@@ -1,0 +1,28 @@
+# Project: AI-powered Singapore bus catch assistant (AI Lodge Hackathon)
+
+PROJECT_PLAN.md is the source of truth. Follow it. If something conflicts with 
+the plan or is missing, ask before deviating.
+
+## Stack
+Python 3.11+, FastAPI, httpx, SQLite (stdlib), openai SDK (gpt-4o-mini), pytest.
+Frontend: one static index.html with vanilla JS and Leaflet. No Node, no build step.
+
+## Hard rules
+- Python computes probability, leave-by, reroute choice, coordinates, and stop 
+  selection. OpenAI only explains the fact sheet. Never let the model produce numbers.
+- Never show a bare "you'll make it". Always show a point value and a range.
+- On stale or failed data: show unavailable/stale, hide the percentage, no leave-now.
+- Reject LLM output that changes the range, changes the action, or contains unsafe 
+  advice (run, sprint, jaywalk). Fall back to the template sentence.
+- Bus-only. Do not add trains, crowding, fares, accounts, background tracking, 
+  or walking navigation.
+
+## Secrets
+- Read keys from .env only (LTA_ACCOUNT_KEY, OPENAI_API_KEY, ONEMAP_EMAIL, 
+  ONEMAP_PASSWORD). Never hardcode, log, or send them to the browser.
+- The frontend calls our own API, never LTA, OneMap, or OpenAI directly.
+
+## Workflow
+- Build one step from PROJECT_PLAN.md at a time, then stop.
+- Tests use fixtures, never live APIs.
+- Keep it hackathon-simple. No extra abstractions or dependencies without asking.
