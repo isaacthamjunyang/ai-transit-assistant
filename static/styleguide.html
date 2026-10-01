@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Theme and component kit</title>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="components.css">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <span class="app-header__logo" aria-hidden="true">
+        <svg class="icon" viewBox="0 0 24 24" focusable="false">
+          <rect x="3" y="7" width="18" height="8" rx="2" fill="currentColor"></rect>
+          <circle cx="7" cy="17" r="1.6" fill="currentColor"></circle>
+          <circle cx="17" cy="17" r="1.6" fill="currentColor"></circle>
+        </svg>
+      </span>
+      <div>
+        <h1 class="app-header__title">Bus Catch Assistant</h1>
+        <p class="app-header__subtitle">Singapore Bus Journey Assistant</p>
+      </div>
+    </div>
+    <button type="button" class="icon-button" id="menu-open" aria-expanded="false" aria-controls="menu-sheet">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+      </svg>
+      <span class="visually-hidden">Menu</span>
+    </button>
+  </header>
+  <div id="menu-sheet" class="menu-sheet" hidden>
+    <div class="menu-sheet__panel" role="dialog" aria-label="Menu">
+      <p class="menu-sheet__label">Appearance</p>
+      <div class="row row--inline" role="group" aria-label="Colour scheme">
+        <button type="button" class="button button--secondary" id="theme-light">Light</button>
+        <button type="button" class="button button--secondary" id="theme-dark">Dark</button>
+        <button type="button" class="button button--secondary" id="theme-system">Match system</button>
+      </div>
+      <details id="guide-demo-controls">
+        <summary>Demo Controls</summary>
+        <label for="guide-scenario">Scenario</label>
+        <select id="guide-scenario"></select>
+        <button type="button" class="button button--primary">Run Scenario</button>
+        <button type="button" class="button button--secondary">Reset to Live</button>
+      </details>
+    </div>
+  </div>
+
+  <main class="guide">
+    <section class="stack" aria-labelledby="buttons-heading">
+      <h2 id="buttons-heading">Buttons</h2>
+      <button type="button" class="button button--primary">Primary</button>
+      <button type="button" class="button button--secondary">Secondary</button>
+    </section>
+
+    <section class="stack" aria-labelledby="field-heading">
+      <h2 id="field-heading">Form field</h2>
+      <div class="field">
+        <label class="field__label" for="place-search">Place search</label>
+        <div class="field__shell">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="2"></circle>
+            <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+          <input class="field__control" id="place-search" type="text" value="Aljunied">
+          <button type="button" class="field__clear" id="place-clear" aria-label="Clear">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+          </button>
+        </div>
+        <p class="field__hint">Sample field. This hint is style-guide chrome, not a locked product string.</p>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="status-heading">
+      <h2 id="status-heading">Status badges</h2>
+      <p class="badge badge--live">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.2 17 19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <span data-copy="status.live"></span>
+      </p>
+      <p class="badge badge--schedule">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <span data-copy="status.scheduleOnly"></span>
+      </p>
+      <p class="badge badge--uncertain">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+        <span data-copy="status.locationUncertain"></span>
+      </p>
+      <p class="badge badge--stale">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5M5 5l14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <span data-copy="status.stale"></span>
+      </p>
+      <p class="badge badge--unavailable">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <span data-copy="status.unavailable"></span>
+      </p>
+      <p class="badge badge--no-history">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"></circle></svg></span>
+        <span data-copy="status.noHistoryYet"></span>
+      </p>
+      <p class="field__hint" data-copy="status.noHistoricalReliabilityYet"></p>
+      <p class="badge badge--simulated">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <span data-copy="simulated"></span>
+      </p>
+    </section>
+
+    <section class="stack" aria-labelledby="meter-heading">
+      <h2 id="meter-heading">Probability meter</h2>
+      <div class="meter meter--ring meter--sample" id="probability" aria-live="polite">
+        <div class="meter__dial">
+          <div class="meter__ring"></div>
+          <span class="meter__tick meter__tick--40" aria-hidden="true"></span>
+          <span class="meter__tick meter__tick--50" aria-hidden="true"></span>
+          <div class="meter__center">
+            <p class="meter__value">64%</p>
+            <p class="meter__range">51–78%</p>
+          </div>
+        </div>
+        <p class="meter__caption"><span>40%</span><span>50%</span></p>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="pace-heading">
+      <h2 id="pace-heading">Pace guidance</h2>
+      <p class="field__hint">When pace guidance has no category, this chip is not shown.</p>
+      <div class="pace-chip">
+        <p class="badge badge--live"><span data-copy="pace.slower.title"></span></p>
+        <p class="field__hint" data-copy="pace.slower.detail"></p>
+      </div>
+      <div class="pace-chip">
+        <p class="badge badge--live"><span data-copy="pace.slightly_slower.title"></span></p>
+        <p class="field__hint" data-copy="pace.slightly_slower.detail"></p>
+      </div>
+      <div class="pace-chip">
+        <p class="badge badge--no-history"><span data-copy="pace.steady.title"></span></p>
+        <p class="field__hint" data-copy="pace.steady.detail"></p>
+      </div>
+      <div class="pace-chip">
+        <p class="badge badge--uncertain"><span data-copy="pace.slightly_faster.title"></span></p>
+        <p class="field__hint" data-copy="pace.slightly_faster.detail"></p>
+      </div>
+      <div class="pace-chip">
+        <p class="badge badge--uncertain"><span data-copy="pace.faster.title"></span></p>
+        <p class="field__hint" data-copy="pace.faster.detail"></p>
+      </div>
+      <div class="pace-chip">
+        <p class="badge badge--unavailable"><span data-copy="pace.unlikely.title"></span></p>
+        <p class="field__hint" data-copy="pace.unlikely.detail"></p>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="live-heading">
+      <h2 id="live-heading">Live journey sample</h2>
+      <p class="badge badge--live">
+        <span class="badge__dot" aria-hidden="true"></span>
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.2 17 19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <span data-copy="status.live"></span>
+      </p>
+      <ul class="tabs" aria-label="next 3 buses">
+        <li><span class="tabs__tab tabs__tab--current">158</span></li>
+        <li><span class="tabs__tab">158A</span></li>
+        <li><span class="tabs__tab">11</span></li>
+      </ul>
+      <dl class="kv">
+        <dt class="kv__label">Monitored</dt>
+        <dd class="kv__value">1</dd>
+        <dt class="kv__label">GPS accuracy</dt>
+        <dd class="kv__value">12 m</dd>
+        <dt class="kv__label">Last update</dt>
+        <dd class="kv__value">10:41</dd>
+      </dl>
+      <ol class="timeline">
+        <li class="timeline__item"><span class="timeline__mark" aria-hidden="true"></span>Board at Opp Pebble Bay</li>
+        <li class="timeline__item"><span class="timeline__mark" aria-hidden="true"></span>Alight at the destination stop</li>
+      </ol>
+    </section>
+
+    <section class="stack" aria-labelledby="alert-heading">
+      <h2 id="alert-heading">Alert slot</h2>
+      <div class="row" role="group" aria-label="Alert slot state">
+        <button type="button" class="button button--secondary" id="show-optional" aria-pressed="true">Notifications card</button>
+        <button type="button" class="button button--secondary" id="show-denied" aria-pressed="false">Blocked banner</button>
+        <button type="button" class="button button--secondary" id="show-active" aria-pressed="false">Active line</button>
+        <button type="button" class="button button--secondary" id="show-caution" aria-pressed="false">Caution banner</button>
+      </div>
+      <div class="alert-slot" id="alert-slot">
+        <article class="card card--info alert-slot__item is-shown" id="slot-optional">
+          <h3 data-copy="notificationCard.title"></h3>
+          <p data-copy="notificationCard.description"></p>
+          <button type="button" class="button button--primary" data-copy="notificationCard.action"></button>
+        </article>
+        <p class="banner banner--denied alert-slot__item" id="slot-denied" data-copy="deniedBanner"></p>
+        <p class="banner alert-slot__item" id="slot-active" data-copy="notificationCard.granted"></p>
+        <p class="banner banner--caution alert-slot__item" id="slot-caution"></p>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="reroute-heading">
+      <h2 id="reroute-heading">Route updated</h2>
+      <article class="card card--success">
+        <h3 data-copy="rerouteCard.title"></h3>
+        <p id="reroute-message"></p>
+        <p id="reroute-probability"></p>
+      </article>
+      <article class="card card--caution">
+        <p id="no-better-standard"></p>
+      </article>
+      <article class="card card--caution">
+        <p id="no-better-post"></p>
+      </article>
+    </section>
+
+    <section class="stack" aria-labelledby="arrive-heading">
+      <h2 id="arrive-heading">Arrive-by badges</h2>
+      <p class="badge badge--track">
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.2 17 19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <span data-copy="arriveBy.onTrack"></span>
+      </p>
+      <p data-copy="arriveBy.onTrackMessage"></p>
+      <p class="badge badge--risk">
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <span data-copy="arriveBy.risk"></span>
+      </p>
+      <p data-copy="arriveBy.riskMessage"></p>
+      <p class="badge badge--na">
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <span data-copy="arriveBy.na"></span>
+      </p>
+      <p data-copy="arriveBy.naMessage"></p>
+      <p class="field__hint">Leg 2 schedule expectation sits here. The plan does not lock one sentence for that line.</p>
+    </section>
+
+    <section class="stack" aria-labelledby="search-states-heading">
+      <h2 id="search-states-heading">Search and stop states</h2>
+      <p class="empty">No matches found. Try a building, road, or postal code.</p>
+      <p class="banner banner--denied">Destination search unavailable.</p>
+      <p class="empty">No destination stops were found within 600 m.</p>
+      <p class="empty">No nearby boarding stops were found within 400 m.</p>
+      <button type="button" class="list-item list-item--selected">
+        <span class="list-item__icon" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+        </span>
+        <span class="list-item__body">
+          <span class="list-item__title">Opp Pebble Bay</span>
+          <span class="list-item__meta">90029</span>
+        </span>
+        <span class="list-item__aside">
+          <span>182 m · ~2 min walk</span>
+        </span>
+      </button>
+      <button type="button" class="list-item">
+        <span class="list-item__icon" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
+        </span>
+        <span class="list-item__body">
+          <span class="list-item__title">Further stop</span>
+          <span class="list-item__meta">41021</span>
+        </span>
+        <span class="list-item__aside">
+          <span>540 m · ~7 min walk</span>
+          <span data-copy="noDirectBus"></span>
+        </span>
+      </button>
+    </section>
+
+    <section class="stack" aria-labelledby="quality-heading">
+      <h2 id="quality-heading">Stale and location uncertain</h2>
+      <article class="card card--unavailable">
+        <p class="badge badge--unavailable">
+          <span class="badge__dot" aria-hidden="true"></span>
+          <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5M5 5l14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+          <span data-copy="status.stale"></span>
+        </p>
+        <h3 data-copy="quality.stale.heading"></h3>
+        <p data-copy="quality.stale.updated"></p>
+        <p data-copy="quality.stale.body"></p>
+      </article>
+      <article class="card card--caution">
+        <p class="badge badge--uncertain">
+          <span class="badge__dot" aria-hidden="true"></span>
+          <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+          <span data-copy="status.locationUncertain"></span>
+        </p>
+        <h3 data-copy="quality.uncertain.heading"></h3>
+        <p data-copy="quality.uncertain.body"></p>
+      </article>
+    </section>
+
+    <section class="stack" aria-labelledby="demo-heading">
+      <h2 id="demo-heading">Demo, loading, and empty</h2>
+      <p class="banner banner--demo" data-copy="demoBanner"></p>
+      <p class="badge badge--simulated">
+        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 3v4M12 17v4M3 12h4M17 12h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <span data-copy="simulated"></span>
+      </p>
+      <p class="empty">No nearby boarding stops were found within 400 m.</p>
+    </section>
+
+    <section class="stack" aria-labelledby="map-heading">
+      <h2 id="map-heading">Map markers</h2>
+      <div id="guide-map" class="guide-map" aria-label="Sample map with user, boarding stop, and destination stop"></div>
+    </section>
+  </main>
+  <script src="copy.js"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    document.querySelectorAll("[data-copy]").forEach(function (el) {
+      var value = copy;
+      el.getAttribute("data-copy").split(".").forEach(function (part) {
+        value = value[part];
+      });
+      if (typeof value === "string") {
+        el.textContent = value;
+      }
+    });
+
+    var scenarioList = document.getElementById("guide-scenario");
+    copy.scenarios.forEach(function (name) {
+      var option = document.createElement("option");
+      option.textContent = name;
+      scenarioList.appendChild(option);
+    });
+
+    document.getElementById("slot-caution").textContent = copy.cautionBanner.replace("{point}", "48");
+    document.getElementById("reroute-message").textContent = copy.rerouteCard.message
+      .replace("{new_service}", "18")
+      .replace("{new_stop_name}", "Opp Pebble Bay")
+      .replace("{new_stop_code}", "90029");
+    document.getElementById("reroute-probability").textContent = copy.rerouteCard.probability
+      .replace("{new_point}", "73")
+      .replace("{new_low}", "60")
+      .replace("{new_high}", "81")
+      .replace("{old_point}", "28");
+    document.getElementById("no-better-standard").textContent = copy.noBetter.standard.replace("{point}", "28");
+    document.getElementById("no-better-post").textContent = copy.noBetter.postReroute.replace("{point}", "28");
+    document.getElementById("probability").setAttribute("aria-label", copy.probabilityExample);
+
+    function showSlot(id, button) {
+      document.querySelectorAll(".alert-slot__item").forEach(function (item) {
+        item.classList.toggle("is-shown", item.id === id);
+      });
+      ["show-optional", "show-denied", "show-active", "show-caution"].forEach(function (buttonId) {
+        var item = document.getElementById(buttonId);
+        item.setAttribute("aria-pressed", item === button ? "true" : "false");
+      });
+    }
+
+    document.getElementById("show-optional").addEventListener("click", function () {
+      showSlot("slot-optional", this);
+    });
+    document.getElementById("show-denied").addEventListener("click", function () {
+      showSlot("slot-denied", this);
+    });
+    document.getElementById("show-active").addEventListener("click", function () {
+      showSlot("slot-active", this);
+    });
+    document.getElementById("show-caution").addEventListener("click", function () {
+      showSlot("slot-caution", this);
+    });
+
+    document.getElementById("menu-open").addEventListener("click", function () {
+      var sheet = document.getElementById("menu-sheet");
+      var open = sheet.hasAttribute("hidden");
+      if (open) {
+        sheet.removeAttribute("hidden");
+      } else {
+        sheet.setAttribute("hidden", "");
+      }
+      this.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.getElementById("theme-light").addEventListener("click", function () {
+      document.documentElement.setAttribute("data-theme", "light");
+    });
+    document.getElementById("theme-dark").addEventListener("click", function () {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+    document.getElementById("theme-system").addEventListener("click", function () {
+      document.documentElement.removeAttribute("data-theme");
+    });
+    var placeSearch = document.getElementById("place-search");
+    var placeClear = document.getElementById("place-clear");
+    function syncPlaceClear() {
+      placeClear.hidden = placeSearch.value.length === 0;
+    }
+    placeSearch.addEventListener("input", syncPlaceClear);
+    placeClear.addEventListener("click", function () {
+      placeSearch.value = "";
+      syncPlaceClear();
+    });
+    syncPlaceClear();
+
+    if (typeof L !== "undefined") {
+      var guideMap = L.map("guide-map", { keyboard: true }).setView([1.3521, 103.8198], 12);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(guideMap);
+      function marker(label, className) {
+        return L.divIcon({
+          className: className,
+          html: "<span class=\"marker__label\">" + label + "</span>",
+          iconSize: [44, 44],
+          iconAnchor: [22, 22]
+        });
+      }
+      L.marker([1.3521, 103.8198], { icon: marker("You", "marker marker--user") }).addTo(guideMap);
+      L.marker([1.356, 103.828], { icon: marker("Stop", "marker marker--boarding") }).addTo(guideMap);
+      L.marker([1.348, 103.81], { icon: marker("End", "marker marker--destination") }).addTo(guideMap);
+    }
+  </script>
+</body>
+</html>

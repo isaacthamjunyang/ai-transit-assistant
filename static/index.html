@@ -1,0 +1,3883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bus Catch Assistant</title>
+  <!-- Leaflet 1.9.4 from the unpkg CDN. OpenStreetMap tiles need no API key. -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="components.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <span class="app-header__logo" aria-hidden="true">
+        <svg class="icon" viewBox="0 0 24 24" focusable="false">
+          <rect x="3" y="7" width="18" height="8" rx="2" fill="currentColor"></rect>
+          <circle cx="7" cy="17" r="1.6" fill="currentColor"></circle>
+          <circle cx="17" cy="17" r="1.6" fill="currentColor"></circle>
+        </svg>
+      </span>
+      <div>
+        <h1 class="app-header__title">Bus Catch Assistant</h1>
+        <p class="app-header__subtitle">Singapore Bus Journey Assistant</p>
+      </div>
+    </div>
+    <button type="button" class="icon-button" id="menu-open" aria-expanded="false" aria-controls="menu-sheet">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+      </svg>
+      <span class="visually-hidden">Menu</span>
+    </button>
+  </header>
+  <div class="wrap">
+    <div id="location-status" class="banner location-row" role="status">
+      <span>Your location</span>
+      <span id="location-state" class="badge badge--no-history">Getting location</span>
+    </div>
+    <p id="demo-banner" class="demo-banner" hidden>SIMULATED DEMO MODE</p>
+    <button type="button" id="back-home" class="secondary" hidden>← Back to Home</button>
+  </div>
+  <div id="menu-sheet" class="menu-sheet" hidden>
+    <div class="menu-sheet__panel" role="dialog" aria-label="Menu">
+      <p class="menu-sheet__label">Appearance</p>
+      <div class="row row--inline" role="group" aria-label="Colour scheme">
+        <button type="button" class="button button--secondary" id="theme-light">Light</button>
+        <button type="button" class="button button--secondary" id="theme-dark">Dark</button>
+        <button type="button" class="button button--secondary" id="theme-system">Match system</button>
+      </div>
+      <details id="demo-controls" hidden>
+      <summary>Demo Controls</summary>
+      <label for="demo-scenario">Scenario</label>
+      <select id="demo-scenario">
+        <option>LTA API Timeout / Proxy Error</option>
+        <option>Stale Data Poll</option>
+        <option>Schedule-Only / Monitored = 0</option>
+        <option>GPS Fix/Age Penalty</option>
+        <option>Auto-Reroute Opportunity</option>
+        <option>OneMap Zero Results / API Error</option>
+        <option>Unsafe / Contradictory OpenAI Output</option>
+      </select>
+      <button type="button" id="demo-run">Run Scenario</button>
+      <button type="button" id="demo-reset">Reset to Live</button>
+    </details>
+    </div>
+  </div>
+  <main class="wrap">
+    <div class="journey-progress">
+      <p id="step-summary" class="step-summary">Step 1 of 5 · Destination</p>
+      <ol id="step-rail" class="step-dots" aria-label="Catch the bus">
+        <li id="step-destination" aria-current="step"><span class="visually-hidden">Destination</span></li>
+        <li id="step-destination-stop"><span class="visually-hidden">Destination stop</span></li>
+        <li id="step-boarding"><span class="visually-hidden">Boarding stop</span></li>
+        <li id="step-route"><span class="visually-hidden">Route</span></li>
+        <li id="step-catch"><span class="visually-hidden">Catch the bus</span></li>
+      </ol>
+    </div>
+    <section class="card" aria-labelledby="destination-heading">
+      <form id="destination-form">
+        <label id="destination-heading" for="destination">Where do you want to go?</label>
+        <p class="hint">Search a place in Singapore. We'll help you find a nearby bus stop and a route.</p>
+        <div class="field">
+          <div class="field__shell">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="2"></circle>
+              <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+            <input
+              id="destination"
+              class="field__control"
+              name="destination"
+              type="text"
+              autocomplete="off"
+              placeholder="Place, road, or postal code"
+            >
+            <button type="button" class="field__clear" id="destination-clear" aria-label="Clear" hidden>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              </svg>
+            </button>
+          </div>
+          <button type="submit" class="primary">Search</button>
+        </div>
+        <div class="field" id="arrive-by-field">
+          <label class="field__label" for="arrive-by">Arrive by</label>
+          <input id="arrive-by" type="datetime-local">
+        </div>
+        <p id="destination-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
+        <p class="note" id="destination-status" role="status"></p>
+        <ul id="destination-results" class="destination-results"></ul>
+        <div id="destination-selected" hidden>
+          <p class="destination-selected-heading">Selected destination:</p>
+          <p id="destination-selected-label"></p>
+          <p id="destination-selected-address" class="note"></p>
+        </div>
+      </form>
+      <div id="destination-stop-panel" hidden>
+        <h2>Which stop are you heading to?</h2>
+        <p id="destination-stop-status" class="note" role="status"></p>
+        <h3>Stops within 600 m</h3>
+        <ul id="reachable-stops" class="destination-stop-list"></ul>
+        <h3 id="other-destination-stops" hidden>Other stops within 600m (No direct service)</h3>
+        <ul id="unreachable-stops" class="destination-stop-list" hidden></ul>
+        <button type="button" id="confirm-destination-stop" hidden>Confirm destination stop</button>
+        <p id="destination-stop-confirmed" class="destination-selected-heading" hidden></p>
+      </div>
+    </section>
+    <div class="stage">
+    <section id="boarding-stage" hidden aria-labelledby="which-bus-heading">
+      <h2 id="which-bus-heading" class="section-kicker">Where are you boarding?</h2>
+      <p class="section-support">Recommended stops within 400 m, and the buses that serve them.</p>
+      <section class="card" aria-label="Map">
+        <div id="map"></div>
+      </section>
+      <section class="card" aria-labelledby="stops-heading">
+        <h2 id="stops-heading">Recommended nearby stops</h2>
+        <p id="boarding-radius-note" class="note" hidden>Showing boarding stops within 400 m of you.</p>
+        <p id="stops-empty" class="empty" hidden>No nearby boarding stops were found within 400 m.</p>
+        <ul id="stop-list" class="stop-list"></ul>
+        <p class="note">Distances are straight-line, not a walking route.</p>
+      </section>
+      <section class="card" id="service-card" hidden aria-labelledby="service-heading">
+        <h2 id="service-heading">Buses you can take</h2>
+        <p class="note" id="service-note">Pick one bus. Its catch probability appears after you start the journey.</p>
+        <div id="service-list" class="service-list"></div>
+      </section>
+      <button type="button" id="continue-boarding" class="primary" hidden>Continue</button>
+    </section>
+    <section class="card" id="arrival-card" hidden aria-labelledby="catch-chance-heading">
+      <div class="arrival-heading-row">
+        <div>
+          <h2 id="catch-chance-heading"><span class="bus-glyph mini" aria-hidden="true"></span>Can I catch it?</h2>
+          <p id="arrival-heading">Live arrivals</p>
+        </div>
+        <button type="button" id="close-arrivals" class="secondary">Close</button>
+      </div>
+      <p id="arrival-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
+      <p id="arrival-status"></p>
+      <p id="arrival-warning" class="arrival-warning" hidden></p>
+      <section id="quality-card" class="card card--unavailable" hidden>
+        <p id="quality-card-badge" class="badge badge--unavailable">
+          <span class="badge__dot" aria-hidden="true"></span>
+          <span class="badge__icon quality-icon-stale" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5M5 5l14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+          </span>
+          <span class="badge__icon quality-icon-uncertain" hidden aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg>
+          </span>
+          <span id="quality-card-label"></span>
+        </p>
+        <h3 id="quality-card-heading"></h3>
+        <p id="quality-card-time"></p>
+        <p id="quality-card-body"></p>
+      </section>
+      <div id="primary-bus"></div>
+      <ul id="arrival-list" class="arrival-list"></ul>
+      <p id="arrival-updated" class="note"></p>
+      <div id="reroute-moment" class="reroute-moment" hidden></div>
+    </section>
+    <section class="card" id="journey-panel" hidden aria-labelledby="leave-heading">
+      <div id="route-plan" hidden>
+        <h3>Your journey</h3>
+        <p class="route-lead">The chosen route is drawn on the map, with its estimated duration and any walking.</p>
+        <svg class="route-motif" aria-hidden="true" viewBox="0 0 220 28" focusable="false">
+          <path d="M8 14 H200" />
+          <circle cx="8" cy="14" r="4" />
+          <circle cx="110" cy="14" r="4" />
+          <circle cx="200" cy="14" r="4" />
+        </svg>
+        <p id="catch-warning" hidden></p>
+        <p id="missed-stop" hidden>You passed your stop. Your destination stays the same while a nearer boarding stop is found.</p>
+        <div id="route-plan-body"></div>
+        <button type="button" id="im-on-board" hidden>I'm On Board</button>
+        <p id="on-board-note" hidden>Missed-stop monitoring is on.</p>
+        <p id="transfer-prompt" hidden></p>
+        <button type="button" id="track-leg-2" hidden>Track Leg 2</button>
+      </div>
+      <div id="leave-by-section">
+        <h2 id="leave-heading">When should I leave?</h2>
+        <p id="journey-place"></p>
+        <p id="journey-stop"></p>
+        <p id="journey-service"></p>
+        <p id="journey-ride"></p>
+        <p id="arrive-by-chosen" hidden>
+          <span id="arrive-by-chosen-text"></span>
+          <a id="arrive-by-edit" href="#arrive-by">Edit</a>
+        </p>
+        <p id="journey-comparison"></p>
+        <p id="journey-note"></p>
+        <p id="journey-leave-by"></p>
+        <p id="leave-context"></p>
+        <p id="journey-leave-countdown" hidden></p>
+        <p id="journey-leave-by-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
+      </div>
+      <div id="reroute-block">
+        <div id="reroute-card" hidden>
+          <p id="reroute-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
+          <h3 id="reroute-title"></h3>
+          <p id="reroute-message"></p>
+          <p id="reroute-probability"></p>
+        </div>
+        <p id="reroute-none" class="note"></p>
+      </div>
+      <div id="ai-explanation">
+        <p id="ai-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
+        <span id="ai-explanation-status"></span>
+        <p id="ai-explanation-headline"></p>
+        <p id="ai-explanation-reasoning"></p>
+        <p id="ai-explanation-advice"></p>
+      </div>
+      <div id="notification-panel"></div>
+    </section>
+    </div>
+  </main>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    var AI_EXPLANATION_ENABLED = false;
+    (function applyAiExplanationFlag() {
+      var card = document.getElementById("ai-explanation");
+      if (card) {
+        card.classList.toggle("is-enabled", AI_EXPLANATION_ENABLED === true);
+      }
+    })();
+    var STALE_HEADING = "LTA data is stale";
+    var STALE_UPDATED = "Last update: {time} ago";
+    var STALE_BODY = "Due to stale data, we cannot give a catch probability or recommend leaving now. Please wait for live data or try again later.";
+    var LOCATION_HEADING = "Location uncertain";
+    var LOCATION_BODY = "Your GPS accuracy is {accuracy} m. We'll show a wider range for the catch probability and won't suggest \"leave now\" from this fix.";
+    var FALLBACK_LAT = 1.3521;
+    var FALLBACK_LON = 103.8198;
+    var FALLBACK_ZOOM = 12;
+    var BOARDING_RADIUS_M = 400;
+    var POLL_MS = 20000;
+    var STALE_MS = 60000;
+    var selectedBoardingStop = null;
+    var selectedDestination = null;
+    var selectedDestinationStop = null;
+    var confirmedDestinationStop = null;
+    var userLat = null;
+    var userLon = null;
+    var userAccuracy = null;
+    var userLocationTimestamp = null;
+    var selectedService = null;
+    var monitoringActive = false;
+    var monitorGeneration = 0;
+    var pollTimer = null;
+    var displayTimer = null;
+    var lastSuccess = null;
+    var displayFrozen = false;
+    var lastNotifiedBusId = null;
+    var fiveMinuteNotifiedKey = null;
+    var leaveNowTimer = null;
+    var leaveNowScheduleKey = null;
+    var missedRecheckBusId = null;
+    var lastRerouteAt = null;
+    var pinnedEtaTimestamp = null;
+    var lastMeter = null;
+    var paceShown = null;
+    var pacePending = null;
+    var pacePollKey = null;
+    var paceRenderKey = "";
+    var paceFresh = true;
+    var PACE_RANK = { unlikely: 0, faster: 1, slightly_faster: 2, steady: 3, slightly_slower: 4, slower: 5 };
+    var PACE_BADGE = {
+      slower: "badge badge--live",
+      slightly_slower: "badge badge--live",
+      steady: "badge badge--no-history",
+      slightly_faster: "badge badge--uncertain",
+      faster: "badge badge--uncertain",
+      unlikely: "badge badge--unavailable"
+    };
+    var PACE_TEXT = {
+      slower: { title: "Walk slower", detail: "You have time. A relaxed pace should still work." },
+      slightly_slower: { title: "Walk slightly slower", detail: "You can ease your pace a little." },
+      steady: { title: "Keep a steady pace", detail: "A normal walking pace works." },
+      slightly_faster: { title: "Walk slightly faster", detail: "A slightly brisker walk improves your chances." },
+      faster: { title: "Walk faster", detail: "A brisk walk improves your chances. Stay on footpaths and use crossings." },
+      unlikely: { title: "Unlikely at a normal pace", detail: "Walking faster is unlikely to be enough. Check the reroute options or the next bus." }
+    };
+    var lastHeroKey = "";
+    var lastFetchedAt = "";
+    var rerouteMomentTimer = null;
+    var activeRoutePlan = null;
+    var routePlanGeneration = 0;
+    var NO_FEASIBLE_ROUTE = "No direct or 1-transfer bus connection available for this trip.";
+    var UNRANKABLE_ROUTE = "Route found, but travel time could not be estimated.";
+    var FUTURE_LEG_NOTE = "Live catch chance available when this leg starts";
+    var routePlanStatus = null;
+    var routePlateSwap = false;
+    var geoWatchId = null;
+    var transferArmedAt = null;
+    var transferLastConfirmedAt = null;
+    var TRANSFER_WAIT_MS = 30000;
+    var onBoard = false;
+
+    var listEl = document.getElementById("stop-list");
+    var emptyEl = document.getElementById("stops-empty");
+    var serviceCard = document.getElementById("service-card");
+    var serviceList = document.getElementById("service-list");
+    var serviceNote = document.getElementById("service-note");
+    var arrivalCard = document.getElementById("arrival-card");
+    var arrivalHeading = document.getElementById("arrival-heading");
+    var arrivalStatus = document.getElementById("arrival-status");
+    var arrivalWarning = document.getElementById("arrival-warning");
+    var arrivalList = document.getElementById("arrival-list");
+    var arrivalUpdated = document.getElementById("arrival-updated");
+    var markersByCode = {};
+    var destMarkersByCode = {};
+    var destStopGeneration = 0;
+    var userMarker = null;
+    var radiusCircle = null;
+
+    var routePreviewLayers = [];
+    var routeRoleMarkers = [];
+
+    var map = L.map("map", { scrollWheelZoom: true }).setView(
+      [FALLBACK_LAT, FALLBACK_LON],
+      FALLBACK_ZOOM
+    );
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    document.getElementById("destination-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+    });
+    document.getElementById("close-arrivals").addEventListener("click", function () {
+      endMonitoring();
+    });
+
+    function mapPopupOptions() {
+      return { className: "map-popup", minWidth: 180, maxWidth: 260, closeButton: true };
+    }
+
+    function userIcon() {
+      return L.divIcon({
+        className: "user-marker marker--user",
+        html: "<span class=\"marker__label\">You</span>",
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+    }
+
+    function stopIcon(selected) {
+      return L.divIcon({
+        className: "stop-marker marker--boarding" + (selected ? " selected" : ""),
+        html: "<span class=\"marker__label\">" + (selected ? "Chosen" : "Stop") + "</span>",
+        iconSize: selected ? [72, 36] : [52, 32],
+        iconAnchor: selected ? [36, 18] : [26, 16]
+      });
+    }
+
+    function cssToken(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function showLocationUnavailable(denied) {
+      var state = document.getElementById("location-state");
+      if (state) {
+        state.className = "badge badge--unavailable";
+        state.textContent = denied ? "Denied" : "Unavailable";
+      }
+      var boardingNote = document.getElementById("boarding-radius-note");
+      if (boardingNote) {
+        boardingNote.hidden = true;
+      }
+      map.setView([FALLBACK_LAT, FALLBACK_LON], FALLBACK_ZOOM);
+    }
+
+    function showUser(lat, lon) {
+      userMarker = L.marker([lat, lon], { icon: userIcon() })
+        .addTo(map)
+        .bindPopup("Your location", mapPopupOptions());
+      radiusCircle = L.circle([lat, lon], {
+        className: "boarding-radius",
+        radius: BOARDING_RADIUS_M,
+        color: cssToken("--color-primary"),
+        weight: 2,
+        fillColor: cssToken("--color-primary"),
+        fillOpacity: 0.12
+      }).addTo(map);
+      map.fitBounds(radiusCircle.getBounds(), { padding: [24, 24] });
+      var state = document.getElementById("location-state");
+      if (state) {
+        state.className = "badge badge--live";
+        state.textContent = userAccuracy === null ? "Found" : "Found · " + Math.round(userAccuracy) + " m";
+      }
+      var boardingNote = document.getElementById("boarding-radius-note");
+      if (boardingNote) {
+        boardingNote.hidden = false;
+      }
+    }
+
+    function walkLabel(stop) {
+      return stop.distance_m + " m · ~" + stop.walk_minutes + " min walk";
+    }
+
+    function servicesLabel(stop) {
+      if (!stop.services || stop.services.length === 0) {
+        return "Services: none";
+      }
+      return "Services: " + stop.services.join(", ");
+    }
+
+    function popupElement(stop) {
+      var box = document.createElement("div");
+      box.className = "stop-popup";
+      var name = document.createElement("strong");
+      name.textContent = stop.description;
+      var code = document.createElement("div");
+      code.textContent = stop.stop_code;
+      var walk = document.createElement("div");
+      walk.textContent = walkLabel(stop);
+      var services = document.createElement("div");
+      services.textContent = servicesLabel(stop);
+      box.appendChild(name);
+      box.appendChild(code);
+      if (stop.road_name) {
+        var road = document.createElement("div");
+        road.textContent = stop.road_name;
+        box.appendChild(road);
+      }
+      box.appendChild(walk);
+      box.appendChild(services);
+      return box;
+    }
+
+    function clearStopMarkers() {
+      Object.keys(markersByCode).forEach(function (code) {
+        map.removeLayer(markersByCode[code]);
+      });
+      markersByCode = {};
+    }
+
+    function addMarker(stop) {
+      var marker = L.marker([stop.latitude, stop.longitude], { icon: stopIcon(false) })
+        .addTo(map)
+        .bindPopup(popupElement(stop), mapPopupOptions());
+      marker.on("click", function () {
+        selectStop(stop);
+      });
+      markersByCode[stop.stop_code] = marker;
+    }
+
+    var nearbyBoardingStops = [];
+
+    function renderStops(stops) {
+      nearbyBoardingStops = stops.slice();
+      endMonitoring();
+      hideServiceChoices();
+      clearStopMarkers();
+      listEl.replaceChildren();
+      selectedBoardingStop = null;
+      if (!stops.length) {
+        emptyEl.hidden = false;
+        emptyEl.textContent = "No nearby boarding stops were found within 400 m.";
+        return;
+      }
+      emptyEl.hidden = true;
+      stops.forEach(function (stop) {
+        var item = document.createElement("li");
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "stop-button";
+        button.setAttribute("data-stop-code", stop.stop_code);
+
+        var name = document.createElement("span");
+        name.className = "stop-name";
+        name.textContent = stop.description;
+        var code = document.createElement("span");
+        code.className = "stop-code";
+        code.textContent = stop.stop_code;
+        var meta = document.createElement("span");
+        meta.className = "stop-meta";
+        meta.textContent = walkLabel(stop);
+        var services = document.createElement("span");
+        services.className = "stop-services";
+        services.textContent = servicesLabel(stop);
+
+        button.appendChild(name);
+        button.appendChild(code);
+        if (stop.road_name) {
+          var road = document.createElement("span");
+          road.className = "stop-road";
+          road.textContent = stop.road_name;
+          button.appendChild(road);
+        }
+        button.appendChild(meta);
+        button.appendChild(services);
+        button.addEventListener("click", function () {
+          selectStop(stop);
+        });
+        item.appendChild(button);
+        listEl.appendChild(item);
+        addMarker(stop);
+      });
+    }
+
+    function showStopsUnavailable() {
+      endMonitoring();
+      hideServiceChoices();
+      clearStopMarkers();
+      listEl.replaceChildren();
+      selectedBoardingStop = null;
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Nearby stops are unavailable.";
+      updateStepRail();
+    }
+
+    function updateStepRail() {
+      var steps = [
+        document.getElementById("step-destination"),
+        document.getElementById("step-destination-stop"),
+        document.getElementById("step-boarding"),
+        document.getElementById("step-route"),
+        document.getElementById("step-catch")
+      ];
+      if (!steps[0]) {
+        return;
+      }
+      var labels = [
+        "Destination",
+        "Destination stop",
+        "Boarding stop",
+        "Route",
+        "Catch the bus"
+      ];
+      var done = [
+        !!selectedDestination,
+        !!confirmedDestinationStop,
+        !!(confirmedDestinationStop && selectedBoardingStop),
+        !!(activeRoutePlan && activeRoutePlan.legs && activeRoutePlan.legs.length),
+        !!(
+          lastSuccess
+          && Array.isArray(lastSuccess.buses)
+          && lastSuccess.buses.length
+          && !displayFrozen
+        )
+      ];
+      var current = 0;
+      for (var i = 0; i < done.length; i++) {
+        if (!done[i]) {
+          current = i;
+          break;
+        }
+        current = i;
+      }
+      steps.forEach(function (step, index) {
+        step.classList.toggle("done", !!done[index]);
+        step.classList.toggle("current", index === current);
+        if (index === current) {
+          step.setAttribute("aria-current", "step");
+        } else {
+          step.removeAttribute("aria-current");
+        }
+      });
+      var summary = document.getElementById("step-summary");
+      if (summary) {
+        summary.textContent = "Step " + (current + 1) + " of 5 · " + labels[current];
+      }
+    }
+
+    function selectStop(stop) {
+      var sameStop = selectedBoardingStop && selectedBoardingStop.stop_code === stop.stop_code;
+      if (!sameStop) {
+        endMonitoring();
+        selectedBoardingStop = stop;
+        if (confirmedDestinationStop) {
+          var proceed = document.getElementById("continue-boarding");
+          if (proceed) {
+            proceed.hidden = false;
+          }
+        } else {
+          renderServiceChoices(stop);
+        }
+      }
+      var buttons = listEl.querySelectorAll(".stop-button");
+      buttons.forEach(function (button) {
+        var selected = button.getAttribute("data-stop-code") === stop.stop_code;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      Object.keys(markersByCode).forEach(function (code) {
+        var marker = markersByCode[code];
+        var selected = code === stop.stop_code;
+        marker.setIcon(stopIcon(selected));
+      });
+      updateStepRail();
+    }
+
+    function loadNearby(lat, lon) {
+      var url = "/api/stops/nearby?lat=" + encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon);
+      fetch(url)
+        .then(function (response) {
+          if (!response.ok) {
+            showStopsUnavailable();
+            return null;
+          }
+          return response.json();
+        })
+        .then(function (stops) {
+          if (!stops) {
+            return;
+          }
+          if (!Array.isArray(stops)) {
+            showStopsUnavailable();
+            return;
+          }
+          renderStops(stops);
+        })
+        .catch(function () {
+          showStopsUnavailable();
+        });
+    }
+
+    function hideServiceChoices() {
+      serviceCard.hidden = true;
+      serviceList.replaceChildren();
+    }
+
+    function renderServiceChoices(stop) {
+      serviceCard.hidden = false;
+      serviceList.replaceChildren();
+      var services = stop.services || [];
+      if (!services.length) {
+        serviceNote.textContent = "This stop has no services in the cache.";
+        return;
+      }
+      serviceNote.textContent = "Select one service to see live arrivals.";
+      services.forEach(function (serviceNo) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "service-button";
+        button.textContent = serviceNo;
+        button.setAttribute("data-service", serviceNo);
+        button.addEventListener("click", function () {
+          chooseService(serviceNo);
+        });
+        serviceList.appendChild(button);
+      });
+    }
+
+    function highlightService(serviceNo) {
+      serviceList.querySelectorAll(".service-button").forEach(function (button) {
+        var selected = button.getAttribute("data-service") === serviceNo;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+    }
+
+    function invalidateSession() {
+      monitorGeneration += 1;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      if (displayTimer) {
+        clearInterval(displayTimer);
+        displayTimer = null;
+      }
+      monitoringActive = false;
+      lastSuccess = null;
+      displayFrozen = false;
+      lastMeter = null;
+      lastHeroKey = "";
+      lastFetchedAt = "";
+      clearLeaveNowTimer();
+    }
+
+    function clearArrivalPanel() {
+      arrivalCard.hidden = true;
+      arrivalStatus.textContent = "";
+      arrivalWarning.hidden = true;
+      arrivalWarning.textContent = "";
+      arrivalWarning.className = "arrival-warning";
+      arrivalList.replaceChildren();
+      clearPrimaryBus();
+      arrivalUpdated.textContent = "";
+      hideQualityCard();
+    }
+
+    function endMonitoring() {
+      invalidateSession();
+      pinnedEtaTimestamp = null;
+      selectedService = null;
+      highlightService(null);
+      clearArrivalPanel();
+      renderJourneyLeaveBy();
+      updateStepRail();
+    }
+
+    function chooseService(serviceNo) {
+      if (!selectedBoardingStop) {
+        return;
+      }
+      if (monitoringActive && selectedService === serviceNo) {
+        return;
+      }
+      var allowed = selectedBoardingStop.services || [];
+      if (allowed.indexOf(serviceNo) === -1) {
+        return;
+      }
+      if (activeRoutePlan && activeRoutePlan.legs) {
+        var planned = activeRoutePlan.legs[activeRoutePlan.leg_index - 1];
+        var samePlannedLeg = planned
+          && planned.service_no === serviceNo
+          && selectedBoardingStop
+          && planned.boarding_stop_code === selectedBoardingStop.stop_code;
+        if (!samePlannedLeg) {
+          clearRoutePlan();
+        }
+      }
+      pinnedEtaTimestamp = null;
+      startMonitoring(serviceNo);
+    }
+
+    function startMonitoring(serviceNo) {
+      resetPaceGuidance();
+      invalidateSession();
+      var generation = monitorGeneration;
+      selectedService = serviceNo;
+      monitoringActive = true;
+      highlightService(serviceNo);
+      arrivalCard.hidden = false;
+      setArrivalTone("is-loading");
+      arrivalHeading.textContent = "Live arrivals · " + selectedBoardingStop.stop_code + " · " + serviceNo;
+      arrivalList.replaceChildren();
+      clearPrimaryBus();
+      arrivalStatus.textContent = "Loading arrivals…";
+      arrivalWarning.hidden = true;
+      arrivalWarning.textContent = "";
+      arrivalUpdated.textContent = "";
+      requestArrivals(generation);
+      pollTimer = setInterval(function () {
+        requestArrivals(generation);
+      }, POLL_MS);
+      displayTimer = setInterval(function () {
+        refreshDisplay(generation);
+      }, 1000);
+      updateStepRail();
+    }
+
+    function successAgeMs() {
+      if (!lastSuccess || !lastSuccess.fetched_at) {
+        return Infinity;
+      }
+      return Date.now() - new Date(lastSuccess.fetched_at).getTime();
+    }
+
+    function requestArrivals(generation) {
+      if (generation !== monitorGeneration || !monitoringActive || !selectedBoardingStop || !selectedService) {
+        return;
+      }
+      var stopCode = selectedBoardingStop.stop_code;
+      var serviceNo = selectedService;
+      var url = "/api/arrivals?stop_code=" + encodeURIComponent(stopCode) + "&service_no=" + encodeURIComponent(serviceNo);
+      if (userLat !== null && userLon !== null && userAccuracy !== null) {
+        url += "&lat=" + encodeURIComponent(userLat);
+        url += "&lon=" + encodeURIComponent(userLon);
+        url += "&accuracy=" + encodeURIComponent(userAccuracy);
+        if (userLocationTimestamp !== null) {
+          url += "&location_timestamp=" + encodeURIComponent(userLocationTimestamp);
+        }
+      }
+      if (confirmedDestinationStop && selectedDestination) {
+        url += "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code);
+        url += "&dest_lat=" + encodeURIComponent(selectedDestination.latitude);
+        url += "&dest_lon=" + encodeURIComponent(selectedDestination.longitude);
+        if (arriveByInput.value) {
+          url += "&arrive_by=" + encodeURIComponent(arriveByInput.value);
+        }
+        if (lastRerouteAt) {
+          url += "&last_reroute_at=" + encodeURIComponent(lastRerouteAt);
+        }
+        if (typeof pinnedEtaTimestamp === "number" && isFinite(pinnedEtaTimestamp)) {
+          url += "&pinned_eta=" + encodeURIComponent(pinnedEtaTimestamp);
+        }
+        url += "&explanation_rendered=" + (explanationRendered ? "1" : "0");
+        if (explanationRendered && lastExplainedLow !== null && lastExplainedHigh !== null) {
+          url += "&last_explained_range_low=" + encodeURIComponent(lastExplainedLow);
+          url += "&last_explained_range_high=" + encodeURIComponent(lastExplainedHigh);
+        }
+        url += "&explanation_in_flight=" + (explanationInFlight ? "1" : "0");
+        if (activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.leg_index) {
+          url += "&route_type=" + encodeURIComponent(activeRoutePlan.route_type);
+          url += "&leg_index=" + encodeURIComponent(activeRoutePlan.leg_index);
+          var futureLeg = activeRoutePlan.legs && activeRoutePlan.legs[1];
+          var firstLeg = activeRoutePlan.legs && activeRoutePlan.legs[0];
+          if (activeRoutePlan.leg_index === 1 && futureLeg && firstLeg && typeof firstLeg.ride_minutes === "number") {
+            url += "&leg2_service_no=" + encodeURIComponent(futureLeg.service_no);
+            url += "&leg2_direction=" + encodeURIComponent(futureLeg.direction);
+            url += "&leg2_stop_code=" + encodeURIComponent(futureLeg.boarding_stop_code);
+            url += "&leg1_ride_minutes=" + encodeURIComponent(firstLeg.ride_minutes);
+          }
+        }
+      }
+      fetch(url)
+        .then(function (response) {
+          if (generation !== monitorGeneration) {
+            return null;
+          }
+          if (!response.ok) {
+            return response.json().then(function (body) {
+              return { failed: true, simulated: !!(body && body.simulated) };
+            }, function () {
+              return { failed: true };
+            });
+          }
+          return response.json().then(function (body) {
+            if (!body || body.status !== "ok" || !Array.isArray(body.buses)) {
+              return { failed: true, simulated: !!(body && body.simulated) };
+            }
+            return { ok: true, body: body };
+          });
+        })
+        .then(function (result) {
+          if (!result || generation !== monitorGeneration) {
+            return;
+          }
+          if (result.failed) {
+            if (result.simulated) {
+              lastSuccess = null;
+              showFirstFailure("No live arrival data available. No previous successful update.");
+              setArrivalSimulated(true);
+              return;
+            }
+            handlePollFailure();
+            return;
+          }
+          if (!result.body.buses.length) {
+            handleEmptyBuses(result.body);
+            return;
+          }
+          var fetchedAt = new Date(result.body.fetched_at).getTime();
+          if (result.body.simulated && isFinite(fetchedAt) && (Date.now() - fetchedAt) > STALE_MS) {
+            lastSuccess = result.body;
+            setArrivalSimulated(true);
+            freezeStale();
+            return;
+          }
+          applySuccess(result.body);
+        })
+        .catch(function () {
+          if (generation !== monitorGeneration) {
+            return;
+          }
+          handlePollFailure();
+        });
+    }
+
+    function applySuccess(body) {
+      syncExplanation(body);
+      setArrivalSimulated(body.simulated === true);
+      if (body.reroute && body.reroute.switched && body.reroute.reroute) {
+        setRerouteSimulated(body.simulated === true);
+        applyRouteSwitch(body.reroute);
+        return;
+      }
+      if (body && Object.prototype.hasOwnProperty.call(body, "pinned_eta_timestamp")) {
+        pinnedEtaTimestamp = body.pinned_eta_timestamp;
+      }
+      lastSuccess = body;
+      if (
+        typeof body.leg2_schedule_headway_minutes === "number"
+        && activeRoutePlan
+        && activeRoutePlan.legs
+        && activeRoutePlan.legs[1]
+        && activeRoutePlan.leg_index === 1
+      ) {
+        activeRoutePlan.legs[1].published_headway_minutes = body.leg2_schedule_headway_minutes;
+      }
+      displayFrozen = false;
+      setArrivalTone("");
+      arrivalWarning.hidden = true;
+      arrivalWarning.textContent = "";
+      arrivalStatus.textContent = "";
+      renderBusCards(body);
+      arrivalUpdated.textContent = "Last updated: " + formatTime(body.fetched_at, true);
+      renderJourneyLeaveBy();
+      syncLeaveNow(body);
+      showNoBetterOption(body.reroute);
+      updateStepRail();
+    }
+
+    function applyRouteSwitch(decision) {
+      resetPaceGuidance();
+      var reroute = decision.reroute;
+      playRerouteMoment(decision);
+      var previousCode = selectedBoardingStop ? selectedBoardingStop.stop_code : "";
+      var previousService = selectedService;
+      var sameTarget = reroute.stop.stop_code === previousCode && reroute.service_no === previousService;
+      pinnedEtaTimestamp = sameTarget && typeof reroute.eta_epoch === "number" ? reroute.eta_epoch : null;
+      lastRerouteAt = new Date().toISOString();
+      renderRerouteCard(reroute);
+      rerouteNone.textContent = "";
+      notifyReroute(reroute);
+      clearLeaveNowState();
+      selectedBoardingStop = reroute.stop;
+      renderServiceChoices(selectedBoardingStop);
+      highlightBoardingSelection(reroute.stop.stop_code);
+      startMonitoring(reroute.service_no);
+      syncPlannedLegAfterReroute(reroute);
+    }
+
+    function highlightBoardingSelection(stopCode) {
+      listEl.querySelectorAll(".stop-button").forEach(function (button) {
+        var selected = button.getAttribute("data-stop-code") === stopCode;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      Object.keys(markersByCode).forEach(function (code) {
+        markersByCode[code].setIcon(stopIcon(code === stopCode));
+      });
+    }
+
+    function renderRerouteCard(reroute) {
+      var wasHidden = rerouteCard.hidden;
+      var previous = rerouteTitle.textContent + "|" + rerouteProbability.textContent;
+      var next = (reroute.title || "") + "|" + (reroute.probability_line || "");
+      rerouteCard.hidden = false;
+      rerouteTitle.textContent = reroute.title;
+      rerouteMessage.textContent = reroute.message;
+      rerouteProbability.textContent = reroute.probability_line;
+      if (wasHidden || previous !== next) {
+        rerouteCard.classList.remove("reroute-enter");
+        void rerouteCard.offsetWidth;
+        rerouteCard.classList.add("reroute-enter");
+      }
+    }
+
+    function playRerouteMoment(decision) {
+      var moment = document.getElementById("reroute-moment");
+      var reroute = decision && decision.reroute;
+      if (!moment || !reroute || prefersReducedMotion()) {
+        return;
+      }
+      var currentService = selectedService || "";
+      var currentPoint = "";
+      var hero = lastSuccess && featuredBus(lastSuccess.buses);
+      if (hero && hero.probability && typeof hero.probability.point === "number") {
+        currentPoint = hero.probability.point + "%";
+      }
+      var nextService = reroute.service_no || "";
+      var nextPoint = "";
+      var score = decision.winner_score;
+      if (score && typeof score.point === "number") {
+        nextPoint = score.point + "%";
+      }
+      moment.replaceChildren();
+      var simulated = document.getElementById("reroute-simulated");
+      if (simulated && !simulated.hidden) {
+        var badge = document.createElement("p");
+        badge.className = "simulated-badge";
+        badge.textContent = "[SIMULATED]";
+        moment.appendChild(badge);
+      }
+      moment.appendChild(rerouteStage("s1", "CURRENT LEG", currentService, currentPoint));
+      moment.appendChild(rerouteStage("s3", "⚡ ROUTE UPDATED", nextService, nextPoint));
+      moment.hidden = false;
+      moment.classList.remove("is-playing");
+      void moment.offsetWidth;
+      moment.classList.add("is-playing");
+      if (rerouteMomentTimer) {
+        clearTimeout(rerouteMomentTimer);
+      }
+      rerouteMomentTimer = setTimeout(function () {
+        rerouteMomentTimer = null;
+        moment.hidden = true;
+        moment.classList.remove("is-playing");
+        moment.replaceChildren();
+      }, 680);
+    }
+
+    function rerouteStage(className, label, service, point) {
+      var block = document.createElement("div");
+      block.className = "reroute-stage " + className;
+      var kicker = document.createElement("p");
+      kicker.className = "reroute-kicker";
+      kicker.textContent = label;
+      block.appendChild(kicker);
+      if (service) {
+        var bus = document.createElement("p");
+        bus.className = "reroute-bus";
+        bus.textContent = "Bus " + service;
+        block.appendChild(bus);
+      }
+      if (point) {
+        var pct = document.createElement("p");
+        pct.className = "reroute-point";
+        pct.textContent = point;
+        block.appendChild(pct);
+      }
+      return block;
+    }
+
+    function prefersReducedMotion() {
+      return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    }
+
+    function showNoBetterOption(decision) {
+      rerouteNone.textContent = decision && decision.no_better_option ? decision.no_better_option : "";
+    }
+
+    function showExplanationUpdating() {
+      aiExplanationStatus.textContent = "● Updating explanation...";
+    }
+
+    function renderExplanation(view) {
+      aiExplanationHeadline.textContent = view.headline || "";
+      aiExplanationReasoning.textContent = view.reasoning || "";
+      aiExplanationAdvice.textContent = view.leave_advice || "";
+      setExplanationSimulated(view.simulated === true);
+    }
+
+    function markExplanationRendered(sheet) {
+      if (!sheet) {
+        return;
+      }
+      explanationRendered = true;
+      lastExplainedLow = sheet.range_low;
+      lastExplainedHigh = sheet.range_high;
+    }
+
+    function resetExplanationState() {
+      explanationRendered = false;
+      lastExplainedLow = null;
+      lastExplainedHigh = null;
+      explanationInFlight = false;
+      pendingExplanation = null;
+      lastExplanationPack = null;
+      explanationSerial += 1;
+      aiExplanationHeadline.textContent = "";
+      aiExplanationReasoning.textContent = "";
+      aiExplanationAdvice.textContent = "";
+      aiExplanationStatus.textContent = "";
+    }
+
+    function showStoredExplanationFallback() {
+      explanationSerial += 1;
+      pendingExplanation = null;
+      if (!lastExplanationPack || !lastExplanationPack.fact_sheet || !lastExplanationPack.fallback) {
+        aiExplanationStatus.textContent = "";
+        return;
+      }
+      renderExplanation({
+        headline: lastExplanationPack.fallback,
+        reasoning: "",
+        leave_advice: lastExplanationPack.fact_sheet.chosen_action
+      });
+      aiExplanationStatus.textContent = "";
+    }
+
+    function beginExplanation(pack) {
+      if (AI_EXPLANATION_ENABLED !== true) {
+        return;
+      }
+      if (!pack || !pack.fact_sheet) {
+        return;
+      }
+      if (explanationInFlight) {
+        pendingExplanation = pack;
+        return;
+      }
+      explanationInFlight = true;
+      var serial = explanationSerial;
+      showExplanationUpdating();
+      var controller = new AbortController();
+      var timer = setTimeout(function () {
+        controller.abort();
+      }, 4000);
+      fetch("/api/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pack.fact_sheet),
+        signal: controller.signal
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            return { failed: true };
+          }
+          return response.json().then(function (body) {
+            return { ok: true, body: body };
+          });
+        })
+        .then(function (result) {
+          if (serial !== explanationSerial) {
+            return;
+          }
+          if (result && result.ok && result.body && result.body.queued) {
+            aiExplanationStatus.textContent = "";
+            return;
+          }
+          var body = result && result.ok ? result.body : null;
+          var usable = body && typeof body.headline === "string" && typeof body.leave_advice === "string";
+          if (!usable) {
+            renderExplanation({
+              headline: pack.fallback,
+              reasoning: "",
+              leave_advice: pack.fact_sheet.chosen_action
+            });
+          } else {
+            renderExplanation({
+              headline: body.headline,
+              reasoning: body.reasoning || "",
+              leave_advice: body.leave_advice,
+              simulated: body.simulated === true
+            });
+          }
+          markExplanationRendered(pack.fact_sheet);
+          aiExplanationStatus.textContent = "";
+        })
+        .catch(function () {
+          if (serial !== explanationSerial) {
+            return;
+          }
+          renderExplanation({
+            headline: pack.fallback,
+            reasoning: "",
+            leave_advice: pack.fact_sheet.chosen_action
+          });
+          markExplanationRendered(pack.fact_sheet);
+          aiExplanationStatus.textContent = "";
+        })
+        .then(function () {
+          clearTimeout(timer);
+          explanationInFlight = false;
+          if (serial !== explanationSerial) {
+            return;
+          }
+          var next = pendingExplanation;
+          pendingExplanation = null;
+          if (next) {
+            beginExplanation(next);
+          }
+        });
+    }
+
+    function syncExplanation(body) {
+      var pack = body && body.explanation;
+      if (!pack || !pack.fact_sheet) {
+        return;
+      }
+      lastExplanationPack = pack;
+      if (pack.replace_with_fallback) {
+        explanationSerial += 1;
+        pendingExplanation = null;
+        renderExplanation({
+          headline: pack.fallback,
+          reasoning: "",
+          leave_advice: pack.fact_sheet.chosen_action
+        });
+        aiExplanationStatus.textContent = "";
+        markExplanationRendered(pack.fact_sheet);
+        return;
+      }
+      if (explanationInFlight && (pack.call || pack.pending)) {
+        pendingExplanation = pack;
+        return;
+      }
+      if (pack.pending && !explanationInFlight) {
+        beginExplanation(pack);
+        return;
+      }
+      if (pack.call) {
+        beginExplanation(pack);
+      }
+    }
+
+    function notifyReroute(reroute) {
+      if (typeof Notification !== "function" || Notification.permission !== "granted") {
+        return;
+      }
+      try {
+        new Notification(reroute.notification_title, { body: reroute.notification_body });
+      } catch (err) {
+        return;
+      }
+    }
+
+    function clearRerouteState() {
+      lastRerouteAt = null;
+      pinnedEtaTimestamp = null;
+      rerouteCard.hidden = true;
+      rerouteCard.classList.remove("reroute-enter");
+      rerouteTitle.textContent = "";
+      rerouteMessage.textContent = "";
+      rerouteProbability.textContent = "";
+      rerouteNone.textContent = "";
+      clearRerouteMoment();
+    }
+
+    function handlePollFailure() {
+      if (!lastSuccess) {
+        showFirstFailure("No live arrival data available. No previous successful update.");
+        return;
+      }
+      var age = successAgeMs();
+      if (age > STALE_MS) {
+        freezeStale();
+        return;
+      }
+      if (age < STALE_MS) {
+        showUpdating();
+      }
+    }
+
+    function handleEmptyBuses(body) {
+      lastSuccess = body;
+      displayFrozen = false;
+      arrivalList.replaceChildren();
+      arrivalStatus.textContent = "";
+      setArrivalTone("is-empty");
+      arrivalWarning.hidden = false;
+      arrivalWarning.className = "arrival-warning";
+      arrivalWarning.textContent = "No buses currently in service at this stop.";
+      arrivalUpdated.textContent = body && body.fetched_at
+        ? "Last updated: " + formatTime(body.fetched_at, true)
+        : "";
+      renderJourneyLeaveBy();
+      clearLeaveNowTimer();
+      clearPrimaryBus();
+      updateStepRail();
+    }
+
+    function setArrivalTone(tone) {
+      if (!arrivalCard) {
+        return;
+      }
+      arrivalCard.classList.remove("is-loading", "is-empty", "is-stale", "is-unavailable");
+      if (tone) {
+        arrivalCard.classList.add(tone);
+      }
+    }
+
+    function showFirstFailure(message) {
+      displayFrozen = false;
+      setArrivalTone("is-unavailable");
+      arrivalList.replaceChildren();
+      clearPrimaryBus();
+      arrivalStatus.textContent = "Status: Unavailable";
+      arrivalWarning.hidden = false;
+      arrivalWarning.className = "arrival-warning stale";
+      arrivalWarning.textContent = message;
+      arrivalUpdated.textContent = "Last updated: N/A";
+      renderJourneyLeaveBy();
+      clearLeaveNowTimer();
+      showStoredExplanationFallback();
+      updateStepRail();
+    }
+
+    function showUpdating() {
+      arrivalWarning.hidden = false;
+      arrivalWarning.className = "arrival-warning";
+      arrivalWarning.textContent = "Updating...";
+    }
+
+    function freezeStale() {
+      displayFrozen = true;
+      setArrivalTone("is-stale");
+      arrivalStatus.textContent = "Status: Stale / Unavailable";
+      arrivalWarning.hidden = true;
+      arrivalWarning.className = "arrival-warning";
+      arrivalWarning.textContent = "";
+      if (lastSuccess) {
+        renderBusCards(lastSuccess);
+      } else {
+        syncQualityCard(null);
+      }
+      renderJourneyLeaveBy();
+      clearLeaveNowTimer();
+      showStoredExplanationFallback();
+      updateStepRail();
+    }
+
+    function refreshDisplay(generation) {
+      if (generation !== monitorGeneration || !monitoringActive) {
+        return;
+      }
+      if (!lastSuccess || displayFrozen) {
+        updateLeaveCountdown();
+        return;
+      }
+      if (successAgeMs() > STALE_MS) {
+        freezeStale();
+        return;
+      }
+      renderBusCards(lastSuccess);
+      syncLeaveNow(lastSuccess);
+      maybeFiveMinuteReminder(lastSuccess);
+      updateLeaveCountdown();
+    }
+
+    function clearPrimaryBus() {
+      var primarySlot = document.getElementById("primary-bus");
+      if (primarySlot) {
+        primarySlot.replaceChildren();
+      }
+    }
+
+    function featuredBus(buses) {
+      var active = null;
+      var primary = null;
+      for (var i = 0; i < buses.length; i++) {
+        if (buses[i].is_active_target && !active) {
+          active = buses[i];
+        }
+        if (buses[i].is_primary && !primary) {
+          primary = buses[i];
+        }
+      }
+      return active || primary || buses[0] || null;
+    }
+
+    function renderBusCards(body) {
+      paceRenderKey = body && body.fetched_at ? body.fetched_at : "";
+      var primarySlot = document.getElementById("primary-bus");
+      var hero = featuredBus(body.buses);
+      clearPrimaryBus();
+      arrivalList.replaceChildren();
+      var ago = updatedAgo(body.fetched_at);
+      body.buses.forEach(function (bus) {
+        var isHero = bus === hero;
+        var item = document.createElement(isHero ? "div" : "li");
+        item.className = isHero ? "arrival-feature" : "arrival-ticket";
+        if (isHero) {
+          var heroKey = (selectedService || "") + "|"
+            + (selectedBoardingStop && selectedBoardingStop.stop_code ? selectedBoardingStop.stop_code : "")
+            + "|" + (bus.position || "") + "|" + (bus.arrival_time || "");
+          if (heroKey !== lastHeroKey) {
+            item.className += " hero-enter";
+          }
+          lastHeroKey = heroKey;
+        }
+        if (isHero) {
+          item.appendChild(heroRoute());
+        }
+        var title = document.createElement("div");
+        var label = bus.position === "NextBus"
+          ? "Next bus"
+          : bus.position === "NextBus2"
+            ? "Bus after"
+            : "Third bus";
+        var live = bus.monitored ? "Live" : "Schedule only";
+        title.textContent = label + ": " + countdownLabel(bus.arrival_time) + " (" + formatTime(bus.arrival_time, false) + ") — " + live;
+        item.appendChild(title);
+        var chip = document.createElement("p");
+        chip.className = "catch-chip" + (displayFrozen ? " frozen" : bus.monitored ? " live" : " schedule");
+        chip.textContent = live;
+        item.appendChild(chip);
+        if (isHero && ago) {
+          var agoLine = document.createElement("p");
+          agoLine.className = "updated-ago";
+          agoLine.textContent = ago;
+          item.appendChild(agoLine);
+        }
+        if (!isHero && selectedService) {
+          var ticketPlate = document.createElement("span");
+          ticketPlate.className = "service-plate ticket-plate";
+          ticketPlate.textContent = selectedService;
+          item.insertBefore(ticketPlate, title);
+        }
+        if (bus.is_missed) {
+          appendMissed(item);
+        } else if (!displayFrozen) {
+          if (isHero) {
+            appendHeroPoint(item, bus);
+            appendCatchMeter(item, bus);
+          }
+          appendScore(item, bus);
+        }
+        if (bus === hero && primarySlot) {
+          primarySlot.appendChild(item);
+        } else {
+          arrivalList.appendChild(item);
+        }
+      });
+      arrivalUpdated.textContent = "Last updated: " + formatTime(body.fetched_at, true);
+      renderCatchWarning(hero);
+      if (body.fetched_at && body.fetched_at !== lastFetchedAt) {
+        if (lastFetchedAt && arrivalCard) {
+          arrivalCard.classList.remove("data-refresh");
+          void arrivalCard.offsetWidth;
+          arrivalCard.classList.add("data-refresh");
+        }
+        lastFetchedAt = body.fetched_at;
+      }
+      syncQualityCard(body);
+    }
+
+    function agoAmount(iso) {
+      var at = new Date(iso).getTime();
+      if (!isFinite(at)) {
+        return "";
+      }
+      var seconds = Math.max(0, Math.round((Date.now() - at) / 1000));
+      return seconds + " seconds";
+    }
+
+    function hideQualityCard() {
+      var card = document.getElementById("quality-card");
+      if (card) {
+        card.hidden = true;
+      }
+    }
+
+    function showQualityCard(kind, bodyText, timeText) {
+      var card = document.getElementById("quality-card");
+      var badge = document.getElementById("quality-card-badge");
+      var heading = document.getElementById("quality-card-heading");
+      var time = document.getElementById("quality-card-time");
+      var body = document.getElementById("quality-card-body");
+      var label = document.getElementById("quality-card-label");
+      if (!card || !badge || !heading || !time || !body || !label) {
+        return;
+      }
+      var stale = kind === "stale";
+      var staleIcon = card.querySelector(".quality-icon-stale");
+      var uncertainIcon = card.querySelector(".quality-icon-uncertain");
+      card.hidden = false;
+      card.className = stale ? "card card--unavailable" : "card card--caution";
+      badge.className = stale ? "badge badge--unavailable" : "badge badge--uncertain";
+      label.textContent = stale ? "stale" : "location uncertain";
+      heading.textContent = stale ? STALE_HEADING : LOCATION_HEADING;
+      if (timeText) {
+        time.hidden = false;
+        time.textContent = STALE_UPDATED.replace("{time}", timeText);
+      } else {
+        time.hidden = true;
+        time.textContent = "";
+      }
+      body.textContent = bodyText;
+      if (staleIcon) {
+        staleIcon.hidden = !stale;
+      }
+      if (uncertainIcon) {
+        uncertainIcon.hidden = stale;
+      }
+    }
+
+    function syncQualityCard(body) {
+      if (displayFrozen) {
+        var iso = body && body.fetched_at ? body.fetched_at : "";
+        showQualityCard("stale", STALE_BODY, agoAmount(iso));
+        return;
+      }
+      var hero = body && body.buses ? featuredBus(body.buses) : null;
+      var chance = hero && hero.probability;
+      if (chance && chance.data_quality === "location uncertain") {
+        var metres = isFinite(userAccuracy) ? String(Math.round(userAccuracy)) : "";
+        showQualityCard("location", LOCATION_BODY.replace("{accuracy}", metres), "");
+        return;
+      }
+      hideQualityCard();
+    }
+
+    function appendMissed(item) {
+      var missed = document.createElement("div");
+      missed.className = "arrival-score";
+      missed.textContent = "Missed";
+      item.appendChild(missed);
+    }
+
+    function appendScore(item, bus) {
+      var chance = bus.probability;
+      if (!chance || typeof chance.point !== "number") {
+        return;
+      }
+      var score = document.createElement("div");
+      score.className = "arrival-score";
+      score.textContent = chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%)";
+      item.appendChild(score);
+      if (chance.data_quality === "location uncertain") {
+        var quality = document.createElement("div");
+        quality.className = "arrival-note";
+        quality.textContent = "Location uncertain";
+        item.appendChild(quality);
+      }
+      if (chance.reliability_label) {
+        var reliability = document.createElement("div");
+        reliability.className = "arrival-note";
+        reliability.textContent = chance.reliability_label;
+        item.appendChild(reliability);
+      }
+    }
+
+    function heroRoute() {
+      var route = document.createElement("div");
+      route.className = "hero-route";
+      var leg = activePlannedLeg();
+      if (leg) {
+        var badge = document.createElement("p");
+        badge.className = "leg-badge";
+        badge.textContent = "CURRENT LEG";
+        route.appendChild(badge);
+      }
+      var plate = document.createElement("span");
+      plate.className = "service-plate";
+      plate.textContent = selectedService || "";
+      var stopName = document.createElement("span");
+      stopName.className = "hero-path";
+      if (leg) {
+        stopName.textContent = (leg.boarding_stop_name || leg.boarding_stop_code)
+          + " → "
+          + (leg.alighting_stop_name || leg.alighting_stop_code);
+      } else {
+        stopName.textContent = selectedBoardingStop && selectedBoardingStop.description
+          ? selectedBoardingStop.description
+          : "";
+      }
+      route.appendChild(plate);
+      route.appendChild(stopName);
+      return route;
+    }
+
+    function activePlannedLeg() {
+      if (!activeRoutePlan || !activeRoutePlan.legs || !activeRoutePlan.leg_index) {
+        return null;
+      }
+      return activeRoutePlan.legs[activeRoutePlan.leg_index - 1] || null;
+    }
+
+    function appendHeroPoint(item, bus) {
+      var chance = bus.probability;
+      if (!chance || typeof chance.point !== "number") {
+        return;
+      }
+      var point = document.createElement("p");
+      point.className = "catch-point";
+      point.textContent = chance.point + "%";
+      var caption = document.createElement("p");
+      caption.className = "catch-caption";
+      caption.textContent = "catch probability";
+      item.appendChild(point);
+      item.appendChild(caption);
+    }
+
+    function resetPaceGuidance() {
+      paceShown = null;
+      pacePending = null;
+      paceFresh = true;
+    }
+
+    function smoothPace(raw, display, pending) {
+      if (raw !== "slower" && raw !== "slightly_slower") {
+        return { display: raw || null, pending: null };
+      }
+      if (display === null || display === raw) {
+        return { display: raw, pending: null };
+      }
+      if (PACE_RANK[display] < PACE_RANK[raw]) {
+        if (pending === raw) {
+          return { display: raw, pending: null };
+        }
+        return { display: display, pending: raw };
+      }
+      return { display: raw, pending: null };
+    }
+
+    function paceCategoryFor(raw) {
+      var category = raw || null;
+      if (paceFresh || paceRenderKey !== pacePollKey) {
+        var next = paceFresh
+          ? { display: category, pending: null }
+          : smoothPace(category, paceShown, pacePending);
+        paceShown = next.display;
+        pacePending = next.pending;
+        paceFresh = false;
+        pacePollKey = paceRenderKey;
+      }
+      return paceShown;
+    }
+
+    function paceChip(category) {
+      var text = PACE_TEXT[category];
+      if (!text) {
+        return null;
+      }
+      var chip = document.createElement("div");
+      chip.className = "pace-chip";
+      var badge = document.createElement("p");
+      badge.className = PACE_BADGE[category];
+      var title = document.createElement("span");
+      title.textContent = text.title;
+      badge.appendChild(title);
+      var detail = document.createElement("p");
+      detail.className = "field__hint";
+      detail.textContent = text.detail;
+      chip.appendChild(badge);
+      chip.appendChild(detail);
+      return chip;
+    }
+
+    function appendCatchReadout(item, meter, chance) {
+      var row = document.createElement("div");
+      row.className = "catch-readout";
+      row.appendChild(meter);
+      var chip = paceChip(paceCategoryFor(chance && chance.pace));
+      if (chip) {
+        row.appendChild(chip);
+      }
+      item.appendChild(row);
+    }
+
+    function appendCatchMeter(item, bus) {
+      var chance = bus.probability;
+      if (!chance || typeof chance.point !== "number") {
+        return;
+      }
+      if (typeof chance.range_low !== "number" || typeof chance.range_high !== "number") {
+        return;
+      }
+      var meter = document.createElement("div");
+      meter.className = "meter meter--ring catch-meter";
+      meter.setAttribute("role", "img");
+      meter.setAttribute(
+        "aria-label",
+        chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%)"
+      );
+      var dial = document.createElement("div");
+      dial.className = "meter__dial";
+      var ring = document.createElement("div");
+      ring.className = "meter__ring";
+      var tick40 = document.createElement("span");
+      tick40.className = "meter__tick meter__tick--40";
+      tick40.setAttribute("aria-hidden", "true");
+      var tick50 = document.createElement("span");
+      tick50.className = "meter__tick meter__tick--50";
+      tick50.setAttribute("aria-hidden", "true");
+      var center = document.createElement("div");
+      center.className = "meter__center";
+      var value = document.createElement("p");
+      value.className = "meter__value";
+      value.textContent = chance.point + "%";
+      var range = document.createElement("p");
+      range.className = "meter__range";
+      range.textContent = chance.range_low + "–" + chance.range_high + "%";
+      center.appendChild(value);
+      center.appendChild(range);
+      dial.appendChild(ring);
+      dial.appendChild(tick40);
+      dial.appendChild(tick50);
+      dial.appendChild(center);
+      var caption = document.createElement("p");
+      caption.className = "meter__caption";
+      var mark40 = document.createElement("span");
+      mark40.textContent = "40%";
+      var mark50 = document.createElement("span");
+      mark50.textContent = "50%";
+      caption.appendChild(mark40);
+      caption.appendChild(mark50);
+      meter.appendChild(dial);
+      meter.appendChild(caption);
+      var same = !!(lastMeter
+        && lastMeter.low === chance.range_low
+        && lastMeter.high === chance.range_high
+        && lastMeter.point === chance.point);
+      var from = lastMeter;
+      lastMeter = {
+        low: chance.range_low,
+        high: chance.range_high,
+        point: chance.point
+      };
+      function place(rangeLow, rangeHigh, rangePoint) {
+        var point = Math.min(100, Math.max(0, rangePoint));
+        ring.style.setProperty("--meter-sweep", String(point));
+      }
+      if (same || prefersReducedMotion()) {
+        meter.classList.add("is-instant");
+        place(chance.range_low, chance.range_high, chance.point);
+        appendCatchReadout(item, meter, chance);
+        return;
+      }
+      if (from) {
+        place(from.low, from.high, from.point);
+      } else {
+        place(0, 0, 0);
+      }
+      appendCatchReadout(item, meter, chance);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          place(chance.range_low, chance.range_high, chance.point);
+        });
+      });
+    }
+
+    function updatedAgo(iso) {
+      var at = new Date(iso).getTime();
+      if (!isFinite(at)) {
+        return "";
+      }
+      var seconds = Math.max(0, Math.round((Date.now() - at) / 1000));
+      return "Updated " + seconds + " seconds ago";
+    }
+
+    function countdownLabel(iso) {
+      var seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
+      if (seconds <= 30) {
+        return "Due";
+      }
+      if (seconds < 60) {
+        return "<1 min";
+      }
+      return Math.round(seconds / 60) + " min";
+    }
+
+    function formatTime(iso, withSeconds) {
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) {
+        return "";
+      }
+      var options = {
+        timeZone: "Asia/Singapore",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      };
+      if (withSeconds) {
+        options.second = "2-digit";
+      }
+      var parts = new Intl.DateTimeFormat("en-US", options).formatToParts(date);
+      var hour = "";
+      var minute = "";
+      var second = "";
+      var day = "";
+      parts.forEach(function (part) {
+        if (part.type === "hour") hour = part.value;
+        if (part.type === "minute") minute = part.value;
+        if (part.type === "second") second = part.value;
+        if (part.type === "dayPeriod") day = part.value.toUpperCase();
+      });
+      if (withSeconds) {
+        return hour + ":" + minute + ":" + second + " " + day;
+      }
+      return hour + ":" + minute + " " + day;
+    }
+
+    var destinationForm = document.getElementById("destination-form");
+    var destinationInput = document.getElementById("destination");
+    var destinationStatus = document.getElementById("destination-status");
+    var destinationResults = document.getElementById("destination-results");
+    var destinationSelected = document.getElementById("destination-selected");
+    var destinationSelectedLabel = document.getElementById("destination-selected-label");
+    var destinationSelectedAddress = document.getElementById("destination-selected-address");
+    var destinationSubmit = destinationForm.querySelector("button[type='submit']");
+    var destinationStopPanel = document.getElementById("destination-stop-panel");
+    var destinationStopStatus = document.getElementById("destination-stop-status");
+    var reachableStopList = document.getElementById("reachable-stops");
+    var unreachableStopList = document.getElementById("unreachable-stops");
+    var confirmDestinationStop = document.getElementById("confirm-destination-stop");
+    var destinationStopConfirmed = document.getElementById("destination-stop-confirmed");
+    var journeyPanel = document.getElementById("journey-panel");
+    var journeyPlace = document.getElementById("journey-place");
+    var journeyStop = document.getElementById("journey-stop");
+    var journeyService = document.getElementById("journey-service");
+    var journeyRide = document.getElementById("journey-ride");
+    var arriveByInput = document.getElementById("arrive-by");
+    var journeyComparison = document.getElementById("journey-comparison");
+    var journeyNote = document.getElementById("journey-note");
+    var journeyLeaveBy = document.getElementById("journey-leave-by");
+    var rerouteCard = document.getElementById("reroute-card");
+    var rerouteTitle = document.getElementById("reroute-title");
+    var rerouteMessage = document.getElementById("reroute-message");
+    var rerouteProbability = document.getElementById("reroute-probability");
+    var rerouteNone = document.getElementById("reroute-none");
+    var notificationPanel = document.getElementById("notification-panel");
+    var aiExplanationStatus = document.getElementById("ai-explanation-status");
+    var aiExplanationHeadline = document.getElementById("ai-explanation-headline");
+    var aiExplanationReasoning = document.getElementById("ai-explanation-reasoning");
+    var aiExplanationAdvice = document.getElementById("ai-explanation-advice");
+    var explanationRendered = false;
+    var lastExplainedLow = null;
+    var lastExplainedHigh = null;
+    var explanationInFlight = false;
+    var pendingExplanation = null;
+    var lastExplanationPack = null;
+    var explanationSerial = 0;
+    var destinationSearchInFlight = false;
+    var destinationStopsByCode = {};
+
+    function clearDestinationStops() {
+      destStopGeneration += 1;
+      selectedDestinationStop = null;
+      confirmedDestinationStop = null;
+      destinationStopsByCode = {};
+      reachableStopList.replaceChildren();
+      unreachableStopList.replaceChildren();
+      destinationStopStatus.textContent = "";
+      confirmDestinationStop.hidden = true;
+      destinationStopConfirmed.hidden = true;
+      destinationStopConfirmed.textContent = "";
+      destinationStopPanel.hidden = true;
+      clearJourneyPanel();
+      Object.keys(destMarkersByCode).forEach(function (code) {
+        map.removeLayer(destMarkersByCode[code]);
+      });
+      destMarkersByCode = {};
+      updateStepRail();
+    }
+
+    function clearDestinationSelection() {
+      selectedDestination = null;
+      destinationSelected.hidden = true;
+      destinationSelectedLabel.textContent = "";
+      destinationSelectedAddress.textContent = "";
+      clearDestinationStops();
+    }
+
+    function renderDestinationResults(results) {
+      destinationResults.replaceChildren();
+      results.forEach(function (result) {
+        var item = document.createElement("li");
+        var name = document.createElement("div");
+        name.className = "destination-label";
+        name.textContent = result.label || "";
+        var address = document.createElement("div");
+        address.className = "destination-address";
+        address.textContent = result.address || "";
+        var choose = document.createElement("button");
+        choose.type = "button";
+        choose.textContent = "Select";
+        choose.addEventListener("click", function () {
+          selectedDestination = {
+            id: result.id,
+            label: result.label,
+            address: result.address,
+            latitude: result.latitude,
+            longitude: result.longitude
+          };
+          destinationResults.querySelectorAll("li").forEach(function (entry) {
+            entry.classList.remove("selected");
+          });
+          item.classList.add("selected");
+          destinationSelected.hidden = false;
+          destinationSelectedLabel.textContent = result.label || "";
+          destinationSelectedAddress.textContent = result.address || "";
+          clearDestinationStops();
+          loadDestinationStops();
+        });
+        item.appendChild(name);
+        item.appendChild(address);
+        item.appendChild(choose);
+        destinationResults.appendChild(item);
+      });
+    }
+
+    function setDestinationStatus(text) {
+      destinationStatus.textContent = text;
+      destinationStatus.classList.toggle("searching", text === "Searching…");
+    }
+
+    destinationForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var query = destinationInput.value.trim();
+      if (!query) {
+        setDestinationStatus("Enter a destination.");
+        return;
+      }
+      if (destinationSearchInFlight) {
+        return;
+      }
+      destinationSearchInFlight = true;
+      destinationSubmit.disabled = true;
+      clearDestinationSelection();
+      destinationResults.replaceChildren();
+      setDestinationStatus("Searching…");
+      fetch("/api/destinations?q=" + encodeURIComponent(query))
+        .then(function (response) {
+          if (!response.ok) {
+            return response.json().then(function (body) {
+              return { failed: true, simulated: !!(body && body.simulated) };
+            }, function () {
+              return { failed: true };
+            });
+          }
+          return response.json().then(function (body) {
+            if (!body || body.status !== "ok" || !Array.isArray(body.results)) {
+              return { failed: true, simulated: !!(body && body.simulated) };
+            }
+            return { ok: true, results: body.results, simulated: body.simulated === true };
+          });
+        })
+        .then(function (result) {
+          setDestinationSimulated(!!(result && result.simulated));
+          if (!result || result.failed) {
+            setDestinationStatus("Destination search unavailable.");
+            destinationResults.replaceChildren();
+            return;
+          }
+          if (result.results.length === 0) {
+            setDestinationStatus("No matches found. Try a building, road, or postal code.");
+            destinationResults.replaceChildren();
+            return;
+          }
+          setDestinationStatus("");
+          renderDestinationResults(result.results);
+        })
+        .catch(function () {
+          setDestinationStatus("Destination search unavailable.");
+          destinationResults.replaceChildren();
+        })
+        .then(function () {
+          destinationSearchInFlight = false;
+          destinationSubmit.disabled = false;
+        });
+    });
+
+    function destStopIcon(reachable, selected) {
+      return L.divIcon({
+        className: "dest-marker marker--destination" + (selected ? " selected" : ""),
+        html: "<span class=\"marker__label\">End</span>",
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+    }
+
+    function copyDestinationStop(stop) {
+      return {
+        stop_code: stop.stop_code,
+        stop_name: stop.stop_name,
+        road_name: stop.road_name,
+        lat: stop.lat,
+        lon: stop.lon,
+        distance_m: stop.distance_m,
+        walk_minutes: stop.walk_minutes,
+        is_reachable: stop.is_reachable,
+        connecting_services: stop.connecting_services.slice(),
+        rough_journey_minutes: stop.rough_journey_minutes
+      };
+    }
+
+    function highlightDestinationStop(code) {
+      reachableStopList.querySelectorAll("li").forEach(function (item) {
+        item.classList.toggle("selected", item.getAttribute("data-stop-code") === code);
+      });
+      Object.keys(destMarkersByCode).forEach(function (markerCode) {
+        var stop = destinationStopsByCode[markerCode];
+        destMarkersByCode[markerCode].setIcon(destStopIcon(stop.is_reachable, markerCode === code));
+      });
+    }
+
+    function selectDestinationStop(stop) {
+      if (!stop || !stop.stop_code) {
+        return;
+      }
+      if (!confirmedDestinationStop || confirmedDestinationStop.stop_code !== stop.stop_code) {
+        confirmedDestinationStop = null;
+        destinationStopConfirmed.hidden = true;
+        destinationStopConfirmed.textContent = "";
+      }
+      selectedDestinationStop = copyDestinationStop(stop);
+      confirmDestinationStop.hidden = false;
+      highlightDestinationStop(stop.stop_code);
+    }
+
+    function renderDestinationStopCard(stop, list) {
+      var item = document.createElement("li");
+      item.setAttribute("data-stop-code", stop.stop_code);
+      if (!stop.is_reachable) {
+        item.classList.add("unreachable");
+      }
+      var name = document.createElement("div");
+      name.className = "destination-label";
+      name.textContent = stop.stop_name;
+      var code = document.createElement("div");
+      code.className = "destination-stop-meta";
+      code.textContent = stop.stop_code;
+      var road = document.createElement("div");
+      road.className = "destination-stop-meta";
+      road.textContent = stop.road_name || "";
+      var walk = document.createElement("div");
+      walk.textContent = stop.distance_m + " m · ~" + stop.walk_minutes + " min walk";
+      item.appendChild(name);
+      item.appendChild(code);
+      item.appendChild(road);
+      item.appendChild(walk);
+      if (!stop.is_reachable) {
+        var reach = document.createElement("div");
+        reach.className = "destination-stop-meta";
+        reach.textContent = "no direct bus from near you — a transfer may still work";
+        item.appendChild(reach);
+      }
+      var choose = document.createElement("button");
+      choose.type = "button";
+      choose.textContent = "Select";
+      choose.addEventListener("click", function () {
+        selectDestinationStop(stop);
+      });
+      item.appendChild(choose);
+      item.addEventListener("click", function (event) {
+        if (event.target === choose) {
+          return;
+        }
+        selectDestinationStop(stop);
+      });
+      list.appendChild(item);
+    }
+
+    function addDestinationMarker(stop) {
+      var marker = L.marker([stop.lat, stop.lon], {
+        icon: destStopIcon(stop.is_reachable, false),
+        zIndexOffset: stop.is_reachable ? 400 : 300
+      }).addTo(map);
+      marker.bindPopup(
+        stop.stop_name + " (" + stop.stop_code + ")",
+        mapPopupOptions()
+      );
+      marker.on("click", function () {
+        selectDestinationStop(stop);
+      });
+      destMarkersByCode[stop.stop_code] = marker;
+    }
+
+    function renderDestinationStops(body) {
+      destinationStopsByCode = {};
+      reachableStopList.replaceChildren();
+      unreachableStopList.replaceChildren();
+      body.reachable_stops.forEach(function (stop) {
+        destinationStopsByCode[stop.stop_code] = stop;
+        renderDestinationStopCard(stop, reachableStopList);
+        addDestinationMarker(stop);
+      });
+      body.unreachable_stops.forEach(function (stop) {
+        destinationStopsByCode[stop.stop_code] = stop;
+        renderDestinationStopCard(stop, reachableStopList);
+        addDestinationMarker(stop);
+      });
+      if (body.reachable_stops.length + body.unreachable_stops.length === 0) {
+        destinationStopStatus.textContent = "No destination stops were found within 600 m.";
+      } else {
+        destinationStopStatus.textContent = "";
+      }
+      var points = [];
+      Object.keys(destMarkersByCode).forEach(function (code) {
+        points.push(destMarkersByCode[code].getLatLng());
+      });
+      if (userMarker) {
+        points.push(userMarker.getLatLng());
+      }
+      if (points.length > 1) {
+        map.fitBounds(L.latLngBounds(points), { padding: [24, 24], maxZoom: 16 });
+      }
+    }
+
+    function loadDestinationStops() {
+      if (!selectedDestination) {
+        return;
+      }
+      if (userLat === null || userLon === null) {
+        destinationStopPanel.hidden = false;
+        destinationStopStatus.textContent = "Location unavailable. Destination stops need your current location.";
+        return;
+      }
+      var generation = ++destStopGeneration;
+      destinationStopPanel.hidden = false;
+      destinationStopStatus.textContent = "Finding destination stops…";
+      var url = "/api/destination-stops?dest_lat=" + encodeURIComponent(selectedDestination.latitude)
+        + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude)
+        + "&user_lat=" + encodeURIComponent(userLat)
+        + "&user_lon=" + encodeURIComponent(userLon);
+      fetch(url)
+        .then(function (response) {
+          if (generation !== destStopGeneration) {
+            return null;
+          }
+          if (!response.ok) {
+            return { failed: true };
+          }
+          return response.json().then(function (body) {
+            if (!body || body.status !== "ok" || !Array.isArray(body.reachable_stops) || !Array.isArray(body.unreachable_stops)) {
+              return { failed: true };
+            }
+            return { ok: true, body: body };
+          });
+        })
+        .then(function (result) {
+          if (!result || generation !== destStopGeneration) {
+            return;
+          }
+          if (result.failed) {
+            destinationStopStatus.textContent = "Destination stops are unavailable.";
+            return;
+          }
+          renderDestinationStops(result.body);
+        })
+        .catch(function () {
+          if (generation === destStopGeneration) {
+            destinationStopStatus.textContent = "Destination stops are unavailable.";
+          }
+        });
+    }
+
+    function clearRoutePlan() {
+      routePlanGeneration += 1;
+      activeRoutePlan = null;
+      routePlanStatus = null;
+      var panel = document.getElementById("route-plan");
+      var body = document.getElementById("route-plan-body");
+      if (body) {
+        body.className = "";
+        body.replaceChildren();
+      }
+      if (typeof clearRoutePreview === "function") {
+        clearRoutePreview();
+      }
+      if (panel) {
+        panel.classList.remove("journey-advanced");
+        panel.hidden = true;
+      }
+    }
+
+    function loadRoutePlan() {
+      if (!confirmedDestinationStop || !selectedBoardingStop || !selectedDestination) {
+        return;
+      }
+      if (userLat === null || userLon === null) {
+        return;
+      }
+      var generation = ++routePlanGeneration;
+      var boardingCode = selectedBoardingStop.stop_code;
+      activeRoutePlan = null;
+      var panel = document.getElementById("route-plan");
+      var host = document.getElementById("route-plan-body");
+      if (host) {
+        host.className = "";
+        host.replaceChildren();
+        var planning = document.createElement("p");
+        planning.textContent = "Planning the bus connection…";
+        host.appendChild(planning);
+      }
+      if (panel) {
+        panel.hidden = false;
+      }
+      var url = "/api/route-plan?boarding_stop_code=" + encodeURIComponent(boardingCode)
+        + "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code)
+        + "&user_lat=" + encodeURIComponent(userLat)
+        + "&user_lon=" + encodeURIComponent(userLon)
+        + "&dest_lat=" + encodeURIComponent(selectedDestination.latitude)
+        + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude);
+      if (nearbyBoardingStops.length) {
+        url += "&alternate_stops=" + encodeURIComponent(nearbyBoardingStops.map(function (stop) {
+          return stop.stop_code;
+        }).join(","));
+      }
+      fetch(url)
+        .then(function (response) {
+          if (generation !== routePlanGeneration) {
+            return null;
+          }
+          if (!response.ok) {
+            return { failed: true };
+          }
+          return response.json().then(function (body) {
+            if (!body || typeof body.route_status !== "string") {
+              return { failed: true };
+            }
+            return { ok: true, body: body };
+          });
+        })
+        .then(function (result) {
+          if (!result || generation !== routePlanGeneration) {
+            return;
+          }
+          if (!selectedBoardingStop || selectedBoardingStop.stop_code !== boardingCode) {
+            return;
+          }
+          if (result.failed) {
+            clearRoutePlan();
+            return;
+          }
+          applyRoutePlan(result.body);
+        })
+        .catch(function () {
+          if (generation === routePlanGeneration) {
+            clearRoutePlan();
+          }
+        });
+    }
+
+    function alternateBoardingCard(body) {
+      var stop = body.alternate_stop;
+      var card = document.createElement("div");
+      card.className = "route-card ticket";
+      var title = document.createElement("p");
+      title.className = "route-kicker";
+      title.textContent = "Try this nearby boarding stop instead.";
+      var note = document.createElement("p");
+      note.textContent = body.message || "A route is available from a nearby stop.";
+      var name = document.createElement("p");
+      name.className = "route-name";
+      name.textContent = stop.description || stop.stop_code;
+      var distance = document.createElement("p");
+      distance.textContent = typeof stop.distance_m === "number" ? stop.distance_m + " m away" : "";
+      var service = document.createElement("p");
+      service.textContent = "Take Bus " + (stop.services || []).join(" → ");
+      var kind = document.createElement("p");
+      kind.textContent = stop.route_type === "one_transfer" ? "1 transfer" : "Direct";
+      if (stop.transfer_stop_name) {
+        kind.textContent += " at " + stop.transfer_stop_name;
+      }
+      var time = document.createElement("p");
+      time.textContent = typeof stop.generalized_time_minutes === "number"
+        ? "Estimated journey: ~" + Math.round(stop.generalized_time_minutes) + " min"
+        : "";
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "primary";
+      button.textContent = "Use This Stop";
+      button.addEventListener("click", function () {
+        var match = null;
+        nearbyBoardingStops.forEach(function (item) {
+          if (item.stop_code === stop.stop_code) {
+            match = item;
+          }
+        });
+        if (!match) {
+          return;
+        }
+        selectedBoardingStop = match;
+        loadRoutePlan();
+      });
+      card.appendChild(title);
+      card.appendChild(note);
+      card.appendChild(name);
+      card.appendChild(distance);
+      card.appendChild(service);
+      card.appendChild(kind);
+      card.appendChild(time);
+      card.appendChild(button);
+      return card;
+    }
+
+    function applyRoutePlan(body) {
+      var panel = document.getElementById("route-plan");
+      var host = document.getElementById("route-plan-body");
+      if (!panel || !host) {
+        return;
+      }
+      if (body && body.route_status === "alternate_boarding" && body.alternate_stop) {
+        activeRoutePlan = null;
+        routePlanStatus = "alternate_boarding";
+        host.className = "";
+        host.replaceChildren();
+        host.appendChild(alternateBoardingCard(body));
+        panel.hidden = false;
+        return;
+      }
+      if (!body || body.route_status === "no_feasible_route" || body.route_status === "unrankable") {
+        activeRoutePlan = null;
+        routePlanStatus = body && body.route_status === "unrankable" ? "unrankable" : "no_feasible_route";
+        panel.classList.remove("journey-advanced");
+        host.className = "";
+        host.replaceChildren();
+        var message = document.createElement("p");
+        message.textContent = routePlanStatus === "unrankable" ? UNRANKABLE_ROUTE : NO_FEASIBLE_ROUTE;
+        host.appendChild(message);
+        panel.hidden = false;
+        if (routePlanStatus === "unrankable") {
+          journeyService.textContent = "";
+          journeyRide.textContent = "";
+          journeyComparison.textContent = "";
+          journeyNote.textContent = "";
+        }
+        return;
+      }
+      if (!Array.isArray(body.legs) || !body.legs.length || (body.route_type !== "direct" && body.route_type !== "one_transfer")) {
+        activeRoutePlan = null;
+        host.replaceChildren();
+        panel.hidden = true;
+        return;
+      }
+      routePlanStatus = "options";
+      activeRoutePlan = null;
+      renderRouteOptions(body);
+      if (journeyPanel) {
+        journeyPanel.hidden = false;
+      }
+    }
+
+    function legLatLngs(leg) {
+      return (leg.stops || []).filter(function (stop) {
+        return typeof stop.latitude === "number" && typeof stop.longitude === "number";
+      }).map(function (stop) {
+        return [stop.latitude, stop.longitude];
+      });
+    }
+
+    function clearRoutePreview() {
+      routePreviewLayers.forEach(function (layer) { map.removeLayer(layer); });
+      routeRoleMarkers.forEach(function (layer) { map.removeLayer(layer); });
+      routePreviewLayers = [];
+      routeRoleMarkers = [];
+    }
+
+    function routePin(latlng, label) {
+      if (!latlng) {
+        return;
+      }
+      var marker = L.marker(latlng, {
+        keyboard: false,
+        icon: L.divIcon({
+          className: "route-pin route-pin-" + label.toLowerCase(),
+          html: label,
+          iconSize: [92, 24],
+          iconAnchor: [46, 12]
+        })
+      }).addTo(map);
+      routeRoleMarkers.push(marker);
+    }
+
+    function highlightJourneyRoute(option) {
+      clearRoutePreview();
+      if (!option || !option.legs || !option.legs.length) {
+        return;
+      }
+      var bounds = [];
+      function remember(points) {
+        points.forEach(function (point) { bounds.push(point); });
+      }
+      var first = legLatLngs(option.legs[0]);
+      if (userLat !== null && userLon !== null && first.length) {
+        var approach = L.polyline([[userLat, userLon], first[0]], {
+          color: cssToken("--color-primary"),
+          dashArray: "5, 10",
+          weight: 3
+        }).addTo(map);
+        routePreviewLayers.push(approach);
+        remember([[userLat, userLon], first[0]]);
+      }
+      option.legs.forEach(function (leg, index) {
+        var points = legLatLngs(leg);
+        if (points.length < 2) {
+          return;
+        }
+        var line = L.polyline(points, {
+          color: index === 0 ? cssToken("--color-primary") : cssToken("--fill-warning"),
+          weight: 5
+        }).addTo(map);
+        routePreviewLayers.push(line);
+        remember(points);
+      });
+      if (option.legs.length > 1) {
+        var legA = legLatLngs(option.legs[0]);
+        var legB = legLatLngs(option.legs[1]);
+        var leave = legA[legA.length - 1];
+        var join = legB[0];
+        if (leave && join && (leave[0] !== join[0] || leave[1] !== join[1])) {
+          var transferWalk = L.polyline([leave, join], {
+            color: cssToken("--color-primary"),
+            dashArray: "5, 10",
+            weight: 3
+          }).addTo(map);
+          routePreviewLayers.push(transferWalk);
+          remember([leave, join]);
+        }
+      }
+      var last = legLatLngs(option.legs[option.legs.length - 1]);
+      routePin(first[0], "BOARD");
+      if (option.legs.length > 1) {
+        routePin(first[first.length - 1], "TRANSFER");
+      }
+      routePin(last[last.length - 1], "DESTINATION");
+      if (bounds.length) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [28, 28], maxZoom: 16 });
+      }
+      if (map.invalidateSize) {
+        map.invalidateSize();
+      }
+    }
+
+    function walkPhrase(metres) {
+      if (typeof metres !== "number" || !isFinite(metres)) {
+        return "";
+      }
+      var minutes = Math.max(1, Math.round(metres / 1.25 / 60));
+      return Math.round(metres) + " m · ~" + minutes + " min walk";
+    }
+
+    function renderRouteOptions(body) {
+      var panel = document.getElementById("route-plan");
+      var host = document.getElementById("route-plan-body");
+      var options = body && Array.isArray(body.options) && body.options.length ? body.options : [body];
+      options = options.slice(0, 3);
+      host.className = "route-choices";
+      host.replaceChildren();
+      function showRoute(option, card) {
+        host.querySelectorAll(".route-choice").forEach(function (item) {
+          var chosen = item === card;
+          item.classList.toggle("selected", chosen);
+          item.querySelector(".route-detail").hidden = !chosen;
+          var flag = item.querySelector(".route-chosen");
+          if (flag) {
+            flag.hidden = !chosen;
+          }
+        });
+        highlightJourneyRoute(option);
+      }
+      options.forEach(function (option, index) {
+        var card = document.createElement("article");
+        card.className = "route-choice";
+        card.tabIndex = 0;
+        var label = document.createElement("p");
+        label.className = "route-kicker";
+        label.textContent = option.label || "Fastest Route";
+        var kind = document.createElement("p");
+        kind.textContent = option.route_type === "one_transfer" ? "1 Transfer" : "Direct";
+        var plates = document.createElement("div");
+        plates.className = "plate-row";
+        (option.legs || []).forEach(function (leg, legIndex) {
+          if (legIndex > 0) {
+            var arrow = document.createElement("span");
+            arrow.textContent = option.transfer_distance_m > 0 ? "→ walk →" : "→";
+            plates.appendChild(arrow);
+          }
+          var plate = document.createElement("span");
+          plate.className = "service-plate";
+          plate.textContent = leg.service_no;
+          plates.appendChild(plate);
+        });
+        var time = document.createElement("p");
+        time.className = "route-duration";
+        time.textContent = typeof option.generalized_time_minutes === "number"
+          ? "Estimated ~" + Math.round(option.generalized_time_minutes) + " min total"
+          : "";
+        var walks = document.createElement("p");
+        var walkBits = [];
+        var boardPoint = option.legs && option.legs[0] && legLatLngs(option.legs[0])[0];
+        if (boardPoint && userLat !== null && userLon !== null) {
+          walkBits.push("Walk " + walkPhrase(haversineMetres(userLat, userLon, boardPoint[0], boardPoint[1])));
+        }
+        if (option.transfer_distance_m > 0) {
+          walkBits.push("Transfer walk " + walkPhrase(option.transfer_distance_m));
+        }
+        walks.className = "route-walks";
+        walks.textContent = walkBits.join(" · ");
+        var detail = document.createElement("div");
+        detail.className = "route-detail";
+        detail.hidden = true;
+        (option.legs || []).forEach(function (leg, legIndex) {
+          var heading = document.createElement("p");
+          heading.textContent = "LEG " + (legIndex + 1);
+          detail.appendChild(heading);
+          var list = document.createElement("div");
+          list.className = "route-stop-list";
+          (leg.stops || []).forEach(function (stop, stopIndex) {
+            var row = document.createElement("p");
+            row.className = "stop-line";
+            var named = stopIndex === 0
+              ? (leg.boarding_stop_name || stop.stop_code)
+              : stopIndex === leg.stops.length - 1
+                ? (leg.alighting_stop_name || stop.stop_code)
+                : stop.stop_code;
+            row.textContent = named;
+            list.appendChild(row);
+          });
+          detail.appendChild(list);
+        });
+        var chosen = document.createElement("p");
+        chosen.className = "route-chosen";
+        chosen.hidden = true;
+        chosen.textContent = "Selected";
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "primary";
+        button.textContent = "Select & Start Journey";
+        button.addEventListener("click", function (event) {
+          event.stopPropagation();
+          selectPlannedRoute(option);
+        });
+        card.addEventListener("click", function () {
+          showRoute(option, card);
+        });
+        card.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            showRoute(option, card);
+          }
+        });
+        card.appendChild(label);
+        card.appendChild(kind);
+        card.appendChild(plates);
+        card.appendChild(time);
+        card.appendChild(walks);
+        card.appendChild(chosen);
+        card.appendChild(detail);
+        card.appendChild(button);
+        host.appendChild(card);
+        if (index === 0) {
+          showRoute(option, card);
+        }
+      });
+      panel.hidden = false;
+      hideLegControls();
+      requestAnimationFrame(function () {
+        if (map && map.invalidateSize) {
+          map.invalidateSize();
+        }
+      });
+    }
+
+    function selectPlannedRoute(option) {
+      if (!option || !option.legs || !option.legs.length) {
+        return;
+      }
+      highlightJourneyRoute(option);
+      stopJourneyWatch();
+      routePlanStatus = "ok";
+      activeRoutePlan = {
+        route_type: option.route_type,
+        route_status: "ok",
+        legs: option.legs,
+        leg_index: 1,
+        transfer_stop_code: option.transfer_stop_code || null,
+        transfer_stop_name: option.transfer_stop_name || null,
+        origin_stop_code: option.legs[0].boarding_stop_code,
+        label: option.label
+      };
+      onBoard = false;
+      fiveMinuteNotifiedKey = null;
+      resetPaceGuidance();
+      beginPlannedLeg();
+      renderRouteStrip();
+      showJourneyControls();
+      if (activeRoutePlan.route_type === "one_transfer") {
+        loadJourney();
+        startJourneyWatch();
+      }
+    }
+
+    function hideLegControls() {
+      var ids = ["im-on-board", "on-board-note", "transfer-prompt", "track-leg-2", "missed-stop", "catch-warning"];
+      ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.hidden = true;
+        }
+      });
+    }
+
+    function showJourneyControls() {
+      var home = document.getElementById("back-home");
+      var board = document.getElementById("im-on-board");
+      if (home) {
+        home.hidden = false;
+      }
+      if (board && activeRoutePlan && activeRoutePlan.leg_index === 1) {
+        board.hidden = false;
+      }
+    }
+
+    function beginPlannedLeg() {
+      if (!activeRoutePlan || !activeRoutePlan.legs) {
+        return;
+      }
+      var leg = activeRoutePlan.legs[activeRoutePlan.leg_index - 1];
+      if (!leg) {
+        return;
+      }
+      if (activeRoutePlan.leg_index >= 2) {
+        selectedBoardingStop = {
+          stop_code: leg.boarding_stop_code,
+          description: leg.boarding_stop_name || leg.boarding_stop_code,
+          services: [leg.service_no]
+        };
+        renderServiceChoices(selectedBoardingStop);
+      } else if (selectedBoardingStop) {
+        var services = selectedBoardingStop.services ? selectedBoardingStop.services.slice() : [];
+        if (services.indexOf(leg.service_no) === -1) {
+          services.push(leg.service_no);
+          selectedBoardingStop.services = services;
+          renderServiceChoices(selectedBoardingStop);
+        }
+      }
+      var already = monitoringActive
+        && selectedService === leg.service_no
+        && selectedBoardingStop
+        && selectedBoardingStop.stop_code === leg.boarding_stop_code;
+      if (!already) {
+        startMonitoring(leg.service_no);
+      }
+    }
+
+    function startNextLeg() {
+      if (!activeRoutePlan || activeRoutePlan.route_type !== "one_transfer" || activeRoutePlan.leg_index !== 1) {
+        return;
+      }
+      if (!activeRoutePlan.legs || activeRoutePlan.legs.length < 2) {
+        return;
+      }
+      onBoard = false;
+      stopJourneyWatch();
+      activeRoutePlan.leg_index = 2;
+      lastRerouteAt = null;
+      pinnedEtaTimestamp = null;
+      lastNotifiedBusId = null;
+      fiveMinuteNotifiedKey = null;
+      resetPaceGuidance();
+      resetExplanationState();
+      clearRerouteState();
+      document.getElementById("im-on-board").hidden = true;
+      document.getElementById("on-board-note").hidden = true;
+      beginPlannedLeg();
+      renderRouteStrip();
+      markJourneyAdvance();
+    }
+
+    function syncPlannedLegAfterReroute(reroute) {
+      if (!activeRoutePlan || !activeRoutePlan.legs || !reroute || !reroute.stop) {
+        return;
+      }
+      var planned = activeRoutePlan.legs[activeRoutePlan.leg_index - 1];
+      if (!planned) {
+        return;
+      }
+      routePlateSwap = planned.service_no !== reroute.service_no || planned.boarding_stop_code !== reroute.stop.stop_code;
+      planned.service_no = reroute.service_no;
+      planned.boarding_stop_code = reroute.stop.stop_code;
+      if (reroute.stop.description) {
+        planned.boarding_stop_name = reroute.stop.description;
+      }
+      renderRouteStrip();
+    }
+
+    function renderRouteStrip() {
+      var panel = document.getElementById("route-plan");
+      var host = document.getElementById("route-plan-body");
+      if (!panel || !host || !activeRoutePlan || !activeRoutePlan.legs || !activeRoutePlan.legs.length) {
+        return;
+      }
+      host.replaceChildren();
+      host.className = "journey-timeline";
+      var legs = activeRoutePlan.legs;
+      var active = activeRoutePlan.leg_index || 1;
+      var first = legs[0];
+      host.appendChild(routeStopNode(
+        first.boarding_stop_name || first.boarding_stop_code,
+        first.boarding_stop_code,
+        active > 1 ? "done" : "here",
+        active > 1 ? "COMPLETED" : "YOUR BOARDING STOP"
+      ));
+      legs.forEach(function (leg, index) {
+        host.appendChild(routeLegNode(leg, index + 1));
+        if (activeRoutePlan.route_type === "one_transfer" && index === 0 && legs.length > 1) {
+          host.appendChild(routeTransferNode(leg, active > 1 ? "done" : "ready"));
+        }
+      });
+      var last = legs[legs.length - 1];
+      host.appendChild(routeStopNode(
+        last.alighting_stop_name || last.alighting_stop_code,
+        last.alighting_stop_code,
+        "anchor",
+        "Confirmed destination stop"
+      ));
+      if (selectedDestination && selectedDestination.label) {
+        host.appendChild(routePlaceNode(selectedDestination.label));
+      }
+      panel.hidden = false;
+    }
+
+    function routeMark(state) {
+      var mark = document.createElement("span");
+      mark.className = "journey-mark";
+      mark.setAttribute("aria-hidden", "true");
+      mark.textContent = state === "done" ? "✓" : state === "future" ? "○" : "●";
+      return mark;
+    }
+
+    function routeStopNode(name, code, state, kickerText) {
+      var stop = document.createElement("div");
+      stop.className = "route-stop " + state;
+      stop.appendChild(routeMark(state));
+      var card = document.createElement("div");
+      card.className = "route-card";
+      var kicker = document.createElement("p");
+      kicker.className = "route-kicker";
+      kicker.textContent = kickerText;
+      var title = document.createElement("p");
+      title.className = "route-name";
+      title.textContent = name + " (" + code + ")";
+      card.appendChild(kicker);
+      card.appendChild(title);
+      stop.appendChild(card);
+      return stop;
+    }
+
+    function routePlaceNode(label) {
+      var place = document.createElement("div");
+      place.className = "route-place";
+      place.appendChild(routeMark("here"));
+      var card = document.createElement("div");
+      card.className = "route-card";
+      var kicker = document.createElement("p");
+      kicker.className = "route-kicker";
+      kicker.textContent = "DESTINATION";
+      var title = document.createElement("p");
+      title.className = "route-name";
+      title.textContent = "🎯 " + label;
+      card.appendChild(kicker);
+      card.appendChild(title);
+      place.appendChild(card);
+      return place;
+    }
+
+    function routeLegNode(leg, index) {
+      var planIndex = activeRoutePlan ? activeRoutePlan.leg_index : 1;
+      var current = planIndex === index;
+      var upcoming = index > planIndex;
+      var state = current ? "current" : upcoming ? "future" : "done";
+      var block = document.createElement("div");
+      block.className = "route-leg " + state;
+      block.appendChild(routeMark(state));
+      var card = document.createElement("div");
+      card.className = "route-card";
+      var kicker = document.createElement("p");
+      kicker.className = "route-kicker";
+      kicker.textContent = current ? "CURRENT LEG" : upcoming ? "FUTURE LEG" : "COMPLETED";
+      card.appendChild(kicker);
+      var plate = document.createElement("span");
+      plate.className = "service-plate";
+      if (current && routePlateSwap) {
+        plate.classList.add("plate-swap");
+        routePlateSwap = false;
+      }
+      plate.textContent = leg.service_no;
+      card.appendChild(plate);
+      var path = document.createElement("p");
+      path.className = "route-path";
+      path.textContent = (leg.boarding_stop_name || leg.boarding_stop_code)
+        + " → "
+        + (leg.alighting_stop_name || leg.alighting_stop_code);
+      card.appendChild(path);
+      if (current) {
+        appendActiveCatch(card);
+      } else if (upcoming) {
+        var note = document.createElement("p");
+        note.textContent = FUTURE_LEG_NOTE;
+        card.appendChild(note);
+        if (typeof leg.published_headway_minutes === "number") {
+          var schedule = document.createElement("p");
+          schedule.textContent = "Scheduled about every " + leg.published_headway_minutes + " minutes";
+          card.appendChild(schedule);
+        }
+      }
+      block.appendChild(card);
+      return block;
+    }
+
+    function routeTransferNode(leg, state) {
+      var block = document.createElement("div");
+      block.className = "route-transfer " + state;
+      block.appendChild(routeMark(state === "done" ? "done" : "here"));
+      var card = document.createElement("div");
+      card.className = "route-card";
+      var kicker = document.createElement("p");
+      kicker.className = "route-kicker";
+      kicker.textContent = state === "done" ? "TRANSFER COMPLETE" : "🔄 CHANGE BUS";
+      var name = document.createElement("p");
+      name.className = "route-name";
+      name.textContent = (leg.alighting_stop_name || leg.alighting_stop_code) + " (" + leg.alighting_stop_code + ")";
+      card.appendChild(kicker);
+      card.appendChild(name);
+      if (activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.leg_index === 1) {
+        var prompt = document.createElement("p");
+        prompt.className = "route-prompt";
+        prompt.textContent = "Next action:";
+        var button = document.createElement("button");
+        button.type = "button";
+        button.id = "start-next-leg";
+        button.textContent = "Start Next Leg →";
+        button.addEventListener("click", startNextLeg);
+        card.appendChild(prompt);
+        card.appendChild(button);
+      }
+      block.appendChild(card);
+      return block;
+    }
+
+    function appendActiveCatch(block) {
+      var fresh = lastSuccess && !displayFrozen && successAgeMs() <= STALE_MS;
+      var primary = fresh && lastSuccess.buses ? featuredBus(lastSuccess.buses) : null;
+      var chance = primary && primary.probability;
+      if (chance && typeof chance.point === "number" && !primary.is_missed) {
+        var chanceLabel = document.createElement("p");
+        chanceLabel.className = "route-kicker";
+        chanceLabel.textContent = "Catch chance:";
+        var point = document.createElement("p");
+        point.className = "route-chance";
+        point.textContent = chance.point + "%";
+        var range = document.createElement("p");
+        range.textContent = "range " + chance.range_low + "–" + chance.range_high + "%";
+        block.appendChild(chanceLabel);
+        block.appendChild(point);
+        block.appendChild(range);
+      }
+      if (fresh && lastSuccess.leave_by && journeyLeaveBy.textContent.indexOf("Unavailable") === -1) {
+        var leaveLabel = document.createElement("p");
+        leaveLabel.className = "route-kicker";
+        leaveLabel.textContent = "Leave by:";
+        var leave = document.createElement("p");
+        leave.className = "route-leave";
+        leave.textContent = formatTime(lastSuccess.leave_by, true);
+        block.appendChild(leaveLabel);
+        block.appendChild(leave);
+      }
+    }
+
+    function markJourneyAdvance() {
+      var panel = document.getElementById("route-plan");
+      if (!panel || prefersReducedMotion()) {
+        return;
+      }
+      panel.classList.remove("journey-advanced");
+      if (arrivalCard) {
+        arrivalCard.classList.remove("journey-advanced");
+      }
+      void panel.offsetWidth;
+      panel.classList.add("journey-advanced");
+      if (arrivalCard) {
+        arrivalCard.classList.add("journey-advanced");
+      }
+    }
+
+    function clearJourneyPanel() {
+      journeyPanel.hidden = true;
+      journeyPlace.textContent = "";
+      journeyStop.textContent = "";
+      journeyService.textContent = "";
+      journeyRide.textContent = "";
+      journeyComparison.textContent = "";
+      journeyNote.textContent = "";
+      journeyLeaveBy.textContent = "";
+      var leaveContext = document.getElementById("leave-context");
+      if (leaveContext) {
+        leaveContext.textContent = "";
+      }
+      setLeaveBySimulated(false);
+      updateLeaveCountdown();
+      syncArriveBySummary();
+      clearRoutePlan();
+      clearLeaveNowState();
+      clearRerouteState();
+      resetExplanationState();
+      renderNotificationPermission();
+      updateStepRail();
+    }
+
+    function renderLeaveContext(fresh) {
+      var context = document.getElementById("leave-context");
+      if (!context) {
+        return;
+      }
+      if (!fresh || !selectedService || !selectedBoardingStop) {
+        context.textContent = "";
+        return;
+      }
+      var from = selectedBoardingStop.description || selectedBoardingStop.stop_code;
+      context.textContent = "Bus " + selectedService + " from " + from;
+    }
+
+    function renderJourneyLeaveBy() {
+      if (journeyPanel.hidden) {
+        renderLeaveContext(false);
+        setLeaveBySimulated(false);
+        updateLeaveCountdown();
+        renderRouteStrip();
+        return;
+      }
+      var fresh = lastSuccess && lastSuccess.leave_by && !displayFrozen && successAgeMs() <= STALE_MS;
+      if (!fresh) {
+        journeyLeaveBy.textContent = "Leave-by: Unavailable";
+        renderLeaveContext(false);
+        setLeaveBySimulated(false);
+        updateLeaveCountdown();
+        renderRouteStrip();
+        return;
+      }
+      journeyLeaveBy.textContent = "Leave-by: " + formatTime(lastSuccess.leave_by, true);
+      renderLeaveContext(true);
+      setLeaveBySimulated(lastSuccess.simulated === true);
+      updateLeaveCountdown();
+      renderRouteStrip();
+    }
+
+    function updateLeaveCountdown() {
+      var countdown = document.getElementById("journey-leave-countdown");
+      var section = document.getElementById("leave-by-section");
+      if (!countdown) {
+        return;
+      }
+      var fresh = !journeyPanel.hidden
+        && lastSuccess
+        && lastSuccess.leave_by
+        && !displayFrozen
+        && successAgeMs() <= STALE_MS;
+      if (!fresh) {
+        countdown.hidden = true;
+        countdown.textContent = "";
+        if (section) {
+          section.classList.remove("leave-soon");
+          section.classList.remove("leave-now-active");
+        }
+        return;
+      }
+      var at = new Date(lastSuccess.leave_by).getTime();
+      if (!isFinite(at)) {
+        countdown.hidden = true;
+        countdown.textContent = "";
+        if (section) {
+          section.classList.remove("leave-soon");
+          section.classList.remove("leave-now-active");
+        }
+        return;
+      }
+      var seconds = Math.max(0, Math.round((at - Date.now()) / 1000));
+      countdown.hidden = false;
+      countdown.textContent = "Leave in " + formatRemaining(seconds);
+      if (section) {
+        section.classList.toggle("leave-soon", seconds <= 60);
+        var notice = lastSuccess.leave_now;
+        section.classList.toggle("leave-now-active", !!(notice && notice.eligible === true));
+      }
+    }
+
+    function formatRemaining(seconds) {
+      var hours = Math.floor(seconds / 3600);
+      var minutes = Math.floor((seconds % 3600) / 60);
+      var secs = seconds % 60;
+      function pad(value) {
+        return value < 10 ? "0" + value : String(value);
+      }
+      if (hours > 0) {
+        return hours + ":" + pad(minutes) + ":" + pad(secs);
+      }
+      return minutes + ":" + pad(secs);
+    }
+
+    function formatArriveByDisplay(value) {
+      var parts = String(value).split("T");
+      if (parts.length !== 2) {
+        return value;
+      }
+      return parts[0] + " " + parts[1];
+    }
+
+    function syncArriveBySummary() {
+      var line = document.getElementById("arrive-by-chosen");
+      var text = document.getElementById("arrive-by-chosen-text");
+      if (!line || !text || !arriveByInput) {
+        return;
+      }
+      if (!arriveByInput.value) {
+        line.hidden = true;
+        text.textContent = "";
+        return;
+      }
+      line.hidden = false;
+      text.textContent = "Arrive by: " + formatArriveByDisplay(arriveByInput.value) + " ";
+    }
+
+    function renderJourney(body) {
+      syncArriveBySummary();
+      var services = Array.isArray(body.connecting_services) ? body.connecting_services : [];
+      if (selectedService && services.indexOf(selectedService) !== -1) {
+        journeyService.textContent = "Connecting service: " + selectedService;
+      } else if (services.length) {
+        journeyService.textContent = "Connecting service: " + services.join(", ");
+      } else {
+        journeyService.textContent = "Connecting service: none";
+      }
+      if (routePlanStatus === "unrankable") {
+        journeyService.textContent = "";
+        journeyRide.textContent = "";
+        journeyComparison.textContent = "";
+        journeyNote.textContent = "";
+        renderJourneyLeaveBy();
+        return;
+      }
+      journeyRide.textContent = body.ride_label || "";
+      journeyComparison.textContent = body.comparison_label || "";
+      journeyNote.textContent = body.comparison_note || "";
+      renderJourneyLeaveBy();
+    }
+
+    function loadJourney() {
+      syncArriveBySummary();
+      if (!confirmedDestinationStop || !selectedDestination) {
+        return;
+      }
+      if (userLat === null || userLon === null) {
+        journeyRide.textContent = "Ride time: Unavailable";
+        journeyComparison.textContent = "";
+        journeyNote.textContent = "";
+        journeyLeaveBy.textContent = "Leave-by: Unavailable";
+        setLeaveBySimulated(false);
+        updateLeaveCountdown();
+        return;
+      }
+      var url = "/api/journey?dest_lat=" + encodeURIComponent(selectedDestination.latitude)
+        + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude)
+        + "&user_lat=" + encodeURIComponent(userLat)
+        + "&user_lon=" + encodeURIComponent(userLon)
+        + "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code);
+      if (selectedBoardingStop && selectedBoardingStop.stop_code) {
+        url += "&boarding_stop_code=" + encodeURIComponent(selectedBoardingStop.stop_code);
+      }
+      if (selectedService) {
+        url += "&service_no=" + encodeURIComponent(selectedService);
+      }
+      if (arriveByInput.value) {
+        url += "&arrive_by=" + encodeURIComponent(arriveByInput.value);
+      }
+      if (activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.legs && activeRoutePlan.legs.length >= 2) {
+        var firstLeg = activeRoutePlan.legs[0];
+        var secondLeg = activeRoutePlan.legs[1];
+        url += "&transfer=1";
+        if (typeof firstLeg.ride_minutes === "number" && isFinite(firstLeg.ride_minutes)) {
+          url += "&leg1_ride_minutes=" + encodeURIComponent(firstLeg.ride_minutes);
+        }
+        if (typeof secondLeg.ride_minutes === "number" && isFinite(secondLeg.ride_minutes)) {
+          url += "&leg2_ride_minutes=" + encodeURIComponent(secondLeg.ride_minutes);
+        }
+        if (firstLeg.service_no) {
+          url += "&leg1_service_no=" + encodeURIComponent(firstLeg.service_no);
+        }
+        if (typeof firstLeg.direction === "number" && isFinite(firstLeg.direction)) {
+          url += "&leg1_direction=" + encodeURIComponent(firstLeg.direction);
+        }
+      }
+      fetch(url)
+        .then(function (response) {
+          if (!response.ok) {
+            return { failed: true };
+          }
+          return response.json().then(function (body) {
+            if (!body || body.status !== "ok") {
+              return { failed: true };
+            }
+            return { ok: true, body: body };
+          });
+        })
+        .then(function (result) {
+          if (!result || result.failed || !confirmedDestinationStop) {
+            return;
+          }
+          renderJourney(result.body);
+        })
+        .catch(function () {
+          journeyRide.textContent = "Ride time: Unavailable";
+          journeyLeaveBy.textContent = "Leave-by: Unavailable";
+          setLeaveBySimulated(false);
+          updateLeaveCountdown();
+        });
+    }
+
+    confirmDestinationStop.addEventListener("click", function () {
+      if (!selectedDestinationStop || !selectedDestinationStop.stop_code) {
+        return;
+      }
+      clearLeaveNowState();
+      clearRerouteState();
+      resetExplanationState();
+      confirmedDestinationStop = copyDestinationStop(selectedDestinationStop);
+      destinationStopConfirmed.hidden = false;
+      destinationStopConfirmed.textContent = "Destination stop confirmed: " + confirmedDestinationStop.stop_name;
+      journeyPanel.hidden = false;
+      journeyPlace.textContent = "Destination: " + (selectedDestination ? selectedDestination.label : "");
+      journeyStop.textContent = confirmedDestinationStop.stop_name + " (" + confirmedDestinationStop.stop_code + ")";
+      renderNotificationPermission();
+      if (lastSuccess) {
+        syncLeaveNow(lastSuccess);
+      }
+      loadJourney();
+      var boardingStage = document.getElementById("boarding-stage");
+      if (boardingStage) {
+        boardingStage.hidden = false;
+        if (map && map.closePopup) {
+          map.closePopup();
+        }
+        requestAnimationFrame(function () {
+          if (map && map.invalidateSize) {
+            map.invalidateSize();
+          }
+        });
+      }
+      document.getElementById("back-home").hidden = false;
+      updateStepRail();
+    });
+
+    arriveByInput.addEventListener("change", function () {
+      syncArriveBySummary();
+      if (!journeyPanel.hidden) {
+        loadJourney();
+      }
+      if (monitoringActive) {
+        requestArrivals(monitorGeneration);
+      }
+    });
+
+    function clearLeaveNowTimer() {
+      if (leaveNowTimer !== null) {
+        clearTimeout(leaveNowTimer);
+        leaveNowTimer = null;
+      }
+      leaveNowScheduleKey = null;
+    }
+
+    function clearLeaveNowState() {
+      clearLeaveNowTimer();
+      lastNotifiedBusId = null;
+      missedRecheckBusId = null;
+    }
+
+    function etaIsMissed(iso) {
+      var at = new Date(iso).getTime();
+      if (!isFinite(at)) {
+        return false;
+      }
+      return at < Date.now() - 30000;
+    }
+
+    function primaryBus(body) {
+      var buses = body && body.buses;
+      if (!buses) {
+        return null;
+      }
+      for (var i = 0; i < buses.length; i++) {
+        if (buses[i].is_active_target && !buses[i].is_missed) {
+          return buses[i];
+        }
+      }
+      for (var i = 0; i < buses.length; i++) {
+        if (buses[i].is_primary && !buses[i].is_missed) {
+          return buses[i];
+        }
+      }
+      return null;
+    }
+
+    function arrivalsBlockLeaveNow() {
+      return displayFrozen || successAgeMs() > STALE_MS;
+    }
+
+    function onEnableNotifications() {
+      if (typeof Notification !== "function") {
+        return;
+      }
+      if (Notification.permission !== "default") {
+        return;
+      }
+      var pending = Notification.requestPermission();
+      if (pending && typeof pending.then === "function") {
+        pending.then(function () {
+          renderNotificationPermission();
+          if (lastSuccess) {
+            syncLeaveNow(lastSuccess);
+            maybeFiveMinuteReminder(lastSuccess);
+          }
+        });
+      }
+    }
+
+    function renderNotificationPermission() {
+      if (!notificationPanel) {
+        return;
+      }
+      notificationPanel.replaceChildren();
+      if (journeyPanel.hidden || typeof Notification !== "function") {
+        return;
+      }
+      if (Notification.permission === "denied") {
+        var banner = document.createElement("p");
+        banner.id = "notification-banner";
+        banner.textContent = "Browser notifications are blocked. Keep this page open to see live leave-by alerts.";
+        notificationPanel.appendChild(banner);
+        return;
+      }
+      if (Notification.permission === "granted") {
+        var active = document.createElement("p");
+        active.id = "notification-status";
+        active.textContent = "Notifications active — Leave-now alert set";
+        var fiveMinuteNote = document.createElement("p");
+        fiveMinuteNote.textContent = "A reminder also appears when about 5 minutes remain on your locked bus.";
+        notificationPanel.appendChild(active);
+        notificationPanel.appendChild(fiveMinuteNote);
+        return;
+      }
+      if (Notification.permission === "default") {
+        var card = document.createElement("div");
+        card.id = "notification-card";
+        var title = document.createElement("p");
+        title.id = "notification-card-title";
+        title.textContent = "Notifications Optional";
+        var description = document.createElement("p");
+        description.id = "notification-card-description";
+        description.textContent = "Get an audio/visual alert 60 seconds before your walk deadline. After you lock a bus and stop, a reminder also appears when about 5 minutes remain.";
+        var button = document.createElement("button");
+        button.type = "button";
+        button.id = "enable-notifications";
+        button.className = "primary";
+        button.textContent = "Enable Notifications";
+        button.addEventListener("click", onEnableNotifications);
+        card.appendChild(title);
+        card.appendChild(description);
+        card.appendChild(button);
+        notificationPanel.appendChild(card);
+      }
+    }
+
+    function recheckAfterMiss(busId) {
+      clearLeaveNowTimer();
+      if (!monitoringActive || !busId || missedRecheckBusId === busId) {
+        return;
+      }
+      missedRecheckBusId = busId;
+      requestArrivals(monitorGeneration);
+    }
+
+    function deliverLeaveNow(busId) {
+      if (journeyPanel.hidden || !monitoringActive || !lastSuccess || lastSuccess.status !== "ok") {
+        return;
+      }
+      if (arrivalsBlockLeaveNow()) {
+        clearLeaveNowTimer();
+        return;
+      }
+      if (typeof Notification !== "function" || Notification.permission !== "granted") {
+        return;
+      }
+      var primary = primaryBus(lastSuccess);
+      if (!primary || primary.is_missed || etaIsMissed(primary.arrival_time)) {
+        if (primary && !primary.is_missed && etaIsMissed(primary.arrival_time)) {
+          recheckAfterMiss(lastSuccess.leave_now && lastSuccess.leave_now.bus_id);
+        }
+        return;
+      }
+      var notice = lastSuccess.leave_now;
+      if (!notice || notice.eligible !== true || notice.bus_id !== busId) {
+        return;
+      }
+      if (lastNotifiedBusId === busId) {
+        return;
+      }
+      var chance = primary.probability;
+      if (!chance || chance.data_quality === "location uncertain") {
+        return;
+      }
+      if (typeof chance.range_high !== "number" || chance.range_high < 40) {
+        return;
+      }
+      if (typeof notice.title !== "string" || typeof notice.body !== "string") {
+        return;
+      }
+      try {
+        new Notification(notice.title, { body: notice.body });
+      } catch (err) {
+        return;
+      }
+      lastNotifiedBusId = busId;
+    }
+
+    function fiveMinuteLockKey() {
+      if (!activeRoutePlan || !selectedService || !selectedBoardingStop || !selectedBoardingStop.stop_code) {
+        return null;
+      }
+      return selectedService + "|" + selectedBoardingStop.stop_code + "|" + activeRoutePlan.leg_index;
+    }
+
+    function maybeFiveMinuteReminder(body) {
+      if (!monitoringActive || journeyPanel.hidden || !activeRoutePlan || !selectedBoardingStop) {
+        return;
+      }
+      if (displayFrozen || successAgeMs() > STALE_MS) {
+        return;
+      }
+      if (typeof Notification !== "function" || Notification.permission !== "granted") {
+        return;
+      }
+      var primary = primaryBus(body);
+      if (!primary || primary.is_missed || !primary.arrival_time) {
+        return;
+      }
+      var eta = new Date(primary.arrival_time).getTime();
+      if (!isFinite(eta)) {
+        return;
+      }
+      var left = eta - Date.now();
+      if (left <= 0 || left > 5 * 60 * 1000) {
+        return;
+      }
+      var key = fiveMinuteLockKey();
+      if (!key || fiveMinuteNotifiedKey === key) {
+        return;
+      }
+      var stopName = selectedBoardingStop.description || selectedBoardingStop.stop_code;
+      var message = "Bus " + selectedService + " at " + stopName + " is about 5 minutes away.";
+      var chance = primary.probability;
+      if (chance && chance.data_quality !== "location uncertain" && typeof chance.point === "number" && typeof chance.range_low === "number" && typeof chance.range_high === "number") {
+        message += " Catch probability: " + chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%).";
+      }
+      try {
+        new Notification("5 minutes left", { body: message });
+      } catch (err) {
+        return;
+      }
+      fiveMinuteNotifiedKey = key;
+    }
+
+    function syncLeaveNow(body) {
+      if (journeyPanel.hidden || !monitoringActive) {
+        clearLeaveNowTimer();
+        return;
+      }
+      if (!body || body.status !== "ok" || arrivalsBlockLeaveNow()) {
+        clearLeaveNowTimer();
+        return;
+      }
+      var notice = body.leave_now || {};
+      var busId = typeof notice.bus_id === "string" ? notice.bus_id : null;
+      var primary = primaryBus(body);
+      if (!primary || primary.is_missed || etaIsMissed(primary.arrival_time)) {
+        clearLeaveNowTimer();
+        if (primary && !primary.is_missed && etaIsMissed(primary.arrival_time)) {
+          recheckAfterMiss(busId);
+        }
+        return;
+      }
+      if (lastNotifiedBusId !== null && busId !== null && lastNotifiedBusId !== busId) {
+        lastNotifiedBusId = null;
+      }
+      var chance = primary.probability;
+      if (!notice.eligible || !chance || chance.data_quality === "location uncertain") {
+        clearLeaveNowTimer();
+        return;
+      }
+      if (typeof chance.range_high !== "number" || chance.range_high < 40) {
+        clearLeaveNowTimer();
+        return;
+      }
+      if (lastNotifiedBusId === busId) {
+        clearLeaveNowTimer();
+        return;
+      }
+      if (typeof Notification !== "function" || Notification.permission !== "granted") {
+        clearLeaveNowTimer();
+        return;
+      }
+      if (!body.notification_time || !body.leave_by || !busId) {
+        clearLeaveNowTimer();
+        return;
+      }
+      if (typeof notice.title !== "string" || typeof notice.body !== "string") {
+        clearLeaveNowTimer();
+        return;
+      }
+      var when = new Date(body.notification_time).getTime();
+      if (!isFinite(when)) {
+        clearLeaveNowTimer();
+        return;
+      }
+      var scheduleKey = busId + "|" + body.notification_time;
+      if (leaveNowTimer !== null && leaveNowScheduleKey === scheduleKey) {
+        return;
+      }
+      clearLeaveNowTimer();
+      var delay = when - Date.now();
+      if (delay <= 0) {
+        deliverLeaveNow(busId);
+        return;
+      }
+      leaveNowScheduleKey = scheduleKey;
+      leaveNowTimer = setTimeout(function () {
+        leaveNowTimer = null;
+        leaveNowScheduleKey = null;
+        deliverLeaveNow(busId);
+      }, delay);
+    }
+
+    function renderCatchWarning(bus) {
+      var banner = document.getElementById("catch-warning");
+      if (!banner) {
+        return;
+      }
+      var chance = bus && bus.probability;
+      var legOne = activeRoutePlan && activeRoutePlan.leg_index === 1 && !displayFrozen;
+      if (legOne && chance && typeof chance.point === "number" && chance.point < 50 && !bus.is_missed) {
+        banner.hidden = false;
+        banner.textContent = "⚠ Catch chance dropping (" + chance.point + "%). Tap to enable Leave-Now Alert.";
+        return;
+      }
+      banner.hidden = true;
+    }
+
+    function startJourneyWatch() {
+      if (geoWatchId !== null || !navigator.geolocation || typeof navigator.geolocation.watchPosition !== "function") {
+        return;
+      }
+      geoWatchId = navigator.geolocation.watchPosition(onJourneyFix, function () {
+        return;
+      }, { enableHighAccuracy: true, maximumAge: 5000 });
+    }
+
+    function stopJourneyWatch() {
+      if (geoWatchId !== null && navigator.geolocation && navigator.geolocation.clearWatch) {
+        navigator.geolocation.clearWatch(geoWatchId);
+      }
+      geoWatchId = null;
+      clearTransferWait();
+      var prompt = document.getElementById("transfer-prompt");
+      var button = document.getElementById("track-leg-2");
+      if (prompt) {
+        prompt.hidden = true;
+      }
+      if (button) {
+        button.hidden = true;
+      }
+    }
+
+    function clearTransferWait() {
+      transferArmedAt = null;
+      transferLastConfirmedAt = null;
+    }
+
+    function noteTransferFix(distanceMetres, atMs, valid) {
+      if (valid !== true || typeof distanceMetres !== "number" || !isFinite(distanceMetres) || typeof atMs !== "number" || !isFinite(atMs)) {
+        return "ignore";
+      }
+      if (distanceMetres > 50) {
+        clearTransferWait();
+        return "cancel";
+      }
+      if (transferArmedAt === null || transferLastConfirmedAt === null) {
+        transferArmedAt = atMs;
+        transferLastConfirmedAt = atMs;
+        return "waiting";
+      }
+      if (atMs - transferLastConfirmedAt >= TRANSFER_WAIT_MS) {
+        transferArmedAt = atMs;
+        transferLastConfirmedAt = atMs;
+        return "waiting";
+      }
+      transferLastConfirmedAt = atMs;
+      if (atMs - transferArmedAt >= TRANSFER_WAIT_MS) {
+        return "activate";
+      }
+      return "waiting";
+    }
+
+    function onJourneyFix(position) {
+      if (!activeRoutePlan || activeRoutePlan.leg_index !== 1) {
+        return;
+      }
+      var coords = position && position.coords;
+      var valid = !!(coords && typeof coords.latitude === "number" && isFinite(coords.latitude) && typeof coords.longitude === "number" && isFinite(coords.longitude));
+      if (!valid) {
+        if (onBoard && activeRoutePlan.route_type === "one_transfer") {
+          noteTransferFix(null, Date.now(), false);
+        }
+        return;
+      }
+      userLat = coords.latitude;
+      userLon = coords.longitude;
+      if (!onBoard) {
+        return;
+      }
+      if (activeRoutePlan.route_type === "one_transfer") {
+        updateTransferPrompt(userLat, userLon, Date.now());
+      }
+      checkMissedStop(userLat, userLon);
+    }
+
+    function updateTransferPrompt(lat, lon, atMs) {
+      var leg = activeRoutePlan.legs[0];
+      var point = leg && leg.stops ? leg.stops[leg.stops.length - 1] : null;
+      var prompt = document.getElementById("transfer-prompt");
+      var button = document.getElementById("track-leg-2");
+      if (!point || typeof point.latitude !== "number") {
+        noteTransferFix(null, atMs, false);
+        return;
+      }
+      var metres = haversineMetres(lat, lon, point.latitude, point.longitude);
+      var decision = noteTransferFix(metres, atMs, true);
+      if (decision === "activate") {
+        activateLeg2();
+        return;
+      }
+      if (decision === "waiting") {
+        prompt.hidden = false;
+        prompt.textContent = "Arrived at " + (leg.alighting_stop_name || leg.alighting_stop_code) + " — Activate Leg 2 Live Tracking?";
+        button.hidden = false;
+        return;
+      }
+      if (decision === "cancel") {
+        prompt.hidden = true;
+        button.hidden = true;
+      }
+    }
+
+    function checkMissedStop(lat, lon) {
+      var leg = activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan.legs[0] : null;
+      var stops = leg && leg.stops ? leg.stops : [];
+      if (!leg || stops.length < 2) {
+        return;
+      }
+      var alighting = stops[stops.length - 1];
+      if (typeof alighting.latitude !== "number") {
+        return;
+      }
+      var away = haversineMetres(lat, lon, alighting.latitude, alighting.longitude);
+      var nearest = null;
+      var nearestMetres = Infinity;
+      stops.forEach(function (stop) {
+        if (typeof stop.latitude !== "number") {
+          return;
+        }
+        var metres = haversineMetres(lat, lon, stop.latitude, stop.longitude);
+        if (metres < nearestMetres) {
+          nearest = stop;
+          nearestMetres = metres;
+        }
+      });
+      if (!(away > 150) || !nearest || !(nearest.stop_sequence > alighting.stop_sequence)) {
+        return;
+      }
+      onBoard = false;
+      stopJourneyWatch();
+      endMonitoring();
+      var notice = document.getElementById("missed-stop");
+      if (notice) {
+        notice.hidden = false;
+      }
+      findReanchorStop(lat, lon);
+    }
+
+    function findReanchorStop(lat, lon) {
+      fetch("/api/stops/nearby?lat=" + encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon) + "&radius=400")
+        .then(function (response) { return response.ok ? response.json() : []; })
+        .then(function (stops) {
+          if (Array.isArray(stops) && stops.length) {
+            return stops[0];
+          }
+          return fetch("/api/stops/nearby?lat=" + encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon) + "&radius=800")
+            .then(function (response) { return response.ok ? response.json() : []; })
+            .then(function (wider) {
+              return Array.isArray(wider) && wider.length ? wider[0] : null;
+            });
+        })
+        .then(function (stop) {
+          if (!stop) {
+            return;
+          }
+          selectedBoardingStop = stop;
+          loadRoutePlan();
+        })
+        .catch(function () { return; });
+    }
+
+    function haversineMetres(lat1, lon1, lat2, lon2) {
+      var radius = 6371000;
+      var p1 = lat1 * Math.PI / 180;
+      var p2 = lat2 * Math.PI / 180;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLon = (lon2 - lon1) * Math.PI / 180;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function activateLeg2() {
+      startNextLeg();
+    }
+
+    function exitJourney() {
+      stopJourneyWatch();
+      onBoard = false;
+      fiveMinuteNotifiedKey = null;
+      endMonitoring();
+      arriveByInput.value = "";
+      clearJourneyPanel();
+      confirmedDestinationStop = null;
+      selectedDestination = null;
+      selectedDestinationStop = null;
+      var stage = document.getElementById("boarding-stage");
+      if (stage) {
+        stage.hidden = true;
+      }
+      document.getElementById("back-home").hidden = true;
+      document.getElementById("continue-boarding").hidden = true;
+      destinationSelected.hidden = true;
+      destinationStopPanel.hidden = true;
+      destinationStopConfirmed.hidden = true;
+      destinationInput.value = "";
+      syncDestinationClear();
+      destinationResults.replaceChildren();
+      hideLegControls();
+    }
+
+    function requestLocation() {
+      if (!navigator.geolocation) {
+        showLocationUnavailable();
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          var lat = position.coords.latitude;
+          var lon = position.coords.longitude;
+          var accuracy = position.coords.accuracy;
+          userLat = lat;
+          userLon = lon;
+          userAccuracy = typeof accuracy === "number" && isFinite(accuracy) ? accuracy : null;
+          userLocationTimestamp = typeof position.timestamp === "number" && isFinite(position.timestamp)
+            ? position.timestamp
+            : null;
+          showUser(lat, lon);
+          loadNearby(lat, lon);
+        },
+        function (error) {
+          showLocationUnavailable(!!(error && error.code === 1));
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    requestLocation();
+    startDemoControls();
+
+    function showDemoChrome(enabled) {
+      var banner = document.getElementById("demo-banner");
+      var controls = document.getElementById("demo-controls");
+      banner.hidden = enabled !== true;
+      controls.hidden = enabled !== true;
+    }
+
+    function setArrivalSimulated(on) {
+      markSimulated("arrival-simulated", on === true);
+    }
+
+    function setDestinationSimulated(on) {
+      markSimulated("destination-simulated", on === true);
+    }
+
+    function setRerouteSimulated(on) {
+      markSimulated("reroute-simulated", on === true);
+    }
+
+    function setExplanationSimulated(on) {
+      markSimulated("ai-simulated", on === true);
+    }
+
+    function setLeaveBySimulated(on) {
+      markSimulated("journey-leave-by-simulated", on === true);
+    }
+
+    function markSimulated(id, show) {
+      var badge = document.getElementById(id);
+      if (!badge) {
+        return;
+      }
+      var wasHidden = badge.hidden;
+      badge.hidden = !show;
+      if (show && wasHidden) {
+        pulseSimulated(badge);
+      }
+    }
+
+    function pulseSimulated(badge) {
+      if (!badge || prefersReducedMotion()) {
+        return;
+      }
+      var card = badge.closest("#arrival-card, #leave-by-section, #reroute-card, #ai-explanation, section");
+      if (!card) {
+        return;
+      }
+      var targets = [card];
+      if (badge.id === "arrival-simulated") {
+        var currentLeg = document.querySelector("#route-plan .route-leg.current");
+        if (currentLeg) {
+          targets.push(currentLeg);
+        }
+      }
+      targets.forEach(function (el) {
+        el.classList.remove("sim-glow");
+        void el.offsetWidth;
+        el.classList.add("sim-glow");
+      });
+      if (card._glowTimer) {
+        clearTimeout(card._glowTimer);
+      }
+      card._glowTimer = setTimeout(function () {
+        card._glowTimer = null;
+        targets.forEach(function (el) {
+          el.classList.remove("sim-glow");
+        });
+      }, 700);
+    }
+
+    function clearRerouteMoment() {
+      var moment = document.getElementById("reroute-moment");
+      if (rerouteMomentTimer) {
+        clearTimeout(rerouteMomentTimer);
+        rerouteMomentTimer = null;
+      }
+      if (!moment) {
+        return;
+      }
+      moment.hidden = true;
+      moment.classList.remove("is-playing");
+      moment.replaceChildren();
+    }
+
+    function clearMotionEffects() {
+      document.querySelectorAll(".sim-glow").forEach(function (el) {
+        el.classList.remove("sim-glow");
+        if (el._glowTimer) {
+          clearTimeout(el._glowTimer);
+          el._glowTimer = null;
+        }
+      });
+      clearRerouteMoment();
+    }
+
+    function clearSimulatedMarks() {
+      setArrivalSimulated(false);
+      setDestinationSimulated(false);
+      setRerouteSimulated(false);
+      setExplanationSimulated(false);
+      setLeaveBySimulated(false);
+      clearMotionEffects();
+    }
+
+    function clearDemoIntercept() {
+      fetch("/api/demo/reset", { method: "POST" })
+        .then(function (response) {
+          if (!response.ok) {
+            return null;
+          }
+          return response.json().then(function (body) {
+            return body;
+          }, function () {
+            return null;
+          });
+        })
+        .then(function (body) {
+          if (!body || typeof body.enabled !== "boolean") {
+            return;
+          }
+          if (!document.getElementById("destination-simulated").hidden) {
+            setDestinationStatus("");
+            destinationResults.replaceChildren();
+          }
+          if (!document.getElementById("reroute-simulated").hidden) {
+            rerouteCard.hidden = true;
+            rerouteTitle.textContent = "";
+            rerouteMessage.textContent = "";
+            rerouteProbability.textContent = "";
+          }
+          if (!document.getElementById("ai-simulated").hidden) {
+            aiExplanationHeadline.textContent = "";
+            aiExplanationReasoning.textContent = "";
+            aiExplanationAdvice.textContent = "";
+          }
+          showDemoChrome(body.enabled === true);
+          clearSimulatedMarks();
+          if (monitoringActive) {
+            requestArrivals(monitorGeneration);
+          }
+        })
+        .catch(function () {
+          return;
+        });
+    }
+
+    function runDemoScenario() {
+      var scenario = document.getElementById("demo-scenario").value;
+      fetch("/api/demo/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenario: scenario })
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            return null;
+          }
+          return response.json();
+        })
+        .then(function (body) {
+          if (!body || body.enabled !== true) {
+            return;
+          }
+          if (monitoringActive) {
+            requestArrivals(monitorGeneration);
+          }
+        })
+        .catch(function () {
+          return;
+        });
+    }
+
+    document.getElementById("continue-boarding").addEventListener("click", function () {
+      if (confirmedDestinationStop && selectedBoardingStop) {
+        loadRoutePlan();
+      }
+    });
+    document.getElementById("back-home").addEventListener("click", exitJourney);
+    document.getElementById("menu-open").addEventListener("click", function () {
+      var sheet = document.getElementById("menu-sheet");
+      var open = sheet.hasAttribute("hidden");
+      if (open) {
+        sheet.removeAttribute("hidden");
+      } else {
+        sheet.setAttribute("hidden", "");
+      }
+      this.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.getElementById("theme-light").addEventListener("click", function () {
+      document.documentElement.setAttribute("data-theme", "light");
+    });
+    document.getElementById("theme-dark").addEventListener("click", function () {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+    document.getElementById("theme-system").addEventListener("click", function () {
+      document.documentElement.removeAttribute("data-theme");
+    });
+    function syncDestinationClear() {
+      document.getElementById("destination-clear").hidden = destinationInput.value.length === 0;
+    }
+    destinationInput.addEventListener("input", syncDestinationClear);
+    document.getElementById("destination-clear").addEventListener("click", function () {
+      destinationInput.value = "";
+      syncDestinationClear();
+    });
+    document.getElementById("im-on-board").addEventListener("click", function () {
+      if (!activeRoutePlan || activeRoutePlan.leg_index !== 1) {
+        return;
+      }
+      onBoard = true;
+      document.getElementById("on-board-note").hidden = false;
+      startJourneyWatch();
+    });
+    document.getElementById("track-leg-2").addEventListener("click", activateLeg2);
+    document.getElementById("catch-warning").addEventListener("click", function () {
+      var panel = document.getElementById("notification-panel");
+      if (panel && panel.scrollIntoView) {
+        panel.scrollIntoView({ block: "nearest" });
+      }
+    });
+
+    function startDemoControls() {
+      document.getElementById("demo-scenario").addEventListener("change", clearDemoIntercept);
+      document.getElementById("demo-run").addEventListener("click", runDemoScenario);
+      document.getElementById("demo-reset").addEventListener("click", clearDemoIntercept);
+      clearDemoIntercept();
+    }
+  </script>
+</body>
+</html>

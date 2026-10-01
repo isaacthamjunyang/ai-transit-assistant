@@ -25,3 +25,4 @@ Thumbs.db
 # Cache
 *.egg-info/
 .pytest_cache/
+cache/

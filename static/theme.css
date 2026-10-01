@@ -1,0 +1,169 @@
+/* Step 2c theme tokens.
+   Light colour values are sampled from the mockup.
+   Every dark value is marked derived, not in mockup.
+   Space, type, and shadow were not sampled and are marked the same way.
+   --tap-min is required by the plan, not taken from the mockup. */
+
+:root {
+  --color-paper: #EEF4F8;
+  --color-card: #FFFFFF;
+  --color-ink: #1C2844;
+  --color-muted: #5B6B82;
+  --color-line: #DCE5EE;
+  --color-primary: #1B6FE7;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary: #E4F0FC;
+  --color-secondary-ink: #1556B8;
+  --color-link: #1B68E7;
+
+  --status-live: #0B7A4E;
+  --status-schedule: #475467;
+  --status-uncertain: #8A5A00;
+  --status-stale: #B42318;
+  --status-unavailable: #B42318;
+  --status-no-history: #475467;
+  --status-simulated: #5B3FD0;
+
+  --tint-success: #E7F9F0;
+  --fill-success: #24BC6C;
+  --tint-warning: #FFF3D8;
+  --fill-warning: #F2A900;
+  --tint-danger: #FCE7EA;
+  --fill-danger: #E5484D;
+  --tint-neutral: #EEF1F5;
+  --tint-simulated: #EFEAFE;
+
+  --prob-point: #1B6FE7;
+  --prob-band: #E4F0FC;
+  --prob-mark-40: #E5484D;
+  --prob-mark-50: #F2A900;
+
+  --radius-card: 12px;
+  --radius-control: 10px;
+  --radius-pill: 999px;
+  --space-1: 4px; /* derived, not in mockup */
+  --space-2: 8px; /* derived, not in mockup */
+  --space-3: 16px; /* derived, not in mockup */
+  --space-4: 24px; /* derived, not in mockup */
+  --space-5: 32px; /* derived, not in mockup */
+  --font-stack: system-ui, sans-serif;
+  --type-caption: 0.75rem; /* derived, not in mockup */
+  --type-body: 1rem; /* derived, not in mockup */
+  --type-title: 1.25rem; /* derived, not in mockup */
+  --type-hero: 2rem; /* derived, not in mockup */
+  --shadow-card: 0 8px 24px rgb(28 40 68 / 0.08); /* derived, not in mockup */
+  --tap-min: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-paper: #0E1726; /* derived, not in mockup */
+    --color-card: #16223A; /* derived, not in mockup */
+    --color-ink: #E6ECF5; /* derived, not in mockup */
+    --color-muted: #9AA9BF; /* derived, not in mockup */
+    --color-line: #2A3853; /* derived, not in mockup */
+    --color-primary: #2B6CE6; /* derived, not in mockup */
+    --color-primary-ink: #FFFFFF; /* derived, not in mockup */
+    --color-secondary: #1A2F55; /* derived, not in mockup */
+    --color-secondary-ink: #8DBBFF; /* derived, not in mockup */
+    --color-link: #6AA6FF; /* derived, not in mockup */
+
+    --status-live: #5FE0A0; /* derived, not in mockup */
+    --status-schedule: #AEB9CB; /* derived, not in mockup */
+    --status-uncertain: #F5C76A; /* derived, not in mockup */
+    --status-stale: #FF9AA0; /* derived, not in mockup */
+    --status-unavailable: #FF9AA0; /* derived, not in mockup */
+    --status-no-history: #AEB9CB; /* derived, not in mockup */
+    --status-simulated: #B9A6FF; /* derived, not in mockup */
+
+    --tint-success: #0F2E22; /* derived, not in mockup */
+    --fill-success: #24BC6C; /* derived, not in mockup */
+    --tint-warning: #3A2A08; /* derived, not in mockup */
+    --fill-warning: #F2A900; /* derived, not in mockup */
+    --tint-danger: #3B1519; /* derived, not in mockup */
+    --fill-danger: #E5484D; /* derived, not in mockup */
+    --tint-neutral: #232E42; /* derived, not in mockup */
+    --tint-simulated: #2A2150; /* derived, not in mockup */
+
+    --prob-point: #2B6CE6; /* derived, not in mockup */
+    --prob-band: #1A2F55; /* derived, not in mockup */
+    --prob-mark-40: #E5484D; /* derived, not in mockup */
+    --prob-mark-50: #F2A900; /* derived, not in mockup */
+
+    --shadow-card: 0 8px 24px rgb(0 0 0 / 0.35); /* derived, not in mockup */
+  }
+}
+
+:root[data-theme="light"] {
+  --color-paper: #EEF4F8;
+  --color-card: #FFFFFF;
+  --color-ink: #1C2844;
+  --color-muted: #5B6B82;
+  --color-line: #DCE5EE;
+  --color-primary: #1B6FE7;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary: #E4F0FC;
+  --color-secondary-ink: #1556B8;
+  --color-link: #1B68E7;
+
+  --status-live: #0B7A4E;
+  --status-schedule: #475467;
+  --status-uncertain: #8A5A00;
+  --status-stale: #B42318;
+  --status-unavailable: #B42318;
+  --status-no-history: #475467;
+  --status-simulated: #5B3FD0;
+
+  --tint-success: #E7F9F0;
+  --fill-success: #24BC6C;
+  --tint-warning: #FFF3D8;
+  --fill-warning: #F2A900;
+  --tint-danger: #FCE7EA;
+  --fill-danger: #E5484D;
+  --tint-neutral: #EEF1F5;
+  --tint-simulated: #EFEAFE;
+
+  --prob-point: #1B6FE7;
+  --prob-band: #E4F0FC;
+  --prob-mark-40: #E5484D;
+  --prob-mark-50: #F2A900;
+
+  --shadow-card: 0 8px 24px rgb(28 40 68 / 0.08); /* derived, not in mockup */
+}
+
+:root[data-theme="dark"] {
+  --color-paper: #0E1726; /* derived, not in mockup */
+  --color-card: #16223A; /* derived, not in mockup */
+  --color-ink: #E6ECF5; /* derived, not in mockup */
+  --color-muted: #9AA9BF; /* derived, not in mockup */
+  --color-line: #2A3853; /* derived, not in mockup */
+  --color-primary: #2B6CE6; /* derived, not in mockup */
+  --color-secondary-ink: #8DBBFF; /* derived, not in mockup */
+  --color-primary-ink: #FFFFFF; /* derived, not in mockup */
+  --color-secondary: #1A2F55; /* derived, not in mockup */
+  --color-link: #6AA6FF; /* derived, not in mockup */
+
+  --status-live: #5FE0A0; /* derived, not in mockup */
+  --status-schedule: #AEB9CB; /* derived, not in mockup */
+  --status-uncertain: #F5C76A; /* derived, not in mockup */
+  --status-stale: #FF9AA0; /* derived, not in mockup */
+  --status-unavailable: #FF9AA0; /* derived, not in mockup */
+  --status-no-history: #AEB9CB; /* derived, not in mockup */
+  --status-simulated: #B9A6FF; /* derived, not in mockup */
+
+  --tint-success: #0F2E22; /* derived, not in mockup */
+  --fill-success: #24BC6C; /* derived, not in mockup */
+  --tint-warning: #3A2A08; /* derived, not in mockup */
+  --fill-warning: #F2A900; /* derived, not in mockup */
+  --tint-danger: #3B1519; /* derived, not in mockup */
+  --fill-danger: #E5484D; /* derived, not in mockup */
+  --tint-neutral: #232E42; /* derived, not in mockup */
+  --tint-simulated: #2A2150; /* derived, not in mockup */
+
+  --prob-point: #2B6CE6; /* derived, not in mockup */
+  --prob-band: #1A2F55; /* derived, not in mockup */
+  --prob-mark-40: #E5484D; /* derived, not in mockup */
+  --prob-mark-50: #F2A900; /* derived, not in mockup */
+
+  --shadow-card: 0 8px 24px rgb(0 0 0 / 0.35); /* derived, not in mockup */
+}

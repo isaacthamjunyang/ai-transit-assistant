@@ -1,0 +1,12 @@
+---
+description: UI theme and copy rules for the bus catch assistant
+alwaysApply: true
+---
+
+# UI theme
+
+- Do not use inline `style` attributes. Do not use hex, `rgb(`, or `hsl(` values outside `static/theme.css`.
+- JavaScript toggles classes only. Do not set element styles from script.
+- User-facing strings come from `static/copy.js`. Copy them character for character from PROJECT_PLAN.md.
+- Reuse the components in `static/components.css` before adding a new component.
+- Never change guardrail copy without updating PROJECT_PLAN.md.
