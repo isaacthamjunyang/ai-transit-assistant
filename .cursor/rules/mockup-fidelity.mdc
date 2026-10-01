@@ -1,0 +1,14 @@
+---
+description: Match the 10-screen Bus Catch Assistant mockup
+alwaysApply: true
+---
+
+1. Source of truth: the 10-screen mockup image "Bus Catch Assistant UI Flow.png" in the repo root (C:\Users\Issac Tham\AI-Lodge-Projects\ai-transit-assistant\Bus Catch Assistant UI Flow.png). Match layout, order, spacing, hierarchy, icon style, labels and component shapes exactly. Colours come from theme tokens only.
+2. Phone-first: one column, max-width 440px, centred on desktop, full width on phones. Check at 360px and 1280px. Nothing scrolls sideways.
+3. Header on every screen: bus logo tile, "Bus Catch Assistant", subtitle "AI-powered public transport assistant", hamburger on the right. The menu sheet holds Light / Dark / Match system, Back, Start over, and Demo Controls only when DEMO_MODE=true. No step rail or step indicator.
+4. One inline-SVG icon set (consistent stroke, currentColor). No icon fonts, no remote assets, no remote images.
+5. Existing features stay. A feature the mockup does not show (pace chip, arrive-by status, notification cards, boarding-stop selection, route options, demo mode) is restyled with the same components and placed where it fits naturally, and listed in the summary.
+6. Locked rules win over the mockup: locked copy strings in static/copy.js and PROJECT_PLAN.md, probability always shown as a point plus a range, no blended ranking score, the Step 10 notification payload text.
+7. No hex, rgb() or hsl() outside static/theme.css. No style="" attributes. All user-facing strings come from static/copy.js. Do not rename existing element IDs that tests or JS rely on; update the tests that assert old markup.
+8. Do not change backend logic, formulas, thresholds, SQLite, or the OpenAI logic unless the prompt says so.
+9. After each page prompt: run all tests, then give a summary with (a) what matches the mockup, (b) every deliberate deviation and why, (c) new strings, (d) anything not done. Do not commit.

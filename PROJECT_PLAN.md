@@ -180,6 +180,8 @@ OpenAI call timing, the fact sheet, in-flight handling, and the data-quality fil
 
 ## UI and theme
 
+Mockup fidelity rules: see .cursor/rules/mockup-fidelity.mdc. Mockup image: Bus Catch Assistant UI Flow.png (repo root).
+
 This section is the single look for every later build step. It does not change catch math, leave-by, notification timing, reroute rules, Step 12 guardrails, or any exact copy string already locked below.
 
 The visual target is the 10-screen mockup. Where that mockup and this section disagree, the mockup wins. The mockup was not attached when this section was written, so every colour, radius, space, font, type size, and icon below is a **PLACEHOLDER**. Replace placeholders from the mockup before Step 2b is implemented. Do not invent final values from the current page.
