@@ -1035,11 +1035,27 @@
         + "<span class=\"prob-ring__text\">" + (empty ? emptyText : point + "%") + "</span></div>";
     }
 
-    function sgCatchCard(state, point, low, high) {
+    var SG_LONG_STOP = "Opp Block 123 Bishan Street 12 / Bishan Community Club Annexe";
+
+    // The muted line under the heading: minutes, then the stop name (one line, ellipsis, full name in the title).
+    function sgSub(eta, stop) {
+      return "<p class=\"catch-card__sub\">" + (eta ? "<span class=\"catch-card__eta\">" + eta + "</span>" : "")
+        + (eta && stop ? "<span class=\"catch-card__sep\" aria-hidden=\"true\"> \u00b7 </span>" : "")
+        + (stop ? "<span class=\"catch-card__stop\" title=\"" + stop + "\">" + stop + "</span>" : "") + "</p>";
+    }
+
+    // Heading and muted line on the left, the pill on the right; the heading wraps rather than meeting the pill.
+    function sgCardHead(title, sub, state) {
+      return "<div class=\"catch-card__head\"><div class=\"catch-card__heading\"><p class=\"catch-card__title\">" + title + "</p></div>"
+        + sgPill(state).replace("class=\"pill ", "class=\"pill catch-card__pill ") + "</div>" + sub;
+    }
+
+    function sgCatchCard(state, point, low, high, stop, eta) {
       var usable = point !== null;
-      return "<section class=\"card catch-card\" aria-live=\"polite\">" + sgPill(state).replace("class=\"pill ", "class=\"pill catch-card__pill ")
+      return "<section class=\"card catch-card\" aria-live=\"polite\">"
+        + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), sgSub(eta === undefined ? lc.arrivingIn.replace("{n}", "15") : eta, stop === undefined ? "Tanjong Rhu Stn Exit 2" : stop), state)
         + "<div class=\"catch-card__row\">" + sgRing(point, low, high, false, lc.unavailable)
-        + "<div class=\"catch-card__copy\"><p class=\"catch-card__title\">" + lc.chanceToCatch.replace("{service}", "11") + "</p><p class=\"catch-card__range\">"
+        + "<div class=\"catch-card__copy\"><p class=\"catch-card__range\">"
         + (usable ? lc.range.replace("{range_low}", low).replace("{range_high}", high) : "") + "</p></div></div>"
         + "<p class=\"catch-card__caption\">" + lc.caption + "</p></section>";
     }
@@ -1136,9 +1152,10 @@
     var CROSS_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 6l12 12M18 6L6 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path></svg>";
     var REFRESH_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
 
-    function sgCurrentBusCard() {
-      return '<section class="card catch-card page-c-current" aria-live="polite">' + sgPill("live").replace('class="pill ', 'class="pill catch-card__pill ')
-        + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy"><p class="catch-card__title">' + lc.chanceToCatch.replace("{service}", "11") + '</p><p class="catch-card__range">' + lc.range.replace("{range_low}", "3").replace("{range_high}", "8") + '</p></div></div>'
+    function sgCurrentBusCard(stop) {
+      return '<section class="card catch-card page-c-current" aria-live="polite">'
+        + sgCardHead(lc.chanceToCatchPageC.replace("{service}", "11"), sgSub(lc.arrivingIn.replace("{n}", "2"), stop || "Tanjong Rhu Stn Exit 2"), "live")
+        + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy"><p class="catch-card__range">' + lc.range.replace("{range_low}", "3").replace("{range_high}", "8") + '</p></div></div>'
         + '<p class="catch-card__caption">' + lc.caption + '</p>'
         + '<div class="page-c-warn">' + WARN_ICON + '<p>' + rp.currentWarning + '</p></div>'
         + '<button type="button" class="secondary">' + cp.seeArrivals + '</button></section>';
@@ -1180,6 +1197,9 @@
       return ""
         + "<h4>Probability card: live, with the pace chip</h4>" + sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady")
         + "<h4>Probability card: schedule only, no pace chip</h4>" + sgCatchCard("schedule", 41, 30, 52)
+        + "<h4>Page A heading with a long stop name (ellipsis, full name in the title)</h4>" + sgCatchCard("live", 64, 51, 78, SG_LONG_STOP)
+        + "<h4>Page A heading with no ETA (stop name only)</h4>" + sgCatchCard("schedule", 41, 30, 52, "Tanjong Rhu Stn Exit 2", "")
+        + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
         + "<h4>Page A, action wait: Leave by tile reads Wait for Leave By Alert, no pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgLeaveTiles(true, lc.waitForAlert)
         + "<h4>Page A, action leave_now: Leave by tile reads Leave now, with the pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgPaceChip("slower") + sgLeaveTiles(true, lc.leaveNow)
         + "<h4>Leave by and Estimated arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
@@ -1342,8 +1362,9 @@
     }
 
     function sgLeg2Card() {
-      return '<section class="card catch-card" aria-live="polite">' + sgPill("live").replace('class="pill ', 'class="pill catch-card__pill ')
-        + '<div class="catch-card__row">' + sgRing(64, 51, 78, false, "") + '<div class="catch-card__copy"><p class="catch-card__title">' + lc.chanceToCatchLeg2.replace("{service}", "106").replace("{stop}", "Orchard Stn/Lucky Plaza") + '</p><p class="catch-card__range">' + lc.range.replace("{range_low}", "51").replace("{range_high}", "78") + '</p></div></div>'
+      return '<section class="card catch-card" aria-live="polite">'
+        + sgCardHead(lc.chanceToCatchLeg2.replace("{service}", "106").replace("{stop}", "Orchard Stn/Lucky Plaza"), sgSub(lc.arrivingIn.replace("{n}", "6"), ""), "live")
+        + '<div class="catch-card__row">' + sgRing(64, 51, 78, false, "") + '<div class="catch-card__copy"><p class="catch-card__range">' + lc.range.replace("{range_low}", "51").replace("{range_high}", "78") + '</p></div></div>'
         + '<p class="catch-card__caption">' + l2.caption + '</p></section>'
         + '<section class="leave-tiles"><div class="leave-tile"><span class="leave-tile__icon" aria-hidden="true">' + CLOCK_ICON + '</span><div><p class="leave-tile__label">' + l2.reachLabel + '</p><p class="leave-tile__value">6:12 PM</p><p class="leave-tile__meta">(6:11–6:13 PM)</p></div></div>'
         + '<div class="leave-tile"><span class="leave-tile__icon" aria-hidden="true">' + TILE_FLAG_ICON + '</span><div><p class="leave-tile__label">' + lc.estimatedArrival + '</p><p class="leave-tile__value">6:30 PM</p><p class="leave-tile__meta">(6:27–6:34 PM)</p></div></div></section>'

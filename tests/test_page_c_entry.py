@@ -137,13 +137,16 @@ def test_nothing_eligible_shows_the_current_card_the_no_better_card_and_the_list
 
 
 def test_every_probability_names_its_bus_and_appears_once_per_option():
-    assert "Chance to catch current Bus {service} at your stop" in HTML and "Chance to catch current Bus {service} at your stop" in COPY
-    assert "Chance to catch Bus {service} at {stop}" in HTML and "Chance to catch Bus {service} at {stop}" in COPY
+    for text in ("Chance to catch Bus {service}", "Chance to catch your Bus {service}", "Chance to catch Bus {service} at {stop}"):
+        assert text in HTML and text in COPY, text
+    assert "Chance to catch current Bus" not in HTML + COPY
+    assert "Arriving in {n} min" in HTML and "Arriving in {n} min" in COPY
     heading = _function("catchHeading")
     assert "CATCH_HEADING_LEG2_TEXT" in heading and "CATCH_HEADING_TEXT" in heading
-    assert 'getElementById("catch-title").textContent = catchHeading()' in _function("renderCatchCard")
-    assert 'getElementById("pc-title").textContent = catchHeading()' in _function("updatePageCCurrent")
-    assert 'aria-label", catchHeading() + ". " + probabilityText(chance)' in _function("setRing")
+    assert 'getElementById("catch-title").textContent = catchHeading(false)' in _function("renderCatchCard")
+    assert 'getElementById("pc-title").textContent = catchHeading(true)' in _function("updatePageCCurrent")
+    assert 'setCatchSub("catch", hero)' in _function("renderCatchCard") and 'setCatchSub("pc", hero)' in _function("updatePageCCurrent")
+    assert 'aria-label", ringLabel(chance,' in _function("setRing")
     card = _function("buildOptionCard")
     assert '"Bus " + row.service_no' in card and "Catch probability" not in card and card.count("buildProbRing(row)") == 1
     row = _function("buildOptionRow")
@@ -413,3 +416,59 @@ def test_a_switch_from_page_c_decides_again_for_the_new_bus():
     assert "entryPending = true" in _function("startMonitoring")  # applyRouteSwitch calls startMonitoring
     assert "closePageC()" in _function("finishNewJourney")
     assert "startMonitoring(reroute.service_no)" in _function("applyRouteSwitch")
+
+
+# ---- the probability heading, the muted line and the ring label ---------------------------
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_muted_line_and_the_ring_label_follow_the_agreed_wording():
+    script = (
+        'var ARRIVING_IN_TEXT = "Arriving in {n} min", ARRIVING_SOON_TEXT = "Arriving in <1 min", ARRIVING_NOW_TEXT = "Arriving now";'
+        'var RING_LABEL_TEXT = "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent";'
+        'var RING_ETA_TEXT = " arriving in {n} minutes", RING_ETA_SOON_TEXT = " arriving in under 1 minute", RING_ETA_NOW_TEXT = " arriving now", RING_AT_TEXT = " at {stop}";'
+        "var selectedService = '11'; var selectedBoardingStop = {description: 'Tanjong Rhu Stn Exit 2', stop_code: '90041'};"
+        + _function("fillText") + "\n" + _function("boardingStopName") + "\n" + _function("etaParts") + "\n" + _function("ringLabel") + "\n"
+        + "var at = function (s) { return {arrival_time: new Date(Date.now() + s * 1000).toISOString(), is_missed: false}; };"
+        "var chance = {point: 92, range_low: 80, range_high: 95};"
+        "console.log(JSON.stringify({min15: etaParts(at(900)).line, soon: etaParts(at(45)).line, now: etaParts(at(10)).line, none: etaParts({is_missed: false}),"
+        " missed: etaParts({is_missed: true, arrival_time: at(60).arrival_time}),"
+        " label: ringLabel(chance, at(900)), noEta: ringLabel(chance, null), nowLabel: ringLabel(chance, at(10))}));"
+    )
+    got = _run_node(script)
+    assert got["min15"] == "Arriving in 15 min" and got["soon"] == "Arriving in <1 min" and got["now"] == "Arriving now"
+    assert got["none"] is None and got["missed"] is None
+    assert got["label"] == "92 percent chance of catching Bus 11 arriving in 15 minutes at Tanjong Rhu Stn Exit 2, range 80 to 95 percent"
+    assert got["noEta"] == "92 percent chance of catching Bus 11 at Tanjong Rhu Stn Exit 2, range 80 to 95 percent"
+    assert got["nowLabel"] == "92 percent chance of catching Bus 11 arriving now at Tanjong Rhu Stn Exit 2, range 80 to 95 percent"
+
+
+def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title_and_leg_2_shows_minutes_only():
+    sub = _function("setCatchSub")
+    assert 'var stop = onLeg2() ? "" : boardingStopName();' in sub
+    assert 'stopEl.setAttribute("title", stop)' in sub
+    assert "sepEl.hidden = !(eta && stop)" in sub and 'document.getElementById(prefix + "-sub").hidden = !(eta || stop)' in sub
+    rule = between(CSS, ".catch-card__sub {", "}")
+    assert "white-space: nowrap" in rule and "min-width: 0" in rule
+    stop = between(CSS, ".catch-card__stop {", "}")
+    assert "overflow: hidden" in stop and "text-overflow: ellipsis" in stop and "min-width: 0" in stop
+    assert "flex: 0 0 auto" in between(CSS, ".catch-card__eta,", "}")
+    for prefix in ("catch", "pc"):
+        assert f'id="{prefix}-sub-stop"' in HTML and f'id="{prefix}-sub-eta"' in HTML
+    assert "Arriving in {n} min" in COPY and "Chance to catch your Bus {service}" in COPY
+    assert 'ringLabel: "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent"' in COPY
+
+
+def test_the_pill_shares_a_row_with_the_heading_and_the_heading_wraps_instead_of_overlapping():
+    assert "position: absolute" not in between(CSS, ".catch-card__pill {", "}")
+    head = between(CSS, ".catch-card__head {", "}")
+    assert "display: flex" in head and "justify-content: space-between" in head
+    assert "min-width: 0" in between(CSS, ".catch-card__heading {", "}")  # the heading shrinks and wraps beside the pill
+    for prefix in ("catch", "pc"):
+        after = HTML.split(f'id="{prefix}-title"', 1)[1].split('<div class="catch-card__row">', 1)[0]
+        assert after.index(f'id="{prefix}-pill"') < after.index(f'id="{prefix}-sub"')  # head row (title, pill), then the muted line
+
+
+def test_no_old_heading_remains_in_the_repo():
+    for path in list(STATIC.glob("*")) + [ROOT / "PROJECT_PLAN.md"] + list((ROOT / "tests").glob("test_*.py")):
+        if path.suffix in (".html", ".js", ".css", ".md", ".py") and path.name != "test_page_c_entry.py":
+            assert "Chance to catch current Bus" not in path.read_text(encoding="utf-8"), path.name

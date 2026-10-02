@@ -216,8 +216,20 @@ var copy = {
     leg2Headway: "Schedule: about every {minutes} min."
   },
   liveCatch: {
-    /* deliberate deviation from mockup 7, recorded in the plan */
-    chanceToCatch: "Chance to catch current Bus {service} at your stop",
+    /* proposed, needs approval; a deliberate deviation from mockup 7, recorded in the plan */
+    chanceToCatch: "Chance to catch Bus {service}",
+    /* proposed, needs approval: the Page C current-bus card */
+    chanceToCatchPageC: "Chance to catch your Bus {service}",
+    /* proposed, needs approval: muted line under the heading; the stop name follows after " · " */
+    arrivingIn: "Arriving in {n} min",
+    arrivingSoon: "Arriving in <1 min",
+    arrivingNow: "Arriving now",
+    /* proposed, needs approval: the ring's aria-label; {eta} and {at} are dropped when unknown */
+    ringLabel: "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent",
+    ringEta: " arriving in {n} minutes",
+    ringEtaSoon: " arriving in under 1 minute",
+    ringEtaNow: " arriving now",
+    ringAt: " at {stop}",
     /* proposed, needs approval */
     chanceToCatchLeg2: "Chance to catch Bus {service} at {stop}",
     range: "Range: {range_low} – {range_high}%",

@@ -122,7 +122,7 @@ def test_the_ring_has_no_marks_and_uses_band_colours():
     assert "chance.band" in band and "chance.point" not in band
     assert 'role="img"' in html.split('id="catch-ring"', 1)[1].split(">", 1)[0]
     assert 'aria-live="polite"' in html.split('id="arrival-card"', 1)[1].split(">", 1)[0]
-    assert 'box.setAttribute("aria-label", catchHeading() + ". " + probabilityText(chance))' in html  # names the bus
+    assert 'box.setAttribute("aria-label", ringLabel(chance,' in html  # names the bus
 
 
 def test_ring_band_tokens_alias_the_status_tokens_and_pass_three_to_one():

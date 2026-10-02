@@ -43,7 +43,10 @@ def test_ring_label_always_carries_the_range_with_the_point():
     text = _between(html, "function probabilityText(chance)", "function setRing")
     assert '"Catch probability: " + chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%)"' in text
     ring = _between(html, "function setRing(id, chance, emptyText)", "function setPillState")
-    assert 'box.setAttribute("aria-label", catchHeading() + ". " + probabilityText(chance))' in ring  # names the bus
+    assert 'box.setAttribute("aria-label", ringLabel(chance,' in ring  # names the bus, its arrival and the stop
+    label = _between(html, "function ringLabel(chance, hero)", "function ")
+    assert "a: chance.range_low" in label and "b: chance.range_high" in label  # the range always travels with the point
+    assert "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent" in html
     assert 'value.setAttribute("stroke-dasharray"' in ring
     assert ".style" not in ring
     card = _between(html, "function renderCatchCard(hero)", "function renderLeaveTiles")
@@ -61,7 +64,7 @@ def test_no_new_probability_text_without_its_range():
     # The ring's centre text is the one exception: setRing sets the range-bearing aria-label beside it,
     # and the card shows "Range: low – high%" next to the ring.
     ring = _between(block, "function setRing(id, chance, emptyText)", "function setPillState")
-    assert ring.index('chance.point + "%"') < ring.index("probabilityText(chance)")
+    assert ring.index('chance.point + "%"') < ring.index("ringLabel(chance")
     block = block.replace(ring, "")
     mini = _between(block, "function buildProbRing(chance)", "function badgePills")
     assert mini.index('chance.point + "%"') > mini.index("probabilityText(chance)")

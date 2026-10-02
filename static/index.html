@@ -437,14 +437,19 @@
     </section>
     <section id="page-c" class="page-c" aria-label="Other buses" hidden>
       <section id="reroute-current" class="card catch-card page-c-current" aria-live="polite" hidden>
+        <div class="catch-card__head">
+        <div class="catch-card__heading">
+          <p id="pc-title" class="catch-card__title"></p>
+        </div>
         <span id="pc-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="pc-pill-text">live</span></span>
-        <div class="catch-card__row">
+      </div>
+      <p id="pc-sub" class="catch-card__sub"><span id="pc-sub-eta" class="catch-card__eta"></span><span id="pc-sub-sep" class="catch-card__sep" aria-hidden="true"> · </span><span id="pc-sub-stop" class="catch-card__stop"></span></p>
+      <div class="catch-card__row">
           <div id="pc-ring" class="prob-ring" role="img" aria-label="Catch probability unavailable">
             <svg class="prob-ring__svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="prob-ring__track" cx="50" cy="50" r="43" pathLength="100"></circle><circle id="pc-ring-value" class="prob-ring__value" cx="50" cy="50" r="43" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 50 50)"></circle></svg>
             <span id="pc-ring-text" class="prob-ring__text"></span>
           </div>
           <div class="catch-card__copy">
-            <p id="pc-title" class="catch-card__title"></p>
             <p id="pc-range" class="catch-card__range"></p>
           </div>
         </div>
@@ -470,14 +475,19 @@
     </section>
     <section class="card catch-card" id="arrival-card" tabindex="-1" hidden aria-labelledby="catch-title" aria-live="polite">
       <p id="arrival-heading" class="visually-hidden">Live arrivals</p>
-      <span id="catch-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="catch-pill-text">live</span></span>
+      <div class="catch-card__head">
+        <div class="catch-card__heading">
+          <p id="catch-title" class="catch-card__title">Chance to catch Bus</p>
+        </div>
+        <span id="catch-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="catch-pill-text">live</span></span>
+      </div>
+      <p id="catch-sub" class="catch-card__sub"><span id="catch-sub-eta" class="catch-card__eta"></span><span id="catch-sub-sep" class="catch-card__sep" aria-hidden="true"> · </span><span id="catch-sub-stop" class="catch-card__stop"></span></p>
       <div class="catch-card__row">
         <div id="catch-ring" class="prob-ring" role="img" aria-label="Catch probability unavailable">
           <svg class="prob-ring__svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="prob-ring__track" cx="50" cy="50" r="43" pathLength="100"></circle><circle id="catch-ring-value" class="prob-ring__value" cx="50" cy="50" r="43" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 50 50)"></circle></svg>
           <span id="catch-ring-text" class="prob-ring__text"></span>
         </div>
         <div class="catch-card__copy">
-          <p id="catch-title" class="catch-card__title">Chance to catch current Bus at your stop</p>
           <p id="catch-range" class="catch-card__range"></p>
         </div>
       </div>
@@ -5572,7 +5582,7 @@
       if (chance) {
         value.setAttribute("stroke-dasharray", Math.max(0, Math.min(100, chance.point)) + " 100");
         text.textContent = chance.point + "%";
-        box.setAttribute("aria-label", catchHeading() + ". " + probabilityText(chance));
+        box.setAttribute("aria-label", ringLabel(chance, lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null));
         box.classList.remove("is-empty", "prob-ring--ok", "prob-ring--mid", "prob-ring--low");
         if (ringBandClass(chance)) {
           box.classList.add(ringBandClass(chance));
@@ -5619,7 +5629,8 @@
         range.textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
       }
       document.getElementById("catch-caption").textContent = onLeg2() ? LEG2_CAPTION : "if you leave now and walk at a normal pace";
-      document.getElementById("catch-title").textContent = catchHeading();
+      document.getElementById("catch-title").textContent = catchHeading(false);
+      setCatchSub("catch", hero);
       // The pace chip shows only while the Python action is leave_now: "Walk slower" beside "wait" would contradict it.
       renderPaceSlot(usable && !onLeg2() && trackedAction(lastSuccess) === "leave_now" ? paceChip(paceCategoryFor(chance.pace)) : null);
       updatePageCCurrent(hero, usable, state);
@@ -6097,7 +6108,16 @@
     var ALTERNATIVES_HEADING = "Alternative options";
     var UPDATED_TEXT = "Updated {time}";
     var OPTIONS_FAILED_TEXT = "Could not load other buses. Try the refresh button.";
-    var CATCH_HEADING_TEXT = "Chance to catch current Bus {service} at your stop";
+    var CATCH_HEADING_TEXT = "Chance to catch Bus {service}";
+    var CATCH_HEADING_PAGE_C_TEXT = "Chance to catch your Bus {service}";
+    var ARRIVING_IN_TEXT = "Arriving in {n} min";
+    var ARRIVING_SOON_TEXT = "Arriving in <1 min";
+    var ARRIVING_NOW_TEXT = "Arriving now";
+    var RING_LABEL_TEXT = "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent";
+    var RING_ETA_TEXT = " arriving in {n} minutes";
+    var RING_ETA_SOON_TEXT = " arriving in under 1 minute";
+    var RING_ETA_NOW_TEXT = " arriving now";
+    var RING_AT_TEXT = " at {stop}";
     var CATCH_HEADING_LEG2_TEXT = "Chance to catch Bus {service} at {stop}";
     var LEAVE_NOW_TEXT = "Leave now";
     var WAIT_ALERT_TEXT = "Wait for Leave By Alert";
@@ -6120,12 +6140,64 @@
       return action;
     }
 
-    function catchHeading() {
+    function boardingStopName() {
+      return selectedBoardingStop ? (selectedBoardingStop.description || selectedBoardingStop.stop_code || "") : "";
+    }
+
+    // pageC is true on the Page C current-bus card: "your Bus" there. Leg 2 names the transfer stop in the heading.
+    function catchHeading(pageCCard) {
       if (onLeg2()) {
-        var stop = selectedBoardingStop ? (selectedBoardingStop.description || selectedBoardingStop.stop_code) : "";
-        return fillText(CATCH_HEADING_LEG2_TEXT, { service: selectedService || "", stop: stop });
+        return fillText(CATCH_HEADING_LEG2_TEXT, { service: selectedService || "", stop: boardingStopName() });
       }
-      return fillText(CATCH_HEADING_TEXT, { service: selectedService || "" });
+      return fillText(pageCCard ? CATCH_HEADING_PAGE_C_TEXT : CATCH_HEADING_TEXT, { service: selectedService || "" });
+    }
+
+    // The same whole minutes as the arrival tile (countdownLabel): "Due" reads as now, under a minute as <1 min.
+    function etaParts(hero) {
+      if (!hero || hero.is_missed || !hero.arrival_time || !isFinite(new Date(hero.arrival_time).getTime())) {
+        return null;
+      }
+      var seconds = Math.round((new Date(hero.arrival_time).getTime() - Date.now()) / 1000);
+      if (seconds <= 30) {
+        return { line: ARRIVING_NOW_TEXT, ring: RING_ETA_NOW_TEXT };
+      }
+      if (seconds < 60) {
+        return { line: ARRIVING_SOON_TEXT, ring: RING_ETA_SOON_TEXT };
+      }
+      var n = Math.round(seconds / 60);
+      return { line: fillText(ARRIVING_IN_TEXT, { n: n }), ring: fillText(RING_ETA_TEXT, { n: n }) };
+    }
+
+    // The muted line under the heading: arrival minutes and the stop name (one line, ellipsis, full name in the title).
+    // Leg 2 shows the minutes only; with no ETA only the stop name shows.
+    function setCatchSub(prefix, hero) {
+      var eta = etaParts(hero);
+      var stop = onLeg2() ? "" : boardingStopName();
+      var etaEl = document.getElementById(prefix + "-sub-eta");
+      var sepEl = document.getElementById(prefix + "-sub-sep");
+      var stopEl = document.getElementById(prefix + "-sub-stop");
+      etaEl.textContent = eta ? eta.line : "";
+      stopEl.textContent = stop;
+      if (stop) {
+        stopEl.setAttribute("title", stop);
+      } else {
+        stopEl.removeAttribute("title");
+      }
+      sepEl.hidden = !(eta && stop);
+      document.getElementById(prefix + "-sub").hidden = !(eta || stop);
+    }
+
+    function ringLabel(chance, hero) {
+      var eta = etaParts(hero);
+      var stop = boardingStopName();
+      return fillText(RING_LABEL_TEXT, {
+        p: chance.point,
+        service: selectedService || "",
+        eta: eta ? eta.ring : "",
+        at: stop ? fillText(RING_AT_TEXT, { stop: stop }) : "",
+        a: chance.range_low,
+        b: chance.range_high
+      });
     }
 
     function syncPageCClasses() {
@@ -6347,7 +6419,8 @@
       var chance = hero && hero.probability;
       setPillState(document.getElementById("pc-pill"), document.getElementById("pc-pill-text"), state);
       setRing("pc-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
-      document.getElementById("pc-title").textContent = catchHeading();
+      document.getElementById("pc-title").textContent = catchHeading(true);
+      setCatchSub("pc", hero);
       document.getElementById("pc-range").textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
       document.getElementById("pc-warn").hidden = !(usable && isUnlikely(hero));
     }
