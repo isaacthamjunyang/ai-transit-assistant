@@ -8,6 +8,7 @@ later step has enough observations.
 import math
 from datetime import datetime, timedelta, timezone
 
+from config import RING_BAND_MID_FROM, RING_BAND_OK_FROM
 from nearby import haversine_m
 from pace import pace_guidance
 
@@ -41,30 +42,39 @@ def walk_seconds(distance_m: float, metres_per_second: float) -> float:
     return distance_m / metres_per_second
 
 
-def point_slack(seconds_until_eta: float, distance_m: float) -> float:
+def point_slack(
+    seconds_until_eta: float, distance_m: float, speed_m_s: float = POINT_WALK_M_S
+) -> float:
     return (
         seconds_until_eta
-        - walk_seconds(distance_m, POINT_WALK_M_S)
+        - walk_seconds(distance_m, speed_m_s)
         - BOARDING_BUFFER_S
         - GPS_PENALTY_S
         - HISTORICAL_LATENESS_S
     )
 
 
-def low_slack(seconds_until_eta: float, distance_m: float, accuracy_m: float) -> float:
+def low_slack(
+    seconds_until_eta: float,
+    distance_m: float,
+    accuracy_m: float,
+    speed_m_s: float = SLOW_WALK_M_S,
+) -> float:
     return (
         seconds_until_eta
-        - walk_seconds(distance_m, SLOW_WALK_M_S)
+        - walk_seconds(distance_m, speed_m_s)
         - BOARDING_BUFFER_S
         - (accuracy_m / POINT_WALK_M_S)
         - HISTORICAL_LATENESS_S
     )
 
 
-def high_slack(seconds_until_eta: float, distance_m: float) -> float:
+def high_slack(
+    seconds_until_eta: float, distance_m: float, speed_m_s: float = FAST_WALK_M_S
+) -> float:
     return (
         seconds_until_eta
-        - walk_seconds(distance_m, FAST_WALK_M_S)
+        - walk_seconds(distance_m, speed_m_s)
         - BOARDING_BUFFER_S
         - HISTORICAL_LATENESS_S
     )
@@ -77,6 +87,17 @@ def catch_probability(slack: float) -> float:
 
 def to_percent(unit_probability: float) -> int:
     return int(round(unit_probability * 100))
+
+
+def ring_band(point: int | None) -> str | None:
+    """Colour band for the probability ring: ok, mid or low. None when there is no point to show."""
+    if isinstance(point, bool) or not isinstance(point, int):
+        return None
+    if point >= RING_BAND_OK_FROM:
+        return "ok"
+    if point >= RING_BAND_MID_FROM:
+        return "mid"
+    return "low"
 
 
 def parse_headway_seconds(value: object) -> int | None:
@@ -173,8 +194,21 @@ def score_buses(
     stop_code: str,
     now: datetime,
     location_timestamp: float | None = None,
+    reach_speed_m_s: float | None = None,
+    reach_range_fraction: float = 0.25,
 ) -> list[dict]:
-    """Return buses with probability filled in. Does not reorder them."""
+    """Return buses with probability filled in. Does not reorder them.
+
+    reach_speed_m_s is set only while the user is on a vehicle (Leg 2 of a transfer). The
+    time to reach the stop is then distance / speed, with a range of plus or minus
+    reach_range_fraction, in place of the three walking speeds. Nothing else changes.
+    """
+    if reach_speed_m_s is not None:
+        point_speed = reach_speed_m_s
+        slow_speed = reach_speed_m_s / (1 + reach_range_fraction)
+        fast_speed = reach_speed_m_s / (1 - reach_range_fraction)
+    else:
+        point_speed, slow_speed, fast_speed = POINT_WALK_M_S, SLOW_WALK_M_S, FAST_WALK_M_S
     moment = _as_sgt(now)
     age_seconds = (
         None
@@ -210,13 +244,14 @@ def score_buses(
         seconds_until = (arrival - moment).total_seconds()
         monitored = bool(item.get("monitored"))
         accuracy = float(accuracy_m)
-        slack = point_slack(seconds_until, distance_m)
+        slack = point_slack(seconds_until, distance_m, point_speed)
         worse = low_slack(
             seconds_until,
             distance_m,
             effective_accuracy_m(accuracy, age_seconds),
+            slow_speed,
         )
-        better = high_slack(seconds_until, distance_m)
+        better = high_slack(seconds_until, distance_m, fast_speed)
         if not monitored:
             half_headway = headway_seconds(
                 services,
@@ -250,7 +285,8 @@ def score_buses(
             "reliability_label": RELIABILITY_LABEL,
             "is_missed": False,
         }
-        item["probability"]["pace"] = pace_guidance(
+        item["probability"]["band"] = ring_band(item["probability"]["point"])
+        item["probability"]["pace"] = None if reach_speed_m_s is not None else pace_guidance(
             point=item["probability"]["point"],
             range_low=item["probability"]["range_low"],
             range_high=item["probability"]["range_high"],

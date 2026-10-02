@@ -115,17 +115,17 @@ def _cache(services: list[dict] | None = None, alternate: bool = False) -> StopA
 
 def _sheet(**overrides) -> dict:
     fact = {
-        "point": 55,
-        "range_low": 40,
-        "range_high": 70,
-        "slack_seconds": 12,
+        "bus_minutes": 10,
         "walk_minutes": 4,
-        "monitored": True,
-        "data_quality": "live",
+        "minutes_before_leaving": 6,
         "chosen_action": "wait",
     }
     fact.update(overrides)
     return fact
+
+
+def _body(fact: dict) -> dict:
+    return {"fact_sheet": fact, "context": {"band": "ok", "uncertain": False, "leg2": False}}
 
 
 def _client(monkeypatch, cache: StopAndRouteCache):
@@ -540,47 +540,41 @@ def test_openai_unsafe_contradictory_and_timeout_use_the_guardrails(monkeypatch)
             constructed.append("openai")
             raise AssertionError("live OpenAI")
 
-    def spy(raw, fact_sheet):
+    def spy(raw, fact_sheet, context=None):
         seen.append(raw)
-        return real_interpret(raw, fact_sheet)
+        return real_interpret(raw, fact_sheet, context)
 
     monkeypatch.setattr("openai.OpenAI", Marker)
     monkeypatch.setattr(explain, "interpret_explanation", spy)
     fact = _sheet()
     demo.run_scenario(demo.OPENAI_GUARD)
-    unsafe_status, unsafe = explain.handle_explain_request(fact)
+    unsafe_status, unsafe = explain.handle_explain_request(_body(fact))
     demo.run_scenario(demo.OPENAI_GUARD)
-    contrary_status, contrary = explain.handle_explain_request(fact)
+    contrary_status, contrary = explain.handle_explain_request(_body(fact))
     started = time.monotonic()
     demo.run_scenario(demo.OPENAI_GUARD)
-    timeout_status, timed = explain.handle_explain_request(fact)
+    timeout_status, timed = explain.handle_explain_request(_body(fact))
     elapsed = time.monotonic() - started
-    fallback = explain.fallback_text(fact)
+    clause = explain.ACTION_ADVICE["wait"]
     assert unsafe_status == contrary_status == timeout_status == 200
     assert len(seen) == 2
     unsafe_body = seen[0]["body"]
     contrary_body = seen[1]["body"]
-    assert explain.contains_unsafe(unsafe_body["headline"], unsafe_body["reasoning"])
-    assert unsafe_body["cited_low"] == fact["range_low"]
-    assert unsafe_body["cited_high"] == fact["range_high"]
-    assert unsafe["source"] == "fallback"
-    assert unsafe["headline"] == fallback
-    assert "jaywalk" not in unsafe["headline"]
-    assert "run" not in unsafe["headline"].lower()
-    assert contrary_body["cited_low"] == fact["range_low"] + 5
-    assert contrary_body["cited_high"] == fact["range_high"] + 5
-    assert contrary["source"] == "fallback"
-    assert contrary["headline"] == fallback
-    assert timed["source"] == "fallback"
-    assert timed["headline"] == fallback
+    assert set(unsafe_body) == set(contrary_body) == {"advice"}  # the new schema: one field
+    assert not explain.advice_is_valid(unsafe_body["advice"], "wait") and explain.contains_unsafe(unsafe_body["advice"])
+    assert not explain.advice_is_valid(contrary_body["advice"], "wait")  # digits and a promise
+    for view in (unsafe, contrary, timed):
+        assert view["source"] == "fallback"
+        assert view["advice"] == clause  # the deterministic clause
+        assert view["text"].endswith(f"It is advisable to {clause}.")
+        assert "run" not in view["text"].lower().split() and "jaywalk" not in view["text"]
     assert elapsed < 1
     assert constructed == []
     assert SECRET not in json.dumps([unsafe, contrary, timed])
     assert demo.OPENAI_DEMO_ELAPSED_S > explain.TIMEOUT_SECONDS
     demo.reset_to_live()
     missing = explain.produce_explanation(fact)
-    assert missing["source"] == "fallback"
-    assert missing["headline"] == fallback
+    assert missing["source"] == "fallback" and missing["advice"] == clause
     assert constructed == []
     assert "alert(" not in INDEX.read_text(encoding="utf-8")
 
@@ -735,10 +729,15 @@ def test_stale_card_keeps_the_eta_and_does_not_render_a_percentage(monkeypatch):
     assert "clearLeaveNowTimer()" in frozen
     assert "syncLeaveNow" not in frozen
     assert "applyRouteSwitch" not in frozen
-    cards = html.split("function renderBusCards(body)", 1)[1].split("function appendMissed", 1)[0]
-    assert "countdownLabel(bus.arrival_time)" in cards
-    assert "} else if (!displayFrozen)" in cards
-    assert "appendScore(item, bus)" in cards
+    # Stale keeps the last ETA on screen (bus tiles) but no percentage (probability card).
+    cards = html.split("function renderBusCards(body)", 1)[1].split("function agoAmount", 1)[0]
+    assert "renderCatchCard(hero)" in cards
+    catch = html.split("function renderCatchCard(hero)", 1)[1].split("function renderLeaveTiles", 1)[0]
+    assert "!displayFrozen && chance" in catch
+    tiles = html.split("function renderNextBuses(buses, hero)", 1)[1].split("// Reserved rectangles", 1)[0]
+    assert "countdownLabel(bus.arrival_time)" in tiles
+    live = html.split("function renderLiveTracking()", 1)[1].split('document.getElementById("live-refresh")', 1)[0]
+    assert "renderNextBuses(buses, hero)" in live
 
 
 def test_reroute_cooldown_blocks_an_immediate_second_switch(monkeypatch, tmp_path):

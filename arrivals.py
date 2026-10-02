@@ -5,7 +5,9 @@ timestamps, and asks CatchHeuristic for a probability when the user's
 location was supplied. It does not log observations.
 """
 
+import copy
 import math
+import time
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -18,6 +20,8 @@ from lta_static import BASE_URL, REQUEST_TIMEOUT_SECONDS, StopAndRouteCache, rea
 
 SGT = timezone(timedelta(hours=8))
 BUS_POSITIONS = ("NextBus", "NextBus2", "NextBus3")
+PEEK_HANDOFF_SECONDS = 20
+_peek_handoff: dict[tuple[str, str], tuple[float, dict]] = {}
 
 
 class ArrivalUnavailable(Exception):
@@ -39,6 +43,8 @@ def fetch_arrivals(
     accuracy: float | None = None,
     location_timestamp: float | None = None,
     cache: StopAndRouteCache | None = None,
+    reach_speed_m_s: float | None = None,
+    reach_range_fraction: float = 0.25,
 ) -> dict:
     key = read_account_key() if account_key is None else account_key.strip()
     if not key:
@@ -46,7 +52,10 @@ def fetch_arrivals(
             "Live arrival data is unavailable: LTA_ACCOUNT_KEY is missing."
         )
     moment = now if now is not None else datetime.now(SGT)
-    if demo.lta_script_active():
+    handed = None if demo.lta_script_active() else _take_peek(stop_code, service_no)
+    if handed is not None:
+        result = handed
+    elif demo.lta_script_active():
         result = _fetch(
             None,
             key,
@@ -72,6 +81,8 @@ def fetch_arrivals(
         location_timestamp=location_timestamp,
         cache=cache,
         now=moment,
+        reach_speed_m_s=reach_speed_m_s,
+        reach_range_fraction=reach_range_fraction,
     )
     result["leave_by"] = leave_by_for_buses(
         result["buses"],
@@ -91,6 +102,118 @@ def fetch_arrivals(
         notification_time=result["notification_time"],
         arrival_status="ok",
     )
+    return result
+
+
+def fetch_stop_arrivals(
+    stop_code: str,
+    wanted_services: list[str],
+    client: httpx.Client | None = None,
+    account_key: str | None = None,
+    now: datetime | None = None,
+    user_lat: float | None = None,
+    user_lon: float | None = None,
+    accuracy: float | None = None,
+    location_timestamp: float | None = None,
+    cache: StopAndRouteCache | None = None,
+) -> dict[str, dict]:
+    """Every wanted service at one stop from a single BusArrival call with ServiceNo omitted.
+
+    LTA returns all the services at the stop when ServiceNo is left out. Each wanted service
+    comes back shaped and scored like fetch_arrivals (status, stop_code, service_no,
+    fetched_at, buses with probability), through the same parser and scoring. In Demo Mode
+    the provider interception supplies each service, so no network call is made.
+    """
+    key = read_account_key() if account_key is None else account_key.strip()
+    if not key:
+        raise ArrivalUnavailable("Live arrival data is unavailable: LTA_ACCOUNT_KEY is missing.")
+    moment = now if now is not None else datetime.now(SGT)
+    wanted = [str(service).strip() for service in wanted_services if str(service).strip()]
+    results: dict[str, dict] = {}
+    if demo.lta_script_active():
+        for service in wanted:
+            results[service] = _fetch(None, key, stop_code, service, moment, user_lat=user_lat, user_lon=user_lon, cache=cache)
+    else:
+        if client is None:
+            with httpx.Client(timeout=REQUEST_TIMEOUT_SECONDS) as owned:
+                payload = _fetch_stop_payload(owned, key, stop_code)
+        else:
+            payload = _fetch_stop_payload(client, key, stop_code)
+        for service in wanted:
+            results[service] = {
+                "status": "ok",
+                "stop_code": stop_code,
+                "service_no": service,
+                "fetched_at": _as_sgt_iso(moment),
+                "buses": _buses_from_payload(payload, service),
+            }
+    for service, result in results.items():
+        result["buses"] = _with_probability(
+            result["buses"],
+            stop_code=stop_code,
+            service_no=service,
+            user_lat=user_lat,
+            user_lon=user_lon,
+            accuracy=accuracy,
+            location_timestamp=location_timestamp,
+            cache=cache,
+            now=moment,
+        )
+    return results
+
+
+def _fetch_stop_payload(client: httpx.Client, account_key: str, stop_code: str) -> dict:
+    try:
+        response = client.get(
+            f"{BASE_URL}/v3/BusArrival",
+            params={"BusStopCode": stop_code},
+            headers={"AccountKey": account_key},
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+    except httpx.TimeoutException as exc:
+        raise ArrivalUnavailable("Live arrival data is unavailable: request timed out.") from exc
+    except httpx.HTTPError as exc:
+        raise ArrivalUnavailable("Live arrival data is unavailable: request failed.") from exc
+    if response.status_code != 200:
+        raise ArrivalUnavailable(f"Live arrival data is unavailable: HTTP {response.status_code}.")
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise ArrivalUnavailable("Live arrival data is unavailable: response was not valid JSON.") from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("Services"), list):
+        raise ArrivalUnavailable("Live arrival data is unavailable: response did not contain services.")
+    return payload
+
+
+def peek_arrivals(stop_code: str, service_no: str, account_key: str | None = None) -> dict:
+    """One raw arrival lookup for the journey overview.
+
+    Same provider call as monitoring, so Demo Mode interception applies. No probability,
+    no leave-by, no notification, no logging. The result is handed to the first
+    monitoring fetch for the same stop and service if that comes within 20 seconds,
+    so pressing Start does not repeat the call.
+    """
+    key = read_account_key() if account_key is None else account_key.strip()
+    if not key:
+        raise ArrivalUnavailable(
+            "Live arrival data is unavailable: LTA_ACCOUNT_KEY is missing."
+        )
+    moment = datetime.now(SGT)
+    if demo.lta_script_active():
+        return _fetch(None, key, stop_code, service_no, moment)
+    with httpx.Client(timeout=REQUEST_TIMEOUT_SECONDS) as owned:
+        result = _fetch(owned, key, stop_code, service_no, moment)
+    _peek_handoff[(stop_code, service_no)] = (time.monotonic(), copy.deepcopy(result))
+    return result
+
+
+def _take_peek(stop_code: str, service_no: str) -> dict | None:
+    entry = _peek_handoff.pop((stop_code, service_no), None)
+    if entry is None:
+        return None
+    stored_at, result = entry
+    if time.monotonic() - stored_at >= PEEK_HANDOFF_SECONDS:
+        return None
     return result
 
 
@@ -193,6 +316,8 @@ def _with_probability(
     location_timestamp: float | None,
     cache: StopAndRouteCache | None,
     now: datetime,
+    reach_speed_m_s: float | None = None,
+    reach_range_fraction: float = 0.25,
 ) -> list[dict]:
     stop = cache.stop_by_code(stop_code) if cache is not None else None
     stop_lat = stop.get("Latitude") if isinstance(stop, dict) else None
@@ -212,6 +337,8 @@ def _with_probability(
         service_no=service_no,
         stop_code=stop_code,
         now=now,
+        reach_speed_m_s=reach_speed_m_s,
+        reach_range_fraction=reach_range_fraction,
     )
 
 

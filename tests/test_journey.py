@@ -257,7 +257,7 @@ def test_page_shows_the_journey_form():
     assert "body.comparison_label" in html
     assert "body.comparison_note" in html
     assert "Leave-by: Unavailable" in html
-    assert "new Notification(notice.title, { body: notice.body })" in html
+    assert "showLocalNotification(notice.title, { body: notice.body })" in html
     assert "/ 1.1" not in html
 
 

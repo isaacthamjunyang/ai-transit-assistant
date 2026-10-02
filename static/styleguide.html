@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Theme and component kit</title>
+  <script src="theme-boot.js"></script>
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="components.css">
   <link
@@ -25,7 +26,7 @@
       </span>
       <div>
         <h1 class="app-header__title">Bus Catch Assistant</h1>
-        <p class="app-header__subtitle">Singapore Bus Journey Assistant</p>
+        <p class="app-header__subtitle" data-copy="home.subtitle">AI-powered bus guidance in Singapore</p>
       </div>
     </div>
     <button type="button" class="icon-button" id="menu-open" aria-expanded="false" aria-controls="menu-sheet">
@@ -34,15 +35,16 @@
       </svg>
       <span class="visually-hidden">Menu</span>
     </button>
-  </header>
-  <div id="menu-sheet" class="menu-sheet" hidden>
-    <div class="menu-sheet__panel" role="dialog" aria-label="Menu">
-      <p class="menu-sheet__label">Appearance</p>
-      <div class="row row--inline" role="group" aria-label="Colour scheme">
-        <button type="button" class="button button--secondary" id="theme-light">Light</button>
-        <button type="button" class="button button--secondary" id="theme-dark">Dark</button>
-        <button type="button" class="button button--secondary" id="theme-system">Match system</button>
+    <div id="menu-sheet" class="menu-sheet" hidden>
+      <button type="button" class="menu-row" id="appearance-toggle" aria-expanded="false" aria-controls="appearance-options">
+        <span data-copy="home.appearance">Appearance</span>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <div id="appearance-options" class="menu-radios" role="radiogroup" aria-label="Appearance" hidden>
+        <button type="button" class="menu-radio" id="theme-light" role="radio" aria-checked="false" data-copy="home.light">Light</button>
+        <button type="button" class="menu-radio" id="theme-dark" role="radio" aria-checked="false" data-copy="home.dark">Dark</button>
       </div>
+      <button type="button" class="menu-row" id="back-home" aria-disabled="true" data-copy="home.back">Back</button>
       <details id="guide-demo-controls">
         <summary>Demo Controls</summary>
         <label for="guide-scenario">Scenario</label>
@@ -51,9 +53,40 @@
         <button type="button" class="button button--secondary">Reset to Live</button>
       </details>
     </div>
-  </div>
+  </header>
 
   <main class="guide">
+    <section class="stack" aria-labelledby="menu-preview-heading">
+      <h2 id="menu-preview-heading">Menu</h2>
+      <div class="menu-sheet is-preview">
+        <button type="button" class="menu-row" aria-expanded="false">
+          <span data-copy="home.appearance">Appearance</span>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <button type="button" class="menu-row" aria-disabled="true" data-copy="home.back">Back</button>
+      </div>
+      <div class="menu-sheet is-preview">
+        <button type="button" class="menu-row" aria-expanded="true">
+          <span data-copy="home.appearance">Appearance</span>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <div class="menu-radios" role="radiogroup" aria-label="Appearance">
+          <button type="button" class="menu-radio is-selected" role="radio" aria-checked="true">Light</button>
+          <button type="button" class="menu-radio" role="radio" aria-checked="false">Dark</button>
+        </div>
+        <button type="button" class="menu-row" data-copy="home.back">Back</button>
+      </div>
+      <button type="button" class="stop-button is-selected" aria-selected="true">Selected row</button>
+      <button type="button" class="stop-button is-hover">Hover row</button>
+      <button type="button" class="stop-button is-focus">Focus row</button>
+      <div class="arrival-ticket is-selected" aria-selected="true">Selected tile</div>
+      <div class="arrival-ticket is-hover">Hover tile</div>
+      <div class="arrival-ticket is-focus">Focus tile</div>
+      <button type="button" class="service-button is-selected is-selected--success" aria-selected="true">Selected button</button>
+      <button type="button" class="service-button is-hover">Hover button</button>
+      <button type="button" class="service-button is-focus">Focus button</button>
+    </section>
+
     <section class="stack" aria-labelledby="buttons-heading">
       <h2 id="buttons-heading">Buttons</h2>
       <button type="button" class="button button--primary">Primary</button>
@@ -125,8 +158,6 @@
       <div class="meter meter--ring meter--sample" id="probability" aria-live="polite">
         <div class="meter__dial">
           <div class="meter__ring"></div>
-          <span class="meter__tick meter__tick--40" aria-hidden="true"></span>
-          <span class="meter__tick meter__tick--50" aria-hidden="true"></span>
           <div class="meter__center">
             <p class="meter__value">64%</p>
             <p class="meter__range">51–78%</p>
@@ -246,60 +277,247 @@
       <p class="field__hint">Leg 2 schedule expectation sits here. The plan does not lock one sentence for that line.</p>
     </section>
 
+    <section class="stack" aria-labelledby="arrive-panel-heading">
+      <h2 id="arrive-panel-heading">Arrive-by estimate, miss line, and picker</h2>
+      <div class="place-row-samples theme-sample-light">
+        <p>Arrive about 6:24 PM (6:21–6:31 PM)</p>
+        <p>Estimated arrival about 6:24 PM (6:21–6:31 PM)</p>
+        <div class="miss-row">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+          <div>
+            <p class="miss-row__label" data-copy="arriveBy.missLabel"></p>
+            <p>Next Bus 36 in 12 min · arrive about 6:36 PM (about 6 min late)</p>
+          </div>
+        </div>
+        <div class="banner banner--caution planning-banner">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+          <p>Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p>
+          <button type="button" class="secondary" data-copy="arriveBy.changeTime"></button>
+        </div>
+        <div class="arrive-chips" role="radiogroup" aria-label="Arrive by">
+          <button type="button" class="arrive-chip is-selected" role="radio" aria-checked="true" data-copy="arriveBy.noTarget"></button>
+          <button type="button" class="arrive-chip is-hover" role="radio" aria-checked="false" data-copy="arriveBy.in30"></button>
+          <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false" data-copy="arriveBy.inHour"></button>
+          <button type="button" class="arrive-chip" role="radio" aria-checked="false" data-copy="arriveBy.custom"></button>
+        </div>
+        <p class="note">Arrive by 6:45 PM</p>
+        <p class="field-error" data-copy="arriveBy.past"></p>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <p>Arrive about 6:24 PM (6:21–6:31 PM)</p>
+        <p>Estimated arrival about 6:24 PM (6:21–6:31 PM)</p>
+        <div class="miss-row">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+          <div>
+            <p class="miss-row__label">If you miss it</p>
+            <p>Next Bus 36 in 12 min · arrive about 6:36 PM (about 6 min late)</p>
+          </div>
+        </div>
+        <div class="banner banner--caution planning-banner">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+          <p>Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p>
+          <button type="button" class="secondary">Change time</button>
+        </div>
+        <div class="arrive-chips" role="radiogroup" aria-label="Arrive by">
+          <button type="button" class="arrive-chip is-selected" role="radio" aria-checked="true">No target</button>
+          <button type="button" class="arrive-chip is-hover" role="radio" aria-checked="false">In 30 min</button>
+          <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false">In 1 hour</button>
+          <button type="button" class="arrive-chip" role="radio" aria-checked="false">Custom</button>
+        </div>
+        <p class="note">Arrive by 6:45 PM (tomorrow)</p>
+        <p class="field-error">That time has already passed. Choose a later time.</p>
+      </div>
+    </section>
+
     <section class="stack" aria-labelledby="search-states-heading">
       <h2 id="search-states-heading">Search and stop states</h2>
       <p class="empty">No matches found. Try a building, road, or postal code.</p>
       <p class="banner banner--denied">Destination search unavailable.</p>
       <p class="empty">No destination stops were found within 600 m.</p>
-      <p class="empty">No nearby boarding stops were found within 400 m.</p>
-      <button type="button" class="list-item list-item--selected">
-        <span class="list-item__icon" aria-hidden="true">
-          <svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
-        </span>
-        <span class="list-item__body">
-          <span class="list-item__title">Opp Pebble Bay</span>
-          <span class="list-item__meta">90029</span>
-        </span>
-        <span class="list-item__aside">
-          <span>182 m · ~2 min walk</span>
-        </span>
-      </button>
-      <button type="button" class="list-item">
-        <span class="list-item__icon" aria-hidden="true">
-          <svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path></svg>
-        </span>
-        <span class="list-item__body">
-          <span class="list-item__title">Further stop</span>
-          <span class="list-item__meta">41021</span>
-        </span>
-        <span class="list-item__aside">
-          <span>540 m · ~7 min walk</span>
-          <span data-copy="noDirectBus"></span>
-        </span>
-      </button>
     </section>
 
     <section class="stack" aria-labelledby="quality-heading">
-      <h2 id="quality-heading">Stale and location uncertain</h2>
-      <article class="card card--unavailable">
-        <p class="badge badge--unavailable">
-          <span class="badge__dot" aria-hidden="true"></span>
-          <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5M5 5l14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-          <span data-copy="status.stale"></span>
-        </p>
-        <h3 data-copy="quality.stale.heading"></h3>
-        <p data-copy="quality.stale.updated"></p>
-        <p data-copy="quality.stale.body"></p>
-      </article>
-      <article class="card card--caution">
-        <p class="badge badge--uncertain">
-          <span class="badge__dot" aria-hidden="true"></span>
-          <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
-          <span data-copy="status.locationUncertain"></span>
-        </p>
-        <h3 data-copy="quality.uncertain.heading"></h3>
-        <p data-copy="quality.uncertain.body"></p>
-      </article>
+      <h2 id="quality-heading">Leave now and data-quality warnings (screens 9 and 10)</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <div id="quality-sample-light" class="stack"></div>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <div id="quality-sample-dark" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="pages-heading">
+      <h2 id="pages-heading">Probability ring and the two live pages</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <div id="pages-sample-light" class="stack"></div>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <div id="pages-sample-dark" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="flow-heading">
+      <h2 id="flow-heading">Live flow: no-service layout, map, question bar, overviews, reroute options, Leg 2</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <div id="flow-sample-light" class="stack"></div>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <div id="flow-sample-dark" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="home-heading">
+      <h2 id="home-heading">Home and search</h2>
+      <div id="screen-sample-light" class="place-row-samples theme-sample-light"></div>
+      <div id="screen-sample-dark" class="place-row-samples theme-sample-dark"></div>
+      <p class="banner banner--caution">No matches found. Try a building, road, or postal code.</p>
+      <p class="banner banner--denied">Destination search unavailable.</p>
+    </section>
+
+    <section class="stack" aria-labelledby="place-row-heading">
+      <h2 id="place-row-heading">Place row</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <ul class="destination-results">
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Marina Bay Sands</span><span class="place-row__distance">520&nbsp;m</span></span>
+                <span class="place-row__address" title="10 Bayfront Avenue, Singapore 018956">10 Bayfront Avenue, Singapore 018956</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">NUS Ridge View Residential College Beside University Town on Lower Kent Ridge Road</span><span class="place-row__distance">860&nbsp;m</span></span>
+                <span class="place-row__address" title="25 Lower Kent Ridge Road, Singapore 119081. This longer address continues past the second line so the ellipsis can be checked.">25 Lower Kent Ridge Road, Singapore 119081. This longer address continues past the second line so the ellipsis can be checked.</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">VivoCity</span></span>
+                <span class="place-row__address" title="1 HarbourFront Walk, Singapore 098585">1 HarbourFront Walk, Singapore 098585</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Changi Airport</span><span class="place-row__distance">18.4&nbsp;km</span></span>
+                <span class="place-row__address" title="Airport Boulevard, Singapore 819643">Airport Boulevard, Singapore 819643</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row is-selected" aria-selected="true">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Selected place</span><span class="place-row__distance">320&nbsp;m</span></span>
+                <span class="place-row__address" title="1 Selected Road, Singapore 123456">1 Selected Road, Singapore 123456</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row is-hover">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Hover place</span><span class="place-row__distance">410&nbsp;m</span></span>
+                <span class="place-row__address" title="2 Hover Road, Singapore 123456">2 Hover Road, Singapore 123456</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit is-focus">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Focus place</span><span class="place-row__distance">250&nbsp;m</span></span>
+                <span class="place-row__address" title="3 Focus Road, Singapore 123456">3 Focus Road, Singapore 123456</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <ul class="destination-results">
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Marina Bay Sands</span><span class="place-row__distance">520&nbsp;m</span></span>
+                <span class="place-row__address" title="10 Bayfront Avenue, Singapore 018956">10 Bayfront Avenue, Singapore 018956</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">NUS Ridge View Residential College Beside University Town on Lower Kent Ridge Road</span><span class="place-row__distance">860&nbsp;m</span></span>
+                <span class="place-row__address" title="25 Lower Kent Ridge Road, Singapore 119081. This longer address continues past the second line so the ellipsis can be checked.">25 Lower Kent Ridge Road, Singapore 119081. This longer address continues past the second line so the ellipsis can be checked.</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">VivoCity</span></span>
+                <span class="place-row__address" title="1 HarbourFront Walk, Singapore 098585">1 HarbourFront Walk, Singapore 098585</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Changi Airport</span><span class="place-row__distance">18.4&nbsp;km</span></span>
+                <span class="place-row__address" title="Airport Boulevard, Singapore 819643">Airport Boulevard, Singapore 819643</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row is-selected" aria-selected="true">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Selected place</span><span class="place-row__distance">320&nbsp;m</span></span>
+                <span class="place-row__address" title="1 Selected Road, Singapore 123456">1 Selected Road, Singapore 123456</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row is-hover">
+            <button type="button" class="place-row__hit">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Hover place</span><span class="place-row__distance">410&nbsp;m</span></span>
+                <span class="place-row__address" title="2 Hover Road, Singapore 123456">2 Hover Road, Singapore 123456</span>
+              </span>
+            </button>
+          </li>
+          <li class="place-row">
+            <button type="button" class="place-row__hit is-focus">
+              <span class="place-row__pin" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
+              <span class="place-row__body">
+                <span class="place-row__topline"><span class="place-row__title">Focus place</span><span class="place-row__distance">250&nbsp;m</span></span>
+                <span class="place-row__address" title="3 Focus Road, Singapore 123456">3 Focus Road, Singapore 123456</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <section class="stack" aria-labelledby="demo-heading">
@@ -309,7 +527,42 @@
         <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 3v4M12 17v4M3 12h4M17 12h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <span data-copy="simulated"></span>
       </p>
-      <p class="empty">No nearby boarding stops were found within 400 m.</p>
+    </section>
+
+    <section class="stack" aria-labelledby="dest-screens-heading">
+      <h2 id="dest-screens-heading">Destination stops and confirm (screens 3 and 4)</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <div id="dest-sample-light" class="stack"></div>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <div id="dest-sample-dark" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="catch-screens-heading">
+      <h2 id="catch-screens-heading">Catch probability and rerouting (screens 7 and 8)</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <div id="catch-sample-light" class="stack"></div>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <div id="catch-sample-dark" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="live-screens-heading">
+      <h2 id="live-screens-heading">Journey overview and live tracking (screens 5 and 6)</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <div id="live-sample-light" class="stack"></div>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <div id="live-sample-dark" class="stack"></div>
+      </div>
     </section>
 
     <section class="stack" aria-labelledby="map-heading">
@@ -318,6 +571,7 @@
     </section>
   </main>
   <script src="copy.js"></script>
+  <script src="place-icons.js"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -383,20 +637,831 @@
       var open = sheet.hasAttribute("hidden");
       if (open) {
         sheet.removeAttribute("hidden");
+        this.setAttribute("aria-expanded", "true");
       } else {
         sheet.setAttribute("hidden", "");
+        this.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.getElementById("appearance-toggle").addEventListener("click", function () {
+      var options = document.getElementById("appearance-options");
+      var open = options.hasAttribute("hidden");
+      if (open) {
+        options.removeAttribute("hidden");
+      } else {
+        options.setAttribute("hidden", "");
       }
       this.setAttribute("aria-expanded", open ? "true" : "false");
     });
+    function chooseGuideTheme(choice) {
+      if (typeof applyThemeChoice === "function") {
+        applyThemeChoice(choice);
+      } else {
+        document.documentElement.setAttribute("data-theme", choice);
+      }
+      document.getElementById("theme-light").setAttribute("aria-checked", choice === "light" ? "true" : "false");
+      document.getElementById("theme-dark").setAttribute("aria-checked", choice === "dark" ? "true" : "false");
+      document.getElementById("theme-light").classList.toggle("is-selected", choice === "light");
+      document.getElementById("theme-dark").classList.toggle("is-selected", choice === "dark");
+    }
     document.getElementById("theme-light").addEventListener("click", function () {
-      document.documentElement.setAttribute("data-theme", "light");
+      chooseGuideTheme("light");
     });
     document.getElementById("theme-dark").addEventListener("click", function () {
-      document.documentElement.setAttribute("data-theme", "dark");
+      chooseGuideTheme("dark");
     });
-    document.getElementById("theme-system").addEventListener("click", function () {
-      document.documentElement.removeAttribute("data-theme");
+    chooseGuideTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
+    var chevronSvg = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var downSvg = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 9l6 6 6-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var heroArt = "<svg class=\"hero__art\" viewBox=\"0 0 440 160\" preserveAspectRatio=\"xMidYMid slice\" aria-hidden=\"true\" focusable=\"false\"><rect class=\"illus-sky\" x=\"0\" y=\"0\" width=\"440\" height=\"160\"></rect><rect class=\"illus-ground\" x=\"0\" y=\"124\" width=\"440\" height=\"36\"></rect><rect class=\"illus-building-alt\" x=\"292\" y=\"78\" width=\"36\" height=\"58\" rx=\"2\"></rect><rect class=\"illus-building\" x=\"338\" y=\"52\" width=\"24\" height=\"84\"></rect><rect class=\"illus-building\" x=\"368\" y=\"52\" width=\"24\" height=\"84\"></rect><rect class=\"illus-building\" x=\"398\" y=\"52\" width=\"24\" height=\"84\"></rect><rect class=\"illus-building\" x=\"332\" y=\"40\" width=\"96\" height=\"16\" rx=\"8\"></rect><rect class=\"illus-ink\" x=\"248\" y=\"108\" width=\"6\" height=\"20\"></rect><circle class=\"illus-tree\" cx=\"251\" cy=\"98\" r=\"16\"></circle><rect class=\"illus-bus\" x=\"168\" y=\"108\" width=\"78\" height=\"26\" rx=\"6\"></rect><rect class=\"illus-bus-window\" x=\"176\" y=\"114\" width=\"14\" height=\"8\" rx=\"2\"></rect><rect class=\"illus-bus-window\" x=\"194\" y=\"114\" width=\"14\" height=\"8\" rx=\"2\"></rect><circle class=\"illus-ink\" cx=\"186\" cy=\"134\" r=\"6\"></circle><circle class=\"illus-ink\" cx=\"228\" cy=\"134\" r=\"6\"></circle></svg>";
+
+    function guideLocation(mode, text, extra) {
+      return "<section class=\"info-row" + (extra ? " " + extra : "") + "\"><span class=\"icon-tile\" aria-hidden=\"true\"><svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></span><span class=\"info-row__copy\"><span class=\"info-row__title\">" + copy.home.locationTitle + "</span><span class=\"info-row__meta\">" + text + "</span></span><span class=\"location-indicator is-" + mode + "\" aria-hidden=\"true\"><span class=\"spinner\"><span class=\"spinner__dot\"></span><span class=\"spinner__dot\"></span><span class=\"spinner__dot\"></span></span><span class=\"status-dot status-dot--ok\"></span><span class=\"status-dot status-dot--warn\"></span></span></section>";
+    }
+
+    function guideResult(title, address, distance, extraClass, focusClass) {
+      var distanceHtml = distance ? "<span class=\"place-row__distance\">" + distance + "</span>" : "";
+      return "<li class=\"place-row" + (extraClass ? " " + extraClass : "") + "\"" + (extraClass === "is-selected" ? " aria-selected=\"true\"" : "") + "><button type=\"button\" class=\"place-row__hit" + (focusClass ? " " + focusClass : "") + "\"><span class=\"place-tile\" aria-hidden=\"true\">" + placeIconSvg(placeIconId(title)) + "</span><span class=\"place-row__body\"><span class=\"place-row__topline\"><span class=\"place-row__title\">" + title + "</span>" + distanceHtml + "</span><span class=\"place-row__address\" title=\"" + address + "\">" + address + "</span></span><span class=\"place-row__chevron\" aria-hidden=\"true\">" + chevronSvg + "</span></button></li>";
+    }
+
+    function guideArrive(label, open) {
+      var panel = open
+        ? "<div class=\"arrive-panel\"><div class=\"arrive-chips\"><button type=\"button\" class=\"arrive-chip is-selected\" aria-checked=\"true\">" + copy.arriveBy.noTarget + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.in30 + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.inHour + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.custom + "</button></div></div>"
+        : "";
+      return "<div class=\"arrive-block\"><div class=\"info-row__head\"><span class=\"icon-tile\" aria-hidden=\"true\"><svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></span><span class=\"info-row__title\">" + copy.home.arriveBy + "</span></div><button type=\"button\" class=\"select-field\" aria-expanded=\"" + (open ? "true" : "false") + "\"><span>" + label + "</span>" + downSvg + "</button>" + panel + "</div>";
+    }
+
+    function screenSample() {
+      var longAddress = "25 Lower Kent Ridge Road, Singapore 119081. This longer address continues past the second line so the ellipsis can be checked.";
+      var tiles = [
+        ["Bayfront MRT Station", "Train"],
+        ["Orchard Mall", "Shopping"],
+        ["ArtScience Museum", "Museum"],
+        ["Changi Airport", "Plane"],
+        ["Marina Bay Sands", "Building"],
+        ["NUS", "Campus"],
+        ["General Hospital", "Hospital"],
+        ["Botanic Garden", "Park"],
+        ["HarbourFront", "Pin"]
+      ].map(function (item) {
+        return "<span class=\"icon-sample\"><span class=\"place-tile\" aria-hidden=\"true\">" + placeIconSvg(placeIconId(item[0])) + "</span><span class=\"note\">" + item[1] + "</span></span>";
+      }).join("");
+      return "<div class=\"card screen-sample\">" +
+        "<div class=\"hero\">" + heroArt + "<p class=\"hero__copy\"><span class=\"hero__line\">" + copy.home.heroLeave + "</span><span class=\"hero__line\">" + copy.home.heroCatch + "</span></p></div>" +
+        "<p class=\"hero-support\">" + copy.home.heroSupport + "</p>" +
+        "<button type=\"button\" class=\"quick-pick\">" + copy.home.quickPicks[0] + "</button>" +
+        guideLocation("waiting", copy.home.locationGetting) +
+        guideLocation("found", "Tanjong Rhu") +
+        guideLocation("found", copy.home.locationFound) +
+        guideLocation("warn", "Denied") +
+        guideLocation("warn", "Unavailable") +
+        guideLocation("warn", copy.quality.uncertain.body.replace("{accuracy}", "120 m"), "is-uncertain") +
+        guideArrive(copy.home.selectTime, false) +
+        guideArrive("6:30 PM", false) +
+        guideArrive("6:30 PM", true) +
+        "<div class=\"search-row\"><div class=\"field\"><div class=\"field__shell\"><svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"11\" cy=\"11\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M16 16l4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg><input class=\"field__control\" type=\"text\" value=\"Marina Bay Sands\" aria-label=\"Where do you want to go?\"><button type=\"button\" class=\"field__clear\" aria-label=\"Clear\"><svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 7l10 10M17 7L7 17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button></div></div></div>" +
+        "<h2 class=\"results-heading\"><span class=\"results-heading__title\">" + copy.home.resultsHeading + "</span><span class=\"results-heading__hint\">" + copy.home.resultsHint + "</span></h2>" +
+        "<ul class=\"destination-results\">" +
+        guideResult("Marina Bay Sands", "10 Bayfront Avenue, Singapore 018956", "520&nbsp;m", "", "") +
+        guideResult("NUS Ridge View Residential College Beside University Town on Lower Kent Ridge Road", longAddress, "860&nbsp;m", "", "") +
+        guideResult("VivoCity", "1 HarbourFront Walk, Singapore 098585", "", "", "") +
+        guideResult("Changi Airport", "Airport Boulevard, Singapore 819643", "18.4&nbsp;km", "is-selected", "") +
+        guideResult("Hover place", "2 Hover Road, Singapore 123456", "410&nbsp;m", "is-hover", "") +
+        guideResult("Focus place", "3 Focus Road, Singapore 123456", "250&nbsp;m", "", "is-focus") +
+        "</ul><div class=\"icon-samples\">" + tiles + "</div></div>";
+    }
+
+    ["screen-sample-light", "screen-sample-dark"].forEach(function (id) {
+      document.getElementById(id).innerHTML = screenSample();
     });
+
+    document.querySelectorAll(".place-row").forEach(function (row) {
+      var pin = row.querySelector(".place-row__pin");
+      var title = row.querySelector(".place-row__title");
+      if (pin && title) {
+        var tile = document.createElement("span");
+        tile.className = "place-tile";
+        tile.setAttribute("aria-hidden", "true");
+        tile.innerHTML = placeIconSvg(placeIconId(title.textContent));
+        pin.replaceWith(tile);
+      }
+      var hit = row.querySelector(".place-row__hit");
+      if (hit && !hit.querySelector(".place-row__chevron")) {
+        var mark = document.createElement("span");
+        mark.className = "place-row__chevron";
+        mark.setAttribute("aria-hidden", "true");
+        mark.innerHTML = chevronSvg;
+        hit.appendChild(mark);
+      }
+    });
+
+    var BUS_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"5\" y=\"3\" width=\"14\" height=\"15\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><path d=\"M5 11h14M8 18v2M16 18v2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><circle cx=\"8.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle><circle cx=\"15.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle></svg>";
+    var WALK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"1.8\" fill=\"currentColor\"></circle><path d=\"M10 21l2-6 2.5 2.5V21M8 12l2.5-4.5h3l2 3.5 2.5 1M12.5 7.5L11 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var INFO_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 11v6M12 7.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+    var CHEVRON_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var CROSSHAIR_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\" fill=\"currentColor\"></circle><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+    var PIN_SVG = "<svg class=\"dest-pin__svg\" viewBox=\"0 0 32 40\" aria-hidden=\"true\" focusable=\"false\"><path class=\"dest-pin__body\" d=\"M16 38s12-11.6 12-22a12 12 0 1 0-24 0c0 10.4 12 22 12 22z\"></path><circle class=\"dest-pin__dot\" cx=\"16\" cy=\"16\" r=\"4.5\"></circle></svg>";
+    var CLOCK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+    var ARROW_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 12h14M13 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var DOWN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 9l6 6 6-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var stopsCopy = copy.destinationStops;
+    var confirmCopy = copy.confirmDestination;
+
+    function walkLine(minutes, metres) {
+      return stopsCopy.walk.replace("{minutes}", minutes).replace("{distance}", metres + " m");
+    }
+
+    function destRow(name, minutes, metres, options) {
+      var classes = "dest-stop-row" + (options.state ? " " + options.state : "") + (options.unreachable ? " is-unreachable" : "");
+      var pressed = options.state === "is-selected" ? "true" : "false";
+      return "<li><button type=\"button\" class=\"" + classes + "\" aria-pressed=\"" + pressed + "\">"
+        + "<span class=\"dest-stop-row__radio\" aria-hidden=\"true\"></span>"
+        + "<span class=\"bus-tile\" aria-hidden=\"true\">" + BUS_SVG + "</span>"
+        + "<span class=\"dest-stop-row__body\"><span class=\"dest-stop-row__name\">" + name + "</span>"
+        + "<span class=\"dest-stop-row__meta\">" + WALK_ICON + walkLine(minutes, metres) + "</span>"
+        + (options.unreachable ? "<span class=\"dest-stop-row__meta dest-stop-row__note\">" + INFO_ICON + copy.noDirectBus + "</span>" : "")
+        + "</span>"
+        + (options.best ? "<span class=\"pill pill--best\">" + stopsCopy.bestOption + "</span>" : "<span class=\"dest-stop-row__chevron\" aria-hidden=\"true\">" + CHEVRON_ICON + "</span>")
+        + "</button></li>";
+    }
+
+    function destSample() {
+      return ""
+        + "<h4>Map overlay card, markers, pin and locate button</h4>"
+        + "<div class=\"dest-map sample-map\">"
+        + "<div class=\"map-place-card\"><p class=\"map-place-card__name\">Marina Bay Sands</p><p class=\"map-place-card__address\">10 Bayfront Ave, Singapore 018956</p></div>"
+        + "<div class=\"sample-map__strip\">"
+        + "<span class=\"dest-pin\">" + PIN_SVG + "</span>"
+        + "<span class=\"map-stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right\">Unselected stop</span></span>"
+        + "<span class=\"map-stop is-selected\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right is-selected\">Selected stop</span></span>"
+        + "<span class=\"map-stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right is-label-hidden\">Hidden label</span></span>"
+        + "</div>"
+        + "<button type=\"button\" class=\"map-locate map-dest-only sample-map__locate\" aria-label=\"" + stopsCopy.locate + "\">" + CROSSHAIR_ICON + "</button>"
+        + "</div>"
+        + "<h4>Range chip and attribution</h4>"
+        + "<div class=\"row row--inline sample-map-controls\">"
+        + ["50\u00a0m", "200\u00a0m", "1\u00a0km", "5\u00a0km"].map(function (value) {
+          return "<div class=\"map-range-chip\"><span class=\"map-range-chip__text\">" + stopsCopy.range.replace("{distance}", value) + "</span></div>";
+        }).join("")
+        + "<div class=\"map-attribution-chip\">Leaflet | &copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a></div>"
+        + "</div>"
+        + "<h4>Sticky footer: disabled, then enabled</h4>"
+        + "<div class=\"dest-sheet sample-sheet\">"
+        + "<div class=\"dest-sheet__footer\"><button type=\"button\" class=\"primary primary--icon\" disabled><span>" + stopsCopy.selectStop + "</span>" + ARROW_ICON + "</button></div>"
+        + "<div class=\"dest-sheet__footer\"><button type=\"button\" class=\"primary primary--icon\"><span>" + stopsCopy.selectStop + "</span>" + ARROW_ICON + "</button></div>"
+        + "</div>"
+        + "<h4>List sheet, info note and row states</h4>"
+        + "<div class=\"dest-sheet sample-sheet\">"
+        + "<div class=\"dest-sheet__head\"><h5 class=\"dest-sheet__title\">" + stopsCopy.title + "</h5>"
+        + "<button type=\"button\" class=\"info-button\" aria-label=\"" + stopsCopy.infoLabel + "\" aria-expanded=\"true\">" + INFO_ICON + "</button></div>"
+        + "<p class=\"info-popover\" role=\"note\">" + stopsCopy.info + "</p>"
+        + "<ul class=\"destination-stop-list\">"
+        + destRow("Marina Bay Sands", 3, 250, { best: true })
+        + destRow("Bayfront MRT (hover)", 6, 450, { state: "is-hover" })
+        + destRow("The Float @ Marina Bay (focus)", 8, 600, { state: "is-focus" })
+        + destRow("Marina Bay Sands (selected)", 3, 250, { state: "is-selected", best: true })
+        + destRow("Marina Bay Sands Theatre", 4, 300, { unreachable: true })
+        + destRow("Opp The Promontory @ Marina Bay Waterfront Promenade Ctr", 7, 520, {})
+        + "</ul>"
+        + "<p class=\"banner banner--caution\">" + stopsCopy.none + "</p>"
+        + "<p class=\"banner banner--denied\">" + stopsCopy.unavailable + "</p>"
+        + "</div>"
+        + "<h4>Confirm card, Edit links and info box</h4>"
+        + "<div class=\"confirm-screen\">"
+        + "<div class=\"card summary-card\">"
+        + "<div class=\"summary-section\"><div class=\"summary-head\"><h5 class=\"summary-head__title\">" + confirmCopy.selectedDestination + "</h5>"
+        + "<button type=\"button\" class=\"link-button\" aria-label=\"" + confirmCopy.editDestination + "\">" + confirmCopy.edit + "</button></div>"
+        + "<div class=\"summary-item\"><span class=\"place-tile place-tile--large\" aria-hidden=\"true\">" + placeIconSvg(placeIconId("Marina Bay Sands")) + "</span>"
+        + "<span class=\"summary-item__copy\"><span class=\"summary-item__title\">Marina Bay Sands</span><span class=\"summary-item__address\">10 Bayfront Ave, Singapore 018956</span></span></div></div>"
+        + "<hr class=\"hairline\">"
+        + "<div class=\"summary-section\"><div class=\"summary-head\"><h5 class=\"summary-head__title\">" + confirmCopy.destinationStop + "</h5>"
+        + "<button type=\"button\" class=\"link-button is-focus\" aria-label=\"" + confirmCopy.editStop + "\">" + confirmCopy.edit + "</button></div>"
+        + "<div class=\"summary-item summary-item--stop\"><span class=\"bus-tile bus-tile--large\" aria-hidden=\"true\">" + BUS_SVG + "</span>"
+        + "<span class=\"summary-item__copy\"><span class=\"summary-item__title summary-item__title--link\">Marina Bay Sands</span><span class=\"summary-item__meta\">" + walkLine(3, 250) + "</span></span></div></div>"
+        + "<hr class=\"hairline\">"
+        + "<div class=\"summary-section\"><div class=\"arrive-block\"><div class=\"info-row__head\"><span class=\"icon-tile\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
+        + "<span class=\"info-row__title\">" + copy.home.arriveBy + "</span></div>"
+        + arriveField(copy.arriveBy.custom, "6:30 PM") + "</div></div>"
+        + "</div>"
+        + "<div class=\"info-box\">" + INFO_ICON + "<p>" + confirmCopy.info + "</p></div>"
+        + "<button type=\"button\" class=\"primary primary--icon\"><span>" + confirmCopy.action + "</span>" + ARROW_ICON + "</button>"
+        + "</div>";
+    }
+
+    var ALERT_ICON = "<svg class=\"icon field-help__icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 7.5v5.5M12 16.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+
+    function arriveField(label, time) {
+      return "<button type=\"button\" class=\"select-field\"><span>" + label
+        + (time ? "<span class=\"select-field__time\">" + copy.arriveBy.displayTime.replace("{label}", "").replace("{time}", time) + "</span>" : "")
+        + "</span>" + DOWN_ICON + "</button>";
+    }
+
+    function homeGateSample() {
+      return ""
+        + "<h4>Find my route, incomplete, with both messages and the Required tag</h4>"
+        + "<div class=\"card stack\">"
+        + "<div class=\"field\"><div class=\"field__shell\"><input class=\"field__control\" type=\"text\" aria-label=\"" + copy.home.heading + "\" placeholder=\"" + copy.home.placeholder + "\"></div></div>"
+        + "<p class=\"field-help is-shown\">" + ALERT_ICON + "<span class=\"field-help__text\">" + copy.home.requiredDestination + "</span></p>"
+        + "<div class=\"arrive-block\"><div class=\"info-row__head\"><span class=\"icon-tile\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
+        + "<span class=\"info-row__title\">" + copy.home.arriveBy + "</span><span class=\"required-tag\">" + copy.home.required + "</span></div>"
+        + arriveField(copy.home.selectTime, "")
+        + "<p class=\"field-help is-shown\">" + ALERT_ICON + "<span class=\"field-help__text\">" + copy.home.requiredArrive + "</span></p></div>"
+        + "<button type=\"button\" class=\"primary primary--icon\" aria-disabled=\"true\"><span>" + copy.home.findRoute + "</span>" + ARROW_ICON + "</button>"
+        + "</div>"
+        + "<h4>Arrive-by field: the five states</h4>"
+        + "<div class=\"stack\">"
+        + arriveField(copy.home.selectTime, "")
+        + arriveField(copy.arriveBy.noTarget, "")
+        + arriveField(copy.arriveBy.in30, "6:45 PM")
+        + arriveField(copy.arriveBy.inHour, "7:15 PM")
+        + arriveField(copy.arriveBy.custom, "6:30 PM")
+        + "</div>";
+    }
+
+    document.getElementById("dest-sample-light").innerHTML = homeGateSample() + destSample();
+    document.getElementById("dest-sample-dark").innerHTML = homeGateSample() + destSample();
+    var FLAG_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var PIN_FILL_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z\" fill=\"currentColor\"></path><circle cx=\"12\" cy=\"11\" r=\"2.5\" class=\"step-node__hole\"></circle></svg>";
+    var REFRESH_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var TARGET_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2.5\" fill=\"currentColor\"></circle></svg>";
+    var MAP_PIN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path><circle cx=\"12\" cy=\"11\" r=\"2\" fill=\"currentColor\"></circle></svg>";
+    var WARN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 4 3 20h18L12 4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M12 10v4M12 17h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+    var jo = copy.journeyOverview;
+    var lt = copy.liveTracking;
+
+    function sgStep(kind, title, lines, editLabel) {
+      var icon = kind === "origin" ? PIN_FILL_ICON : kind === "destination" ? FLAG_ICON : BUS_SVG;
+      return "<li class=\"journey-step journey-step--" + kind + "\"><span class=\"step-node step-node--" + kind + "\" aria-hidden=\"true\">" + icon + "</span>"
+        + "<div class=\"journey-step__body\">" + (title ? "<p class=\"journey-step__title\">" + title + "</p>" : "") + lines.join("") + "</div>"
+        + (editLabel ? "<button type=\"button\" class=\"link-button journey-step__edit\" aria-label=\"" + editLabel + "\">" + jo.edit + "</button>" : "")
+        + "</li>";
+    }
+
+    function sgDetail(text, cls) {
+      return "<p class=\"" + (cls || "journey-step__detail") + "\">" + text + "</p>";
+    }
+
+    function sgPill(state) {
+      var label = { live: copy.status.live, schedule: copy.status.scheduleOnly, stale: copy.status.stale, unavailable: copy.status.unavailable }[state];
+      return "<span class=\"pill pill--" + state + "\">" + (state === "live" ? "<span class=\"pill__dot\" aria-hidden=\"true\"></span>" : "") + "<span>" + label + "</span></span>";
+    }
+
+    function sgTimeline(withTransfer) {
+      var items = [
+        sgStep("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title"), sgDetail(jo.toBoarding.replace("{distance}", "200\u00a0m"))], ""),
+        sgStep("stop", jo.boardingStop, [sgDetail("Opp Stamford Pr Sch (04119)"), sgDetail(jo.walk.replace("{minutes}", "4"))], ""),
+        sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "36") + "</span>" + sgPill("live") + "</p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.arrivingIn.replace("{minutes}", "4 min"), "journey-step__arriving")], "")
+      ];
+      if (withTransfer) {
+        items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza (09048)"), sgDetail(jo.walk.replace("{minutes}", "2"))], ""));
+        items.push(sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "106") + "</span></p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.leg2Note + " " + jo.leg2Headway.replace("{minutes}", "12"))], ""));
+      }
+      items.push(sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands"), sgDetail(jo.walkToDestination.replace("{minutes}", "3"))], jo.editDestinationStop));
+      items.push(sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], jo.editDestination));
+      return "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + jo.title + "</h4>"
+        + sgReason(withTransfer ? jo.reasonTargetMissed : jo.reasonNoTarget)
+        + "<ol class=\"journey-steps\">" + items.join("") + "</ol></div>";
+    }
+
+    function sgReason(text) {
+      return "<p class=\"overview-reason\">" + INFO_ICON + "<span>" + text + "</span></p>";
+    }
+
+    function sgOverviewState(kind) {
+      var body = "";
+      if (kind === "loading") {
+        var line = "<li class=\"journey-step\"><span class=\"step-node step-node--skeleton\"></span><span class=\"skeleton-lines\"><span class=\"skeleton-line\"></span><span class=\"skeleton-line skeleton-line--short\"></span></span></li>";
+        body = "<ol class=\"journey-steps journey-steps--skeleton\" aria-hidden=\"true\">" + line + line + line + "</ol>";
+      } else if (kind === "no-location") {
+        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + jo.needLocation + "</p><button type=\"button\" class=\"secondary\">" + jo.tryAgain + "</button></div>";
+      } else {
+        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + jo.noRoute + "</p><div class=\"overview-state__actions\"><button type=\"button\" class=\"secondary\">" + jo.editDestinationAction + "</button><button type=\"button\" class=\"secondary\">" + jo.editArriveByAction + "</button></div></div>";
+      }
+      return "<div class=\"card overview-card\" aria-busy=\"" + (kind === "loading" ? "true" : "false") + "\"><h4 class=\"overview-title\">" + jo.title + "</h4>" + body + "</div>";
+    }
+
+    function sgArriveBox() {
+      return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
+        + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.custom + " · 6:30 PM</p>"
+        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateTarget.replace("{point}", "6:18 PM").replace("{range}", "6:14–6:24 PM") + "</p>"
+        + "<p class=\"badge badge--track arrive-box__status\">" + copy.arriveBy.onTrack + "</p></div>"
+        + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
+    }
+
+    function sgArriveBoxNoTarget() {
+      return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
+        + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.noTarget + "</p>"
+        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateOnly.replace("{point}", "6:24 PM").replace("{range}", "6:21–6:31 PM") + "</p></div>"
+        + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
+    }
+
+    function sgBusCard(state, refreshClass, refreshDisabled) {
+      return "<div class=\"bus-card\"><span class=\"bus-tile bus-tile--hero\" aria-hidden=\"true\">" + BUS_SVG + "</span>"
+        + "<div class=\"bus-card__copy\"><p class=\"bus-card__title\"><span>" + jo.bus.replace("{service}", "36") + "</span>" + sgPill(state) + "</p>"
+        + "<p class=\"bus-card__to\">" + jo.to.replace("{destination}", "Marina Bay Sands") + "</p></div>"
+        + "<button type=\"button\" class=\"refresh-button" + (refreshClass ? " " + refreshClass : "") + "\" aria-label=\"" + lt.refresh + "\" aria-disabled=\"" + (refreshDisabled ? "true" : "false") + "\">" + REFRESH_ICON + "</button></div>";
+    }
+
+    function sgTiles(minutes) {
+      return "<ul class=\"bus-tiles\" role=\"list\">" + minutes.map(function (m, i) {
+        return "<li class=\"bus-tile-card" + (i === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + m + "</span><span class=\"bus-tile-card__service\">" + jo.bus.replace("{service}", "36") + "</span>"
+          + (i === 0 ? "<span class=\"bus-tile-card__arriving\">" + lt.arriving + "</span>" : "") + "</li>";
+      }).join("") + "</ul>";
+    }
+
+    function sgStatus(mode) {
+      var live = mode === "live" || mode === "uncertain";
+      function cell(text, icon, state, extra) {
+        return "<p class=\"status-cell" + (state ? " " + state : "") + "\"><span class=\"status-cell__icon" + (extra || "") + "\" aria-hidden=\"true\">" + icon + "</span><span>" + text + "</span></p>";
+      }
+      return "<div class=\"status-grid\">"
+        + cell(live ? lt.liveAvailable : lt.liveUnavailable, "", live ? "is-ok" : "is-off", " status-dot-icon")
+        + cell(live ? lt.monitored : lt.notMonitored, MAP_PIN_ICON, live ? "is-ok" : "is-off")
+        + cell(lt.gpsAccuracy, TARGET_ICON, "")
+        + "<p class=\"status-cell" + (mode === "uncertain" ? " is-warn" : "") + "\"><span class=\"status-cell__icon status-cell__warn\" aria-hidden=\"true\">" + WARN_ICON + "</span><span>" + (mode === "uncertain" ? "120\u00a0m" : mode === "live" ? "18\u00a0m" : lt.noValue) + "</span></p>"
+        + cell(lt.lastUpdate, CLOCK_ICON, "")
+        + "<p class=\"status-cell\"><time datetime=\"2026-10-01T18:04:10+08:00\">" + (mode === "unavailable" ? "1 min 24 sec ago" : "8 seconds ago") + "</time></p>"
+        + "</div>";
+    }
+
+    function liveSample() {
+      return ""
+        + "<h4>Journey timeline, direct</h4>" + sgTimeline(false)
+        + "<h4>Journey timeline, with a transfer</h4>" + sgTimeline(true)
+        + "<h4>Arrive-by box with the estimate</h4>" + sgArriveBox()
+        + "<h4>Arrive-by box, No target (estimate only)</h4>" + sgArriveBoxNoTarget()
+        + "<h4>Screen 5: planning (loading)</h4>" + sgOverviewState("loading")
+        + "<h4>Screen 5: no location</h4>" + sgOverviewState("no-location")
+        + "<h4>Screen 5: no route</h4>" + sgOverviewState("no-route")
+        + "<h4>Start journey</h4><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
+        + "<h4>Bus card: LIVE, refresh idle</h4><div class=\"card live-card\">" + sgBusCard("live", "", false) + "</div>"
+        + "<h4>Bus card: SCHEDULE ONLY, refresh spinning</h4><div class=\"card live-card\">" + sgBusCard("schedule", "is-spinning", false) + "</div>"
+        + "<h4>Bus card: stale, refresh disabled (cooldown or demo)</h4><div class=\"card live-card\">" + sgBusCard("stale", "", true) + "</div>"
+        + "<h4>Next buses: three, two and one</h4><p class=\"live-label\">" + lt.nextBuses + "</p>" + sgTiles(["4 min", "12 min", "24 min"]) + sgTiles(["Due", "15 min"]) + sgTiles(["<1 min"])
+        + "<h4>Live bus tag and boarding-stop label chip</h4>"
+        + "<div class=\"live-map sample-live\"><span class=\"live-bus-tag\"><span class=\"live-bus-tag__icon\">" + BUS_SVG + "</span><span class=\"live-bus-tag__text\"><span class=\"live-bus-tag__service\">" + jo.bus.replace("{service}", "36") + "</span><span class=\"live-bus-tag__eta\">4 min</span></span></span>"
+        + "<span class=\"map-stop map-stop--live\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Opp Stamford Pr Sch<br>(04119)</span></span>"
+        + "<div class=\"map-range-chip\"><span class=\"map-range-chip__text\">" + stopsCopy.range.replace("{distance}", "200\u00a0m") + "</span></div></div>"
+        + "<h4>Status grid: live</h4>" + sgStatus("live")
+        + "<h4>Status grid: unavailable</h4>" + sgStatus("unavailable")
+        + "<h4>Status grid: location uncertain</h4>" + sgStatus("uncertain");
+    }
+
+    document.getElementById("live-sample-light").innerHTML = liveSample();
+    document.getElementById("live-sample-dark").innerHTML = liveSample();
+    var lc = copy.liveCatch;
+    var rp = copy.rerouteProposal;
+    var SPARKLE_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path></svg>";
+    var SHIELD_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l7 3v6c0 4.2-3 7.6-7 9-4-1.4-7-4.8-7-9V6l7-3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M9 12l2 2 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var TILE_FLAG_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var CHEVRON_RIGHT = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    function sgProbLine(point, low, high) {
+      return rp.warningLine.replace("{point}", point).replace("{range_low}", low).replace("{range_high}", high);
+    }
+
+    // The band comes from Python in the app; the samples name it.
+    var SG_BAND = { 92: "ok", 64: "ok", 63: "ok", 45: "mid", 41: "mid", 30: "low" };
+
+    function sgRing(point, low, high, small, emptyText, bandName) {
+      var empty = point === null;
+      var label = empty ? "Catch probability " + emptyText.toLowerCase() : sgProbLine(point, low, high);
+      var chosen = bandName || SG_BAND[point];
+      var band = empty || !chosen ? "" : " prob-ring--" + chosen;
+      return "<div class=\"prob-ring" + band + (small ? " prob-ring--small" : "") + (empty ? " is-empty" : "") + "\" role=\"img\" aria-label=\"" + label + "\">"
+        + "<svg class=\"prob-ring__svg\" viewBox=\"0 0 100 100\" aria-hidden=\"true\" focusable=\"false\"><circle class=\"prob-ring__track\" cx=\"50\" cy=\"50\" r=\"43\" pathLength=\"100\"></circle>"
+        + "<circle class=\"prob-ring__value\" cx=\"50\" cy=\"50\" r=\"43\" pathLength=\"100\" stroke-dasharray=\"" + (empty ? 0 : point) + " 100\" transform=\"rotate(-90 50 50)\"></circle>"
+        + "</svg>"
+        + "<span class=\"prob-ring__text\">" + (empty ? emptyText : point + "%") + "</span></div>";
+    }
+
+    function sgCatchCard(state, point, low, high) {
+      var usable = point !== null;
+      return "<section class=\"card catch-card\" aria-live=\"polite\">" + sgPill(state).replace("class=\"pill ", "class=\"pill catch-card__pill ")
+        + "<div class=\"catch-card__row\">" + sgRing(point, low, high, false, lc.unavailable)
+        + "<div class=\"catch-card__copy\"><p class=\"catch-card__title\">" + lc.chanceToCatch.replace("{service}", "11") + "</p><p class=\"catch-card__range\">"
+        + (usable ? lc.range.replace("{range_low}", low).replace("{range_high}", high) : "") + "</p></div></div>"
+        + "<p class=\"catch-card__caption\">" + lc.caption + "</p></section>";
+    }
+
+    function sgPaceChip(key) {
+      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p><p class=\"field__hint\">" + copy.pace[key].detail + "</p></div></div>";
+    }
+
+    function sgLeaveTiles(withTarget, phrase) {
+      return "<section class=\"leave-tiles\"><div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.leaveBy + "</p><p class=\"leave-tile__value\">" + (phrase || lc.waitForAlert) + "</p></div></div>"
+        + "<div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + TILE_FLAG_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.estimatedArrival + "</p><p class=\"leave-tile__value\">6:24 PM</p><p class=\"leave-tile__meta\">(6:21–6:31 PM)</p></div></div>"
+        + (withTarget ? "<p class=\"leave-tiles__row\"><span class=\"badge badge--track tile-status\">" + copy.arriveBy.onTrack + "</span></p>" : "")
+        + "</section>";
+    }
+
+    // The app builds this text in Python. The guide mirrors the templates only to show every variant.
+    function sgMinutes(n) {
+      return n === 1 ? "1 minute" : n + " minutes";
+    }
+
+    function sgExplainText(opts) {
+      var x = copy.explanation;
+      var e = opts.e;
+      var w = opts.w;
+      var t = e - w;
+      var one = e < 1 ? x.busArrivingNow : e === 1 ? x.busOneMinute : x.busMinutes.replace("{e}", e);
+      var two;
+      var lead = opts.leg2 ? "Given you are about " + sgMinutes(w) + " from the stop" : "Given the walking time is " + sgMinutes(w);
+      if (opts.uncertain) {
+        two = x.locationUncertain;
+      } else if (opts.band === "low" || opts.action === "switchRoute" || opts.action === "doNotRely") {
+        two = lead + ", catching this bus is unlikely.";
+      } else if (w >= e) {
+        two = lead + ", you may not reach the stop before the bus.";
+      } else if (opts.leg2) {
+        two = x.leg2Default.replace("{w}", w).replace("{t}", t).replace(/ 1 minutes/g, " 1 minute");
+      } else {
+        two = "Given the walking time is only " + sgMinutes(w) + ", you have " + sgMinutes(t) + " to get to the bus stop.";
+      }
+      return one + " " + two + " " + x.adviceSentence.replace("{advice}", x.advice[opts.action]);
+    }
+
+    function sgAiCard(mode, opts) {
+      opts = opts || {};
+      var text = mode === "loading" ? "" : sgExplainText(opts);
+      var badge = opts.badge ? "<p class=\"badge ai-card__badge " + (opts.badgeClass || "badge--track") + "\">" + (opts.prefix ? copy.ifCatchPrefix : "") + opts.badge + "</p>" : "";
+      return "<section class=\"ai-card is-enabled has-content\" aria-live=\"polite\">" + badge
+        + "<p class=\"ai-card__head\"><span class=\"ai-card__icon\" aria-hidden=\"true\">" + SPARKLE_ICON + "</span><span>" + lc.aiTitle + "</span></p>"
+        + (mode === "loading" ? "<span class=\"ai-card__status\">" + copy.updatingExplanation + "</span>" : "")
+        + "<p class=\"ai-card__text\">" + text + "</p><p class=\"ai-card__note\">" + lc.aiNote + "</p></section>";
+    }
+
+    var PILL_STAR_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7L12 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path></svg>";
+    var PILL_CLOCK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"13\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 9v4l2.5 2M9.5 3h5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    function sgPills(keys) {
+      if (!keys || !keys.length) {
+        return "";
+      }
+      return '<span class="option-badges">' + keys.map(function (key) {
+        return '<span class="pill pill--best pill--option">' + (key === "fastest" ? PILL_CLOCK_ICON : PILL_STAR_ICON) + '<span>' + (key === "fastest" ? rp.pillQuick : rp.pillHighest) + '</span></span>';
+      }).join("") + '</span>';
+    }
+
+    function sgReasonSentence(key, service) {
+      return rp[key].replace("{s}", service);
+    }
+
+    function sgMergedCard(chip, reasonKey, pills, service) {
+      return '<div class="reroute-option"><div class="card option-merged"><p class="option-chip"><span class="option-chip__icon" aria-hidden="true">' + SHIELD_ICON + '</span><span>' + chip + '</span></p>'
+        + sgPills(pills)
+        + '<div class="option-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
+        + '<div class="option-card__copy"><p class="option-card__title">Bus ' + service + '</p><p class="option-card__arrives"><span class="option-card__live">' + rp.arrivesIn.replace("{minutes}", "2 min") + ' <span class="option-card__arrow" aria-hidden="true">' + ARROW_ICON + '</span></span></p>'
+        + '<p class="option-card__meta">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</p><p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15 PM") + '</p></div>'
+        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '<p class="option-card__arrive">' + rp.arrive.replace("{time}", "6:18 PM") + '</p><p class="option-card__range">' + rp.rangeNote.replace("{range_low}", "55").replace("{range_high}", "70") + '</p></div></div></div>'
+        + '<section class="ai-card option-explain" aria-live="polite"><p class="ai-card__head"><span class="ai-card__icon" aria-hidden="true">' + SPARKLE_ICON + '</span><span>' + lc.aiTitle + '</span></p>'
+        + '<p class="ai-card__text">' + sgReasonSentence(reasonKey, service) + ' ' + rp.advisable.replace("{advice}", "switch to another bus") + '</p></section>'
+        + '<button type="button" class="primary primary--icon"><span>' + rp.switchTo.replace("{service}", service).replace("{minutes}", "2 min") + '</span>' + ARROW_ICON + '</button></div>';
+    }
+
+    function sgAutoBanner() {
+      return '<div class="banner banner--caution reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "36").replace("{minutes}", "3 min") + '</p><p>' + sgProbLine(28, 19, 37) + '</p></div></div>';
+    }
+
+    function sgReroute() {
+      return '<div class="reroute-block"><div class="reroute-proposal">' + sgAutoBanner()
+        + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance"], "7")
+        + '<p class="reroute-alternatives__heading">' + rp.alternatives + '</p><ul class="reroute-alternatives">'
+        + sgOptionRow("16", 41, 33, 50, "9 min", "6:24 PM", "Walk to Bras Basah Complex (183 m)", {})
+        + '</ul></div></div>';
+    }
+
+    var CHECK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 12.5l4.5 4.5L19 7.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var CROSS_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 6l12 12M18 6L6 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path></svg>";
+    var REFRESH_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    function sgCurrentBusCard() {
+      return '<section class="card catch-card page-c-current" aria-live="polite">' + sgPill("live").replace('class="pill ', 'class="pill catch-card__pill ')
+        + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy"><p class="catch-card__title">' + lc.chanceToCatch.replace("{service}", "11") + '</p><p class="catch-card__range">' + lc.range.replace("{range_low}", "3").replace("{range_high}", "8") + '</p></div></div>'
+        + '<p class="catch-card__caption">' + lc.caption + '</p>'
+        + '<div class="page-c-warn">' + WARN_ICON + '<p>' + rp.currentWarning + '</p></div>'
+        + '<button type="button" class="secondary">' + cp.seeArrivals + '</button></section>';
+    }
+
+    function sgRefreshHeader(heading) {
+      return '<div class="reroute-alternatives__head"><p class="reroute-alternatives__heading">' + heading + '</p><p class="reroute-updated">' + rp.updated.replace("{time}", "6:22 PM") + '</p>'
+        + '<button type="button" class="refresh-button" aria-label="' + rp.refreshLabel + '" aria-disabled="false">' + REFRESH_ICON + '</button></div>';
+    }
+
+    function sgPageCUnlikely() {
+      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal">' + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance", "fastest"], "7")
+        + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
+        + sgOptionRow("16", 60, 50, 70, "20 min", "6:54 PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183 m"), {})
+        + sgOptionRow("11", 35, 25, 39, "31 min", "7:05 PM", rp.atYourStop, { unlikely: true })
+        + '</ul></div></div>';
+    }
+
+    function sgPageCMissed() {
+      return '<div class="page-c"><div class="reroute-proposal"><p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "11") + '</p>'
+        + sgMergedCard(rp.recommended, "reasonHighestChanceOnTime", ["highest_chance"], "7")
+        + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
+        + sgOptionRow("16", 60, 50, 70, "20 min", "6:54 PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183 m"), {})
+        + '</ul></div></div>';
+    }
+
+    function sgPageCNone() {
+      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal"><p class="banner banner--quiet reroute-none">' + copy.noBetter.standard.replace("{point}", "5") + '</p>'
+        + sgRefreshHeader(rp.otherBuses) + '<ul class="reroute-alternatives">'
+        + sgOptionRow("11", 35, 25, 39, "31 min", "7:05 PM", rp.atYourStop, { unlikely: true }) + '</ul></div></div>';
+    }
+
+    function sgUnlikelyBanner() {
+      return '<div class="banner banner--caution unlikely-banner"><div class="reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "11").replace("{minutes}", "4 min") + '</p><p>' + sgProbLine(12, 6, 20) + '</p></div></div>'
+        + '<button type="button" class="secondary">' + rp.seeOtherBuses + '</button></div>';
+    }
+
+    function catchSample() {
+      return ""
+        + "<h4>Probability card: live, with the pace chip</h4>" + sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady")
+        + "<h4>Probability card: schedule only, no pace chip</h4>" + sgCatchCard("schedule", 41, 30, 52)
+        + "<h4>Page A, action wait: Leave by tile reads Wait for Leave By Alert, no pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgLeaveTiles(true, lc.waitForAlert)
+        + "<h4>Page A, action leave_now: Leave by tile reads Leave now, with the pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgPaceChip("slower") + sgLeaveTiles(true, lc.leaveNow)
+        + "<h4>Leave by and Estimated arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
+        + "<h4>Tiles with No target (no check)</h4>" + sgLeaveTiles(false)
+        + "<h4>AI Explanation: loading</h4>" + sgAiCard("loading")
+        + "<h4>AI Explanation: badge row, band ok (no prefix)</h4>" + sgAiCard("normal", { e: 10, w: 3, band: "ok", action: "wait", badge: copy.arriveBy.onTrack })
+        + "<h4>AI Explanation: badge row, band mid (prefix)</h4>" + sgAiCard("normal", { e: 6, w: 3, band: "mid", action: "leaveNow", badge: copy.arriveBy.risk, badgeClass: "badge--risk", prefix: true })
+        + "<h4>AI Explanation: no target (no badge row)</h4>" + sgAiCard("normal", { e: 10, w: 3, band: "ok", action: "wait" })
+        + "<h4>Sentence 1: arriving now and one minute</h4>" + sgAiCard("normal", { e: 0, w: 2, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 1, w: 1, band: "ok", action: "wait" })
+        + "<h4>Sentence 2: singular and plural</h4>" + sgAiCard("normal", { e: 5, w: 4, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 6, w: 1, band: "ok", action: "wait" })
+        + "<h4>Sentence 2: may not reach the stop</h4>" + sgAiCard("normal", { e: 3, w: 4, band: "mid", action: "leaveNow" })
+        + "<h4>Sentence 2: catching this bus is unlikely (low band, switch)</h4>" + sgAiCard("normal", { e: 8, w: 3, band: "low", action: "doNotRely" }) + sgAiCard("normal", { e: 5, w: 2, band: "ok", action: "switchRoute" })
+        + "<h4>Sentence 2: location uncertain</h4>" + sgAiCard("normal", { e: 8, w: 3, band: "ok", action: "wait", uncertain: true })
+        + "<h4>Sentence 2: Leg 2 (on a vehicle)</h4>" + sgAiCard("normal", { e: 6, w: 2, band: "ok", action: "wait", leg2: true })
+        + "<h4>Sentence 3: every advice clause</h4>" + sgAiCard("normal", { e: 9, w: 3, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 4, w: 2, band: "ok", action: "leaveNow" })
+        + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
+        + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
+        + "<h4>No better option</h4><p class=\"banner banner--quiet reroute-none\">" + copy.noBetter.standard.replace("{point}", "28") + "</p>";
+    }
+
+    document.getElementById("catch-sample-light").innerHTML = catchSample();
+    document.getElementById("catch-sample-dark").innerHTML = catchSample();
+
+    // Screens 9 and 10: Leave now banner and the data-quality alert components.
+    var qc = copy.quality;
+    var lb = copy.leaveNowBanner;
+    var TRI_FILL_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M10.3 4.2a2 2 0 0 1 3.4 0l8 14A2 2 0 0 1 20 21.2H4a2 2 0 0 1-1.7-3zM11 9.5v4.5h2V9.5zM12 15.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"></path></svg>';
+    var SG_STALE_START = Date.now() - 84000;
+
+    function sgAge() {
+      var seconds = Math.max(0, Math.floor((Date.now() - SG_STALE_START) / 1000));
+      return seconds < 60 ? seconds + " seconds ago" : Math.floor(seconds / 60) + " min " + (seconds % 60) + " sec ago";
+    }
+
+    function sgLeaveNow(title, body, simulated) {
+      return '<section class="card leave-now-banner" aria-label="' + title + '">'
+        + '<div class="leave-now-banner__head"><span class="bus-tile bus-tile--small" aria-hidden="true">' + BUS_SVG + '</span>'
+        + '<span class="leave-now-banner__app">' + lb.app + '</span><span class="leave-now-banner__time">' + lb.now + '</span></div>'
+        + '<h3 class="leave-now-banner__title">' + title + '</h3><p class="leave-now-banner__body">' + body + '</p>'
+        + (simulated ? '<p class="simulated-badge">' + copy.simulated + '</p>' : '')
+        + '<div class="leave-now-banner__actions"><button type="button" class="primary">' + lb.viewDetails + '</button>'
+        + '<button type="button" class="secondary">' + lb.dismiss + '</button></div></section>';
+    }
+
+    function sgStaleBanner() {
+      return '<div class="banner banner--denied alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
+        + '<div class="alert-row__copy"><p class="alert-row__title">' + qc.stale.heading + '</p>'
+        + '<p class="alert-row__meta" aria-live="off">' + qc.stale.updated.split("{time}")[0] + '<time class="sg-stale-time" datetime="2026-10-01T18:04:10+08:00">' + sgAge() + '</time></p></div></div>';
+    }
+
+    function sgUnavailableBanner() {
+      return '<div class="banner banner--denied alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
+        + '<div class="alert-row__copy"><p class="alert-row__title">' + qc.unavailable + '</p></div></div>';
+    }
+
+    function sgStaleStatus() {
+      return '<section class="card stale-status"><div class="bus-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
+        + '<div class="bus-card__copy"><p class="bus-card__title"><span>' + jo.bus.replace("{service}", "36") + '</span><span class="pill pill--schedule"><span>' + copy.status.scheduleOnly + '</span></span></p>'
+        + '<p class="bus-card__to">' + qc.stale.arriving.replace("{minutes}", "6") + '</p></div></div>'
+        + '<div class="info-box">' + INFO_ICON + '<p>' + qc.stale.body + '</p></div></section>';
+    }
+
+    function sgLocationCard() {
+      return '<section class="card card--caution alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
+        + '<div class="alert-row__copy"><h3 class="alert-row__title">' + qc.uncertain.heading + '</h3>'
+        + '<p class="alert-row__body">' + qc.uncertain.body.replace("{accuracy}", "120\u00a0m") + '</p></div></section>';
+    }
+
+    function qualitySample() {
+      var longName = "Opp Stamford Pr Sch (04119)";
+      return ""
+        + "<h4>Leave now banner: short strings</h4>" + sgLeaveNow(copy.leaveNow.title.replace("{service_no}", "36"), copy.leaveNow.body.replace("{stop_name}", "Hotel Grand Pacific").replace("{stop_code}", "01012").replace(/\{service_no\}/g, "36").replace("{point}", "64").replace("{range_low}", "51").replace("{range_high}", "78"), false)
+        + "<h4>Leave now banner: long stop name, with the [SIMULATED] tag</h4>" + sgLeaveNow(copy.leaveNow.title.replace("{service_no}", "190"), copy.leaveNow.body.replace("{stop_name}", "Opp Singapore Management University Administration Building").replace("{stop_code}", "04119").replace(/\{service_no\}/g, "190").replace("{point}", "64").replace("{range_low}", "51").replace("{range_high}", "78"), true)
+        + "<h4>Stale banner, with the counting-up time</h4>" + sgStaleBanner()
+        + "<h4>Unavailable banner (no time)</h4>" + sgUnavailableBanner()
+        + "<h4>Stale status card</h4>" + sgStaleStatus()
+        + "<h4>Location uncertain card</h4>" + sgLocationCard()
+        + "<h4>Stale and location uncertain, stacked</h4>" + sgStaleBanner() + sgStaleStatus() + sgLocationCard()
+        + "<h4>Complete stale page layout</h4>" + sgStaleBanner() + sgStaleStatus() + sgLocationCard()
+        + '<div class="card live-card">' + sgBusCard("stale", "", false) + '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["6 min", "14 min", "25 min"]) + sgStatus("unavailable") + '</div>';
+    }
+
+    document.getElementById("quality-sample-light").innerHTML = qualitySample();
+    document.getElementById("quality-sample-dark").innerHTML = qualitySample();
+
+    // Live flow samples: no-service layout, the map toggle, the question bar, overviews, reroute options, Leg 2.
+    var cp = copy.catchPrompt;
+    var ta = copy.transferAlert;
+    var l2 = copy.leg2;
+    var CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+    var CHEVRON_SM = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+    var ROUTE_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20 10 8l4 6 6-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+    var PIN_SVG_SG = '<svg class="dest-pin__svg" viewBox="0 0 32 40" aria-hidden="true" focusable="false"><path class="dest-pin__body" d="M16 38s12-11.6 12-22a12 12 0 1 0-24 0c0 10.4 12 22 12 22z"></path><circle class="dest-pin__dot" cx="16" cy="16" r="4.5"></circle></svg>';
+
+    function sgStatusCard(pill, info, arriving) {
+      return '<section class="card stale-status"><div class="bus-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
+        + '<div class="bus-card__copy"><p class="bus-card__title"><span>' + jo.bus.replace("{service}", "36") + '</span><span class="pill pill--schedule"><span>' + pill + '</span></span></p>'
+        + (arriving ? '<p class="bus-card__to">' + arriving + '</p>' : '') + '</div></div>'
+        + '<div class="info-box">' + INFO_ICON + '<p>' + info + '</p></div></section>';
+    }
+
+    function sgMap(full) {
+      return '<div class="live-map sample-live"><span class="live-bus-tag"><span class="live-bus-tag__icon">' + BUS_SVG + '</span><span class="live-bus-tag__text"><span class="live-bus-tag__service">' + jo.bus.replace("{service}", "36") + '</span><span class="live-bus-tag__eta">4 min</span></span></span>'
+        + '<span class="leaflet-marker-icon map-dest-live sample-pin">' + PIN_SVG_SG + '<span class="map-dest-live__label">Marina Bay Sands</span></span>'
+        + '<div class="map-range-chip"><span class="map-range-chip__text">' + (full ? "Range: 3 km" : "Range: 200 m") + '</span></div>'
+        + '<button type="button" class="map-toggle" aria-pressed="' + (full ? "true" : "false") + '">' + ROUTE_ICON + '<span>' + (full ? copy.liveMap.nearMe : copy.liveMap.fullRoute) + '</span></button></div>';
+    }
+
+    function sgQuestionBar() {
+      return '<div class="catch-bar catch-bar--sample" role="group" aria-label="' + cp.question + '"><p class="catch-bar__title">' + cp.question + '</p>'
+        + '<div class="catch-bar__actions"><button type="button" class="primary action-yes">' + CHECK_ICON + '<span>' + cp.yes + '</span></button><button type="button" class="secondary action-no">' + CROSS_ICON + '<span>' + cp.no + '</span></button></div></div>';
+    }
+
+    function sgDoneStep(title, lines) {
+      return '<li class="journey-step journey-step--done"><span class="step-node step-node--done" aria-hidden="true">' + CHECK_ICON + '</span><div class="journey-step__body"><p class="journey-step__title">' + title + '</p>' + lines.join("") + '</div></li>';
+    }
+
+    function sgOnWay(transfer) {
+      var items = [
+        sgDoneStep(jo.boardingStop, [sgDetail("Opp Stamford Pr Sch (04119)")]),
+        sgDoneStep(jo.busService, [sgDetail(jo.bus.replace("{service}", "36"), "journey-step__service"), sgDetail(cp.boarded)])
+      ];
+      if (transfer) {
+        items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza (09048)")], ""));
+        items.push(sgStep("bus", jo.busService, [sgDetail(jo.bus.replace("{service}", "106"), "journey-step__service"), sgDetail(cp.transferNote.replace("{transfer stop}", "Orchard Stn/Lucky Plaza (09048)"))], ""));
+      }
+      items.push(sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands")], ""));
+      items.push(sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], ""));
+      return '<div class="card overview-card"><h4 class="overview-title">' + cp.onWayTitle + '</h4><ol class="journey-steps">' + items.join("") + '</ol></div>'
+        + sgArriveBoxNoTarget() + '<button type="button" class="primary">' + cp.planNew + '</button>';
+    }
+
+    function sgOptionRow(service, point, low, high, minutes, reach, walk, opts) {
+      opts = opts || {};
+      var warn = function (text) { return '<p class="alt-row__warn">' + WARN_ICON + '<span>' + text + '</span></p>'; };
+      return '<li class="alt-row' + (opts.unlikely ? " alt-row--unlikely" : "") + '"><button type="button" class="alt-row__hit"><span class="alt-row__icon" aria-hidden="true">' + BUS_SVG + '</span>'
+        + '<div class="alt-row__body"><p class="alt-row__top"><span class="alt-row__service">' + jo.bus.replace("{service}", service) + '</span>'
+        + '<span class="alt-row__chance">' + rp.alternativeChance.replace("{point}", point) + '</span><span class="alt-row__range">' + rp.alternativeRange.replace("{range_low}", low).replace("{range_high}", high) + '</span></p>'
+        + sgPills(opts.pills)
+        + '<p class="alt-row__bottom"><span class="alt-row__arrives">' + rp.arrivesIn.replace("{minutes}", minutes) + '</span><span class="alt-row__reach">' + rp.reachDestination.replace("{time}", reach) + '</span></p>'
+        + '<p class="alt-row__bottom">' + walk + '</p>'
+        + (opts.unlikely ? warn(copy.pace.unlikely.title) : '') + (opts.after ? warn(rp.afterTarget) : '') + '</div>'
+        + '<span class="alt-row__chevron" aria-hidden="true">' + CHEVRON_SM + '</span></button></li>';
+    }
+
+    function sgOptionList(heading, rows, more) {
+      return '<p class="reroute-alternatives__heading">' + heading + '</p><ul class="reroute-alternatives">' + rows.join("") + '</ul>' + (more ? '<button type="button" class="link-button reroute-more" aria-expanded="false">' + rp.showMore + '</button>' : "");
+    }
+
+    function sgNewJourney() {
+      var items = [
+        sgStep("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title"), sgDetail(jo.toBoarding.replace("{distance}", "320 m"))], ""),
+        sgStep("stop", jo.boardingStop, [sgDetail("Bras Basah Complex (01015)"), sgDetail(jo.walk.replace("{minutes}", "5"))], ""),
+        sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "16") + "</span>" + sgPill("live") + "</p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.arrivingIn.replace("{minutes}", "9 min"), "journey-step__arriving")], ""),
+        sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands"), sgDetail(jo.walkToDestination.replace("{minutes}", "3"))], ""),
+        sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], "")
+      ];
+      return '<div class="card overview-card"><h4 class="overview-title">' + rp.newJourneyTitle + '</h4>' + sgReason(rp.newJourneyReason) + '<ol class="journey-steps">' + items.join("") + '</ol></div>'
+        + sgArriveBoxNoTarget() + '<button type="button" class="primary primary--icon"><span>' + jo.startJourney + '</span>' + ARROW_ICON + '</button>';
+    }
+
+    function sgLeg2Card() {
+      return '<section class="card catch-card" aria-live="polite">' + sgPill("live").replace('class="pill ', 'class="pill catch-card__pill ')
+        + '<div class="catch-card__row">' + sgRing(64, 51, 78, false, "") + '<div class="catch-card__copy"><p class="catch-card__title">' + lc.chanceToCatchLeg2.replace("{service}", "106").replace("{stop}", "Orchard Stn/Lucky Plaza") + '</p><p class="catch-card__range">' + lc.range.replace("{range_low}", "51").replace("{range_high}", "78") + '</p></div></div>'
+        + '<p class="catch-card__caption">' + l2.caption + '</p></section>'
+        + '<section class="leave-tiles"><div class="leave-tile"><span class="leave-tile__icon" aria-hidden="true">' + CLOCK_ICON + '</span><div><p class="leave-tile__label">' + l2.reachLabel + '</p><p class="leave-tile__value">6:12 PM</p><p class="leave-tile__meta">(6:11–6:13 PM)</p></div></div>'
+        + '<div class="leave-tile"><span class="leave-tile__icon" aria-hidden="true">' + TILE_FLAG_ICON + '</span><div><p class="leave-tile__label">' + lc.estimatedArrival + '</p><p class="leave-tile__value">6:30 PM</p><p class="leave-tile__meta">(6:27–6:34 PM)</p></div></div></section>'
+        + '<div class="card live-card">' + sgBusCard("live", "", false) + '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["4 min", "12 min", "24 min"]) + '</div>';
+    }
+
+    function flowSample() {
+      var rows = [
+        sgOptionRow("7", 63, 55, 70, "2 min", "6:18 PM", rp.atYourStop, { pills: ["highest_chance", "fastest"] }),
+        sgOptionRow("16", 41, 33, 50, "9 min", "6:24 PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183 m"), { pills: ["fastest"] }),
+        sgOptionRow("77", 35, 25, 39, "12 min", "6:28 PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183 m"), { unlikely: true }),
+        sgOptionRow("36", 30, 22, 38, "19 min", "6:50 PM", rp.atYourStop, { unlikely: true, after: true })
+      ];
+      return ""
+        + "<h4>No buses in service (no-service layout)</h4>" + sgStatusCard(copy.status.unavailable, copy.quality.noService) + '<div class="card live-card">' + sgBusCard("unavailable", "", false) + '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>' + sgStatus("unavailable") + '</div>'
+        + "<h4>Live map: local view with the destination pin</h4>" + sgMap(false)
+        + "<h4>Live map: Full route pressed</h4>" + sgMap(true)
+        + "<h4>Question bar</h4>" + sgQuestionBar()
+        + "<h4>On your way: direct route</h4>" + sgOnWay(false)
+        + "<h4>On your way: transfer route</h4>" + sgOnWay(true)
+        + "<h4>Top transfer prompt</h4>" + '<div class="transfer-top transfer-top--sample" role="presentation"><span class="bus-tile bus-tile--small" aria-hidden="true">' + BUS_SVG + '</span><p class="transfer-top__text">' + ta.prompt + ' <strong>Orchard Stn (02049)</strong></p><button type="button" class="primary">' + ta.next + '</button></div>'
+        + "<h4>Leg 2 page: reach-the-stop tile, no pace chip</h4>" + sgLeg2Card()
+        + "<h4>End card</h4>" + '<div class="banner banner--info alert-row end-card"><span class="alert-row__icon" aria-hidden="true">' + INFO_ICON + '</span><div class="alert-row__copy"><p class="alert-row__title">' + cp.endUnanswered + '</p><button type="button" class="primary">' + cp.planNew + '</button></div></div>'
+        + '<div class="banner banner--info alert-row end-card"><span class="alert-row__icon" aria-hidden="true">' + INFO_ICON + '</span><div class="alert-row__copy"><p class="alert-row__title">' + cp.endMax + '</p><button type="button" class="primary">' + cp.planNew + '</button></div></div>'
+        + "<h4>Page C, unlikely entry (current-bus card, recommended card, refresh header, alternatives)</h4>" + sgPageCUnlikely()
+        + "<h4>Page C, missed entry (banner first, no current-bus card)</h4>" + sgPageCMissed()
+        + "<h4>Page C, nothing eligible (no recommended card, no AI block)</h4>" + sgPageCNone()
+        + "<h4>Compact warning banner on Pages A and B</h4>" + sgUnlikelyBanner()
+        + "<h4>Page C current-bus card on its own</h4>" + sgCurrentBusCard()
+        + "<h4>Question bar: Yes green, No red</h4>" + sgQuestionBar()
+        + "<h4>Entry banners: automatic entry and the No entry</h4>" + sgAutoBanner() + '<p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "36") + '</p>'
+        + "<h4>Merged card: Better option found, highest chance</h4>" + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance"], "7")
+        + "<h4>Merged card: Recommended option, highest chance on time, both pills</h4>" + sgMergedCard(rp.recommended, "reasonHighestChanceOnTime", ["highest_chance", "fastest"], "7")
+        + "<h4>Merged card: fastest, rushing</h4>" + sgMergedCard(rp.recommended, "reasonFastestRushing", ["fastest"], "16")
+        + "<h4>Merged card: shorter walk</h4>" + sgMergedCard(rp.recommended, "reasonShorterWalk", [], "7")
+        + "<h4>Merged card: none by the target</h4>" + sgMergedCard(rp.recommended, "reasonNoneByTarget", ["fastest"], "16")
+        + "<h4>Pills alone and together</h4>" + sgPills(["highest_chance"]) + sgPills(["fastest"]) + sgPills(["highest_chance", "fastest"])
+        + "<h4>Rows: same stop, different stop, low chance, after your target</h4>" + sgOptionList(rp.alternatives, rows, true)
+        + "<h4>Rows with no recommendation</h4>" + sgOptionList(rp.otherOptions, rows.slice(2), false)
+        + "<h4>Reroute notices</h4>" + '<p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "36") + '</p>' + '<p class="banner banner--info reroute-notice">' + rp.alreadyLeft + '</p>'
+        + "<h4>New-journey overview</h4>" + sgNewJourney();
+    }
+
+
+    // Ring bands and the two live pages.
+    function sgPageAlerts(kind) {
+      if (kind === "stale") {
+        return sgStaleBanner() + sgStaleStatus();
+      }
+      if (kind === "no-service") {
+        return sgStatusCard(copy.status.unavailable, copy.quality.noService);
+      }
+      if (kind === "uncertain") {
+        return sgLocationCard() + sgLocationAgeCard();
+      }
+      return "";
+    }
+
+    function sgLocationAgeCard() {
+      return '<section class="card card--caution alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
+        + '<div class="alert-row__copy"><h3 class="alert-row__title">' + qc.uncertain.heading + '</h3>'
+        + '<p class="alert-row__body">' + qc.uncertain.ageBody.replace("{seconds}", "74") + '</p></div></section>';
+    }
+
+    function sgSeeArrivalsBar() {
+      return '<div class="catch-bar catch-bar--single catch-bar--sample"><button type="button" class="primary primary--icon"><span>' + cp.seeArrivals + '</span>' + ARROW_ICON + '</button></div>';
+    }
+
+    function sgPageA(kind) {
+      var cards = kind === "live"
+        ? sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady") + sgLeaveTiles(true)
+          + '<div class="miss-row"><span>' + CLOCK_ICON + '</span><div><p class="miss-row__label">' + copy.arriveBy.missLabel + '</p><p>' + copy.arriveBy.missWithLate.replace("{service}", "36").replace("{minutes}", "8").replace("{point}", "6:36 PM").replace("{late}", "about 6 min late") + '</p></div></div>'
+          + sgAiCard("normal")
+        : "";
+      return sgPageAlerts(kind === "live" ? "" : kind) + cards + sgSeeArrivalsBar();
+    }
+
+    function sgPageB(kind) {
+      var tiles = kind === "no-service"
+        ? '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>'
+        : '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["4 min", "12 min", "24 min"]);
+      var pill = kind === "no-service" ? "unavailable" : "live";
+      return sgPageAlerts(kind === "uncertain" || kind === "stale" ? "" : "")
+        + '<div class="card live-card">' + sgBusCard(pill, "", false) + '<p class="live-then">' + cp.thenBus.replace("{service}", "106").replace("{stop}", "Orchard Stn (02049)") + '</p>' + tiles + sgMap(false) + sgStatus(kind === "no-service" ? "unavailable" : kind === "uncertain" ? "uncertain" : "live") + '</div>'
+        + (kind === "no-service" ? "" : sgQuestionBar());
+    }
+
+    function sgRingRow() {
+      return '<div class="ring-samples">' + [[92, 92, 92, "ok"], [64, 51, 78, "ok"], [45, 38, 52, "mid"], [30, 20, 38, "low"]].map(function (r) {
+        return '<div class="ring-sample">' + sgRing(r[0], r[1], r[2], false, "", r[3]) + '<p class="field__hint">' + sgProbLine(r[0], r[1], r[2]) + '</p></div>';
+      }).join("") + '</div>';
+    }
+
+    function pagesSample() {
+      return ""
+        + "<h4>Probability ring at 92%, 64%, 45% and 30%: no marks, band colours, neutral track</h4>" + sgRingRow()
+        + "<h4>Page A, Catch probability, with its sticky button</h4>" + sgPageA("live")
+        + "<h4>Page A: no-service state (status card replaces the ring, tiles and AI card)</h4>" + sgPageA("no-service")
+        + "<h4>Page A: stale state</h4>" + sgPageA("stale")
+        + "<h4>Page A: location uncertain, accuracy reason and age reason</h4>" + sgPageA("uncertain")
+        + "<h4>Page B, Bus arrival, with its sticky question bar</h4>" + sgPageB("live")
+        + "<h4>Page B: no-service line in place of the next buses (no question bar)</h4>" + sgPageB("no-service");
+    }
+
+    document.getElementById("pages-sample-light").innerHTML = pagesSample();
+    document.getElementById("pages-sample-dark").innerHTML = pagesSample();
+
+    document.getElementById("flow-sample-light").innerHTML = flowSample();
+    document.getElementById("flow-sample-dark").innerHTML = flowSample();
+
+    setInterval(function () {
+      document.querySelectorAll(".sg-stale-time").forEach(function (node) {
+        node.textContent = sgAge();
+      });
+    }, 1000);
+
+
+
     var placeSearch = document.getElementById("place-search");
     var placeClear = document.getElementById("place-clear");
     function syncPlaceClear() {
@@ -423,8 +1488,22 @@
         });
       }
       L.marker([1.3521, 103.8198], { icon: marker("You", "marker marker--user") }).addTo(guideMap);
-      L.marker([1.356, 103.828], { icon: marker("Stop", "marker marker--boarding") }).addTo(guideMap);
-      L.marker([1.348, 103.81], { icon: marker("End", "marker marker--destination") }).addTo(guideMap);
+      L.marker([1.356, 103.828], {
+        icon: L.divIcon({
+          className: "map-stop",
+          html: "<span class=\"map-stop__dot\">" + BUS_SVG + "</span>",
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        })
+      }).addTo(guideMap);
+      L.marker([1.348, 103.81], {
+        icon: L.divIcon({
+          className: "map-stop is-selected",
+          html: "<span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right is-selected\">Selected stop</span>",
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        })
+      }).addTo(guideMap);
     }
   </script>
 </body>

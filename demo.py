@@ -204,6 +204,15 @@ def apply_stale(payload: dict, now: datetime) -> bool:
     return True
 
 
+def simulated_reverse_geocode() -> dict | None:
+    """Same OneMap-failure switch as place search. None leaves reverse geocoding live."""
+    if not demo_enabled() or _state.scenario != ONEMAP_FAILURE:
+        return None
+    if _state.onemap_outcome == "error":
+        return {"unavailable": True}
+    return {"unavailable": False, "name": ""}
+
+
 def simulated_destination(query: str) -> dict | None:
     if not demo_enabled() or _state.scenario != ONEMAP_FAILURE:
         return None
@@ -225,25 +234,12 @@ def simulated_openai_result(fact_sheet: dict) -> dict | None:
         if OPENAI_DEMO_ELAPSED_S > 3:
             return {"timeout": True}
         return {"timeout": True}
-    action = fact_sheet.get("chosen_action")
-    low = fact_sheet.get("range_low")
-    high = fact_sheet.get("range_high")
     if outcome == "unsafe":
-        body = {
-            "headline": "You should run for this bus",
-            "reasoning": "jaywalk if the light is red",
-            "leave_advice": action,
-            "cited_low": low,
-            "cited_high": high,
-        }
+        # Unsafe wording: the clause is rejected and the fixed clause is shown.
+        body = {"advice": "run for this bus"}
     else:
-        body = {
-            "headline": "you'll make it",
-            "reasoning": "The probability is 99%.",
-            "leave_advice": action,
-            "cited_low": low + 5 if isinstance(low, int) else low,
-            "cited_high": high + 5 if isinstance(high, int) else high,
-        }
+        # Digits and a promise, whatever the action: rejected as well.
+        body = {"advice": "leave now, you will make it in 5 minutes"}
     return {"timeout": False, "status": 200, "body": body}
 
 

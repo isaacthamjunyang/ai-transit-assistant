@@ -92,11 +92,11 @@ LTA calls used:
 
 Poll only the active boarding stop plus up to two alternate stops, every 20 seconds, and only while a journey is open.
 
-**Journey the user sets up:** browser location, an arrive-by time, and a place phrase. OneMap resolves the phrase the user selects. The selector proposes LTA stops around that point. The user confirms one destination stop. The app then finds boarding stops within 400 m whose route still passes that confirmed stop later in that direction. Optional preferred service number still applies in that existing step.
+**Journey the user sets up:** browser location, an arrive-by time, and a place phrase. OneMap resolves the phrase the user selects. The selector proposes LTA stops around that point. The user confirms one destination stop. The app then picks the boarding stop within 400 m and the route itself (Step 14, section 1) and shows why it chose them. Optional preferred service number still applies in that existing step.
 
 **Catch** means the user reaches the boarding stop before `EstimatedArrival` minus a 45-second buffer. Ride time onward is `route kilometres / 18 km/h`, labeled as an estimate, and checked against arrive-by. When that route distance is unusable, Step 9 does not invent a duration and does not perform the arrive-by comparison. The locked rule is in **Step 9 specification**.
 
-**Proactive leave-now alert** uses the Notification API while this tab is open, including when the tab is not visible. There is no background process. The locked rules are in **Step 10 specification**.
+**Proactive leave-now alert** uses the Notification API while this tab is open, including when the tab is not visible. There is no background process. A minimal service worker is used only to display local notifications and handle taps (see **Step 14 specification**, section 5). The locked rules are in **Step 10 specification**.
 
 **Logging addition.** The existing `observations` fields stay as listed in section 3. A journey row also stores the search text, the selected OneMap label, latitude, longitude, and the confirmed destination stop code. That is the only logging change.
 
@@ -120,7 +120,7 @@ P(slack)    = clamp(1 / (1 + exp(-0.025 * (slack - 90))), 0.05, 0.92)
 Adjustments:
 
 - `Monitored == 0`: add half the published headway onto the bad side of slack, and cap the high end at 60%. Label **schedule only**.
-- GPS `accuracy` worse than 100 m, or a location fix older than 60 s: same widening, label **location uncertain**. Do not issue "leave now" from that fix.
+- GPS `accuracy` worse than 100 m, or a location fix older than 60 s: same widening, label **location uncertain**. Do not issue "leave now" from that fix. The page refreshes the fix once per poll tick, so a user who stands still is not treated as uncertain; a failed request leaves its age growing.
 - ETA already more than 30 s in the past: that bus is missed; score the next bus.
 - Stale or API down: return **no probability**. See safety section.
 - Historical factor: until 20 logged arrivals exist for that service + stop + hour-of-week, the factor is neutral and the UI says **no historical reliability yet**. Later, subtract median lateness from slack. Do not invent a reliability number before that.
@@ -180,7 +180,7 @@ OpenAI call timing, the fact sheet, in-flight handling, and the data-quality fil
 
 ## UI and theme
 
-Mockup fidelity rules: see .cursor/rules/mockup-fidelity.mdc. Mockup image: Bus Catch Assistant UI Flow.png (repo root).
+Mockup fidelity rules: see .cursor/rules/mockup-fidelity.mdc. Mockup image: Bus_Assistant_Flow_Final_Design.png (repo root). Header subtitle: AI-powered bus guidance in Singapore.
 
 This section is the single look for every later build step. It does not change catch math, leave-by, notification timing, reroute rules, Step 12 guardrails, or any exact copy string already locked below.
 
@@ -188,9 +188,21 @@ The visual target is the 10-screen mockup. Where that mockup and this section di
 
 ### Design tokens
 
-All visual values live in `static/theme.css`, as CSS custom properties. Light and dark both come from `prefers-color-scheme`. A Light / Dark / Match system control sets or removes `data-theme` on the document element only. Match system removes `data-theme` so the page follows `prefers-color-scheme`. `static/components.css` is a second stylesheet and uses those tokens only.
+All visual values live in `static/theme.css`, as CSS custom properties. On a first visit the page picks light or dark from `prefers-color-scheme`. After that the saved Light or Dark choice wins, and `data-theme` is always `light` or `dark`. `static/components.css` is a second stylesheet and uses those tokens only.
 
-The app header has a hamburger that opens a menu sheet. The sheet contains Light, Dark, and Match system. Demo Controls appear in that sheet only when demo mode is on.
+The app header has a hamburger that opens a menu panel under the button. The panel contains Appearance (Light and Dark) and Back. Demo Controls appear in that panel only when demo mode is on.
+
+The Arrive-by row opens an inline panel with No target, In 30 min, In 1 hour, and Custom. A chosen offset becomes a fixed Singapore time, rounded up to 5 minutes.
+
+The live journey is two views of one journey, with one poll, one set of state and one shared alert strip at the top (data-quality warnings, the end card, the compact `See other buses` warning, the Leave now banner, the reroute confirmation, the catch warning; the transfer prompt sits above the header). Both are in the page and one shows at a time. **Page A, Catch probability:** the alert strip, the probability card, the pace chip, the Leave by and Estimated arrival tiles with the spare line and Step 9 badge, If you miss it, AI Explanation, and a sticky full-width `See bus arrival times` button. **Page B, Bus arrival:** the alert strip, the bus card (service, LIVE or SCHEDULE ONLY pill, destination, refresh), the `Then Bus {service} at {stop}` line on a transfer route, the next three buses, the live map (route line, bus tag, You marker, boarding-stop chip, destination pin, Full route toggle, range chip), the status grid, and a sticky bar asking `Did you catch the bus?`. After Start journey the first poll decides which page opens (see the next paragraph). The sticky button opens Page B, and Back from Page B returns to the page it came from. In the no-service, stale, unavailable and location-uncertain states Page A shows the status card in place of the probability card, tiles, If you miss it and the AI card, and Page B shows the no-service line in place of the next-bus tiles.
+
+**After Start journey: two scenarios, decided once.** Start journey shows a loading skeleton (`aria-busy`) until the first poll result returns, then decides once. Scenario 1, catchable: the existing unlikely rule is not met (`range_high` at or above `MIN_REAL_CHANCE_RANGE_HIGH`, the existing 40), or there is no probability (stale, unavailable, no service, no ETA). Page A opens and the data-quality layouts do not change. Scenario 2, not feasible: the rule is met (`range_high` below 40) with a live or schedule-only probability. Page C opens (the unlikely entry). The decision never navigates by itself afterwards. If the situation changes later, a compact warning appears on Pages A and B: `You're unlikely to catch the Bus {service} arriving in {n} min`, `Catch probability: {p}% (range {a}–{b}%)` and a `See other buses` button that opens Page C. It sits in the alert slot below the data-quality warnings and the end card and above the Leave now banner, the reroute confirmation, the catch warning and the notification card; the slot shows one occupant at a time, so it never shows together with another occupant, and it clears when `range_high` is back at 40 or above. The existing catch warning (`Catch chance dropping`) is unchanged. A poll no longer renders a reroute proposal in the page; the server evaluation and the locked pending notification stay, and the page asks the server to skip that evaluation (`reroute=0`) while the unlikely entry of Page C is open. After `Switch to Bus N` and `Start journey` the same decision runs again for the new bus.
+
+**Page C, the options page.** Nothing from Page A appears on it: no pace chip, no Leave by or Estimated arrival tiles, no If you miss it, no Page A AI card, no sticky button and no compact warning. Unlikely entry, top to bottom: the current-bus card (the probability ring, `Chance to catch current Bus {service} at your stop`, `Range: {a} – {b}%`, the LIVE or SCHEDULE ONLY pill, `if you leave now and walk at a normal pace`, a warning line `Catching this bus is unlikely. Here are your other options.` and a `See bus arrival times` button that opens Page B for the current bus); the recommended card (heading chip `Better option found`) with its AI Explanation block; the `Alternative options` list. The unlikely entry chooses from all eligible options and does not apply the improvement rule. If the current bus becomes catchable again the warning line hides and the page does not navigate. When nothing is eligible, the current-bus card, the existing no-better-option card and the list (heading `Other buses at your stop`) show, with no recommended card and no AI block. Missed entry (after `No, I missed it`): no current-bus card; `Bus {service} has left. Here are your other options.` is the top element, then the recommended card (chip `Recommended option`) and the list. Every probability names its bus. The header of the list has a refresh icon button and a muted `Updated {time}`: it re-runs the options search with the existing `MANUAL_REFRESH_MIN_SECONDS` cooldown (aria-disabled while cooling down, spinning while it runs and static under reduced motion, disabled in Demo Mode). Back from the unlikely entry asks `Leave this journey?` while polling runs; after `No` polling has stopped, so Back goes to the overview with no confirm. Worst-case LTA calls per minute: Pages A and B 3 (one poll every 20 s), or 12 while the server evaluates a reroute (up to 3 extra calls per poll); Page C 3 from polls plus 3 per refresh at the 10 s cooldown, at most 21; each entry search makes 3 calls.
+
+**Page A wording (a deliberate deviation from mockup 7).** The probability heading is `Chance to catch current Bus {service} at your stop` (Leg 2: `Chance to catch Bus {service} at {transfer stop name}`), not `chance to catch`. The Leave by tile shows exactly one of two phrases and no clock time: `Leave now` when the Python action is `leave_now`, `Wait for Leave By Alert` when it is `wait`; it is not shown for `switch_route` or `do_not_rely`. The tile, the AI advice clause and the notification all follow that one action; between two polls the page applies the same leave-by test (60 seconds or less) to a `wait`. The pace chip shows only while the action is `leave_now`; it is hidden for `wait`, `switch_route` and `do_not_rely`. The pace categories keep `Walk slower` and `Walk slightly slower`. If you miss it shows the first later arrival of the same service after the tracked arrival, with its estimate from the one Step 9 estimate (anchored only when that arrival is live), and is hidden when there is none. In the question bar, `Yes, I caught it` is solid green and `No, I missed it` solid red, each with white text at 4.5:1 or better in both themes (`--action-yes`, `--action-no`), an icon, and at least 44 px tall.
+
+The boarding-stop screen and the route-options screen were removed. After the destination stop is confirmed, the app picks the boarding stop and the route (Step 14, section 1) and opens the journey overview.
 
 | Token | Light | Dark |
 | --- | --- | --- |
@@ -242,7 +254,7 @@ Each component is defined once and reused. Variants are classes, not new compone
 - **Probability meter.** Specified under Probability meter. Not a second score widget.
 - **Buttons.** `primary` and `secondary` only. Both use `--tap-min`.
 - **Form field.** Label, control, and hint as one unit.
-- **List item.** One row for a place, a stop, or a route option.
+- **List item.** One row for a place or a stop. The app picks the route, so there is no route-option list.
 
 ### Status styles
 
@@ -260,7 +272,7 @@ Colour is never the only signal. Each state has a token, an icon token, and the 
 
 ### Probability meter
 
-The meter shows the existing point and the existing range band. It also draws marks at the existing 40% and 50% thresholds. Those marks are visual only.
+The meter shows the existing point and the existing range band. The probability ring has no tick marks: a thick rounded stroke from 12 o'clock, a neutral track from the border token, and the point centred. The stroke is green from 50%, amber from 40 to 49%, and red below 40% (`--prob-ring-ok`, `--prob-ring-mid`, `--prob-ring-low`, aliases of the status tokens, at least 3:1 on the card in both themes). The number, the range and the pace chip always show too, so colour is never the only signal. The ring colour band comes from Python: the scoring response carries a `band` of `ok`, `mid` or `low` (or none when there is no probability), computed from the point with the thresholds named in `config.py`, and the page only maps the band to a token.
 
 - 40% stays the Step 10 leave-now gate (`range_high >= 40%`) and the Step 11 reroute trigger (`range_high < 40%`).
 - 50% stays the Step 14 caution, which appears when the live Leg 1 point is below 50%. It still does not fire a notification by itself.
@@ -269,7 +281,7 @@ Do not change either threshold, the sigmoid, the 5% floor, the 92% cap, or the s
 
 ### Layout
 
-Mobile first. One column at every width until the mockup shows otherwise. The leave-by countdown sticks while the live journey is on screen. Tap targets are at least `--tap-min`.
+Mobile first. One column at every width until the mockup shows otherwise. The sticky bottom button (Page A) and question bar (Page B) stay on screen while the live journey is shown. Tap targets are at least `--tap-min`.
 
 On the live journey screen, the default view is the hero (probability and leave-by), one status badge, and the AI Explanation card. Arrive-by check, data-quality detail, and the Leg 2 schedule expectation sit in an expandable **Details** region. See Live screen simplification.
 
@@ -315,18 +327,14 @@ Map markers use theme tokens, not hex in JavaScript. Three markers: user, boardi
 | Search | Form field, primary button |
 | Pick place | List item, info card |
 | Pick stop | Map (user and boarding-stop markers), list item, primary button |
-| Pick route option | Map (user, boarding stop, destination stop), list item or card, badge, primary button |
-| Live journey | Probability meter, sticky leave-by countdown, one status badge, AI Explanation card, alert slot, expandable Details |
+| Journey overview (route picked by the app, with the reason) | Timeline card, badge, primary button |
+| Live journey | Page A (probability ring, pace chip, tiles, If you miss it, AI Explanation card) and Page B (bus card, next buses, live map, status grid), one shared alert slot, a sticky button or bar on each |
 | Reroute | Card (`success` while the switch is shown), banner only through the alert slot |
 | Unavailable | Card variant `unavailable`, status badge |
 
 ### Alert slot
 
-The Step 10 Notifications Optional card, the Step 10 denied-notifications banner, and the Step 14 caution banner share one slot. Only one of those three is shown at a time. Their copy stays exactly as written in **Step 10 specification** and **Step 14 specification**. This rule does not add a permission request and does not change when a leave-now notification fires.
-
-Which of the three wins when more than one would apply is not specified. Do not guess an order until that priority is locked.
-
-The granted line in Step 10 is not named as one of the three slot items. Whether it may sit beside the Step 14 caution banner is also not specified.
+The transfer prompt (Step 14) is pinned above the header, outside the slot. In the slot, the data-quality warnings come first: the stale or unavailable banner with its status card, and the no-service status card. The location-uncertain card stacks under them, and it also shows alone. After the warnings come, in this order, the Step 14 end card, the Leave now banner, the reroute block, the Step 14 caution banner, and the Step 10 notification-permission occupant last. That last occupant holds Notifications Optional, the denied banner, or the granted line `Notifications active — Leave-now alert set`. Only the first active occupant after the warnings shows. Every later one is hidden while a higher one is showing, and a data-quality warning hides all of them. The end card never shows together with the Leave now banner or the reroute block, because ending tracking clears both. Their copy stays exactly as written in **Step 10 specification** and **Step 14 specification**. This rule does not add a permission request and does not change when a leave-now notification fires.
 
 ### Copy constants
 
@@ -341,7 +349,7 @@ Sections that currently define user-facing strings:
 - Step 11 specification: both no-better sentences, the reroute card, the reroute notification, and `reroute_reason`
 - Step 12 specification: the AI Explanation title, `● Updating explanation...`, the fallback template, and the four action sentences
 - Step 13 specification: `SIMULATED DEMO MODE`, `[SIMULATED]`, and the seven scenario names
-- Step 14 specification: the no-feasible-route sentence, the three option labels, the caution banner, and the Leg 2 prompt and button names in that section
+- Step 14 specification: the no-feasible-route sentence, the three option labels, the caution banner, and the question bar, transfer alert and end card strings in that section (proposed, needs approval)
 
 ### Live screen simplification
 
@@ -367,7 +375,7 @@ Each step is one commit with something a judge can see or a test can run.
 11. Auto-reroute scoring, the trigger, the automatic switch, the reroute card, the reroute notification, and the reason stored in the existing `observations` table, as specified in **Step 11 specification**. OpenAI explanation of the switch is Step 12.
 12. OpenAI explanation, as specified in **Step 12 specification**, including the fixture tests listed there. No live OpenAI calls. All earlier step tests remain passing.
 13. Demo Mode, as specified in **Step 13 specification**. It is enabled only when `DEMO_MODE` is exactly `true`. It shows the seven interactive scenarios without waiting for a real outage. README demo instructions belong to the implementation step, not to this specification lock.
-14. Multi-leg journey assistant, as specified in **Step 14 specification**. Route options stay static and deterministic. Live catch probability starts only after the user selects one option. This step does not rewrite Steps 1–13 and does not add Step 15. Step 14 is a stretch goal behind a finished single-leg flow. The specification stays locked; this sentence only sets build order.
+14. Multi-leg journey assistant, as specified in **Step 14 specification**. Route options stay static and deterministic. Live catch probability starts only after the app picks one option and the user presses Start journey. This step does not rewrite Steps 1–13 and does not add Step 15. Step 14 is a stretch goal behind a finished single-leg flow. The specification stays locked; this sentence only sets build order.
 
 ## Step 9 specification
 
@@ -408,6 +416,10 @@ When `ride_minutes` is null:
 - The journey stays usable, and the leave-by calculation stays functional.
 
 For a one-transfer route, the arrive-by check uses the sum of both legs' ride minutes together with the same walk and half-headway terms as a direct ride, and it shows N/A when either leg's ride_minutes is null.
+
+### Arrival range, spare minutes, and a missed bus
+
+The point estimate stays that same door-to-door total: the walk to the boarding stop at 1.25 m/s, half of Leg 1's published headway, the ride at 18 km/h (both legs on a transfer), and the walk on from the destination stop at 1.25 m/s, rounded up to a whole minute. The 45 s board buffer and the 60 s leave-now margin are not part of it. On track means the point is at or before the target. Risk of delay means it is after. Spare minutes are the target minus that same point. They are not shown as a line anywhere: only a negative value is used, as the late wording (`about N min late`) inside If you miss it. The Arrive-by check badge sits at the top left of the AI Explanation card (under the tiles when that card is not shown), is hidden with no target, and is prefixed `If you catch this bus: ` when the ring band is mid or low, because it assumes the user catches this bus. The range changes only the end walk and the ride: early uses 1.4 m/s and ride × (1 − RIDE_TOLERANCE), late uses 1.1 m/s and ride × (1 + RIDE_TOLERANCE), and RIDE_TOLERANCE is 0.15. A null ride still shows N/A and no invented number. A second live arrival can be estimated with those terms, assuming the user catches that bus. When the tracked bus has a live (monitored) arrival time, the estimate is anchored to it: the half-headway wait is replaced by the wait for that bus (the larger of the walk and the time until it arrives) and no other term changes. A schedule-only bus, or a bus with no live arrival, keeps the planned basis. The live tile, the new-journey overview and the reroute options all use this one estimate. If every route option the app considered arrives after the target, a non-blocking warning says so.
 
 ### Leave-by calculation
 
@@ -458,7 +470,7 @@ When the notification fires, use this payload:
 - Title: `Leave Now — Bus {service_no}`
 - Body: `Walk to {stop_name} ({stop_code}) now to catch Bus {service_no}. Catch probability: {point}% ({range_low}–{range_high}%).`
 
-Use the current primary bus or service and the selected boarding stop. The displayed probability uses the existing Step 6 point and range.
+Use the current primary bus or service and the selected boarding stop. The displayed probability uses the existing Step 6 point and range. The leave-now alert is also shown as an in-app banner, with the same title and body and the same once-per-bus rule, at the same moment as the notification, whatever the notification permission is.
 
 ### 4. Browser permission
 
@@ -482,7 +494,7 @@ Permission state controls whether the browser notification can be delivered. It 
 
 ### 5. Hidden or background tab
 
-Notifications may fire when the tab is open even if the tab is not currently visible or active. The requirement is tab-open only. There is no background process, service, or server-side notification system.
+Notifications may fire when the tab is open even if the tab is not currently visible or active. The requirement is tab-open only. There is no background process or server-side notification system. The only service worker is the minimal one in **Step 14 specification**, used only to display local notifications and handle taps.
 
 ### 6. Duplicate notifications
 
@@ -529,7 +541,7 @@ Step 10 covers leave-now notifications only, including the permission lifecycle 
 
 ## Step 11 specification
 
-Step 11 is auto-rerouting. It scores alternate candidates, applies the trigger, selects one winner, switches the active route, shows the reroute card, sends the reroute browser notification when notifications are already enabled, and stores the reason in the existing `observations` table.
+Step 11 is auto-rerouting. It scores alternate candidates, applies the trigger, selects one winner, and shows it as a proposal; the active route switches only when the user confirms with the Switch button. After that tap it shows the reroute card, sends the reroute browser notification when notifications are already enabled, and stores the reason in the existing `observations` table.
 
 ### 1. Reroute trigger
 
@@ -545,7 +557,8 @@ The point probability is not the trigger. Both conditions must hold. A stale or 
 Evaluate candidates in this order:
 
 1. The same service at the current boarding stop: `NextBus2`, then `NextBus3`.
-2. Other eligible buses and services at alternate boarding stops within 400 m of the user's current location.
+2. Every other service at the current boarding stop that reaches the destination, all of its arrivals (one `BusArrival` lookup for the stop with `ServiceNo` omitted).
+3. Other eligible buses and services at alternate boarding stops within 400 m of the user's current location (one lookup per stop).
 
 A candidate may be the same service number at a different nearby boarding stop, or a different service number at a nearby boarding stop. When more than two eligible alternate boarding stops are within 400 m, poll the two closest by straight-line haversine distance from the user's current GPS location. Do not use another stop-ranking method.
 
@@ -555,15 +568,19 @@ An alternate candidate must still reach the confirmed destination stop in the re
 
 Use the existing Step 6 catch heuristic exactly. Do not create a second probability formula. For each candidate, score catch probability from the user's current location and that candidate's boarding stop, using the candidate bus ETA and the existing walk-speed, range, and buffer rules. Preserve the existing data-quality handling. Reachability determines eligibility. It does not change the probability mathematics.
 
-### 4. Arrive-by filtering
+### 4. Arrive-by target
 
-When the journey has an arrive-by time, a candidate is eligible only when its estimated destination arrival is at or before that time. If that candidate's `ride_minutes` is null, the candidate is ineligible, because its destination arrival cannot be verified. Do not guess or fabricate a ride duration.
+No candidate is dropped for arriving after the arrive-by time. Each option's estimated destination arrival comes from the one Step 9 estimate (anchored to the bus's live arrival when it has one). An option whose estimate is after the target stays in the list with the label `After your target` and no minute counts. An option with no ride duration has no estimate: it is not on time, it is never preferred over an option that has an estimate, and it never gets the `Reach your destination quickly` pill. Do not guess a ride duration.
 
-When the journey has no arrive-by target, skip the destination-arrival-time filter and evaluate eligible alternatives on catch probability alone.
+### 5. Recommended option
 
-### 5. Winning alternative
+The improvement rule in section 1 now decides only the server-side pending notification. The unlikely entry and the `No, I missed it` entry both choose from all eligible options. Both use one pure function, `recommend_option`, with named constants in `config.py`: `RUSH_MARGIN_MINUTES = 10`, `PROB_TIE_POINTS = 5` and `MIN_REAL_CHANCE_RANGE_HIGH = 40` (the same 40 as the trigger). The rules are ordered and deterministic and there is no blended score. The three factors are the arrive-by target T, the catch probability and the walking distance d to the option's stop (0 at the current stop). The first matching rule wins:
 
-If several alternatives satisfy the trigger, choose the candidate with the highest `range_low`. If those `range_low` values tie and an arrive-by target exists, choose the earlier estimated destination arrival. If they tie and there is no arrive-by target, choose the earlier ETA. Do not rank by point probability when `range_low` can distinguish them.
+0. Eligible options have `range_high` at or above `MIN_REAL_CHANCE_RANGE_HIGH`. With none, there is no recommendation: the existing no-better-option or no-service card shows. An option that is not eligible is never recommended.
+1. T is set. `ontime` is the eligible options whose estimated arrival A is at or before T. With none on time, recommend the eligible option with the earliest A (ties: higher probability, then shorter d), reason `NONE_BY_TARGET`. Otherwise `best` is the on-time option with the highest point probability (a difference of at most `PROB_TIE_POINTS` is a tie and goes to the shorter d, then the earlier A). If T minus A of `best` is less than `RUSH_MARGIN_MINUTES`, recommend the on-time option with the earliest A (ties: higher probability, then shorter d): `FASTEST_RUSHING`, or `HIGHEST_CHANCE_ON_TIME` when it is `best` itself. Otherwise recommend `best`: `HIGHEST_CHANCE_ON_TIME`, or `SHORTER_WALK` when the walk tie-break decided it.
+2. T is not set. Recommend the highest point probability (ties within `PROB_TIE_POINTS`: shorter d, then earlier A): `HIGHEST_CHANCE`, or `SHORTER_WALK` when the walk tie-break decided it.
+
+The reason sentences are written by Python and never by the model (`{s}` is the service number): `FASTEST_RUSHING` "Your arrive-by time is close, so Bus {s} is recommended: it should get you to your destination first."; `HIGHEST_CHANCE_ON_TIME` "Bus {s} is recommended: it has the highest chance of catching, and it should still get you there by your arrive-by time."; `HIGHEST_CHANCE` "Bus {s} is recommended: it has the highest chance of catching."; `SHORTER_WALK` "Bus {s} has a similar chance to the other options, and the walk to its stop is shorter."; `NONE_BY_TARGET` "No option should reach your destination by your arrive-by time. Bus {s} should get you there earliest." (proposed wording).
 
 ### 6. Automatic route switching
 
@@ -647,6 +664,8 @@ When a reroute occurs and browser notifications are already enabled, fire a brow
 - Body: `Switched to Bus {new_service} at {new_stop_name}. Catch probability: {new_point}% (range {new_low}–{new_high}%).`
 
 Do not alter the Step 10 leave-now permission lifecycle. Do not add another automatic permission request. If notifications are not enabled, the in-page reroute card still appears.
+
+While a proposal is waiting for the user's tap, the notification uses the pending wording once it is approved (proposed: title `Better option — Bus {new_service}`, body `A better option is available. Open the app to switch.`). The locked title and body above are used after the user switches.
 
 ### 12. SQLite persistence
 
@@ -857,6 +876,10 @@ Map the Python action to `{action_advice_text}` exactly:
 - `leave_now` → `Leave now to walk to the bus stop.`
 - `switch_route` → `Route updated to an alternate service.`
 - `do_not_rely` → `Data uncertain; do not rely solely on this estimate.`
+
+While a reroute proposal is waiting for the user's tap, the page shows a pending sentence in place of the `switch_route` one once it is approved (proposed: `A better option is available. Tap Switch to change bus.`). The action value stays `switch_route`.
+
+Page C recommendation explanation. The recommended option on the reroute page carries an AI Explanation block of two sentences: a fixed reason sentence for its reason code (FASTEST_RUSHING, HIGHEST_CHANCE_ON_TIME, HIGHEST_CHANCE, SHORTER_WALK, NONE_BY_TARGET), written by Python from fixed templates, then "It is advisable to {advice}." The model receives only the reason code and chosen_action = "switch_route", with no number, probability, range, coordinate or stop, and returns only the advice clause, which passes the existing clause validation. The fixed clause "switch to another bus" is used when the explanation is off, fails or is rejected. One request is made when a recommendation is first shown or when its reason code or action changes. The existing Step 12 fact sheet, timing and validation are unchanged.
 
 Probability digits come from the Python fact sheet. Do not use model-generated probability values in the fallback.
 
@@ -1286,7 +1309,7 @@ Step 13 does not add features unrelated to demo mode, a new probability model, n
 
 ## Step 14 specification
 
-Step 14 is the multi-leg journey assistant. It extends the existing catch engine into an end-to-end guide with at most one transfer. Route generation stays deterministic and static. Live arrival polling stays separate and starts only after the user selects one route option. Step 14 is a stretch goal behind a finished single-leg flow. The rules in this specification stay locked. They do not move ahead of that single-leg flow.
+Step 14 is the multi-leg journey assistant. It extends the existing catch engine into an end-to-end guide with at most one transfer. Route generation stays deterministic and static. Live arrival polling stays separate and starts only after the app has picked one route option and the user presses Start journey. Step 14 is a stretch goal behind a finished single-leg flow. The rules in this specification stay locked. They do not move ahead of that single-leg flow.
 
 This section locks the product. It does not rewrite Steps 1–13. `catch_heuristic.score_buses`, `leave_by_time`, `notification_time = leave_by - 60s`, the Step 11 algorithm, Step 12 explanation, and the seven Step 13 scenarios stay as already specified. This section does not add Step 15.
 
@@ -1295,8 +1318,8 @@ This section locks the product. It does not rewrite Steps 1–13. `catch_heurist
 Selection order:
 
 1. Destination search. The user searches for a place and confirms one destination stop, `confirmed_destination_stop`. The existing Step 7 and Step 8 selection rules stay. The destination stop is not chosen automatically.
-2. Boarding stop selection. The app lists cached bus stops within 400 m of the current GPS fix, using the existing boarding radius. The user selects `origin_boarding_stop`. Another nearby stop is not substituted.
-3. Route pathfinder. The pathfinder reads cached `BusRoutes` and `BusStops` and builds candidate routes from `origin_boarding_stop` to `confirmed_destination_stop`.
+2. Boarding stop and route, picked by the app. The app takes every cached bus stop within 400 m of the current GPS fix, using the existing boarding radius, runs the pathfinder below from each one to `confirmed_destination_stop`, and merges the options in the order of section 2 (including the transfer penalty). With an arrive-by time, it picks the first option whose estimated arrival (the Step 9 estimate) is at or before the target; if none is, it picks the first option and shows the existing planning warning. Without a target, it picks the first option. Ties break by fewest transfers, then the shorter walk to the boarding stop, then the lower service number. The picked option's first boarding stop is `origin_boarding_stop`. The overview shows one short line saying why this route was chosen. The user does not pick a boarding stop or a route option.
+3. Route pathfinder. The pathfinder reads cached `BusRoutes` and `BusStops` and builds candidate routes from each candidate boarding stop to `confirmed_destination_stop`.
 
 A sequence is `ServiceNo` + `Direction` ordered by `StopSequence`.
 
@@ -1326,7 +1349,7 @@ Ranking uses static route geometry and scheduled travel time only. Live LTA arri
 
 Generalized journey time is `T_total + transfer penalty`.
 
-- `T_total` reuses the existing door-to-door pieces: the walk to the selected boarding stop at 1.25 m/s, half of Leg 1's published headway, the ride at 18 km/h, and the walk from the confirmed destination stop to the place. For one transfer, the ride term is Leg 1 ride plus Leg 2 ride. No second half-headway is added.
+- `T_total` reuses the existing door-to-door pieces: the walk to the boarding stop at 1.25 m/s, half of Leg 1's published headway, the ride at 18 km/h, and the walk from the confirmed destination stop to the place. For one transfer, the ride term is Leg 1 ride plus Leg 2 ride. No second half-headway is added.
 - Direct transfer penalty: 0 minutes.
 - One-transfer penalty: 10 equivalent minutes.
 
@@ -1344,9 +1367,9 @@ Do not label a route that was not produced by this ranking. Do not let discovery
 
 ### 3. Live probability engine activation
 
-Live catch probability starts only after the user selects one of the labeled options. Selecting an option does not change `confirmed_destination_stop`.
+Live catch probability starts only after the user presses Start journey on the option the app picked. Picking an option does not change `confirmed_destination_stop`.
 
-Leg 1, Bus A, after selection:
+Leg 1, Bus A, after Start journey:
 
 - Start the existing real-time `BusArrival` poll for Leg 1's boarding stop and service.
 - Compute `P_Leg1`, the range, slack, and the leave-by clock with the existing Python engine.
@@ -1373,38 +1396,35 @@ Push notifications stay on the existing Step 10 rules:
 
 The banner tap may open the existing Enable Notifications action. It does not call `Notification.requestPermission()` by itself, and it does not change notification timing.
 
-### 5. Leg 2 transition
+### 5. "Did you catch the bus?", the transfer alert, and Leg 2
 
-While Leg 1 is active and the page is open, foreground GPS checks the straight-line distance to the transfer stop. Leg 1 counts as active for this transition only after "I'm On Board". This is not background tracking and it does not run when the tab is closed.
+Constants live in `config.py` and are written into the page: `UNANSWERED_END_MINUTES = 10`, `MAX_MONITOR_MINUTES = 60`, `TRANSFER_NEAR_METERS = 300`, `TRANSFER_WATCH_MAX_MINUTES = 90`, `TRANSFER_BUS_SPEED_MPS` (the existing 18 km/h ride-speed constant, in metres per second), and `LEG2_REACH_RANGE_FRACTION = 0.25`.
 
-Transition:
+**Question bar and sticky buttons.** Page B has a sticky bar fixed to the bottom of the page column (with safe-area padding, and bottom padding on the page so nothing is covered) asking `Did you catch the bus?` with a primary `Yes, I caught it` and a secondary `No, I missed it`. It shows whenever polling runs and the tracked bus has a known arrival time (live, or the last known time while stale or unavailable), and hides after Yes, No or an end card. It also hides in the no-service layout and when the unavailable state has no arrival time, because there is no bus to ask about. There is no lead time before the expected arrival. Page A has the sticky `See bus arrival times` button, shown while polling runs and hidden once tracking has stopped. The same two pages are used for the second bus.
 
-1. When that distance is at most 50 m, show: `Arrived at [Transfer Stop Name] — Activate Leg 2 Live Tracking?`
-2. Tapping `Track Leg 2` starts Phase 2 immediately: live `BusArrival` polling for Bus B.
-3. If the user stays at most 50 m from the transfer stop for 30 seconds without tapping, Phase 2 starts automatically. Leaving the 50 m radius cancels that 30-second wait. It starts again only on a later entry.
+**Yes.** Polling, the leave-now and reroute notifications and the pace state stop for this leg, and any pending proposal is cancelled. The journey overview shows "on your way": the boarding stop and the first bus are marked done (`On board`), the Arrive-by box keeps the latest Step 9 estimate (built from the bus's observed arrival at the stop plus the existing ride and end-walk terms), and `Plan a new journey` resets the app and keeps the destination and arrive-by choice. A direct route is then over. On a transfer route the second bus shows `We'll alert you when you're near {transfer stop}. Keep this page open.` and the transfer watch starts.
 
-Phase 2 uses the existing poll. It does not add a second polling interval. Leg 1's reroute clock, pinned bus, notification identity, and Step 12 explanation baseline do not carry into Leg 2. `confirmed_destination_stop` and the selected route option stay fixed.
+**No.** Polling for the missed bus stops and the reroute search runs at once with the current fix. It ignores the unlikely-trigger and the improvement rule, because the missed bus is no longer a comparison. The screen 8 block shows `Bus {service} has left. Here are your other options.` The search lists every arrival it finds (later arrivals of the same service, other services at the stop, other nearby stops), each named by its service and its arrival minutes. The recommendation rules in Step 11 section 5 choose the recommended option. If nothing is found, or no option is eligible, the existing no-service or no-better-option card is shown.
 
-### 6. Missed-stop detection and re-routing
+**Unanswered.** `UNANSWERED_END_MINUTES` after the tracked bus's last ETA (frozen once it has passed; with no ETA only the cap applies) the alert slot shows an end card (`Tracking ended. Your bus's expected arrival time has passed.`), or `Tracking stopped after 60 minutes.` at `MAX_MONITOR_MINUTES`, each with `Plan a new journey`. Ending stops polling, the location watch, notifications, timers and the pace state, and cancels any proposal. A confirmed route switch restarts the clocks. The same limits apply on the Leg 2 page.
 
-The user taps `I'm On Board` after boarding Leg 1. That tap records that Leg 1 has been boarded. It does not by itself change the route.
+**Transfer alert.** The foreground location watch uses the existing geolocation permission and starts only after `Yes` on a transfer route. A fix counts only if it meets the existing uncertain-location rule (accuracy at most 100 m, age at most 60 s). When two consecutive counted fixes are within `TRANSFER_NEAR_METERS` of the transfer stop, the alert fires once per journey: a banner pinned above the header (`You are reaching the second bus stop`, the stop name in bold, a `Next` button) that stays until `Next`, plus a local notification when permission is already granted (title `Get ready to change bus`, body `You are reaching {stop name}. Tap to check your chance of catching Bus {service}.`, fixed tag `transfer-alert`). The watch stops after `Next`, after `TRANSFER_WATCH_MAX_MINUTES`, on Back or Leave, and at the end card. No fix is stored or logged, and nothing is written to SQLite. With no location permission the overview shows `Turn on location to get a transfer alert.`
 
-A missed stop requires both of the following:
+The alert works only while the page stays open on screen. There is no background tracking. On iPhone the app has to be added to the Home Screen for notifications to work.
 
-1. Straight-line `distance_to_alighting_stop` is greater than 150 m.
-2. The user's live position, snapped to the nearest cached stop on the ordered Leg 1 `ServiceNo` + `Direction` sequence, has a `StopSequence` greater than the alighting stop's `StopSequence`.
+**Service worker.** `/sw.js` is used only to display local notifications and handle taps. It installs and activates (`skipWaiting`, `clients.claim`) and, on `notificationclick`, closes the notification, focuses an open app window and posts `{type: "transfer-alert"}`, or opens `/`. It has no fetch handler, no cache, no push, no background sync, and no storage. The page registers it from the existing Enable Notifications flow and when permission is already granted. The leave-now and transfer notifications use `registration.showNotification` when a registration exists, and `new Notification` otherwise. This does not add a permission prompt.
 
-If either condition is false, do not re-route.
+**Leg 2.** `Next` opens the Leg 2 live page, with the same layout as the Leg 1 page, and starts the existing poll and scoring for Bus B. The probability formula, thresholds and range logic do not change. While the user is on a vehicle the "time to reach the stop" input is the straight-line distance to the transfer stop divided by `TRANSFER_BUS_SPEED_MPS`, with a range of plus or minus `LEG2_REACH_RANGE_FRACTION`, where Leg 1 uses the walking-time input. The ring caption reads `based on how far you are from the stop`. The pace chip and the AI Explanation card are hidden on Leg 2 (the explanation fact sheet carries walking minutes), no leave-now alert is shown, and the left tile reads `Reach the stop` over a time range instead of `Leave by`. The data-quality warnings and the question bar appear on Leg 2. `Yes` opens the final "on your way" overview for the whole journey and ends tracking. `No` runs the on-demand reroute from the transfer stop to the destination. Leg 1's reroute clock, pinned bus, notification identity and Step 12 explanation baseline do not carry into Leg 2. `confirmed_destination_stop` and the picked route option stay fixed.
 
-When both are true:
+### 6. Reroute options (screen 8)
 
-1. Read the current foreground GPS fix.
-2. Choose the nearest cached bus stop within 400 m. If none is within 400 m, expand the search to 800 m.
-3. If a stop is found, set it as the new `origin_boarding_stop`.
-4. Run the pathfinder again toward the original `confirmed_destination_stop` and show the updated option labels from section 2.
-5. If no stop is within 800 m, do not invent an origin and do not invent a route.
+Detection, the 40% trigger, the improvement margin and the cooldown do not change. When the existing logic finds the current bus unlikely, the reroute block still appears automatically.
 
-The confirmed destination place and `confirmed_destination_stop` stay the same. All of this location monitoring is foreground-only.
+- **One option, one probability, named by its arrival.** The block lists every candidate the search evaluated: the later arrivals of the current service, the other services at the current stop (one `BusArrival` lookup for the stop with `ServiceNo` omitted) and the services at the existing alternate stops (one lookup per stop, at most two, run in parallel), one row per (service, stop, arrival); the missed arrival never appears. The compact warning on Pages A and B reads `You're unlikely to catch the Bus {service} arriving in {n} min` with `Catch probability: {p}% (range {a}–{b}%)` and `See other buses`; on Page C the unlikely entry opens with the current-bus card and the `No` entry with `Bus {service} has left. Here are your other options.` The recommended option is one merged card, not a list row: a heading chip (`Better option found` for the unlikely entry, `Recommended option` for `No`), the pills, the blue bus tile, `Bus {service}`, `Arrives in {n} min` (live arrow for live data), `To {destination}`, `Leave by {time}`, a ring with the point percentage with `Arrive {time}` and `range {a}–{b}%` under it, the AI Explanation block (Step 12) and a full-width `Switch to Bus {service} in {n} min`. The probability shows once per option. The list `Alternative options` has one button per row: `Bus {service}`, `{p}% chance` and `(range {a}–{b}%)` on one line; the pills; `Arrives in {n} min` and `Reach destination about {time}`; `At your stop` or `Walk to {stop name} ({distance})`; a warning row `Unlikely at a normal pace` when `range_high` is below 40%; `After your target` when the estimate is after the target; and a chevron. The list is ordered by point probability (high first), then earlier estimated arrival, then service number, at most 6 rows then `Show more`.
+- **Two pills, no blended score.** `Highest catch probability` is on the option with the highest point probability among all options (ties to the earlier arrival). `Reach your destination quickly` is on the option with the earliest estimated arrival among options whose `range_high` is at least 40% (ties to the higher probability). One option may carry both. The recommended option comes from `recommend_option` (Step 11 section 5). This is a pure Python function.
+- **Switch opens the new-journey overview.** `Switch to Bus {service} in {n} min` or a row tap opens `Your new journey` in the style of the journey overview (the reason line, the timeline without Edit links, the Arrive-by box, `Start journey`). Nothing changes until `Start journey`; Back returns to the live page and the current journey keeps running. `Start journey` first checks the cached arrivals (one lookup if they are older than 20 seconds). If the chosen bus has left, the live page shows `That bus has already left. Choose another option.` Otherwise it runs the existing switch routine with all its side effects. The estimated arrival on the card, in the overview and on the live tile is the same Step 9 estimate.
+- **On demand.** Both entries of Page C open from `/api/reroute-options` (entry `better` for the unlikely entry, `recommended` after `No, I missed it`), which reuses the same candidates and lookups, drops the missed arrival (missed entry only), ignores the trigger and the improvement rule, and recommends with the same function.
+- **Pending wording.** Until the switch is confirmed the reroute notification and the Step 12 `switch_route` fallback keep the pending-proposal wording.
 
 ### 7. Tests
 
@@ -1414,11 +1434,14 @@ Step 14 tests, using fixtures and not live APIs, must verify:
 2. Static ranking does not call `BusArrival` during search.
 3. A journey whose valid candidates all exceed the 90-minute budget returns `route_status = "no_feasible_route"` and does not invent a route.
 4. The option labels are exactly `Fastest Route`, `Fewest Transfers`, and `Alternative Route`, and they follow section 2.
-5. Live catch probability starts only after the user selects a route option.
+5. Live catch probability starts only after the user starts the journey on the route option the app picked.
 6. A Leg 1 point below 50% renders the warning banner and does not fire a push notification.
-7. A foreground fix at most 50 m from the transfer stop shows the Leg 2 prompt only after "I'm On Board", and staying inside that radius for 30 seconds without a tap starts Leg 2 live tracking.
-8. Missed-stop re-routing runs only when distance to the alighting stop is greater than 150 m and the route sequence index is past that stop.
-9. Missed-stop re-routing sets the new origin to the nearest stop within 400 m, or within 800 m when the 400 m search is empty, and keeps the original confirmed destination.
+7. The question bar shows on Page B while polling runs and not on Page A, hides after an answer, an end card or in the no-service layout, and Page A has the `See bus arrival times` button that opens Page B.
+8. `Yes` ends tracking on a direct route and starts the transfer watch only on a transfer route. `No` runs the on-demand options search. The unanswered and 60-minute end rules stop everything.
+9. The transfer alert fires once after two consecutive counted fixes within `TRANSFER_NEAR_METERS` and not on a poor or old fix. No location is stored or logged.
+10. The in-app prompt and the notification carry the specified text. `/sw.js` is served and has no fetch, push, cache, or sync handler.
+11. `Next` opens the Leg 2 page with the vehicle-speed reach input, no pace chip, and the `Reach the stop` tile.
+12. The reroute options include every evaluated candidate with its range, apply the badge rules, make no extra LTA call, open the new-journey overview without changing anything, and apply the stale-bus guard on `Start journey`.
 
 ### 8. Scope
 
@@ -1443,7 +1466,7 @@ UI rules:
 Fallback when LTA data is bad:
 
 - HTTP error, timeout, or empty body (LTA returns nothing when buses are not in service or during maintenance): status **unavailable**. Show the last success time. Hide the percentage. Do not speak a leave-now or a reroute. Offer the published frequency only as a labeled schedule, not as a fake ETA.
-- Last success older than 60 seconds: status **stale**. Keep the last ETA on screen with its timestamp. Freeze leave-now and reroute until a fresh poll arrives.
+- Last success older than 60 seconds: status **stale**. Keep the last ETA on screen with its timestamp. Freeze leave-now and reroute until a fresh poll arrives. When the probability is unavailable or stale, the live page hides the probability card, pace chip, tiles, If you miss it, reroute block and AI Explanation and shows one status card under the warning banner: the bus with a SCHEDULE ONLY pill, the last ETA marked estimated, and the stale explanation.
 
 Fallback when OneMap is bad:
 

@@ -14,7 +14,7 @@ from nearby import BOARDING_RADIUS_M, haversine_m
 SGT = timezone(timedelta(hours=8))
 DESTINATION_RADIUS_M = 600
 WALK_SPEED_M_S = 1.25
-BUS_SPEED_KM_H = 18
+from config import BUS_SPEED_KM_H  # noqa: E402,F401  (defined once in config)
 
 
 def list_destination_stops(
@@ -45,6 +45,7 @@ def list_destination_stops(
         if not links:
             card["is_reachable"] = False
             card["connecting_services"] = []
+            card["arrival_terms"] = None
             card["rough_journey_minutes"] = None
             unreachable.append((place_m, card))
             continue
@@ -53,8 +54,10 @@ def list_destination_stops(
         chosen = _choose_link(cache, links, estimate_origin, preferred, place_m, moment)
         card["is_reachable"] = True
         card["connecting_services"] = services
+        terms = None if chosen is None else _arrival_terms(cache, chosen, place_m, moment)
+        card["arrival_terms"] = terms
         card["rough_journey_minutes"] = (
-            None if chosen is None else math.ceil(_total_minutes(cache, chosen, place_m, moment))
+            None if terms is None else math.ceil(terms["total_minutes"])
         )
         reachable.append((place_m, card))
     reachable.sort(key=lambda item: (item[0], item[1]["stop_code"]))
@@ -189,12 +192,13 @@ def _choose_link(
     return min(usable, key=duration)
 
 
-def _total_minutes(
+def _arrival_terms(
     cache: StopAndRouteCache,
     link: dict,
     place_m: float,
     now: datetime,
-) -> float:
+) -> dict:
+    """The four Step 9 terms, unrounded. The total matches `_total_minutes`."""
     record = _service_record(cache.services, link["service"], link["direction"])
     origin_code = record.get("OriginCode") if record else None
     destination_code = record.get("DestinationCode") if record else None
@@ -207,12 +211,26 @@ def _total_minutes(
         destination_code if isinstance(destination_code, str) else None,
         now,
     )
-    return (
-        link["user_m"] / WALK_SPEED_M_S / 60
-        + (headway / 2) / 60
-        + (link["route_km"] / BUS_SPEED_KM_H) * 60
-        + place_m / WALK_SPEED_M_S / 60
-    )
+    board = link["user_m"] / WALK_SPEED_M_S / 60
+    wait = (headway / 2) / 60
+    ride = (link["route_km"] / BUS_SPEED_KM_H) * 60
+    end = place_m / WALK_SPEED_M_S / 60
+    return {
+        "board_walk_minutes": board,
+        "wait_minutes": wait,
+        "ride_minutes": ride,
+        "end_walk_metres": place_m,
+        "total_minutes": board + wait + ride + end,
+    }
+
+
+def _total_minutes(
+    cache: StopAndRouteCache,
+    link: dict,
+    place_m: float,
+    now: datetime,
+) -> float:
+    return _arrival_terms(cache, link, place_m, now)["total_minutes"]
 
 
 def _service_record(services: list[dict], service_no: str, direction: int) -> dict | None:

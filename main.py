@@ -1,5 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -7,18 +8,38 @@ from fastapi import Body, FastAPI, Query
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 import math
+import re
 
 import httpx
 
-from arrivals import ArrivalUnavailable, fetch_arrivals
+from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals
 import demo
-from explain import ai_explanation_enabled, build_poll_explanation, handle_explain_request
+from config import LEG2_REACH_RANGE_FRACTION, PAGE_CONSTANTS, TRANSFER_BUS_SPEED_MPS
+from explain import (
+    ai_explanation_enabled,
+    build_poll_explanation,
+    handle_explain_request,
+    chosen_action,
+    handle_option_explain_request,
+    seconds_until_leave_by,
+    _scored_journey_bus,
+)
 from catch_heuristic import normalize_location_timestamp
 from destination_stops import list_destination_stops
-from journey import build_journey, parse_journey_time
+from journey import build_journey, bus_arrival_window, miss_line, parse_journey_time, planning_warning
+from journey_plan import plan_journey
 from lta_static import load_static_data
-from nearby import BOARDING_RADIUS_M, nearby_boarding_stops
-from reroute import SGT, apply_active_target, log_scored_poll, plan_reroute, resolve_pinned_target
+from nearby import BOARDING_RADIUS_M, haversine_m, nearby_boarding_stops
+from reroute import (
+    SGT,
+    _reaching_services,
+    apply_active_target,
+    closest_alternate_stops,
+    log_scored_poll,
+    plan_options,
+    plan_reroute,
+    resolve_pinned_target,
+)
 from route_plan import (
     plan_route,
     projected_transfer_epoch,
@@ -30,7 +51,9 @@ from onemap import (
     DestinationUnavailable,
     OneMapSession,
     ONEMAP_TIMEOUT_SECONDS,
+    REVERSE_TIMEOUT_SECONDS,
     read_onemap_credentials,
+    reverse_geocode,
     search_destinations,
 )
 
@@ -53,10 +76,12 @@ def home() -> HTMLResponse:
     page = INDEX_PATH.read_text(encoding="utf-8")
     flag = "true" if ai_explanation_enabled() else "false"
     page = page.replace(
-        "var AI_EXPLANATION_ENABLED = false;",
+        "var AI_EXPLANATION_ENABLED = true;",
         "var AI_EXPLANATION_ENABLED = " + flag + ";",
         1,
     )
+    for name, value in PAGE_CONSTANTS.items():
+        page = re.sub(rf"var {name} = [0-9.]+;", f"var {name} = {value};", page, count=1)
     return HTMLResponse(page)
 
 
@@ -68,6 +93,26 @@ def theme_css() -> FileResponse:
 @app.get("/components.css")
 def components_css() -> FileResponse:
     return FileResponse(STATIC_DIR / "components.css", media_type="text/css")
+
+
+@app.get("/theme-boot.js")
+def theme_boot_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "theme-boot.js", media_type="text/javascript")
+
+
+@app.get("/format-distance.js")
+def format_distance_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "format-distance.js", media_type="text/javascript")
+
+
+@app.get("/sw.js")
+def service_worker_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "sw.js", media_type="text/javascript")
+
+
+@app.get("/place-icons.js")
+def place_icons_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "place-icons.js", media_type="text/javascript")
 
 
 @app.get("/api/demo", response_model=None)
@@ -131,6 +176,8 @@ def arrivals(
     explanation_rendered: Annotated[int | None, Query()] = None,
     last_explained_range_low: Annotated[int | None, Query()] = None,
     last_explained_range_high: Annotated[int | None, Query()] = None,
+    explained_action: Annotated[str | None, Query()] = None,
+    explained_advice: Annotated[str | None, Query(max_length=200)] = None,
     explanation_in_flight: Annotated[int | None, Query()] = None,
     route_type: Annotated[str | None, Query()] = None,
     leg_index: Annotated[int | None, Query()] = None,
@@ -138,6 +185,9 @@ def arrivals(
     leg2_direction: Annotated[int | None, Query()] = None,
     leg2_stop_code: Annotated[str | None, Query()] = None,
     leg1_ride_minutes: Annotated[float | None, Query()] = None,
+    leg2_ride_minutes: Annotated[float | None, Query()] = None,
+    leg1_direction: Annotated[int | None, Query()] = None,
+    reroute: Annotated[int | None, Query()] = None,
 ) -> dict | JSONResponse:
     stop_code = stop_code.strip()
     service_no = service_no.strip()
@@ -194,6 +244,7 @@ def arrivals(
     moment = datetime.now(SGT)
     accuracy, location_timestamp = demo.scoring_location(accuracy, location_timestamp, moment)
     demo.begin_arrival_poll(stop_code, service_no)
+    on_vehicle = route_type == "one_transfer" and leg_index == 2
     try:
         payload = fetch_arrivals(
             stop_code,
@@ -203,6 +254,8 @@ def arrivals(
             accuracy=accuracy,
             location_timestamp=location_timestamp,
             cache=cache,
+            reach_speed_m_s=TRANSFER_BUS_SPEED_MPS if on_vehicle else None,
+            reach_range_fraction=LEG2_REACH_RANGE_FRACTION,
         )
     except ArrivalUnavailable:
         content = {
@@ -212,6 +265,8 @@ def arrivals(
         if demo.timeout_is_active():
             content["simulated"] = True
         return JSONResponse(status_code=503, content=content)
+    if on_vehicle:
+        payload["reach_stop"] = _reach_window(cache, stop_code, lat, lon, moment)
     if demo.apply_stale(payload, moment):
         return payload
     if demo.arrival_is_simulated():
@@ -236,30 +291,9 @@ def arrivals(
         and lat is not None
         and lon is not None
         and reroute_enabled(route_type, leg_index)
+        and reroute != 0  # Page C is open: the page asks the server to skip this evaluation. Nothing else changes.
     ):
-        def load_alternate(code: str, service: str) -> dict:
-            alternate = fetch_arrivals(
-                code,
-                service,
-                user_lat=lat,
-                user_lon=lon,
-                accuracy=accuracy,
-                location_timestamp=location_timestamp,
-                cache=cache,
-            )
-            log_scored_poll(
-                cache=cache,
-                current=alternate,
-                bus=_scored_primary(alternate.get("buses") or []),
-                user_lat=lat,
-                user_lon=lon,
-                accuracy_m=accuracy,
-                now=moment,
-                reroute_fired=False,
-                reroute_reason="",
-                destination_stop_code=destination_code,
-            )
-            return alternate
+        load_alternate = _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code)
 
         evaluation = payload
         if target is not None:
@@ -288,6 +322,7 @@ def arrivals(
         reroute = decision.get("reroute") if fired else None
         if isinstance(reroute, dict):
             reason = reroute.get("reroute_reason") or ""
+    payload["chosen_action"] = _poll_action(payload, moment, fired)
     log_scored_poll(
         cache=cache,
         current=payload,
@@ -308,11 +343,11 @@ def arrivals(
             user_lat=lat,
             user_lon=lon,
             stop_code=stop_code,
-            rendered=explanation_rendered == 1,
-            last_low=last_explained_range_low,
-            last_high=last_explained_range_high,
+            explained_action=explained_action,
+            explained_advice=explained_advice,
             in_flight=explanation_in_flight == 1,
             reroute_fired=fired,
+            reach_distance_m=(payload.get("reach_stop") or {}).get("distance_m") if on_vehicle else None,
         )
         if pack is not None:
             payload["explanation"] = pack
@@ -326,6 +361,225 @@ def arrivals(
         leg2_stop_code=leg2_stop_code,
         leg1_ride_minutes=leg1_ride_minutes,
     )
+    _attach_arrival_estimate(
+        payload,
+        cache=cache,
+        now=moment,
+        user_lat=lat,
+        user_lon=lon,
+        dest_lat=dest_lat,
+        dest_lon=dest_lon,
+        destination_stop_code=destination_code,
+        boarding_stop_code=stop_code,
+        service_no=service_no,
+        arrive_by=parsed_arrive_by,
+        route_type=route_type,
+        leg_index=leg_index,
+        leg1_ride_minutes=leg1_ride_minutes,
+        leg2_ride_minutes=leg2_ride_minutes,
+        leg1_direction=leg1_direction,
+    )
+    return payload
+
+
+def _reach_window(cache, stop_code, lat, lon, now) -> dict | None:
+    """Leg 2 display: now plus the time to reach the stop by vehicle, with its range."""
+    stop = cache.stop_by_code(stop_code) if cache is not None else None
+    if not isinstance(stop, dict) or lat is None or lon is None:
+        return None
+    try:
+        distance = haversine_m(lat, lon, float(stop["Latitude"]), float(stop["Longitude"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+    seconds = distance / TRANSFER_BUS_SPEED_MPS
+
+    def at(factor: float) -> str:
+        return (now + timedelta(seconds=seconds * factor)).replace(microsecond=0).isoformat()
+
+    return {
+        "point": at(1),
+        "low": at(1 - LEG2_REACH_RANGE_FRACTION),
+        "high": at(1 + LEG2_REACH_RANGE_FRACTION),
+        "distance_m": int(distance + 0.5),
+    }
+
+
+class _StopLoader:
+    """BusArrival lookups for the reroute search, one call per stop for all its services.
+
+    Calling the loader with (stop, service) returns that service scored and logged the same way
+    as a poll. prefetch() fetches the listed stops once each, in parallel (one thread per stop,
+    so the current stop and up to two alternate stops make three calls), and a later call for any
+    of their services is served from that result. Without a prefetch a call falls back to the
+    single-service lookup.
+    """
+
+    def __init__(self, cache, lat, lon, accuracy, location_timestamp, moment, destination_code):
+        self.cache = cache
+        self.lat = lat
+        self.lon = lon
+        self.accuracy = accuracy
+        self.location_timestamp = location_timestamp
+        self.moment = moment
+        self.destination_code = destination_code
+        self.stops: dict[str, dict | ArrivalUnavailable] = {}
+        self._logged: set[tuple[str, str]] = set()
+
+    def _fetch_stop(self, code: str, services: list[str]):
+        try:
+            return fetch_stop_arrivals(
+                code,
+                services,
+                now=self.moment,
+                user_lat=self.lat,
+                user_lon=self.lon,
+                accuracy=self.accuracy,
+                location_timestamp=self.location_timestamp,
+                cache=self.cache,
+            )
+        except ArrivalUnavailable as exc:
+            return exc
+
+    def prefetch(self, plan) -> None:
+        todo = {}
+        for code, services in plan:
+            if code not in self.stops:
+                todo[code] = list(dict.fromkeys(services))
+        if not todo:
+            return
+        if len(todo) == 1 or demo.lta_script_active():
+            for code, services in todo.items():
+                self.stops[code] = self._fetch_stop(code, services)
+            return
+        with ThreadPoolExecutor(max_workers=len(todo)) as pool:
+            futures = {code: pool.submit(self._fetch_stop, code, services) for code, services in todo.items()}
+            for code, future in futures.items():
+                self.stops[code] = future.result()
+
+    def get(self, code: str, service: str, *, log: bool = True) -> dict:
+        entry = self.stops.get(code)
+        if entry is None:
+            alternate = fetch_arrivals(
+                code,
+                service,
+                user_lat=self.lat,
+                user_lon=self.lon,
+                accuracy=self.accuracy,
+                location_timestamp=self.location_timestamp,
+                cache=self.cache,
+            )
+        elif isinstance(entry, ArrivalUnavailable):
+            raise entry
+        else:
+            alternate = entry.get(service) or {
+                "status": "ok",
+                "stop_code": code,
+                "service_no": service,
+                "fetched_at": self.moment.replace(microsecond=0).isoformat(),
+                "buses": [],
+            }
+        if log and (code, service) not in self._logged:
+            self._logged.add((code, service))
+            log_scored_poll(
+                cache=self.cache,
+                current=alternate,
+                bus=_scored_primary(alternate.get("buses") or []),
+                user_lat=self.lat,
+                user_lon=self.lon,
+                accuracy_m=self.accuracy,
+                now=self.moment,
+                reroute_fired=False,
+                reroute_reason="",
+                destination_stop_code=self.destination_code,
+            )
+        return alternate
+
+    def __call__(self, code: str, service: str) -> dict:
+        return self.get(code, service)
+
+
+def _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code):
+    """One BusArrival lookup per stop, scored and logged the same way as a poll."""
+    return _StopLoader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code)
+
+
+@app.get("/api/reroute-options", response_model=None)
+def reroute_options(
+    stop_code: Annotated[str, Query(min_length=1)],
+    service_no: Annotated[str, Query(min_length=1)],
+    lat: Annotated[float, Query()],
+    lon: Annotated[float, Query()],
+    accuracy: Annotated[float, Query(ge=0)],
+    destination_stop_code: Annotated[str, Query(min_length=1)],
+    dest_lat: Annotated[float, Query(ge=-90, le=90)],
+    dest_lon: Annotated[float, Query(ge=-180, le=180)],
+    location_timestamp: Annotated[float | None, Query()] = None,
+    arrive_by: Annotated[str | None, Query()] = None,
+    missed_eta: Annotated[float | None, Query()] = None,
+    entry: Annotated[str, Query()] = "recommended",
+) -> dict | JSONResponse:
+    """On-demand options (the missed entry and the unlikely entry). Same candidates and calls as the automatic search.
+
+    entry is "recommended" (after "No, I missed it") or "better" (the unlikely entry). It only names the
+    card's heading chip. Both choose from all eligible options and ignore the improvement rule."""
+    if entry not in ("recommended", "better"):
+        return JSONResponse(status_code=422, content={"detail": "entry must be recommended or better."})
+    cache = getattr(app.state, "lta_static", None)
+    if cache is None or not all(math.isfinite(value) for value in (lat, lon, accuracy, dest_lat, dest_lon)):
+        return JSONResponse(status_code=422, content={"detail": "A reroute search needs the static cache and finite coordinates."})
+    if missed_eta is not None and not math.isfinite(missed_eta):
+        return JSONResponse(status_code=422, content={"detail": "missed_eta must be a finite epoch timestamp."})
+    try:
+        parsed_arrive_by = None if arrive_by is None else parse_journey_time(arrive_by)
+    except ValueError:
+        return JSONResponse(status_code=422, content={"detail": "arrive_by must be an ISO timestamp."})
+    moment = datetime.now(SGT)
+    destination_code = destination_stop_code.strip()
+    loader = _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code)
+    current_stop = stop_code.strip()
+    current_service = service_no.strip()
+    # The current stop (every reaching service, one call) and the alternate stops are fetched together.
+    here = [current_service] + [
+        service for service in _reaching_services(cache, current_stop, destination_code) if service != current_service
+    ]
+    plan = [(current_stop, here)]
+    for stop in closest_alternate_stops(cache, lat, lon, current_stop, destination_code):
+        plan.append((stop["BusStopCode"], _reaching_services(cache, stop["BusStopCode"], destination_code)))
+    loader.prefetch(plan)
+    try:
+        current = loader.get(current_stop, current_service, log=False)
+    except ArrivalUnavailable:
+        return JSONResponse(status_code=503, content={"status": "unavailable", "detail": "Live arrival data is unavailable."})
+    options = plan_options(
+        cache=cache,
+        current=current,
+        user_lat=lat,
+        user_lon=lon,
+        destination_stop_code=destination_code,
+        place_lat=dest_lat,
+        place_lon=dest_lon,
+        arrive_by=parsed_arrive_by,
+        now=moment,
+        loader=loader,
+        missed_eta_epoch=missed_eta,
+        entry=entry,
+    )
+    return {
+        "status": "ok",
+        "stop_code": current.get("stop_code"),
+        "service_no": current.get("service_no"),
+        "fetched_at": current.get("fetched_at"),
+        "no_buses": not (current.get("buses") or []),
+        "options": options,
+    }
+
+
+@app.post("/api/explain-option", response_model=None)
+def explain_option(body: Annotated[dict, Body()]) -> dict | JSONResponse:
+    """The Page C clause for the recommended option. The model sees the reason code and the action only."""
+    status, payload = handle_option_explain_request(body)
+    if status != 200:
+        return JSONResponse(status_code=status, content=payload)
     return payload
 
 
@@ -338,6 +592,117 @@ def explain(body: Annotated[dict, Body()]) -> dict | JSONResponse:
         payload = dict(payload)
         payload["simulated"] = True
     return payload
+
+
+def _poll_action(payload: dict, now: datetime, reroute_fired: bool) -> str | None:
+    """The Python action for the tracked bus (the one behind the AI clause and the Leave by tile)."""
+    bus = _scored_journey_bus(payload.get("buses") or [])
+    chance = bus.get("probability") if isinstance(bus, dict) else None
+    if not isinstance(chance, dict):
+        return None
+    quality = chance.get("data_quality")
+    high = chance.get("range_high")
+    if not isinstance(quality, str) or type(high) is not int:
+        return None
+    return chosen_action(
+        reroute_fired_this_poll=reroute_fired,
+        data_quality=quality,
+        range_high=high,
+        leave_by_seconds=seconds_until_leave_by(payload.get("leave_by"), now),
+    )
+
+
+def _live_eta(bus: dict | None, now: datetime) -> datetime | None:
+    """The tracked bus's arrival time when it is a live (monitored) arrival, else None."""
+    if not isinstance(bus, dict) or bus.get("monitored") is not True:
+        return None
+    arrival = bus.get("arrival_time")
+    if not isinstance(arrival, str) or not arrival.strip():
+        return None
+    try:
+        return parse_journey_time(arrival)
+    except ValueError:
+        return None
+
+
+def _attach_arrival_estimate(
+    payload: dict,
+    *,
+    cache,
+    now: datetime,
+    user_lat: float | None,
+    user_lon: float | None,
+    dest_lat: float | None,
+    dest_lon: float | None,
+    destination_stop_code: str | None,
+    boarding_stop_code: str,
+    service_no: str,
+    arrive_by: datetime | None,
+    route_type: str | None,
+    leg_index: int | None,
+    leg1_ride_minutes: float | None,
+    leg2_ride_minutes: float | None,
+    leg1_direction: int | None,
+) -> None:
+    """Step 9 window and the second-arrival line from data this poll already has."""
+    if (
+        cache is None
+        or destination_stop_code is None
+        or user_lat is None
+        or user_lon is None
+        or dest_lat is None
+        or dest_lon is None
+    ):
+        return
+    transfer = route_type == "one_transfer" and leg_index == 1
+    built = build_journey(
+        cache,
+        dest_lat,
+        dest_lon,
+        user_lat,
+        user_lon,
+        destination_stop_code,
+        boarding_stop_code=boarding_stop_code,
+        service_no=service_no,
+        arrive_by=arrive_by,
+        now=now,
+        transfer=transfer,
+        leg1_ride_minutes=leg1_ride_minutes,
+        leg2_ride_minutes=leg2_ride_minutes,
+        leg1_service_no=service_no,
+        leg1_direction=leg1_direction,
+    )
+    if built.get("arrival_point"):
+        estimate = {
+            "estimated_arrival": built["arrival_point"],
+            "arrival_low": built["arrival_low"],
+            "arrival_high": built["arrival_high"],
+            "spare_minutes": built["spare_minutes"],
+            "basis": built["arrival_basis"],
+        }
+        # The tracked bus's live arrival anchors the estimate; without one the planned basis stays.
+        tracked = _scored_journey_bus(payload.get("buses") or [])
+        eta = _live_eta(tracked, now)
+        window = bus_arrival_window(now, built.get("arrival_terms"), eta, live=eta is not None, arrive_by=arrive_by)
+        if eta is not None and window is not None:
+            estimate = {
+                "estimated_arrival": window["estimated_arrival"].replace(microsecond=0).isoformat(),
+                "arrival_low": window["arrival_low"].replace(microsecond=0).isoformat(),
+                "arrival_high": window["arrival_high"].replace(microsecond=0).isoformat(),
+                "spare_minutes": None if arrive_by is None else window["spare_minutes"],
+                "basis": window["basis"],
+            }
+        payload["arrival_estimate"] = estimate
+    else:
+        payload["arrival_estimate"] = None
+    payload["if_you_miss"] = miss_line(
+        now,
+        service_no,
+        payload.get("buses") or [],
+        built.get("arrival_terms"),
+        arrive_by,
+        tracked=_scored_journey_bus(payload.get("buses") or []),
+    )
 
 
 def _attach_leg2_schedule(
@@ -382,6 +747,45 @@ def _scored_primary(buses: list[dict]) -> dict | None:
         if bus.get("is_primary") and not bus.get("is_missed"):
             return bus
     return None
+
+
+@app.post("/api/reverse-geocode", response_model=None)
+def reverse_geocode_place(body: Annotated[dict | None, Body()] = None) -> dict:
+    """Place name only. Coordinates are rounded and are not written or recorded."""
+    empty = {"status": "ok", "name": "", "display_name": "", "full_name": ""}
+    if not isinstance(body, dict):
+        return empty
+    raw_lat = body.get("lat")
+    raw_lon = body.get("lon")
+    if isinstance(raw_lat, bool) or isinstance(raw_lon, bool):
+        return empty
+    try:
+        lat = float(raw_lat)
+        lon = float(raw_lon)
+    except (TypeError, ValueError):
+        return empty
+    if not math.isfinite(lat) or not math.isfinite(lon):
+        return empty
+    if not -90 <= lat <= 90 or not -180 <= lon <= 180:
+        return empty
+    session = getattr(app.state, "onemap_session", None)
+    if session is None:
+        session = OneMapSession()
+        app.state.onemap_session = session
+    token, email, password = read_onemap_credentials()
+    try:
+        with httpx.Client(timeout=REVERSE_TIMEOUT_SECONDS) as client:
+            return reverse_geocode(
+                lat,
+                lon,
+                session=session,
+                client=client,
+                token=token,
+                email=email,
+                password=password,
+            )
+    except Exception:
+        return empty
 
 
 @app.get("/api/destinations", response_model=None)
@@ -556,6 +960,88 @@ def journey(
     )
 
 
+@app.get("/api/journey-plan", response_model=None)
+def journey_plan(
+    user_lat: Annotated[float, Query(ge=-90, le=90)],
+    user_lon: Annotated[float, Query(ge=-180, le=180)],
+    destination_stop_code: Annotated[str, Query(min_length=1)],
+    dest_lat: Annotated[float, Query(ge=-90, le=90)],
+    dest_lon: Annotated[float, Query(ge=-180, le=180)],
+    arrive_by: Annotated[str | None, Query()] = None,
+) -> dict | JSONResponse:
+    """The app picks the boarding stop and the route. Static data only."""
+    coordinates = (user_lat, user_lon, dest_lat, dest_lon)
+    if any(not math.isfinite(value) for value in coordinates):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Coordinates must be finite latitudes and longitudes."},
+        )
+    destination = destination_stop_code.strip()
+    if not destination:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "destination_stop_code must be a non-empty string."},
+        )
+    try:
+        parsed_arrive_by = None if arrive_by is None else parse_journey_time(arrive_by)
+    except ValueError:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "arrive_by must be an ISO timestamp."},
+        )
+    cache = getattr(app.state, "lta_static", None)
+    if cache is None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unavailable",
+                "detail": "Static stop data is unavailable.",
+            },
+        )
+    return plan_journey(
+        cache,
+        user_lat=user_lat,
+        user_lon=user_lon,
+        destination_stop_code=destination,
+        dest_lat=dest_lat,
+        dest_lon=dest_lon,
+        arrive_by=parsed_arrive_by,
+    )
+
+
+@app.get("/api/arrivals/peek", response_model=None)
+def arrivals_peek(
+    stop_code: Annotated[str, Query(min_length=1)],
+    service_no: Annotated[str, Query(min_length=1)],
+) -> dict | JSONResponse:
+    """One raw lookup for the overview: no probability, no logging, no reroute, no notification."""
+    stop = stop_code.strip()
+    service = service_no.strip()
+    if not stop or not service:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "stop_code and service_no are required."},
+        )
+    try:
+        payload = peek_arrivals(stop, service)
+    except ArrivalUnavailable as exc:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "detail": str(exc), "simulated": demo.arrival_is_simulated()},
+        )
+    return {
+        "status": "ok",
+        "stop_code": stop,
+        "service_no": service,
+        "fetched_at": payload.get("fetched_at"),
+        "buses": [
+            {"arrival_time": bus.get("arrival_time"), "monitored": bus.get("monitored") is True}
+            for bus in payload.get("buses") or []
+        ],
+        "simulated": demo.arrival_is_simulated(),
+    }
+
+
 @app.get("/api/route-plan", response_model=None)
 def route_plan(
     boarding_stop_code: Annotated[str, Query(min_length=1)],
@@ -565,6 +1051,7 @@ def route_plan(
     dest_lat: Annotated[float, Query(ge=-90, le=90)],
     dest_lon: Annotated[float, Query(ge=-180, le=180)],
     alternate_stops: Annotated[str | None, Query()] = None,
+    arrive_by: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
     coordinates = (user_lat, user_lon, dest_lat, dest_lon)
     if any(not math.isfinite(value) for value in coordinates):
@@ -588,8 +1075,16 @@ def route_plan(
                 "detail": "Static stop data is unavailable.",
             },
         )
+    try:
+        parsed_arrive_by = None if arrive_by is None else parse_journey_time(arrive_by)
+    except ValueError:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "arrive_by must be an ISO timestamp."},
+        )
     alternates = [] if alternate_stops is None else alternate_stops.split(",")
-    return suggest_alternate_boarding(
+    moment = datetime.now(SGT)
+    planned = suggest_alternate_boarding(
         cache,
         origin,
         destination,
@@ -598,5 +1093,12 @@ def route_plan(
         dest_lat,
         dest_lon,
         alternates,
-        now=datetime.now(SGT),
+        now=moment,
     )
+    options = planned.get("options") or []
+    minutes = [option.get("generalized_time_minutes") for option in options]
+    if planned.get("route_status") == "alternate_boarding":
+        alternate = planned.get("alternate_stop") or {}
+        minutes = [alternate.get("generalized_time_minutes")]
+    planned["planning_warning"] = planning_warning(moment, parsed_arrive_by, minutes)
+    return planned

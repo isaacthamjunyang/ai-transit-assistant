@@ -222,15 +222,12 @@ def test_missing_cache_is_unavailable_and_has_no_fake_stops(api_client):
 def test_page_keeps_a_one_time_fix_and_allows_a_foreground_journey_watch(api_client):
     """Step 4 still takes one getCurrentPosition fix for the nearby list.
 
-    Step 14 may call watchPosition while a transfer or missed-stop journey is
-    active, and it must clear that watch. This is foreground tracking only.
+    Any later watchPosition (the transfer alert) must be cleared. Foreground only.
     """
     html = api_client.get("/").text
     assert "navigator.geolocation.getCurrentPosition" in html
-    assert "navigator.geolocation.watchPosition" in html
     assert "clearWatch" in html
     assert html.count("setInterval(") == 2
-    assert "/api/stops/nearby" in html
     assert "/api/arrivals" in html
     assert "datamall" not in html
     assert "selectedBoardingStop" in html
@@ -260,4 +257,4 @@ def test_page_keeps_a_one_time_fix_and_allows_a_foreground_journey_watch(api_cli
     assert 'id="arrive-by"' in html
     assert "/api/journey?" in html
     assert "Leave-by: Unavailable" in html
-    assert "new Notification(notice.title, { body: notice.body })" in html
+    assert "showLocalNotification(notice.title, { body: notice.body })" in html

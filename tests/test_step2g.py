@@ -11,14 +11,14 @@ INDEX = ROOT / "static" / "index.html"
 COPY = ROOT / "static" / "copy.js"
 
 STALE_HEADING = "LTA data is stale"
-STALE_UPDATED = "Last update: {time} ago"
+STALE_UPDATED = "Last update: {time}"
 STALE_BODY = (
     "Due to stale data, we cannot give a catch probability or recommend leaving now. "
     "Please wait for live data or try again later."
 )
 LOCATION_HEADING = "Location uncertain"
 LOCATION_BODY = (
-    "Your GPS accuracy is {accuracy} m. We'll show a wider range for the catch "
+    "Your GPS accuracy is {accuracy}. We'll show a wider range for the catch "
     'probability and won\'t suggest \\"leave now\\" from this fix.'
 )
 
@@ -41,14 +41,14 @@ def test_arrive_by_sits_on_step_one_and_a_blank_value_omits_the_query():
         assert gate < param
 
 
-def test_explanation_flag_defaults_off_and_the_card_is_one_class():
+def test_explanation_flag_defaults_on_and_the_card_is_one_class():
     html = INDEX.read_text(encoding="utf-8")
     css = (ROOT / "static" / "components.css").read_text(encoding="utf-8")
-    assert "var AI_EXPLANATION_ENABLED = false;" in html
+    assert "var AI_EXPLANATION_ENABLED = true;" in html
     begin = html.split("function beginExplanation", 1)[1].split("function syncExplanation", 1)[0]
     assert begin.index("AI_EXPLANATION_ENABLED") < begin.index('fetch("/api/explain"')
     assert "#ai-explanation.is-enabled" in css
-    assert "AI Explanation" not in html
+    assert "AI Explanation" in html
 
 
 def test_served_page_follows_the_explanation_flag(monkeypatch):
@@ -70,12 +70,12 @@ def test_quality_cards_use_the_locked_copy_and_existing_tints():
     for text in (STALE_HEADING, STALE_UPDATED, STALE_BODY, LOCATION_HEADING, LOCATION_BODY):
         assert text in html
         assert text in copy
-    card = html.split('id="quality-card"', 1)[1].split("</section>", 1)[0]
-    assert "card--unavailable" in card
-    assert "card--caution" in html.split("function showQualityCard", 1)[1].split("function syncQualityCard", 1)[0]
-    sync = html.split("function syncQualityCard", 1)[1].split("function appendMissed", 1)[0]
-    assert "displayFrozen" in sync
-    assert 'chance.data_quality === "location uncertain"' in sync
+    assert "banner--denied" in html.split('id="quality-banner"', 1)[1].split(">", 1)[0]
+    assert "card--caution" in html.split('id="location-card"', 1)[1].split(">", 1)[0]
+    sync = html.split("function syncQuality()", 1)[1].split("function activePlannedLeg", 1)[0]
+    assert "displayFrozen" in html.split("function qualityState()", 1)[1].split("function staleArrivingText", 1)[0]
+    assert 'chance.data_quality === "location uncertain"' in html.split("function locationCardApplies()", 1)[1].split("function syncQuality", 1)[0]
+    assert "locationCardApplies()" in sync
 
 
 def test_dead_bus_illustrations_are_gone():
@@ -87,4 +87,4 @@ def test_dead_bus_illustrations_are_gone():
     assert ".buddy-bus" not in css
     assert ".companion-bus" not in css
     assert ".route-bus" not in css
-    assert "route-motif" in html
+    assert "route-motif" not in html

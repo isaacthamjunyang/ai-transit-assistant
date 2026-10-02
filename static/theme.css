@@ -34,9 +34,11 @@
   --tint-simulated: #EFEAFE;
 
   --prob-point: #1B6FE7;
-  --prob-band: #E4F0FC;
-  --prob-mark-40: #E5484D;
-  --prob-mark-50: #F2A900;
+  /* Ring bands alias the status tokens, so each follows the theme. On --color-card, light / dark:
+     ok 5.4 / 9.6, mid 5.9 / 10.0, low 6.6 / 7.8 (all above the 3:1 needed for a graphic). */
+  --prob-ring-ok: var(--status-live);
+  --prob-ring-mid: var(--status-uncertain);
+  --prob-ring-low: var(--status-unavailable);
 
   --radius-card: 12px;
   --radius-control: 10px;
@@ -49,10 +51,38 @@
   --font-stack: system-ui, sans-serif;
   --type-caption: 0.75rem; /* derived, not in mockup */
   --type-body: 1rem; /* derived, not in mockup */
+  --type-distance: 1.125rem; /* derived, not in mockup; between body and title */
   --type-title: 1.25rem; /* derived, not in mockup */
   --type-hero: 2rem; /* derived, not in mockup */
   --shadow-card: 0 8px 24px rgb(28 40 68 / 0.08); /* derived, not in mockup */
   --tap-min: 44px;
+  --color-selected-outline: #1B6FE7; /* 4.7:1 on --color-card */
+  --color-selected-outline-success: #0B7A4E; /* 5.4:1 on --color-card */
+  --color-line-strong: #5B6B82;
+  --color-focus: #1B6FE7;
+  --action-yes: #0B7A4E; /* white text 5.4:1 */
+  --action-no: #B42318; /* white text 6.6:1 */
+  --action-ink: #FFFFFF;
+
+  --illus-sky: #E7F3FC; /* hero text #1C2844 on this sky is 13.0:1 */
+  --illus-building: #FFFFFF;
+  --illus-building-alt: #D5E4F2;
+  --illus-tree: #24BC6C;
+  --illus-bus: #1B6FE7;
+  --illus-bus-window: #E4F0FC;
+  --illus-ground: #C9E2F6;
+
+  --map-destination: #D23A40; /* derived from --fill-danger; 4.1:1 on light map land, 4.7:1 on the ring */
+  --map-marker-ring: #FFFFFF; /* derived, not in mockup */
+  --map-walk-line: #1B6FE7; /* 4.1:1 on light map land */
+  --map-selected-ring: #0B7A4E; /* 5.4:1 against --map-marker-ring on both sides */
+  --map-selected-width: 3px;
+  --map-selected-halo: #FFFFFF; /* the ring sits between this halo and the white inner ring */
+  --map-selected-halo-width: 2px;
+  --map-range-text: #1B68E7; /* link colour; 5.0:1 on --color-card */
+  --map-live-bus: #0A6B43; /* white text 6.6:1 */
+  --map-live-bus-ink: #FFFFFF;
+  --step-node-destination: #1C3A7A; /* white flag 10.9:1 */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -85,16 +115,41 @@
     --tint-neutral: #232E42; /* derived, not in mockup */
     --tint-simulated: #2A2150; /* derived, not in mockup */
 
-    --prob-point: #2B6CE6; /* derived, not in mockup */
-    --prob-band: #1A2F55; /* derived, not in mockup */
-    --prob-mark-40: #E5484D; /* derived, not in mockup */
-    --prob-mark-50: #F2A900; /* derived, not in mockup */
+    --prob-point: #6AA6FF; /* derived; 6.4:1 on --color-card */
 
     --shadow-card: 0 8px 24px rgb(0 0 0 / 0.35); /* derived, not in mockup */
+    --color-selected-outline: #8DBBFF; /* 8:1 on --color-card */
+    --color-selected-outline-success: #5FE0A0; /* above 3:1 on --color-card */
+    --color-line-strong: #9AA9BF;
+    --color-focus: #8DBBFF;
+    --action-yes: #0A6B43; /* white text 6.6:1 */
+    --action-no: #A61E2A; /* white text 7.4:1 */
+    --action-ink: #FFFFFF;
+
+    --illus-sky: #1A3050; /* hero text #E6ECF5 on this sky is 11.2:1 */
+    --illus-building: #E6ECF5;
+    --illus-building-alt: #9AA9BF;
+    --illus-tree: #24BC6C;
+    --illus-bus: #6AA6FF;
+    --illus-bus-window: #E6ECF5;
+    --illus-ground: #12263F;
+
+    --map-destination: #E5484D; /* derived from --fill-danger; 3.9:1 on the ring, ring 3.8:1 on darkened land */
+    --map-marker-ring: #FFFFFF; /* derived, not in mockup */
+    --map-walk-line: #E6ECF5; /* 3.2:1 on darkened map land */
+    --map-selected-ring: #0E8A58; /* derived; 4.4:1 against --map-marker-ring on both sides */
+    --map-selected-width: 3px;
+    --map-selected-halo: #FFFFFF; /* the ring sits between this halo and the white inner ring */
+    --map-selected-halo-width: 2px;
+    --map-range-text: #8DBBFF; /* info-text colour; 8.0:1 on --color-card */
+    --map-live-bus: #0A6B43; /* white text 6.6:1 */
+    --map-live-bus-ink: #FFFFFF;
+    --step-node-destination: #2A4D99; /* derived; white flag 8.0:1 */
   }
 }
 
-:root[data-theme="light"] {
+:root[data-theme="light"],
+.theme-sample-light {
   --color-paper: #EEF4F8;
   --color-card: #FFFFFF;
   --color-ink: #1C2844;
@@ -124,14 +179,39 @@
   --tint-simulated: #EFEAFE;
 
   --prob-point: #1B6FE7;
-  --prob-band: #E4F0FC;
-  --prob-mark-40: #E5484D;
-  --prob-mark-50: #F2A900;
 
   --shadow-card: 0 8px 24px rgb(28 40 68 / 0.08); /* derived, not in mockup */
+  --color-selected-outline: #1B6FE7; /* 4.7:1 on --color-card */
+  --color-selected-outline-success: #0B7A4E; /* 5.4:1 on --color-card */
+  --color-line-strong: #5B6B82;
+  --color-focus: #1B6FE7;
+  --action-yes: #0B7A4E; /* white text 5.4:1 */
+  --action-no: #B42318; /* white text 6.6:1 */
+  --action-ink: #FFFFFF;
+
+  --illus-sky: #E7F3FC; /* hero text #1C2844 on this sky is 13.0:1 */
+  --illus-building: #FFFFFF;
+  --illus-building-alt: #D5E4F2;
+  --illus-tree: #24BC6C;
+  --illus-bus: #1B6FE7;
+  --illus-bus-window: #E4F0FC;
+  --illus-ground: #C9E2F6;
+
+  --map-destination: #D23A40; /* derived from --fill-danger; 4.1:1 on light map land, 4.7:1 on the ring */
+  --map-marker-ring: #FFFFFF; /* derived, not in mockup */
+  --map-walk-line: #1B6FE7; /* 4.1:1 on light map land */
+  --map-selected-ring: #0B7A4E; /* 5.4:1 against --map-marker-ring on both sides */
+  --map-selected-width: 3px;
+  --map-selected-halo: #FFFFFF; /* the ring sits between this halo and the white inner ring */
+  --map-selected-halo-width: 2px;
+  --map-range-text: #1B68E7; /* link colour; 5.0:1 on --color-card */
+  --map-live-bus: #0A6B43; /* white text 6.6:1 */
+  --map-live-bus-ink: #FFFFFF;
+  --step-node-destination: #1C3A7A; /* white flag 10.9:1 */
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.theme-sample-dark {
   --color-paper: #0E1726; /* derived, not in mockup */
   --color-card: #16223A; /* derived, not in mockup */
   --color-ink: #E6ECF5; /* derived, not in mockup */
@@ -160,10 +240,34 @@
   --tint-neutral: #232E42; /* derived, not in mockup */
   --tint-simulated: #2A2150; /* derived, not in mockup */
 
-  --prob-point: #2B6CE6; /* derived, not in mockup */
-  --prob-band: #1A2F55; /* derived, not in mockup */
-  --prob-mark-40: #E5484D; /* derived, not in mockup */
-  --prob-mark-50: #F2A900; /* derived, not in mockup */
+  --prob-point: #6AA6FF; /* derived; 6.4:1 on --color-card */
 
   --shadow-card: 0 8px 24px rgb(0 0 0 / 0.35); /* derived, not in mockup */
+  --color-selected-outline: #8DBBFF; /* 8:1 on --color-card */
+  --color-selected-outline-success: #5FE0A0; /* above 3:1 on --color-card */
+  --color-line-strong: #9AA9BF;
+  --color-focus: #8DBBFF;
+  --action-yes: #0A6B43; /* white text 6.6:1 */
+  --action-no: #A61E2A; /* white text 7.4:1 */
+  --action-ink: #FFFFFF;
+
+  --illus-sky: #1A3050; /* hero text #E6ECF5 on this sky is 11.2:1 */
+  --illus-building: #E6ECF5;
+  --illus-building-alt: #9AA9BF;
+  --illus-tree: #24BC6C;
+  --illus-bus: #6AA6FF;
+  --illus-bus-window: #E6ECF5;
+  --illus-ground: #12263F;
+
+  --map-destination: #E5484D; /* derived from --fill-danger; 3.9:1 on the ring, ring 3.8:1 on darkened land */
+  --map-marker-ring: #FFFFFF; /* derived, not in mockup */
+  --map-walk-line: #E6ECF5; /* 3.2:1 on darkened map land */
+  --map-selected-ring: #0E8A58; /* derived; 4.4:1 against --map-marker-ring on both sides */
+  --map-selected-width: 3px;
+  --map-selected-halo: #FFFFFF; /* the ring sits between this halo and the white inner ring */
+  --map-selected-halo-width: 2px;
+  --map-range-text: #8DBBFF; /* info-text colour; 8.0:1 on --color-card */
+  --map-live-bus: #0A6B43; /* white text 6.6:1 */
+  --map-live-bus-ink: #FFFFFF;
+  --step-node-destination: #2A4D99; /* derived; white flag 8.0:1 */
 }

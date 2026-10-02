@@ -216,7 +216,7 @@ def test_next_bus_3_can_qualify():
     assert decision["reroute"]["arrival_time"] == "2026-09-29T14:30:00+08:00"
 
 
-def test_highest_range_low_wins_over_a_higher_point():
+def test_the_recommender_picks_the_highest_point_among_those_that_pass_the_improvement_rule():
     calls = []
 
     def loader(code, service):
@@ -248,12 +248,15 @@ def test_highest_range_low_wins_over_a_higher_point():
         loader=loader,
     )
     assert decision["switched"] is True
-    assert decision["reroute"]["service_no"] == "36"
-    assert decision["reroute"]["stop"]["stop_code"] == "01022"
+    # Both pass the improvement rule (range_low 60 and 80 against 39 + 15). The recommender then takes the
+    # highest point, 95 at the current stop, over the other stop's 40 (it no longer ranks by range_low).
+    assert decision["reroute"]["service_no"] == "18"
+    assert decision["reroute"]["stop"]["stop_code"] == ORIGIN
+    assert decision["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE"
     assert calls == [("01022", "36")]
 
 
-def test_range_low_tie_uses_earlier_destination_arrival_when_arrive_by_is_set():
+def test_equal_chance_with_arrive_by_takes_the_on_time_option_at_the_current_stop():
     def loader(code, service):
         return _current(
             [_bus("NextBus", 70, 90, 75, "2026-09-29T14:40:00+08:00", primary=True)],
@@ -283,11 +286,14 @@ def test_range_low_tie_uses_earlier_destination_arrival_when_arrive_by_is_set():
         arrive_by=NOW + timedelta(hours=3),
         place=(dest_lat, dest_lon),
     )
-    assert decision["reroute"]["service_no"] == "36"
-    assert decision["reroute"]["stop"]["stop_code"] == "01022"
+    # Equal points. Bus 18 at the current stop is also the earlier arrival (its ride is anchored on a 5 minute ETA),
+    # so it is the highest chance on time; the walk tie-break itself is covered in test_recommend.py.
+    assert decision["reroute"]["service_no"] == "18"
+    assert decision["reroute"]["stop"]["stop_code"] == ORIGIN
+    assert decision["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE_ON_TIME"
 
 
-def test_range_low_tie_uses_earlier_eta_without_arrive_by():
+def test_the_highest_point_wins_without_arrive_by_even_at_a_later_arrival():
     def loader(code, service):
         return _current(
             [_bus("NextBus", 70, 90, 99, "2026-09-29T14:40:00+08:00", primary=True)],
@@ -315,8 +321,10 @@ def test_range_low_tie_uses_earlier_eta_without_arrive_by():
         cache,
         loader=loader,
     )
-    assert decision["reroute"]["service_no"] == "18"
-    assert decision["reroute"]["stop"]["stop_code"] == ORIGIN
+    # Point 99 at the other stop beats point 40 at the current stop; the earlier ETA is no longer a tie-break here.
+    assert decision["reroute"]["service_no"] == "36"
+    assert decision["reroute"]["stop"]["stop_code"] == "01022"
+    assert decision["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE"
 
 
 def test_same_service_at_another_stop_is_allowed():
@@ -413,25 +421,20 @@ def test_stop_beyond_400m_is_not_an_alternate():
     assert decision["switched"] is False
 
 
-def test_arrive_by_accepts_a_ride_that_lands_on_the_target():
-    early = _decide(
-        [_primary(), _bus("NextBus2", 70, 90, 80)],
-        _simple_cache(2.0),
-        arrive_by=NOW + timedelta(minutes=13),
-        place=_north(2000),
-    )
-    late = _decide(
-        [_primary(), _bus("NextBus2", 70, 90, 80)],
-        _simple_cache(2.0),
-        arrive_by=NOW + timedelta(minutes=12),
-        place=_north(2000),
-    )
-    assert early["switched"] is True
-    assert late["switched"] is False
-    assert late["no_better_option"].endswith("15% improvement threshold.")
+def test_a_late_option_is_kept_and_the_recommender_names_none_by_target():
+    # The old arrive-by filter dropped a candidate whose estimate was after the target. A late option now
+    # stays: it is labelled and the recommender handles it (NONE_BY_TARGET).
+    buses = [_primary(), _bus("NextBus2", 70, 90, 80)]
+    roomy = _decide(buses, _simple_cache(2.0), arrive_by=NOW + timedelta(hours=2), place=_north(2000))
+    tight = _decide(buses, _simple_cache(2.0), arrive_by=NOW + timedelta(minutes=12), place=_north(2000))
+    assert roomy["switched"] is True and tight["switched"] is True
+    assert roomy["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE_ON_TIME"
+    assert roomy["options"]["recommended"]["after_target"] is False
+    assert tight["options"]["recommended"]["reason_code"] == "NONE_BY_TARGET"
+    assert tight["options"]["recommended"]["after_target"] is True
 
 
-def test_datetime_local_arrive_by_filters_and_a_blank_value_does_not():
+def test_datetime_local_arrive_by_is_read_as_singapore_time_and_a_blank_value_sets_no_target():
     buses = [_primary(), _bus("NextBus2", 70, 90, 80)]
     cache = _simple_cache(2.0)
     place = _north(2000)
@@ -442,17 +445,20 @@ def test_datetime_local_arrive_by_filters_and_a_blank_value_does_not():
         place=place,
     )
     blank = _decide(buses, cache, arrive_by=None, place=place)
-    assert set_value["switched"] is False
-    assert blank["switched"] is True
+    assert set_value["options"]["recommended"]["reason_code"] == "NONE_BY_TARGET"
+    assert blank["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE"
 
 
-def test_null_ride_minutes_is_ineligible_when_arrive_by_is_set():
+def test_null_ride_minutes_gives_no_estimate_and_is_not_on_time_when_arrive_by_is_set():
     decision = _decide(
         [_primary(), _bus("NextBus2", 90, 95, 92)],
         _simple_cache(None),
         arrive_by=NOW + timedelta(hours=5),
     )
-    assert decision["switched"] is False
+    # Kept in the list with no estimate. Nothing can be on time, so it is the only (unverified) recommendation.
+    option = decision["options"]["recommended"]
+    assert option["estimated_arrival"] is None
+    assert option["reason_code"] == "NONE_BY_TARGET"
 
 
 def test_without_arrive_by_a_null_ride_can_still_qualify():
@@ -687,7 +693,7 @@ def test_reroute_copy_uses_the_old_and_new_results():
 def test_page_shows_the_server_copy_and_does_not_request_permission(tmp_path):
     html = INDEX.read_text(encoding="utf-8")
     assert html.count("Notification.requestPermission") == 1
-    assert "new Notification(notice.title, { body: notice.body })" in html
+    assert "showLocalNotification(notice.title, { body: notice.body })" in html
     assert "new Notification(reroute.notification_title, { body: reroute.notification_body })" in html
     notify = html.split("function notifyReroute", 1)[1].split("function clearRerouteState", 1)[0]
     assert "requestPermission" not in notify
@@ -868,6 +874,11 @@ def test_arrivals_endpoint_returns_the_reroute_without_a_live_call(tmp_path, mon
 
     monkeypatch.setattr("main.load_static_data", lambda: cache)
     monkeypatch.setattr("main.fetch_arrivals", fake)
+    # The search fetches each stop once for all its services; the fake answers per service the same way.
+    monkeypatch.setattr(
+        "main.fetch_stop_arrivals",
+        lambda stop_code, services, **_kwargs: {service: fake(stop_code, service) for service in services},
+    )
     monkeypatch.setattr(observations, "DEFAULT_DB_PATH", tmp_path / "observations.db")
     with TestClient(app) as client:
         plain = client.get("/api/arrivals", params={"stop_code": ORIGIN, "service_no": "18"})

@@ -224,7 +224,7 @@ def test_page_schedules_from_notification_time_and_blocks_unsafe_data():
     assert "lastNotifiedBusId !== busId" in sync_fn
     assert "lastNotifiedBusId = null" in sync_fn
     assert "lastNotifiedBusId = busId" in html
-    assert "serviceWorker" not in html
+    assert "pushManager" not in html and "PushManager" not in html and "sync.register" not in html
     assert "document.hidden" not in html
     panel_start = html.find("function clearJourneyPanel")
     panel_end = html.find("function renderJourneyLeaveBy")

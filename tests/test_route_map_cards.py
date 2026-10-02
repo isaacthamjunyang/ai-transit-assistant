@@ -1,4 +1,4 @@
-"""Route cards stay static until Select & Start Journey."""
+"""The route preview draws stop coordinates and never starts arrivals; route cards are gone (auto-planned)."""
 
 from pathlib import Path
 
@@ -20,9 +20,10 @@ def test_route_preview_uses_stop_coordinates_and_does_not_start_arrivals():
     assert '"TRANSFER"' in preview
     assert '"DESTINATION"' in preview
     assert "map.fitBounds" in preview
-    cards = html.split("function renderRouteOptions", 1)[1].split("function selectPlannedRoute", 1)[0]
-    assert "Select & Start Journey" in cards
-    assert "startMonitoring" not in cards
-    assert cards.index("showRoute(option, card)") < cards.index("selectPlannedRoute(option)")
-    assert "min total" in cards
-    assert "legs[0].stops" not in cards or "join(\" → \")" not in cards
+    # Route cards were removed: the app picks the route. Start journey runs the existing action.
+    assert "function renderRouteOptions" not in html
+    assert "route-choice" not in html.split("<script", 1)[0]
+    assert "Review journey" not in html
+    assert "Select & Start Journey" not in html
+    start = html.split('getElementById("start-journey").addEventListener("click"', 1)[1].split("});", 1)[0]
+    assert "selectPlannedRoute(pendingRouteOption)" in start

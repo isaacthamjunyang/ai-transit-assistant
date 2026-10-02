@@ -102,11 +102,12 @@ def test_over_budget_and_no_link_stay_no_feasible():
 def test_page_selection_and_map_and_explicit_stop_choice():
     html = INDEX.read_text(encoding="utf-8")
     css = (INDEX.parent / "components.css").read_text(encoding="utf-8")
-    selected = css.split(".destination-stop-list li.selected", 1)[1].split("}", 1)[0]
-    assert "3px solid var(--color-primary)" in selected
+    selected = css.split(".dest-stop-row.is-selected,", 1)[1].split("}", 1)[0]
+    assert "0 0 0 2px var(--color-selected-outline)" in selected
     assert html.count('L.map("map"') == 1
-    shown = html.split("boardingStage.hidden = false;", 1)[1].split("updateStepRail", 1)[0]
-    assert "map.invalidateSize" in shown
-    assert "Use This Stop" in html
-    assert "alternate_stops" in html
+    # The boarding-stop screen is gone: the map moves into the live screen and is resized there.
+    place = html.split("function placeMap(inDestination, inLive)", 1)[1].split("function placeArriveBy", 1)[0]
+    assert "map.invalidateSize()" in place
+    assert "Use This Stop" not in html
+    assert 'id="boarding-stage"' not in html
     assert html.count("setInterval(") == 2

@@ -12,6 +12,7 @@ from arrivals import _with_probability
 from demo import SCENARIOS
 from journey import BOARDING_BUFFER_S, SLOW_WALK_M_S, leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
+from explain import ACTION_ADVICE
 from lta_static import StopAndRouteCache
 from main import app
 from nearby import EARTH_RADIUS_M
@@ -501,15 +502,12 @@ def test_leave_by_stays_on_the_active_stop_distance():
 def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the_button():
     html = INDEX.read_text(encoding="utf-8")
     assert html.count("setInterval(") == 2
-    assert 'id="route-plan"' in html
-    assert "your journey" in html.lower()
-    assert "Track Leg 2" in html
-    assert "I'm On Board" in html
-    assert "Select & Start Journey" in html
-    assert "← Back to Home" in html
-    assert "watchPosition" in html
+    assert "Start journey" in html
+    for gone in ("I'm On Board", "Start Next Leg", "Track Leg 2", "You passed your stop", "Arrived at ", "id=\"route-plan\""):
+        assert gone not in html, gone
+    assert 'id="back-home"' in html
+    assert ">Back</button>" in html
     assert "clearWatch" in html
-    assert "Live catch chance available when this leg starts" in html
     assert "No direct or 1-transfer bus connection available for this trip." in html
     assert 'journeyComparison.textContent = "Arrive-by check: N/A"' not in html
     journey_request = html.split("function loadJourney()", 1)[1].split("fetch(url)", 1)[0]
@@ -523,24 +521,22 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
     assert 'journeyLeaveBy.textContent = "Leave-by: " + formatTime(lastSuccess.leave_by, true);' in html
     assert "&route_type=" in html
     assert "&leg_index=" in html
-    start = html.split("function startNextLeg()", 1)[1].split("function syncPlannedLegAfterReroute", 1)[0]
+    start = html.split("function openLeg2()", 1)[1].split("function syncPlannedLegAfterReroute", 1)[0]
     assert "activeRoutePlan.leg_index = 2" in start
     assert "geolocation" not in start
     assert "watchPosition" not in start
     assert "setInterval" not in start
-    begin = html.split("function beginPlannedLeg()", 1)[1].split("function startNextLeg()", 1)[0]
+    begin = html.split("function beginPlannedLeg()", 1)[1].split("function openLeg2()", 1)[0]
     assert begin.index("leg.boarding_stop_code") < begin.index("startMonitoring(leg.service_no)")
-    assert "CURRENT LEG" in html
-    assert "FUTURE LEG" in html
-    assert "Arrived at " in html
-    assert "You passed your stop" in html
-    assert "Fastest Route" in html
+    assert "Fastest Route" not in html  # labels stay server-side; the app picks one option
     start_clears = start.index("beginPlannedLeg()")
     assert start.index("lastRerouteAt = null") < start_clears
     assert start.index("pinnedEtaTimestamp = null") < start_clears
     assert start.index("lastNotifiedBusId = null") < start_clears
     assert start.index("resetExplanationState()") < start_clears
-    assert "beginPlannedLeg()" not in html.split('body.route_status === "unrankable"', 1)[1].split("routePlanStatus = \"ok\"", 1)[0]
+    plan = html.split("function planJourney()", 1)[1].split("function peekOverviewArrivals", 1)[0]
+    assert "beginPlannedLeg()" not in plan
+    assert "startMonitoring" not in plan
 
 
 def test_route_planning_does_not_use_demo_fixtures_or_add_scenarios():
@@ -710,7 +706,10 @@ def test_two_leg_plan_then_leg_2_poll_uses_the_transfer_stop(monkeypatch):
     assert first_body["buses"][0]["probability"]["slack_seconds"] - second_body["buses"][0]["probability"]["slack_seconds"] == 200
     assert first_body["leave_by"] != second_body["leave_by"]
     assert second_body["explanation"]["call"] is True
-    assert second_body["explanation"]["fact_sheet"]["walk_minutes"] == 3
+    # Leg 2 is on a vehicle: w comes from the Leg 2 input (distance to the stop at the ride speed), at least 1 minute.
+    assert second_body["explanation"]["fact_sheet"]["walk_minutes"] >= 1
+    assert second_body["explanation"]["context"]["leg2"] is True
+    assert second_body["explanation"]["text"].startswith("The bus is ")
     assert first_body["leave_now"]["bus_id"].startswith("36|01011|")
     assert second_body["leave_now"]["bus_id"].startswith("14|55555|")
     held = second_body["explanation"]["fact_sheet"]
@@ -724,8 +723,8 @@ def test_two_leg_plan_then_leg_2_poll_uses_the_transfer_stop(monkeypatch):
                 "route_type": "one_transfer",
                 "leg_index": 2,
                 "explanation_rendered": 1,
-                "last_explained_range_low": held["range_low"],
-                "last_explained_range_high": held["range_high"],
+                "explained_action": held["chosen_action"],
+                "explained_advice": ACTION_ADVICE[held["chosen_action"]],
             },
         )
     assert repeat.json()["explanation"]["call"] is False
