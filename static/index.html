@@ -325,6 +325,7 @@
         </div>
         <button type="button" class="link-button" id="overview-arrive-edit" aria-label="Edit arrive by time">Edit</button>
       </div>
+      <p id="overview-motion-note" class="note" aria-live="off"></p>
       <button type="button" id="start-journey" class="primary primary--icon" disabled>
         <span>Start journey</span>
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -360,6 +361,7 @@
           <p id="new-journey-arrive-estimate" class="arrive-box__estimate" hidden></p>
         </div>
       </div>
+      <p id="new-journey-motion-note" class="note" aria-live="off"></p>
       <button type="button" id="new-journey-start" class="primary primary--icon"><span>Start journey</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
     </section>
     <div class="stage">
@@ -492,6 +494,7 @@
         </div>
       </div>
       <p id="catch-caption" class="catch-card__caption">if you leave now and walk at a normal pace</p>
+      <p id="catch-pace-line" class="note" aria-live="off"></p>
       <p id="arrival-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
       <p id="arrival-status" class="note"></p>
       <p id="arrival-warning" class="arrival-warning" hidden></p>
@@ -609,6 +612,7 @@
   ></script>
   <script src="format-distance.js"></script>
   <script src="place-icons.js"></script>
+  <script src="walk-speed.js"></script>
   <script>
     var AI_EXPLANATION_ENABLED = true;
     (function applyAiExplanationFlag() {
@@ -710,7 +714,6 @@
     var NO_FEASIBLE_ROUTE = "No direct or 1-transfer bus connection available for this trip.";
     var UNRANKABLE_ROUTE = "Route found, but travel time could not be estimated.";
     var routePlanStatus = null;
-    var geoWatchId = null;
 
     var listEl = document.getElementById("stop-list");
     var emptyEl = document.getElementById("stops-empty");
@@ -1093,6 +1096,7 @@
       lastHeroKey = "";
       lastFetchedAt = "";
       clearLeaveNowTimer();
+      syncPaceEstimator();
     }
 
     function clearArrivalPanel() {
@@ -1110,6 +1114,7 @@
     }
 
     function endMonitoring() {
+      paceJourneyActive = false;
       invalidateSession();
       pinnedEtaTimestamp = null;
       selectedService = null;
@@ -1170,6 +1175,7 @@
         refreshDisplay(generation);
       }, 1000);
       updateStepRail();
+      syncPaceEstimator();
     }
 
     function armPollTimer(generation) {
@@ -1286,6 +1292,7 @@
       if (pageC && pageC.entry === "unlikely") {
         url += "&reroute=0";
       }
+      url += walkSpeedQuery();
       setPollBusy(true);
       fetch(url)
         .then(function (response) {
@@ -1346,6 +1353,8 @@
     }
 
     function applySuccess(body) {
+      noteServerWalkSpeed(body);
+      notePaceNearStop(body);
       syncExplanation(body);
       setArrivalSimulated(body.simulated === true);
       var proposal = body.reroute && body.reroute.switched && body.reroute.reroute ? body.reroute.reroute : null;
@@ -2688,7 +2697,8 @@
       var url = "/api/destination-stops?dest_lat=" + encodeURIComponent(selectedDestination.latitude)
         + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude)
         + "&user_lat=" + encodeURIComponent(userLat)
-        + "&user_lon=" + encodeURIComponent(userLon);
+        + "&user_lon=" + encodeURIComponent(userLon)
+        + walkSpeedQuery();
       fetch(url)
         .then(function (response) {
           if (generation !== destStopGeneration) {
@@ -2712,6 +2722,7 @@
             setDestinationStopStatus("Destination stops are unavailable.", "denied");
             return;
           }
+          noteServerWalkSpeed(result.body);
           renderDestinationStops(result.body);
         })
         .catch(function () {
@@ -2825,7 +2836,7 @@
       if (typeof metres !== "number" || !isFinite(metres)) {
         return "";
       }
-      var minutes = Math.max(1, Math.round(metres / 1.25 / 60));
+      var minutes = walkMinutes(metres);
       return formatDistance(metres) + " · ~" + minutes + " min walk";
     }
 
@@ -2834,7 +2845,6 @@
         return;
       }
       highlightJourneyRoute(option);
-      stopJourneyWatch();
       routePlanStatus = "ok";
       activeRoutePlan = {
         route_type: option.route_type,
@@ -2894,7 +2904,6 @@
       if (!activeRoutePlan.legs || activeRoutePlan.legs.length < 2) {
         return;
       }
-      stopJourneyWatch();
       activeRoutePlan.leg_index = 2;
       lastRerouteAt = null;
       pinnedEtaTimestamp = null;
@@ -3348,6 +3357,7 @@
       if (arriveByInput.value) {
         url += "&arrive_by=" + encodeURIComponent(arriveByInput.value);
       }
+      url += walkSpeedQuery();
       fetch(url)
         .then(function (response) {
           if (!response.ok) {
@@ -3356,6 +3366,7 @@
           return response.json();
         })
         .then(function (body) {
+          noteServerWalkSpeed(body);
           renderPlanningWarning(body && body.planning_warning);
         })
         .catch(function () {
@@ -3513,6 +3524,7 @@
           url += "&leg1_direction=" + encodeURIComponent(firstLeg.direction);
         }
       }
+      url += walkSpeedQuery();
       fetch(url)
         .then(function (response) {
           if (!response.ok) {
@@ -3529,6 +3541,7 @@
           if (!result || result.failed || !confirmedDestinationStop) {
             return;
           }
+          noteServerWalkSpeed(result.body);
           renderJourney(result.body);
         })
         .catch(function () {
@@ -3966,13 +3979,6 @@
       banner.hidden = true;
     }
 
-    function stopJourneyWatch() {
-      if (geoWatchId !== null && navigator.geolocation && navigator.geolocation.clearWatch) {
-        navigator.geolocation.clearWatch(geoWatchId);
-      }
-      geoWatchId = null;
-    }
-
     function haversineMetres(lat1, lon1, lat2, lon2) {
       var radius = 6371000;
       var p1 = lat1 * Math.PI / 180;
@@ -3984,7 +3990,7 @@
     }
 
     function exitJourney(keepFields) {
-      stopJourneyWatch();
+      paceJourneyActive = false;
       fiveMinuteNotifiedKey = null;
       endMonitoring();
       if (!keepFields) {
@@ -4079,6 +4085,8 @@
       var controls = document.getElementById("demo-controls");
       banner.hidden = enabled !== true;
       controls.hidden = enabled !== true;
+      syncPaceEstimator();
+      renderMotionNote();
     }
 
     function setArrivalSimulated(on) {
@@ -4383,6 +4391,8 @@
       syncLocateButton();
       syncPageCClasses();
       syncCatchBar();
+      syncPaceEstimator();
+      renderMotionNote();
     }
 
     function syncHomeButton() {
@@ -4725,7 +4735,7 @@
     }
 
     function walkMinutes(metres) {
-      return Math.max(1, Math.round(metres / 1.25 / 60));
+      return Math.max(1, Math.round(metres / serverWalkSpeed / 60));
     }
 
     function setOverviewState(state) {
@@ -4766,6 +4776,7 @@
       if (arriveByInput.value) {
         url += "&arrive_by=" + encodeURIComponent(arriveByInput.value);
       }
+      url += walkSpeedQuery();
       fetch(url)
         .then(function (response) {
           return response.ok ? response.json() : { failed: true };
@@ -4774,6 +4785,7 @@
           if (generation !== planGeneration) {
             return;
           }
+          noteServerWalkSpeed(body);
           if (!body || body.failed || body.status !== "ok") {
             setOverviewState("unavailable");
             return;
@@ -5541,6 +5553,7 @@
       if (!pendingRouteOption || this.disabled) {
         return;
       }
+      beginPaceEstimator();
       liveUserMoved = false;
       selectPlannedRoute(pendingRouteOption);
       pushScreen("live");
@@ -5628,7 +5641,10 @@
       if (range) {
         range.textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
       }
-      document.getElementById("catch-caption").textContent = onLeg2() ? LEG2_CAPTION : "if you leave now and walk at a normal pace";
+      var walkPace = catchWalkPace();
+      document.getElementById("catch-caption").textContent = onLeg2() ? LEG2_CAPTION : walkPace.caption;
+      // The pace line shows what the server used for this poll, whatever the source, including the normal pace.
+      document.getElementById("catch-pace-line").textContent = usable && !onLeg2() ? walkPace.line : "";
       document.getElementById("catch-title").textContent = catchHeading(false);
       setCatchSub("catch", hero);
       // The pace chip shows only while the Python action is leave_now: "Walk slower" beside "wait" would contradict it.
@@ -6249,7 +6265,7 @@
       if (missedEpoch !== null && missedEpoch !== undefined && isFinite(missedEpoch)) {
         url += "&missed_eta=" + encodeURIComponent(missedEpoch);
       }
-      return url;
+      return url + walkSpeedQuery();
     }
 
     function canSearchOptions() {
@@ -6302,6 +6318,7 @@
           renderPageC();
           return;
         }
+        noteServerWalkSpeed(body);
         current.options = body.options || { mode: "none", entry: current.entry, recommended: null, rows: [] };
         current.noBuses = body.no_buses === true;
         var fetchedAt = body.fetched_at ? new Date(body.fetched_at).getTime() : NaN;
@@ -6647,6 +6664,7 @@
       if (!row) {
         return;
       }
+      beginPaceEstimator();
       if (Date.now() - newJourneyFetchedAt <= OPTIONS_CACHE_MAX_AGE_MS || demoModeOn()) {
         finishNewJourney(row);
         return;
@@ -6741,6 +6759,139 @@
       syncCatchBar();
     }
 
+    // Walking speed (static/walk-speed.js). The estimator reads the motion sensor and one location watch only between
+    // "Start journey" and the stop conditions below, in the foreground. The page sends the speed number with its
+    // requests and shows what the server returns, never its own value.
+    var paceEstimator = window.WalkSpeed && window.WalkSpeed.createEstimator
+      ? window.WalkSpeed.createEstimator({ onFix: onEstimatorFix, onStatus: renderMotionNote })
+      : null;
+    var paceJourneyActive = false;
+    var serverWalkSpeed = 1.25;
+    var serverWalkSource = "default";
+    var WALK_SOURCES = ["gps", "cadence", "remembered", "default"];
+    var CAPTION_NORMAL = "if you leave now and walk at a normal pace";
+    var CAPTION_CURRENT_PACE = "if you leave now and keep walking at your current pace";
+    var CAPTION_USUAL_PACE = "if you leave now and walk at your usual pace";
+    var PACE_LINES = {
+      gps: "Walking pace: {kmh} km/h · from GPS",
+      cadence: "Walking pace: {kmh} km/h · from your steps",
+      remembered: "Walking pace: {kmh} km/h · your usual pace",
+      "default": "Walking pace: {kmh} km/h · normal pace"
+    };
+    var MOTION_PRIVACY_TEXT = "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before.";
+    var MOTION_OFF_TEXT = "Motion sensor is off, so your steps are not used.";
+
+    // The caption and the pace line come from the latest poll's walk_speed_used and walk_speed_source (the server's
+    // values), never from the estimator's own number. 1.25 m/s shows as 4.5 km/h.
+    function catchWalkPace() {
+      var used = lastSuccess && typeof lastSuccess.walk_speed_used === "number" && isFinite(lastSuccess.walk_speed_used)
+        ? lastSuccess.walk_speed_used : null;
+      var source = lastSuccess && WALK_SOURCES.indexOf(lastSuccess.walk_speed_source) !== -1 ? lastSuccess.walk_speed_source : "default";
+      if (used === null || (lastSuccess && WALK_SOURCES.indexOf(lastSuccess.walk_speed_source) === -1)) {
+        used = 1.25;
+        source = "default";
+      }
+      var caption = source === "gps" || source === "cadence" ? CAPTION_CURRENT_PACE : source === "remembered" ? CAPTION_USUAL_PACE : CAPTION_NORMAL;
+      return { caption: caption, line: PACE_LINES[source].replace("{kmh}", (used * 3.6).toFixed(1)) };
+    }
+
+    // Above "Start journey": the privacy line, or the sensor-off line when there is no motion sensor or it was denied.
+    function motionUnavailable() {
+      if (!paceEstimator || !paceEstimator.motionSupported()) {
+        return true;
+      }
+      var status = paceEstimator.status();
+      return status.motion === "off" || status.permission === "denied" || status.permission === "unavailable";
+    }
+
+    function renderMotionNote() {
+      if (!paceEstimator) {
+        return;
+      }
+      var text = demoModeOn() ? "" : motionUnavailable() ? MOTION_OFF_TEXT : MOTION_PRIVACY_TEXT;
+      ["overview-motion-note", "new-journey-motion-note"].forEach(function (id) {
+        var note = document.getElementById(id);
+        if (note) {
+          note.textContent = text;
+        }
+      });
+    }
+
+    function walkSpeedQuery() {
+      return paceEstimator && !demoModeOn() ? paceEstimator.queryString() : "";
+    }
+
+    function noteServerWalkSpeed(body) {
+      if (!body || typeof body.walk_speed_used !== "number" || !isFinite(body.walk_speed_used) || body.walk_speed_used <= 0) {
+        return;
+      }
+      if (WALK_SOURCES.indexOf(body.walk_speed_source) === -1) {
+        return;
+      }
+      serverWalkSpeed = body.walk_speed_used;
+      serverWalkSource = body.walk_speed_source;
+    }
+
+    // A fix from the estimator's watch that is newer than the per-poll one may be used by the next request.
+    function onEstimatorFix(fix) {
+      if (!monitoringActive || !fix || typeof fix.t !== "number") {
+        return;
+      }
+      if (userLocationTimestamp !== null && fix.t <= userLocationTimestamp) {
+        return;
+      }
+      userLat = fix.lat;
+      userLon = fix.lon;
+      userAccuracy = fix.accuracy;
+      userLocationTimestamp = fix.t;
+    }
+
+    // The estimator runs while a journey that was started with "Start journey" is polled on the live pages. It does not
+    // run on the Leg 2 page, the "on your way" overview, the overviews, after an answer or an end card, or in Demo Mode.
+    function paceShouldRun() {
+      if (!paceEstimator || !paceJourneyActive || !monitoringActive || endedKind || missedMode) {
+        return false;
+      }
+      if (onLeg2() || demoModeOn() || paceEstimator.isLatched()) {
+        return false;
+      }
+      var top = screenStack[screenStack.length - 1];
+      return top === "live" || top === "arrivals";
+    }
+
+    function syncPaceEstimator() {
+      if (!paceEstimator) {
+        return;
+      }
+      if (paceShouldRun()) {
+        if (!paceEstimator.isWanted()) {
+          paceEstimator.start();
+        }
+      } else if (paceEstimator.isWanted()) {
+        paceEstimator.stop(paceJourneyActive ? "paused" : "journey over");
+      }
+    }
+
+    // Inside the tap on "Start journey": the iOS motion permission needs the gesture. It never blocks the journey.
+    function beginPaceEstimator() {
+      if (!paceEstimator || demoModeOn()) {
+        return;
+      }
+      paceJourneyActive = true;
+      paceEstimator.resetLeg();
+      paceEstimator.requestPermission().then(syncPaceEstimator, syncPaceEstimator);
+      syncPaceEstimator();
+    }
+
+    // Two polls in a row inside the 30 m rule (the server's near_stop) stop the estimator for the rest of the leg.
+    function notePaceNearStop(body) {
+      if (!paceEstimator || !paceJourneyActive || onLeg2()) {
+        return;
+      }
+      paceEstimator.noteNearStop(!!(body && body.near_stop === true));
+      syncPaceEstimator();
+    }
+
     // Stops polling, the display tick, notifications and timers. What is on screen stays.
     function stopTracking() {
       monitorGeneration += 1;
@@ -6753,13 +6904,14 @@
         displayTimer = null;
       }
       monitoringActive = false;
-      stopJourneyWatch();
       stopTransferWatch();
       clearLeaveNowTimer();
       hideLeaveNowBanner();
       clearRerouteProposal();
       resetPaceGuidance();
       fiveMinuteNotifiedKey = null;
+      paceJourneyActive = false;
+      syncPaceEstimator();
       syncCatchBar();
     }
 

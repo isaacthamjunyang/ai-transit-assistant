@@ -8,7 +8,7 @@ Decisions already made: OpenAI for explanations; this build is **bus-only**. Tra
 
 The user types a place ("Marina Bay Sands", "NUS", "Orchard Road", "Changi Airport") instead of a destination bus-stop name or code. OneMap resolves that text to coordinates. The app then ranks nearby LTA stops and the user confirms one. After that confirm, the existing flow is unchanged: boarding stop, live arrivals, catch probability, leave-by, reroute, OpenAI explanation.
 
-Unchanged on purpose: the catch-probability formula, the 40% / 15-point reroute rule, LTA polling, SQLite observation fields, and the OpenAI fact-sheet guardrail. OpenAI still does not choose coordinates, stops, or probabilities.
+Unchanged on purpose: the catch-probability formula, the 40% / 15-point reroute rule, LTA polling, SQLite observation fields (except that the user's position and GPS accuracy are no longer stored), and the OpenAI fact-sheet guardrail. OpenAI still does not choose coordinates, stops, or probabilities.
 
 ## New components
 
@@ -56,7 +56,7 @@ Hackathon-simple, Windows-native, no frontend build step.
 - **Python 3.11+**, venv, `uvicorn`. Activate with `.\.venv\Scripts\Activate.ps1`.
 - **FastAPI** serves a single static page and the JSON API.
 - **httpx** calls LTA DataMall and OneMap Search.
-- **SQLite** (stdlib) logs every scored poll from day one.
+- **SQLite** (stdlib) logs every scored poll from day one. It does not store the user's position or GPS accuracy.
 - **openai** SDK, model `gpt-4o-mini` (name in config so it can be swapped). Structured Outputs. Temperature is `0.2`, as specified in **Step 12 specification**.
 - **pytest** for the heuristic, staleness rules, destination-search fallbacks, and LLM guardrail. Tests use fixtures, not the live APIs.
 - **Frontend:** one `static/index.html` plus vanilla JS. **Leaflet** with OpenStreetMap tiles (no extra key). Browser Geolocation and the Notification API.
@@ -98,22 +98,24 @@ Poll only the active boarding stop plus up to two alternate stops, every 20 seco
 
 **Proactive leave-now alert** uses the Notification API while this tab is open, including when the tab is not visible. There is no background process. A minimal service worker is used only to display local notifications and handle taps (see **Step 14 specification**, section 5). The locked rules are in **Step 10 specification**.
 
-**Logging addition.** The existing `observations` fields stay as listed in section 3. A journey row also stores the search text, the selected OneMap label, latitude, longitude, and the confirmed destination stop code. That is the only logging change.
+**Logging.** The `observations` fields are as listed in section 3. Nothing else is persisted: the search text, the selected OneMap label, the destination's latitude and longitude, and the confirmed destination stop code are not stored.
 
 ## 3. Catch probability
 
 Ship this with no historical data. Historical lateness is logged now and applied only after a bucket has enough rows.
 
-Point walk speed **1.25 m/s**. The range uses **1.1 m/s** (slower, worse slack) and **1.4 m/s** (still a normal walk). The app never tells the user to exceed a normal walking pace (up to 1.4 m/s). Pace guidance may say "Walk faster" only when range_high is at least 40%, because range_high is computed at 1.4 m/s. Below that it says "Unlikely at a normal pace" and never advises going faster.
+The point walk speed is the speed used for the request: the user's measured walking speed when the page sends one, clamped to **0.5–1.4 m/s**, and otherwise the default **1.25 m/s** (see **Walking speed** below). The range uses a slow end of speed × (1.1 / 1.25), not below 0.5 m/s (slower, worse slack), and a fast end of speed × (1.4 / 1.25), never above **1.4 m/s** (still a normal walk). At the default speed these are exactly 1.1 and 1.4 m/s. The app never tells the user to exceed a normal walking pace (up to 1.4 m/s) and never counts running: a cadence above 2.8 steps per second, or a GPS speed of 2.2 m/s or more, is not walking. Pace guidance may say "Walk faster" only when range_high is at least 40% and the fast end is at least `PACE_MIN_HEADROOM_MPS` (0.05 m/s) above the point speed. With less headroom, because the user is at or near 1.4 m/s, "faster" becomes "Unlikely at a normal pace" and "slightly faster" becomes "Keep a steady pace". Below 40% it says "Unlikely at a normal pace" and never advises going faster. Pace guidance never implies more than 1.4 m/s.
 
 ```text
-walk_s      = distance_m / 1.25
+walk_s      = distance_m / speed_used
 slack       = seconds_until_eta - walk_s - 45 - gps_penalty
-slack_low   = seconds_until_eta - (distance_m / 1.1) - 45 - (gps_accuracy_m / 1.25)
-slack_high  = seconds_until_eta - (distance_m / 1.4) - 45
+slack_low   = seconds_until_eta - (distance_m / slow_speed) - 45 - (gps_accuracy_m / 1.25)
+slack_high  = seconds_until_eta - (distance_m / fast_speed) - 45
 
 P(slack)    = clamp(1 / (1 + exp(-0.025 * (slack - 90))), 0.05, 0.92)
 ```
+
+The 1.25 in slack_low is the fixed error-model constant ERROR_MODEL_SPEED_MPS, not the user's pace. The probability formula, the clamps, the 40 and 50 thresholds, and the 100 m and 60 s location rules do not change.
 
 50% sits at 90 seconds of slack. The cap is 92% and the floor is 5%, so the UI cannot show certainty. Display the point and the band: **64% (range 51–78%)**.
 
@@ -125,13 +127,38 @@ Adjustments:
 - Stale or API down: return **no probability**. See safety section.
 - Historical factor: until 20 logged arrivals exist for that service + stop + hour-of-week, the factor is neutral and the UI says **no historical reliability yet**. Later, subtract median lateness from slack. Do not invent a reliability number before that.
 
-**Log on every scored poll** (SQLite `observations`): timestamp, stop code, service, direction, ETA, `Monitored`, bus lat/lon, user lat/lon, GPS accuracy, walk metres, slack seconds, P / P_low / P_high, data quality (`live`, `schedule`, `stale`, `unavailable`), whether a reroute fired, and the reason. The insert is part of the main arrivals/scoring pipeline. A poll that does not reroute is still logged. A stale or failed poll with no valid score is not a scored poll. `reroute_fired` and `reroute_reason` values are locked in **Step 11 specification**. This is the dataset that later becomes on-time reliability.
+**Log on every scored poll** (SQLite `observations`): timestamp, stop code, service, direction, ETA, `Monitored`, bus lat/lon, walk metres, slack seconds, P / P_low / P_high, data quality (`live`, `schedule`, `stale`, `unavailable`), whether a reroute fired, and the reason. The insert is part of the main arrivals/scoring pipeline. A poll that does not reroute is still logged. A stale or failed poll with no valid score is not a scored poll. `reroute_fired` and `reroute_reason` values are locked in **Step 11 specification**. This is the dataset that later becomes on-time reliability. The walking speed is not a column and is never written. P, P_low, P_high and slack seconds depend on it, so any later use of this dataset for on-time reliability must account for the speed each row was scored with. No code in the app reads these columns back today. The log does not store the user's position or GPS accuracy: `user_lat`, `user_lon` and `gps_accuracy` stay in the table as columns, so there is no migration, but they are always NULL. It stores the poll time, the stop, the bus position, ETA, the probabilities and data quality, and the walk distance. The table has no retention limit and no automatic deletion: rows stay until the file `observations.db` is removed. The file is in the project folder and is ignored by git (`*.db`).
+
+### Walking speed
+
+The server takes one walking speed per request and uses it everywhere a walking distance becomes minutes: the catch probability and its range, leave-by, the Step 9 estimate and arrival window, the overview and destination-stop walking labels, pace guidance, the AI sentence's walking time, and the reroute and Page C option scoring. The Leg 2 vehicle speed is not affected. With no client value every number is exactly what it was with the fixed 1.25 m/s. The constants are in `config.py`: `WALK_SPEED_DEFAULT_MPS` 1.25, `WALK_SPEED_MIN_MPS` 0.5, `WALK_SPEED_MAX_MPS` 1.4, `RANGE_SLOW_RATIO` (1.1 / 1.25), `RANGE_FAST_RATIO` (1.4 / 1.25).
+
+- Input: the query fields `walk_speed` (m/s) and `walk_speed_source` (`gps`, `cadence`, `remembered` or `default`) on the scored endpoints (`/api/arrivals`, `/api/reroute-options`, `/api/journey-plan`, `/api/route-plan`, `/api/journey`, `/api/destination-stops`). A value that is missing, not a finite number, or from an unknown source is ignored and the default is used with source `default`. A valid value is clamped to 0.5–1.4 m/s and rounded to two decimals. In Demo Mode the client value is ignored so the fixtures stay fixed.
+- Output: every response that returns a probability, an estimate or an option list carries `walk_speed_used` (two decimals) and `walk_speed_source`. The page shows what the server returns, never its own value. The poll also carries `near_stop`, true inside the 30 m rule that hides pace guidance.
+- One rounding rule for labels: every walking time shown to the user is rounded half up with a minimum of 1 minute, the same as the AI sentence's walking minutes. The probability and leave-by terms stay in raw seconds, and the Step 9 sums keep rounding up.
+- GPS error terms: `gps_accuracy_m / 1.25` and the widening for an old fix use the fixed `ERROR_MODEL_SPEED_MPS` of 1.25. They model GPS error, not the user's pace. For a slow walker the penalty is slightly understated, and for a fast walker slightly overstated.
+- Leave-by and `notification_time` follow the slow end of the speed used. A changing speed moves them, but the leave-now notification still fires once per bus id, so a speed change cannot fire it twice.
+
+#### Measuring the speed on the phone
+
+- `static/walk-speed.js` does the measuring. It is the only file that stores walking data in `localStorage`. `index.html` never uses `localStorage`. (`theme-boot.js` separately stores the theme choice.)
+- Motion: DeviceMotionEvent only, on the magnitude of the linear acceleration (or of the acceleration with gravity removed by a low-pass filter), so the phone's orientation does not matter. Cadence is the dominant frequency from 1.2 to 2.8 steps per second over an 8 s window (normalised autocorrelation, the shortest lag whose score is at least 80% of the best, score at least 0.3). Peaks are not counted.
+- Walking detected: a valid cadence, regular (coefficient of variation under 0.15) for about 8 s, and, when there is a GPS speed, one below 2.2 m/s.
+- GPS speed: `coords.speed` on a fix of at most 30 m accuracy and at most 10 s old. If the speed is null it is derived from fixes at least 20 s apart, only when the net displacement is at least max(40 m, 4 × the accuracy).
+- Standing still: with a fresh fix of at most 30 m accuracy, "walking detected" also needs a GPS speed of at least `GPS_WALK_MIN_MPS` (0.3 m/s). A window is rejected only when the speed has stayed under 0.3 m/s for `GPS_STILL_REJECT_S` (5 s) in a row. With no usable fix the rule is not applied. A rejected window is never used for learning. A phone shaken in place at a walking rhythm is therefore not walking.
+- Step length: learned from 15 s windows of steady walking (cadence and GPS speed both steady, median accuracy at most 15 m, GPS speed 0.7–2.0 m/s, cadence 1.3–2.6, step length 0.35–1.1 m). An exponential average (weight 0.2) starts from a 0.70 m prior and is clamped to 0.45–0.95 m. A window where GPS speed and cadence × step length differ by more than 0.6 m/s is not learned from.
+- Fusion, once a second, first match wins: GPS speed (`gps`); cadence × step length once at least 3 samples are learned (`cadence`); the last speed held for 30 s after walking stops; a remembered pace newer than 30 days (`remembered`); otherwise no value. A GPS speed under 0.3 m/s is a stop, not a walking speed: while the cadence window drains, the last speed is held. The speed is smoothed with a 10 s time constant, the value sent changes by at most 0.15 m/s per poll, and it is clamped to 0.5–1.4 m/s.
+- GPS-only: when the motion permission is denied, there is no motion sensor, or no motion event arrives within 3 s, a steady GPS speed from 0.7 m/s up to 2.2 m/s (the vehicle limit) over 8 s counts as walking, on a fix that passes the accuracy and age limits and a coefficient of variation under 0.15. In this mode nothing is learned and the source is never `cadence`.
+- Storage and privacy: motion sensor data stays on the phone. From the sensor work the server receives only the speed number and its source, and the position is sent with each request as before. The speed, its source and the position are never logged (the access log strips `walk_speed`, `walk_speed_source`, the position and the fix time), never written to SQLite, and never given to OpenAI, which still sees only whole minutes. The observations log does not store the user's position or GPS accuracy either (see the logging paragraph in section 3). The local storage keys used for walking data are `bus-catch-step-length` (length, count, date) and `bus-catch-pace` (pace, date). No raw sensor data, position or position time is stored. If storage is unavailable everything still works for the session. A hosting proxy can still record request URLs; the app cannot control that. A request that fails validation returns the usual 422 with each error's `type`, `loc` and `msg` but without the value the client sent (no `input` and no `ctx`), so a bad coordinate or speed is never echoed back. No validator or validation rule changes. The request-logging filter also covers uvicorn's trace-level request records (the `uvicorn.asgi` logger, which prints each request's query string), so the position and the speed are removed there too.
+- Lifecycle: the sensors and one `watchPosition` start only after a "Start journey" tap, while polling runs on the live pages, in the foreground. They stop on Yes, No, the end card, Back or Leave, a hidden page (they resume when it is visible again), leaving the live pages, and after two polls in a row with `near_stop` (then the estimator stays off for that leg and the last smoothed speed keeps being sent). They never run on the Leg 2 page, on the "on your way" overview, or in Demo Mode. The iOS motion permission is requested once, inside the tap, and the journey never waits for it. This is not background tracking and adds no polling timer.
+- The existing per-poll `getCurrentPosition` is unchanged. A newer fix from the watch may be used by the next request.
+- The overview shows a muted line above "Start journey": `Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before.` or, when the permission is denied or there is no motion sensor, `Motion sensor is off, so your steps are not used.` The line is muted and silent (aria-live off), and it is empty in Demo Mode. No menu row is added.
 
 ### Pace guidance
 
 Pace guidance is a display hint beside the catch-probability ring. It does not change the point, the range, `chosen_action`, leave-by, notification timing, or reroute decisions. It is not written into the OpenAI fact sheet and it is not stored in SQLite `observations`.
 
-Pace guidance uses the assumed walking speed of 1.25 m/s (range 1.1–1.4 m/s) already used by the catch-probability engine. It does not read or use the browser's measured GPS speed (`coords.speed`), and it does not try to learn the user's own pace.
+Pace guidance uses the speed used by the catch-probability engine (the user's measured walking speed, or 1.25 m/s by default) and its range. "Walk slower" and "Walk faster" are therefore relative to the measured pace, and "Walk faster" never implies more than 1.4 m/s (see the headroom rule in the walking-speed paragraph above). The rules below are unchanged. Measuring the speed is done on the phone, as described under **Walking speed**.
 
 The scoring response adds a `pace` field. That field is the category from the rules below, before the two-poll display smoother. The page hides the chip when the category is absent.
 
@@ -174,7 +201,7 @@ flowchart TD
   better -->|no| none[SayNoBetterOption]
 ```
 
-A stale or failed poll never triggers a switch. The authoritative Step 9 leave-by formula is `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / 1.1`. The existing 60 s leave-now margin is not part of the Step 9 leave-by calculation. It is used only in Step 10 as `notification_time = leave_by - 60s`. Destination ride duration is not part of the leave-by formula or the notification trigger. Leave-now notification behavior is specified in **Step 10 specification**. Reroute detection and reroute notifications belong to Step 11.
+A stale or failed poll never triggers a switch. The authoritative Step 9 leave-by formula is `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / slow_speed`, and `slow_speed` is the slow end of the speed used (1.1 m/s at the default 1.25 m/s). The existing 60 s leave-now margin is not part of the Step 9 leave-by calculation. It is used only in Step 10 as `notification_time = leave_by - 60s`. Destination ride duration is not part of the leave-by formula or the notification trigger. Leave-now notification behavior is specified in **Step 10 specification**. Reroute detection and reroute notifications belong to Step 11.
 
 OpenAI call timing, the fact sheet, in-flight handling, and the data-quality filter are locked in **Step 12 specification**. Do not call OpenAI on every 20-second poll. Do not call it to choose the place or the destination stop.
 
@@ -200,7 +227,7 @@ The live journey is two views of one journey, with one poll, one set of state an
 
 **Page C, the options page.** Nothing from Page A appears on it: no pace chip, no Leave by or Estimated arrival tiles, no If you miss it, no Page A AI card, no sticky button and no compact warning. Unlikely entry, top to bottom: the current-bus card (the probability ring, `Chance to catch your Bus {service}`, a muted `Arriving in {n} min · {stop name}` line, `Range: {a} – {b}%`, the LIVE or SCHEDULE ONLY pill, `if you leave now and walk at a normal pace`, a warning line `Catching this bus is unlikely. Here are your other options.` and a `See bus arrival times` button that opens Page B for the current bus); the recommended card (heading chip `Better option found`) with its AI Explanation block; the `Alternative options` list. The unlikely entry chooses from all eligible options and does not apply the improvement rule. If the current bus becomes catchable again the warning line hides and the page does not navigate. When nothing is eligible, the current-bus card, the existing no-better-option card and the list (heading `Other buses at your stop`) show, with no recommended card and no AI block. Missed entry (after `No, I missed it`): no current-bus card; `Bus {service} has left. Here are your other options.` is the top element, then the recommended card (chip `Recommended option`) and the list. Every probability names its bus. The header of the list has a refresh icon button and a muted `Updated {time}`: it re-runs the options search with the existing `MANUAL_REFRESH_MIN_SECONDS` cooldown (aria-disabled while cooling down, spinning while it runs and static under reduced motion, disabled in Demo Mode). Back from the unlikely entry asks `Leave this journey?` while polling runs; after `No` polling has stopped, so Back goes to the overview with no confirm. Worst-case LTA calls per minute: Pages A and B 3 (one poll every 20 s), or 12 while the server evaluates a reroute (up to 3 extra calls per poll); Page C 3 from polls plus 3 per refresh at the 10 s cooldown, at most 21; each entry search makes 3 calls.
 
-**Page A wording (a deliberate deviation from mockup 7).** The probability heading is `Chance to catch Bus {service}` with a muted `Arriving in {n} min · {boarding stop name}` line under it (one line, ellipsis, full name in a title attribute; the minutes are the arrival tile's, and with no ETA only the stop name shows). On Leg 2 the heading is `Chance to catch Bus {service} at {transfer stop name}` and the muted line shows the minutes only. The ring's aria-label reads `{p} percent chance of catching Bus {service} arriving in {n} minutes at {stop name}, range {a} to {b} percent`. The heading replaces `chance to catch`. The Leave by tile shows exactly one of two phrases and no clock time: `Leave now` when the Python action is `leave_now`, `Wait for Leave By Alert` when it is `wait`; it is not shown for `switch_route` or `do_not_rely`. The tile, the AI advice clause and the notification all follow that one action; between two polls the page applies the same leave-by test (60 seconds or less) to a `wait`. The pace chip shows only while the action is `leave_now`; it is hidden for `wait`, `switch_route` and `do_not_rely`. The pace categories keep `Walk slower` and `Walk slightly slower`. If you miss it shows the first later arrival of the same service after the tracked arrival, with its estimate from the one Step 9 estimate (anchored only when that arrival is live), and is hidden when there is none. In the question bar, `Yes, I caught it` is solid green and `No, I missed it` solid red, each with white text at 4.5:1 or better in both themes (`--action-yes`, `--action-no`), an icon, and at least 44 px tall.
+**Page A wording (a deliberate deviation from mockup 7).** The probability heading is `Chance to catch Bus {service}` with a muted `Arriving in {n} min · {boarding stop name}` line under it (one line, ellipsis, full name in a title attribute; the minutes are the arrival tile's, and with no ETA only the stop name shows). On Leg 2 the heading is `Chance to catch Bus {service} at {transfer stop name}` and the muted line shows the minutes only. The ring's aria-label reads `{p} percent chance of catching Bus {service} arriving in {n} minutes at {stop name}, range {a} to {b} percent`. The heading replaces `chance to catch`. The Leave by tile shows exactly one of two phrases and no clock time: `Leave now` when the Python action is `leave_now`, `Wait for Leave By Alert` when it is `wait`; it is not shown for `switch_route` or `do_not_rely`. The tile, the AI advice clause and the notification all follow that one action; between two polls the page applies the same leave-by test (60 seconds or less) to a `wait`. The pace chip shows only while the action is `leave_now`; it is hidden for `wait`, `switch_route` and `do_not_rely`. The pace categories keep `Walk slower` and `Walk slightly slower`. The caption under the ring follows the `walk_speed_source` the server returned for the poll: `if you leave now and keep walking at your current pace` for `gps` or `cadence`, `if you leave now and walk at your usual pace` for `remembered`, and the existing `if you leave now and walk at a normal pace` for `default`. A muted line under it, with aria-live off, always shows the server's `walk_speed_used` in km/h to one decimal: `Walking pace: {kmh} km/h · from GPS`, `· from your steps`, `· your usual pace` or `· normal pace` (1.25 m/s shows as 4.5 km/h). Leg 2 keeps its own caption and shows no pace line. If you miss it shows the first later arrival of the same service after the tracked arrival, with its estimate from the one Step 9 estimate (anchored only when that arrival is live), and is hidden when there is none. In the question bar, `Yes, I caught it` is solid green and `No, I missed it` solid red, each with white text at 4.5:1 or better in both themes (`--action-yes`, `--action-no`), an icon, and at least 44 px tall.
 
 The boarding-stop screen and the route-options screen were removed. After the destination stop is confirmed, the app picks the boarding stop and the route (Step 14, section 1) and opens the journey overview.
 
@@ -350,6 +377,7 @@ Sections that currently define user-facing strings:
 - Step 12 specification: the AI Explanation title, `● Updating explanation...`, the fallback template, and the four action sentences
 - Step 13 specification: `SIMULATED DEMO MODE`, `[SIMULATED]`, and the seven scenario names
 - Step 14 specification: the no-feasible-route sentence, the three option labels, the caution banner, and the question bar, transfer alert and end card strings in that section (proposed, needs approval)
+- Section 3, Walking speed: the two extra probability captions, the four `Walking pace` lines, and the two overview motion-sensor lines (approved)
 
 ### Live screen simplification
 
@@ -419,11 +447,11 @@ For a one-transfer route, the arrive-by check uses the sum of both legs' ride mi
 
 ### Arrival range, spare minutes, and a missed bus
 
-The point estimate stays that same door-to-door total: the walk to the boarding stop at 1.25 m/s, half of Leg 1's published headway, the ride at 18 km/h (both legs on a transfer), and the walk on from the destination stop at 1.25 m/s, rounded up to a whole minute. The 45 s board buffer and the 60 s leave-now margin are not part of it. On track means the point is at or before the target. Risk of delay means it is after. Spare minutes are the target minus that same point. They are not shown as a line anywhere: only a negative value is used, as the late wording (`about N min late`) inside If you miss it. The Arrive-by check badge sits at the top left of the AI Explanation card (under the tiles when that card is not shown), is hidden with no target, and is prefixed `If you catch this bus: ` when the ring band is mid or low, because it assumes the user catches this bus. The range changes only the end walk and the ride: early uses 1.4 m/s and ride × (1 − RIDE_TOLERANCE), late uses 1.1 m/s and ride × (1 + RIDE_TOLERANCE), and RIDE_TOLERANCE is 0.15. A null ride still shows N/A and no invented number. A second live arrival can be estimated with those terms, assuming the user catches that bus. When the tracked bus has a live (monitored) arrival time, the estimate is anchored to it: the half-headway wait is replaced by the wait for that bus (the larger of the walk and the time until it arrives) and no other term changes. A schedule-only bus, or a bus with no live arrival, keeps the planned basis. The live tile, the new-journey overview and the reroute options all use this one estimate. If every route option the app considered arrives after the target, a non-blocking warning says so.
+The point estimate stays that same door-to-door total: the walk to the boarding stop at the speed used (1.25 m/s by default), half of Leg 1's published headway, the ride at 18 km/h (both legs on a transfer), and the walk on from the destination stop at the speed used, rounded up to a whole minute. The 45 s board buffer and the 60 s leave-now margin are not part of it. On track means the point is at or before the target. Risk of delay means it is after. Spare minutes are the target minus that same point. They are not shown as a line anywhere: only a negative value is used, as the late wording (`about N min late`) inside If you miss it. The Arrive-by check badge sits at the top left of the AI Explanation card (under the tiles when that card is not shown), is hidden with no target, and is prefixed `If you catch this bus: ` when the ring band is mid or low, because it assumes the user catches this bus. The range changes only the end walk and the ride: early uses the fast end of the speed used (1.4 m/s at the default) and ride × (1 − RIDE_TOLERANCE), late uses the slow end (1.1 m/s at the default) and ride × (1 + RIDE_TOLERANCE), and RIDE_TOLERANCE is 0.15. A null ride still shows N/A and no invented number. A second live arrival can be estimated with those terms, assuming the user catches that bus. When the tracked bus has a live (monitored) arrival time, the estimate is anchored to it: the half-headway wait is replaced by the wait for that bus (the larger of the walk and the time until it arrives) and no other term changes. A schedule-only bus, or a bus with no live arrival, keeps the planned basis. The live tile, the new-journey overview and the reroute options all use this one estimate. If every route option the app considered arrives after the target, a non-blocking warning says so.
 
 ### Leave-by calculation
 
-The authoritative Step 9 formula is `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / 1.1`.
+The authoritative Step 9 formula is `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / slow_speed`, and `slow_speed` is the slow end of the speed used (1.1 m/s at the default 1.25 m/s).
 
 The 45 s board buffer, the 60 s leave-now margin, the 60 s location-fix age threshold, and the 60 s stale-arrival-data threshold stay separate. The 60 s leave-now margin is not part of the Step 9 leave-by calculation. The 60 s location-fix age threshold and the 60 s stale-arrival-data threshold are not terms in this formula.
 
@@ -447,7 +475,7 @@ Step 10 is strictly limited to leave-now browser notifications. Reroute detectio
 
 ### 1. Leave-now trigger
 
-The Step 9 leave-by formula remains `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / 1.1`.
+The Step 9 leave-by formula remains `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / slow_speed`, and `slow_speed` is the slow end of the speed used (1.1 m/s at the default 1.25 m/s).
 
 The Step 10 notification trigger is `notification_time = leave_by - 60s`, where the 60 s is the existing leave-now margin.
 
@@ -675,7 +703,7 @@ Log a scored poll that does not reroute, that finds no better alternative, that 
 
 A stale or failed poll with no valid score is not a scored poll. Those polls stay under the existing data-quality rules and do not insert an observation under this rule.
 
-Each row keeps the section 3 fields: timestamp, stop code, service, direction, ETA, `Monitored`, bus latitude/longitude, user latitude/longitude, GPS accuracy, walk metres, slack seconds, P, P_low, P_high, data quality, `reroute_fired`, and `reroute_reason`.
+Each row keeps the section 3 fields: timestamp, stop code, service, direction, ETA, `Monitored`, bus latitude/longitude, walk metres, slack seconds, P, P_low, P_high, data quality, `reroute_fired`, and `reroute_reason`. The user's position and GPS accuracy are not stored: their columns stay in the table and are always NULL.
 
 When the poll does not reroute, `reroute_fired = 0` and `reroute_reason` is empty. When a reroute fires, `reroute_fired = 1` and `reroute_reason` is exactly:
 
@@ -1349,7 +1377,7 @@ Ranking uses static route geometry and scheduled travel time only. Live LTA arri
 
 Generalized journey time is `T_total + transfer penalty`.
 
-- `T_total` reuses the existing door-to-door pieces: the walk to the boarding stop at 1.25 m/s, half of Leg 1's published headway, the ride at 18 km/h, and the walk from the confirmed destination stop to the place. For one transfer, the ride term is Leg 1 ride plus Leg 2 ride. No second half-headway is added.
+- `T_total` reuses the existing door-to-door pieces: the walk to the boarding stop at the speed used (1.25 m/s by default), half of Leg 1's published headway, the ride at 18 km/h, and the walk from the confirmed destination stop to the place at the same speed. For one transfer, the ride term is Leg 1 ride plus Leg 2 ride. No second half-headway is added.
 - Direct transfer penalty: 0 minutes.
 - One-transfer penalty: 10 equivalent minutes.
 
@@ -1459,7 +1487,7 @@ Step 14 remains bus-only. It does not add trains, crowding, fares, accounts, ser
 UI rules:
 
 - Every catch claim shows a point and a range, plus data quality: live, schedule only, location uncertain, or no history yet.
-- Copy is "about 64% (range 51–78%) if you leave now and walk at a normal pace." It is never "you'll make it." The catch sentence describes the probability, which is calculated at a normal walking pace, and pace guidance is a separate hint.
+- Copy is "about 64% (range 51–78%) if you leave now and walk at a normal pace" when the server used the default speed, "about 64% (range 51–78%) if you leave now and keep walking at your current pace" when the source is `gps` or `cadence`, and "about 64% (range 51–78%) if you leave now and walk at your usual pace" when it is `remembered`. It is never "you'll make it." The catch sentence describes the probability, which is calculated at the walking speed the server used and shown on the line under it, and pace guidance is a separate hint.
 - The leave action Python can emit is only `wait`, `leave_now`, `switch_route`, or `do_not_rely`, using the precedence in **Step 12 specification**.
 - Pace guidance is a display hint, separate from the four leave actions (`wait`, `leave_now`, `switch_route`, `do_not_rely`), and does not change them.
 
@@ -1499,11 +1527,12 @@ Failure scenarios already covered by unit tests in steps 6, 7, and 12. The judge
 - The user selects an OneMap result, then confirms one LTA stop. The app does not geocode with any other provider and does not draw a walking route.
 - Arrive-by is entered with the destination phrase so the selector can show its rough label. The live catch range still starts only after the stop is confirmed.
 - One active journey, no accounts.
-- Walk 1.25 m/s, band 1.1–1.4 m/s, board buffer 45 s, leave-now margin 60 s, reroute when the current primary `range_high` is below 40% and an alternative's `range_low` is at least 15 percentage points higher, as specified in **Step 11 specification**. Boarding-stop search radius 400 m. Ride speed 18 km/h for the arrive-by check only. The 60 s leave-now margin is not part of the Step 9 leave-by calculation. It is used only to set Step 10 notification timing: `notification_time = leave_by - 60s`.
+- Walk speed: the user's measured speed (0.5–1.4 m/s) or the 1.25 m/s default, with a range at 1.1/1.25 and 1.4/1.25 times it (1.1–1.4 m/s at the default), board buffer 45 s, leave-now margin 60 s, reroute when the current primary `range_high` is below 40% and an alternative's `range_low` is at least 15 percentage points higher, as specified in **Step 11 specification**. Boarding-stop search radius 400 m. Ride speed 18 km/h for the arrive-by check only. The 60 s leave-now margin is not part of the Step 9 leave-by calculation. It is used only to set Step 10 notification timing: `notification_time = leave_by - 60s`.
 - Stale means last good Bus Arrival response is older than 60 seconds.
 - `gpt-4o-mini` via the OpenAI API. Keys stay in `.env`.
 - On-time history does not affect the score until 20 observations exist in a service/stop/hour bucket.
 - Trains, crowding (`Load`), background tracking, fares, and turn-by-turn walking navigation are not in this build.
+- The motion sensor and one location watch run only in the foreground, between "Start journey" and the stop conditions under **Walking speed**. This is not background tracking.
 
 ## Decisions still open
 
@@ -1511,7 +1540,7 @@ Working default until you say otherwise. The exact ranking formula is the open p
 
 - Candidate destination stops are LTA stops within **600 m** of the selected coordinates (haversine). If none exist, say so. Do not widen the radius automatically.
 - A stop is **reachable** when some service's cached route includes it and also includes a stop within 400 m of the user, with the user's stop earlier in that direction.
-- Show up to **5** reachable stops, sorted by shortest walk (1.25 m/s for the minutes label). No blended numeric score yet.
+- Show up to **5** reachable stops, sorted by shortest walk (the speed used, 1.25 m/s by default, for the minutes label, rounded half up with a minimum of 1 minute). No blended numeric score yet.
 - The static duration used for that check is walk to a nearby boarding stop, plus the midpoint of the published frequency as a wait, plus `route km / 18 km/h`, plus the walk from the destination stop to the place. The arrive-by status labels and messages are the ones in **Arrive-by status** under **Step 9 specification**. That status is not a catch probability.
 - Unreachable stops, if shown, stay under the reachable list, capped at 3, labeled **no direct bus from near you — a transfer may still work**, and are not the default confirmation.
 

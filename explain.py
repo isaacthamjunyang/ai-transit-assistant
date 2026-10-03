@@ -16,7 +16,9 @@ from datetime import datetime
 from config import TRANSFER_BUS_SPEED_MPS
 from journey import parse_journey_time
 from lta_static import ENV_PATH, _read_env_value
-from nearby import WALK_SPEED_M_S, haversine_m
+from config import WALK_SPEED_DEFAULT_MPS
+from nearby import haversine_m
+from walk_speed import walk_minutes
 
 DEFAULT_MODEL = "gpt-4o-mini"
 TEMPERATURE = 0.2
@@ -204,9 +206,9 @@ def tile_minutes(arrival_iso: str | None, now: datetime) -> int | None:
     return round_half_up(seconds / 60)
 
 
-def overview_walk_minutes(distance_m: float) -> int:
+def overview_walk_minutes(distance_m: float, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS) -> int:
     """Whole minutes the journey overview shows for a walk: at least 1."""
-    return max(1, round_half_up(distance_m / WALK_SPEED_M_S / 60))
+    return walk_minutes(distance_m, walk_speed_m_s, "display")
 
 
 def reach_minutes(distance_m: float) -> int:
@@ -214,7 +216,9 @@ def reach_minutes(distance_m: float) -> int:
     return max(1, round_half_up(distance_m / TRANSFER_BUS_SPEED_MPS / 60))
 
 
-def boarding_walk_minutes(cache, stop_code: str, user_lat: float | None, user_lon: float | None) -> int | None:
+def boarding_walk_minutes(
+    cache, stop_code: str, user_lat: float | None, user_lon: float | None, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS
+) -> int | None:
     if cache is None or user_lat is None or user_lon is None:
         return None
     stop = cache.stop_by_code(stop_code)
@@ -224,7 +228,9 @@ def boarding_walk_minutes(cache, stop_code: str, user_lat: float | None, user_lo
     lon = stop.get("Longitude")
     if type(lat) not in (int, float) or type(lon) not in (int, float):
         return None
-    return overview_walk_minutes(haversine_m(float(user_lat), float(user_lon), float(lat), float(lon)))
+    return overview_walk_minutes(
+        haversine_m(float(user_lat), float(user_lon), float(lat), float(lon)), walk_speed_m_s
+    )
 
 
 def minutes_text(count: int) -> str:
@@ -501,6 +507,7 @@ def build_poll_explanation(
     in_flight: bool,
     reroute_fired: bool,
     reach_distance_m: float | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     """The card's text for this poll, plus whether a model clause is needed for the action.
 
@@ -521,7 +528,11 @@ def build_poll_explanation(
         arrival = reroute.get("arrival_time")
         stop = reroute.get("stop") if isinstance(reroute.get("stop"), dict) else {}
         distance = stop.get("distance_m")
-        walk = overview_walk_minutes(float(distance)) if isinstance(distance, (int, float)) and not isinstance(distance, bool) else None
+        walk = (
+            overview_walk_minutes(float(distance), walk_speed_m_s)
+            if isinstance(distance, (int, float)) and not isinstance(distance, bool)
+            else None
+        )
         band = None
         if isinstance(point, int) and not isinstance(point, bool):
             from catch_heuristic import ring_band
@@ -539,7 +550,7 @@ def build_poll_explanation(
         if leg2:
             walk = reach_minutes(float(reach_distance_m))
         else:
-            walk = boarding_walk_minutes(cache, stop_code, user_lat, user_lon)
+            walk = boarding_walk_minutes(cache, stop_code, user_lat, user_lon, walk_speed_m_s)
     bus_minutes = tile_minutes(arrival, now)
     if (
         bus_minutes is None

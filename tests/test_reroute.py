@@ -1097,7 +1097,8 @@ def test_scored_poll_logging_is_one_row_and_skips_a_poll_with_no_score(tmp_path)
     assert rows[0]["p_high"] == 39
     assert rows[0]["eta"] == "2026-09-29T14:08:00+08:00"
     assert rows[0]["monitored"] == 1
-    assert rows[0]["gps_accuracy"] == 12
+    assert rows[0]["gps_accuracy"] is None  # the position and its accuracy are not stored
+    assert rows[0]["user_lat"] is None and rows[0]["user_lon"] is None
 
 
 def test_unavailable_poll_does_not_write_a_scored_observation(tmp_path, monkeypatch):

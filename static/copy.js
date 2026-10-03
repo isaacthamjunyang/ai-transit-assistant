@@ -201,6 +201,9 @@ var copy = {
     editDestination: "Edit destination",
     editArriveBy: "Edit arrive by time",
     startJourney: "Start journey",
+    /* approved: above Start journey. The server does receive the speed number. */
+    motionPrivacy: "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before.",
+    motionOff: "Motion sensor is off, so your steps are not used.",
     planning: "Planning your journey…",
     needLocation: "Location unavailable. Destination stops need your current location.",
     tryAgain: "Try again",
@@ -234,6 +237,14 @@ var copy = {
     chanceToCatchLeg2: "Chance to catch Bus {service} at {stop}",
     range: "Range: {range_low} – {range_high}%",
     caption: "if you leave now and walk at a normal pace",
+    /* proposed, approved: the caption follows the source the server reports for the walking speed */
+    captionCurrentPace: "if you leave now and keep walking at your current pace",
+    captionUsualPace: "if you leave now and walk at your usual pace",
+    /* approved: the muted line under the caption; {kmh} is the server's walk_speed_used x 3.6, one decimal */
+    walkPaceGps: "Walking pace: {kmh} km/h · from GPS",
+    walkPaceSteps: "Walking pace: {kmh} km/h · from your steps",
+    walkPaceUsual: "Walking pace: {kmh} km/h · your usual pace",
+    walkPaceNormal: "Walking pace: {kmh} km/h · normal pace",
     unavailable: "Unavailable",
     missed: "Missed",
     leaveBy: "Leave by",

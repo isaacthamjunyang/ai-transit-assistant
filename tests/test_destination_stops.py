@@ -108,7 +108,7 @@ def test_radius_is_inclusive_at_600_metres_and_uses_haversine():
     by_code = {stop["stop_code"]: stop for stop in body["unreachable_stops"]}
     raw_inside = haversine_m(PLACE[0], PLACE[1], inside[0], inside[1])
     assert by_code["IN"]["distance_m"] == int(raw_inside + 0.5)
-    assert by_code["IN"]["walk_minutes"] == math.ceil(by_code["IN"]["distance_m"] / 75)
+    assert by_code["IN"]["walk_minutes"] == max(1, math.floor(by_code["IN"]["distance_m"] / 75 + 0.5))  # one rule: round half up, at least 1
     assert by_code["IN"]["stop_name"] == "Inside"
     assert by_code["IN"]["road_name"] == "Orchard Rd"
     assert by_code["IN"]["lat"] == inside[0]

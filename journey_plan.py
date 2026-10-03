@@ -17,6 +17,7 @@ import math
 import re
 from datetime import datetime, timedelta, timezone
 
+from config import WALK_SPEED_DEFAULT_MPS
 from journey import build_journey, parse_journey_time, planning_warning
 from lta_static import StopAndRouteCache
 from nearby import BOARDING_RADIUS_M, nearby_boarding_stops
@@ -80,6 +81,7 @@ def _journey_for(
     dest_lon: float,
     arrive_by: datetime | None,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """The existing Step 9 journey for one option, with the parameters the page sends after Start."""
     legs = option["legs"]
@@ -101,6 +103,7 @@ def _journey_for(
         leg2_ride_minutes=legs[1].get("ride_minutes") if transfer else None,
         leg1_service_no=first["service_no"] if transfer else None,
         leg1_direction=first.get("direction") if transfer else None,
+        walk_speed_m_s=walk_speed_m_s,
     )
 
 
@@ -114,9 +117,12 @@ def plan_journey(
     dest_lon: float,
     arrive_by: datetime | None = None,
     now: datetime | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     moment = now if now is not None else datetime.now(SGT)
-    candidates = nearby_boarding_stops(cache, user_lat, user_lon, BOARDING_RADIUS_M)
+    candidates = nearby_boarding_stops(
+        cache, user_lat, user_lon, BOARDING_RADIUS_M, walk_speed_m_s=walk_speed_m_s
+    )
     options = []
     for stop in candidates:
         planned = plan_route(
@@ -128,6 +134,7 @@ def plan_journey(
             dest_lat,
             dest_lon,
             now=moment,
+            walk_speed_m_s=walk_speed_m_s,
         )
         if planned.get("route_status") != "ok":
             continue
@@ -146,6 +153,7 @@ def plan_journey(
                 dest_lon=dest_lon,
                 arrive_by=arrive_by,
                 now=moment,
+                walk_speed_m_s=walk_speed_m_s,
             )
             journeys[id(option)] = journey
             point = journey.get("arrival_point")
@@ -174,6 +182,7 @@ def plan_journey(
         dest_lon=dest_lon,
         arrive_by=arrive_by,
         now=moment,
+        walk_speed_m_s=walk_speed_m_s,
     )
     minutes = [option.get("generalized_time_minutes") for option in picked["ordered"]]
     warning = planning_warning(moment, arrive_by, minutes) if picked["reason"] == TARGET_MISSED else None

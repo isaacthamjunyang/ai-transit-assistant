@@ -96,7 +96,8 @@ def test_nearby_stops_are_sorted_by_distance_with_no_cap():
 def test_walk_minutes_uses_one_point_two_five_metres_per_second():
     assert walk_minutes(328) == 4
     assert walk_minutes(75) == 1
-    assert walk_minutes(0) == 0
+    assert walk_minutes(0) == 1  # one rule for every shown walking time: at least 1 minute
+    assert walk_minutes(20) == 1
     cache = StopAndRouteCache(
         [_stop("08057", "Dhoby Ghaut Stn", *_north(USER_LAT, USER_LON, 328))],
         [_route("7", "08057")],

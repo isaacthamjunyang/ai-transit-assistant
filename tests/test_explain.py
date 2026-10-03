@@ -105,7 +105,7 @@ def test_walk_minutes_use_the_overview_rounding():
     assert overview_walk_minutes(0) == 1 and overview_walk_minutes(20) == 1  # never zero, as on the overview
     assert overview_walk_minutes(225) == 3 and overview_walk_minutes(262) == 3 and overview_walk_minutes(263) == 4
     html = INDEX.read_text(encoding="utf-8")
-    assert "Math.max(1, Math.round(metres / 1.25 / 60))" in html
+    assert "Math.max(1, Math.round(metres / serverWalkSpeed / 60))" in html
     assert reach_minutes(450) == 2  # Leg 2: 450 m at 18 km/h
 
 

@@ -5,6 +5,8 @@ choice, and chosen_action stay elsewhere. This module only classifies a
 category for the chip next to the probability ring.
 """
 
+from config import PACE_MIN_HEADROOM_MPS
+
 PACE_HIDE_DISTANCE_M = 30
 PACE_UNLIKELY_RANGE_HIGH = 40
 PACE_FASTER_BELOW = 50
@@ -32,12 +34,18 @@ def pace_guidance(
     location_uncertain,
     distance_to_stop_m,
     previous_category,
+    headroom_mps=None,
 ):
     """Return the threshold category, or None when the chip stays hidden.
 
     First match wins. ``previous_category`` does not change this result:
     a single previous value cannot remember that a slower category was
     already seen once. ``smooth_pace`` applies that two-poll rule.
+
+    ``headroom_mps`` is the fast end speed minus the point speed. When it is below
+    PACE_MIN_HEADROOM_MPS the user is at or near the top of a normal walk, so there is
+    nothing faster to advise: "faster" becomes "unlikely" (the chance is below 50 even
+    at the top normal pace) and "slightly_faster" becomes "steady".
     """
     del previous_category
     if data_quality in _HIDDEN_QUALITY or location_uncertain is True:
@@ -46,9 +54,12 @@ def pace_guidance(
         return None
     if range_high < PACE_UNLIKELY_RANGE_HIGH:
         return "unlikely"
+    no_headroom = headroom_mps is not None and round(headroom_mps, 6) < PACE_MIN_HEADROOM_MPS
     if point < PACE_FASTER_BELOW:
-        return "faster"
+        return "unlikely" if no_headroom else "faster"
     if PACE_FASTER_BELOW <= point < PACE_SLIGHTLY_FASTER_BELOW:
+        if no_headroom:
+            return "steady"
         return "slightly_faster"
     if range_low >= PACE_SLOWER_RANGE_LOW and data_quality != "schedule":
         return "slower"
@@ -108,6 +119,11 @@ class PaceSession:
         )
         self.display, self.pending = smooth_pace(raw, self.display, self.pending)
         return self.display
+
+
+def is_near_stop(distance_to_stop_m) -> bool:
+    """The one 30 m rule: pace guidance hides, and the page's motion estimator stops, inside it."""
+    return _closer_than_hide(distance_to_stop_m)
 
 
 def _closer_than_hide(distance_to_stop_m) -> bool:

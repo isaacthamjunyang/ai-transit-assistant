@@ -2,6 +2,11 @@
 
 This is the observations table named in the plan. It does not call LTA,
 OneMap, or OpenAI.
+
+The user's position is not stored. The columns user_lat, user_lon and gps_accuracy stay in the table
+(so there is no migration) but are always written as NULL, whatever the caller passes. The log keeps
+the poll time, the stop, the bus position, the ETA, the probabilities, the data quality and the walk
+distance.
 """
 
 import sqlite3
@@ -50,7 +55,8 @@ INSERT INTO observations (
 
 
 def record_observation(row: dict, db_path: Path | None = None) -> None:
-    """Insert one scored-poll row. Missing keys are stored as NULL."""
+    """Insert one scored-poll row. Missing keys are stored as NULL. The user's position and the GPS
+    accuracy are never stored: those three columns are NULL on every row."""
     path = DEFAULT_DB_PATH if db_path is None else db_path
     stored = {
         "timestamp": row.get("timestamp"),
@@ -61,9 +67,9 @@ def record_observation(row: dict, db_path: Path | None = None) -> None:
         "monitored": row.get("monitored"),
         "bus_lat": row.get("bus_lat"),
         "bus_lon": row.get("bus_lon"),
-        "user_lat": row.get("user_lat"),
-        "user_lon": row.get("user_lon"),
-        "gps_accuracy": row.get("gps_accuracy"),
+        "user_lat": None,
+        "user_lon": None,
+        "gps_accuracy": None,
         "walk_metres": row.get("walk_metres"),
         "slack_seconds": row.get("slack_seconds"),
         "p": row.get("p"),

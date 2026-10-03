@@ -14,6 +14,7 @@ import httpx
 
 import demo
 from catch_heuristic import score_buses
+from config import WALK_SPEED_DEFAULT_MPS
 from journey import leave_by_for_buses
 from leave_now import leave_now_notice, notification_time_iso
 from lta_static import BASE_URL, REQUEST_TIMEOUT_SECONDS, StopAndRouteCache, read_account_key
@@ -45,6 +46,7 @@ def fetch_arrivals(
     cache: StopAndRouteCache | None = None,
     reach_speed_m_s: float | None = None,
     reach_range_fraction: float = 0.25,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     key = read_account_key() if account_key is None else account_key.strip()
     if not key:
@@ -83,6 +85,7 @@ def fetch_arrivals(
         now=moment,
         reach_speed_m_s=reach_speed_m_s,
         reach_range_fraction=reach_range_fraction,
+        walk_speed_m_s=walk_speed_m_s,
     )
     result["leave_by"] = leave_by_for_buses(
         result["buses"],
@@ -91,6 +94,7 @@ def fetch_arrivals(
         user_lon=user_lon,
         cache=cache,
         now=moment,
+        walk_speed_m_s=walk_speed_m_s,
     )
     result["notification_time"] = notification_time_iso(result["leave_by"])
     result["leave_now"] = leave_now_notice(
@@ -116,6 +120,7 @@ def fetch_stop_arrivals(
     accuracy: float | None = None,
     location_timestamp: float | None = None,
     cache: StopAndRouteCache | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict[str, dict]:
     """Every wanted service at one stop from a single BusArrival call with ServiceNo omitted.
 
@@ -158,6 +163,7 @@ def fetch_stop_arrivals(
             location_timestamp=location_timestamp,
             cache=cache,
             now=moment,
+            walk_speed_m_s=walk_speed_m_s,
         )
     return results
 
@@ -318,6 +324,7 @@ def _with_probability(
     now: datetime,
     reach_speed_m_s: float | None = None,
     reach_range_fraction: float = 0.25,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> list[dict]:
     stop = cache.stop_by_code(stop_code) if cache is not None else None
     stop_lat = stop.get("Latitude") if isinstance(stop, dict) else None
@@ -339,6 +346,7 @@ def _with_probability(
         now=now,
         reach_speed_m_s=reach_speed_m_s,
         reach_range_fraction=reach_range_fraction,
+        walk_speed_m_s=walk_speed_m_s,
     )
 
 

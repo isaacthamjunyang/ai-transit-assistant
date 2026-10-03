@@ -8,12 +8,14 @@ import math
 from datetime import datetime, timedelta, timezone
 
 from catch_heuristic import headway_seconds
+from config import WALK_SPEED_DEFAULT_MPS
 from lta_static import StopAndRouteCache
 from nearby import BOARDING_RADIUS_M, haversine_m
+from walk_speed import walk_minutes
 
 SGT = timezone(timedelta(hours=8))
 DESTINATION_RADIUS_M = 600
-WALK_SPEED_M_S = 1.25
+WALK_SPEED_M_S = WALK_SPEED_DEFAULT_MPS
 from config import BUS_SPEED_KM_H  # noqa: E402,F401  (defined once in config)
 
 
@@ -26,6 +28,7 @@ def list_destination_stops(
     boarding_stop_code: str | None = None,
     service_no: str | None = None,
     now: datetime | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """Stops within 600 m of the place, split into reachable and unreachable."""
     moment = now if now is not None else datetime.now(SGT)
@@ -40,7 +43,7 @@ def list_destination_stops(
         # inclusive boundary when the haversine result is not exact.
         if place_m > DESTINATION_RADIUS_M + 1e-6:
             continue
-        card = _card(stop, place_m)
+        card = _card(stop, place_m, walk_speed_m_s)
         links = _links(hops, origins, card["stop_code"])
         if not links:
             card["is_reachable"] = False
@@ -51,10 +54,10 @@ def list_destination_stops(
             continue
         services = _unique_services(link["service"] for link in links)
         estimate_origin = _estimate_origin(links, boarding_stop_code)
-        chosen = _choose_link(cache, links, estimate_origin, preferred, place_m, moment)
+        chosen = _choose_link(cache, links, estimate_origin, preferred, place_m, moment, walk_speed_m_s)
         card["is_reachable"] = True
         card["connecting_services"] = services
-        terms = None if chosen is None else _arrival_terms(cache, chosen, place_m, moment)
+        terms = None if chosen is None else _arrival_terms(cache, chosen, place_m, moment, walk_speed_m_s)
         card["arrival_terms"] = terms
         card["rough_journey_minutes"] = (
             None if terms is None else math.ceil(terms["total_minutes"])
@@ -173,6 +176,7 @@ def _choose_link(
     preferred: str | None,
     place_m: float,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     usable = [
         link
@@ -181,7 +185,7 @@ def _choose_link(
     ]
 
     def duration(link: dict) -> tuple:
-        return (_total_minutes(cache, link, place_m, now), link["service"])
+        return (_total_minutes(cache, link, place_m, now, walk_speed_m_s), link["service"])
 
     if preferred:
         preferred_links = [link for link in usable if link["service"] == preferred]
@@ -197,6 +201,7 @@ def _arrival_terms(
     link: dict,
     place_m: float,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """The four Step 9 terms, unrounded. The total matches `_total_minutes`."""
     record = _service_record(cache.services, link["service"], link["direction"])
@@ -211,10 +216,10 @@ def _arrival_terms(
         destination_code if isinstance(destination_code, str) else None,
         now,
     )
-    board = link["user_m"] / WALK_SPEED_M_S / 60
+    board = walk_minutes(link["user_m"], walk_speed_m_s)
     wait = (headway / 2) / 60
     ride = (link["route_km"] / BUS_SPEED_KM_H) * 60
-    end = place_m / WALK_SPEED_M_S / 60
+    end = walk_minutes(place_m, walk_speed_m_s)
     return {
         "board_walk_minutes": board,
         "wait_minutes": wait,
@@ -229,8 +234,9 @@ def _total_minutes(
     link: dict,
     place_m: float,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> float:
-    return _arrival_terms(cache, link, place_m, now)["total_minutes"]
+    return _arrival_terms(cache, link, place_m, now, walk_speed_m_s)["total_minutes"]
 
 
 def _service_record(services: list[dict], service_no: str, direction: int) -> dict | None:
@@ -243,7 +249,7 @@ def _service_record(services: list[dict], service_no: str, direction: int) -> di
     return None
 
 
-def _card(stop: dict, place_m: float) -> dict:
+def _card(stop: dict, place_m: float, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS) -> dict:
     distance_m = int(place_m + 0.5)
     road = stop.get("RoadName")
     return {
@@ -253,7 +259,7 @@ def _card(stop: dict, place_m: float) -> dict:
         "lat": stop["Latitude"],
         "lon": stop["Longitude"],
         "distance_m": distance_m,
-        "walk_minutes": math.ceil(distance_m / 75),
+        "walk_minutes": walk_minutes(distance_m, walk_speed_m_s, "display"),
     }
 
 

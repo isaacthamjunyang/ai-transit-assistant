@@ -8,13 +8,14 @@ later step has enough observations.
 import math
 from datetime import datetime, timedelta, timezone
 
-from config import RING_BAND_MID_FROM, RING_BAND_OK_FROM
+from config import ERROR_MODEL_SPEED_MPS, RING_BAND_MID_FROM, RING_BAND_OK_FROM, WALK_SPEED_DEFAULT_MPS
 from nearby import haversine_m
 from pace import pace_guidance
+from walk_speed import range_speeds
 
 SGT = timezone(timedelta(hours=8))
 
-POINT_WALK_M_S = 1.25
+POINT_WALK_M_S = WALK_SPEED_DEFAULT_MPS
 SLOW_WALK_M_S = 1.1
 FAST_WALK_M_S = 1.4
 BOARDING_BUFFER_S = 45
@@ -64,7 +65,7 @@ def low_slack(
         seconds_until_eta
         - walk_seconds(distance_m, speed_m_s)
         - BOARDING_BUFFER_S
-        - (accuracy_m / POINT_WALK_M_S)
+        - (accuracy_m / ERROR_MODEL_SPEED_MPS)
         - HISTORICAL_LATENESS_S
     )
 
@@ -175,7 +176,7 @@ def effective_accuracy_m(accuracy_m: float, age_seconds: float | None) -> float:
     accuracy = float(accuracy_m)
     if age_seconds is None or age_seconds <= UNCERTAIN_AGE_S:
         return accuracy
-    return max(accuracy, float(UNCERTAIN_ACCURACY_M)) + POINT_WALK_M_S * (
+    return max(accuracy, float(UNCERTAIN_ACCURACY_M)) + ERROR_MODEL_SPEED_MPS * (
         age_seconds - UNCERTAIN_AGE_S
     )
 
@@ -196,6 +197,7 @@ def score_buses(
     location_timestamp: float | None = None,
     reach_speed_m_s: float | None = None,
     reach_range_fraction: float = 0.25,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> list[dict]:
     """Return buses with probability filled in. Does not reorder them.
 
@@ -208,7 +210,7 @@ def score_buses(
         slow_speed = reach_speed_m_s / (1 + reach_range_fraction)
         fast_speed = reach_speed_m_s / (1 - reach_range_fraction)
     else:
-        point_speed, slow_speed, fast_speed = POINT_WALK_M_S, SLOW_WALK_M_S, FAST_WALK_M_S
+        point_speed, slow_speed, fast_speed = range_speeds(walk_speed_m_s)
     moment = _as_sgt(now)
     age_seconds = (
         None
@@ -294,6 +296,7 @@ def score_buses(
             location_uncertain=quality == "location uncertain",
             distance_to_stop_m=distance_m,
             previous_category=None,
+            headroom_mps=None if reach_speed_m_s is not None else fast_speed - point_speed,
         )
         scored.append(item)
     return scored

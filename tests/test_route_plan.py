@@ -580,8 +580,10 @@ def test_two_leg_plan_then_leg_2_poll_uses_the_transfer_stop(monkeypatch):
 
     def fake_fetch(stop_code, service_no, user_lat=None, user_lon=None, accuracy=None, location_timestamp=None, cache=None, **kwargs):
         polls.append((stop_code, service_no))
-        moment = datetime.now(SGT)
-        arrival = (moment + timedelta(minutes=8)).replace(microsecond=0).isoformat()
+        # A whole-second clock: the two polls each read the clock, and a sub-second part rounded the slack
+        # difference to 199 or 201 now and then. With whole seconds both polls see exactly 480 s to the bus.
+        moment = datetime.now(SGT).replace(microsecond=0)
+        arrival = (moment + timedelta(minutes=8)).isoformat()
         buses = [{"arrival_time": arrival, "monitored": True, "position": "NextBus"}]
         scored = _with_probability(
             buses,

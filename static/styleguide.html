@@ -578,6 +578,8 @@
     crossorigin=""
   ></script>
   <script>
+    var cp = copy.catchPrompt;
+    var CHEVRON_SM = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     document.querySelectorAll("[data-copy]").forEach(function (el) {
       var value = copy;
       el.getAttribute("data-copy").split(".").forEach(function (part) {
@@ -993,7 +995,8 @@
         + "<h4>Screen 5: planning (loading)</h4>" + sgOverviewState("loading")
         + "<h4>Screen 5: no location</h4>" + sgOverviewState("no-location")
         + "<h4>Screen 5: no route</h4>" + sgOverviewState("no-route")
-        + "<h4>Start journey</h4><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
+        + "<h4>Start journey, with the motion privacy line above it</h4><p class=\"note\" aria-live=\"off\">" + jo.motionPrivacy + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
+        + "<h4>Start journey, motion sensor off or denied</h4><p class=\"note\" aria-live=\"off\">" + jo.motionOff + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
         + "<h4>Bus card: LIVE, refresh idle</h4><div class=\"card live-card\">" + sgBusCard("live", "", false) + "</div>"
         + "<h4>Bus card: SCHEDULE ONLY, refresh spinning</h4><div class=\"card live-card\">" + sgBusCard("schedule", "is-spinning", false) + "</div>"
         + "<h4>Bus card: stale, refresh disabled (cooldown or demo)</h4><div class=\"card live-card\">" + sgBusCard("stale", "", true) + "</div>"
@@ -1050,14 +1053,27 @@
         + sgPill(state).replace("class=\"pill ", "class=\"pill catch-card__pill ") + "</div>" + sub;
     }
 
-    function sgCatchCard(state, point, low, high, stop, eta) {
+    function sgCatchCard(state, point, low, high, stop, eta, walk) {
       var usable = point !== null;
+      var caption = walk && walk.caption ? walk.caption : lc.caption;
       return "<section class=\"card catch-card\" aria-live=\"polite\">"
         + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), sgSub(eta === undefined ? lc.arrivingIn.replace("{n}", "15") : eta, stop === undefined ? "Tanjong Rhu Stn Exit 2" : stop), state)
         + "<div class=\"catch-card__row\">" + sgRing(point, low, high, false, lc.unavailable)
         + "<div class=\"catch-card__copy\"><p class=\"catch-card__range\">"
         + (usable ? lc.range.replace("{range_low}", low).replace("{range_high}", high) : "") + "</p></div></div>"
-        + "<p class=\"catch-card__caption\">" + lc.caption + "</p></section>";
+        + "<p class=\"catch-card__caption\">" + caption + "</p>"
+        + (walk && walk.line ? "<p class=\"note\" aria-live=\"off\">" + walk.line + "</p>" : "") + "</section>";
+    }
+
+    // The four walking-speed sources: the caption and the muted pace line (1.25 m/s is 4.5 km/h).
+    function sgWalk(source, kmh) {
+      var map = {
+        gps: [lc.captionCurrentPace, lc.walkPaceGps],
+        cadence: [lc.captionCurrentPace, lc.walkPaceSteps],
+        remembered: [lc.captionUsualPace, lc.walkPaceUsual],
+        "default": [lc.caption, lc.walkPaceNormal]
+      };
+      return { caption: map[source][0], line: map[source][1].replace("{kmh}", kmh) };
     }
 
     function sgPaceChip(key) {
@@ -1197,6 +1213,17 @@
       return ""
         + "<h4>Probability card: live, with the pace chip</h4>" + sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady")
         + "<h4>Probability card: schedule only, no pace chip</h4>" + sgCatchCard("schedule", 41, 30, 52)
+        + "<h4>Walking pace: from GPS</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("gps", "4.7"))
+        + "<h4>Walking pace: from your steps</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("cadence", "4.3"))
+        + "<h4>Walking pace: your usual pace</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("remembered", "3.9"))
+        + "<h4>Walking pace: normal pace (1.25 m/s)</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("default", "4.5"))
+        + "<h4>Developer readout (only with ?pace=debug; delete before submission)</h4>"
+        + "<pre class=\"pace-debug pace-debug--sample\">mode gps (walking)
+cadence 1.82 score 0.91
+gps 1.30 m/s acc 8 m
+step 0.72 m n=4 learn: ok
+used 1.30 m/s gps smooth 1.29
+motion on events 1420</pre>"
         + "<h4>Page A heading with a long stop name (ellipsis, full name in the title)</h4>" + sgCatchCard("live", 64, 51, 78, SG_LONG_STOP)
         + "<h4>Page A heading with no ETA (stop name only)</h4>" + sgCatchCard("schedule", 41, 30, 52, "Tanjong Rhu Stn Exit 2", "")
         + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
@@ -1286,11 +1313,9 @@
     document.getElementById("quality-sample-dark").innerHTML = qualitySample();
 
     // Live flow samples: no-service layout, the map toggle, the question bar, overviews, reroute options, Leg 2.
-    var cp = copy.catchPrompt;
     var ta = copy.transferAlert;
     var l2 = copy.leg2;
     var CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
-    var CHEVRON_SM = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     var ROUTE_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20 10 8l4 6 6-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     var PIN_SVG_SG = '<svg class="dest-pin__svg" viewBox="0 0 32 40" aria-hidden="true" focusable="false"><path class="dest-pin__body" d="M16 38s12-11.6 12-22a12 12 0 1 0-24 0c0 10.4 12 22 12 22z"></path><circle class="dest-pin__dot" cx="16" cy="16" r="4.5"></circle></svg>';
 
@@ -1403,7 +1428,7 @@
         + "<h4>Merged card: none by the target</h4>" + sgMergedCard(rp.recommended, "reasonNoneByTarget", ["fastest"], "16")
         + "<h4>Pills alone and together</h4>" + sgPills(["highest_chance"]) + sgPills(["fastest"]) + sgPills(["highest_chance", "fastest"])
         + "<h4>Rows: same stop, different stop, low chance, after your target</h4>" + sgOptionList(rp.alternatives, rows, true)
-        + "<h4>Rows with no recommendation</h4>" + sgOptionList(rp.otherOptions, rows.slice(2), false)
+        + "<h4>Rows with no recommendation</h4>" + sgOptionList(rp.otherBuses, rows.slice(2), false)
         + "<h4>Reroute notices</h4>" + '<p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "36") + '</p>' + '<p class="banner banner--info reroute-notice">' + rp.alreadyLeft + '</p>'
         + "<h4>New-journey overview</h4>" + sgNewJourney();
     }
@@ -1437,7 +1462,7 @@
       var cards = kind === "live"
         ? sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady") + sgLeaveTiles(true)
           + '<div class="miss-row"><span>' + CLOCK_ICON + '</span><div><p class="miss-row__label">' + copy.arriveBy.missLabel + '</p><p>' + copy.arriveBy.missWithLate.replace("{service}", "36").replace("{minutes}", "8").replace("{point}", "6:36 PM").replace("{late}", "about 6 min late") + '</p></div></div>'
-          + sgAiCard("normal")
+          + sgAiCard("normal", { e: 5, w: 3, action: "leaveNow", band: "ok" })
         : "";
       return sgPageAlerts(kind === "live" ? "" : kind) + cards + sgSeeArrivalsBar();
     }

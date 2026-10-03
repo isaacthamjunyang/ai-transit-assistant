@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Body, FastAPI, Query
+from fastapi import Body, FastAPI, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 import math
@@ -12,9 +13,10 @@ import re
 
 import httpx
 
+import access_log_filter
 from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals
 import demo
-from config import LEG2_REACH_RANGE_FRACTION, PAGE_CONSTANTS, TRANSFER_BUS_SPEED_MPS
+from config import LEG2_REACH_RANGE_FRACTION, PAGE_CONSTANTS, TRANSFER_BUS_SPEED_MPS, WALK_SPEED_DEFAULT_MPS
 from explain import (
     ai_explanation_enabled,
     build_poll_explanation,
@@ -30,6 +32,7 @@ from journey import build_journey, bus_arrival_window, miss_line, parse_journey_
 from journey_plan import plan_journey
 from lta_static import load_static_data
 from nearby import BOARDING_RADIUS_M, haversine_m, nearby_boarding_stops
+from pace import is_near_stop
 from reroute import (
     SGT,
     _reaching_services,
@@ -56,6 +59,9 @@ from onemap import (
     reverse_geocode,
     search_destinations,
 )
+from walk_speed import resolve_walk_speed, response_fields
+
+access_log_filter.install()
 
 
 @asynccontextmanager
@@ -69,6 +75,25 @@ app = FastAPI(title="Bus Catch Assistant", lifespan=lifespan)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 INDEX_PATH = STATIC_DIR / "index.html"
+
+
+def _walk_speed(walk_speed, walk_speed_source) -> tuple[float, str]:
+    """The speed used for this request. Demo Mode ignores the client value so its fixtures stay fixed."""
+    return resolve_walk_speed(walk_speed, walk_speed_source, demo=demo.demo_enabled())
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """The usual 422 with each error's type, loc and msg, but without the offending value.
+
+    FastAPI's default response also carries `input` (the value the client sent) and `ctx`. A bad latitude or
+    longitude would be echoed back, so they are left out. No validator or validation rule changes.
+    """
+    errors = [
+        {"type": error.get("type"), "loc": list(error.get("loc", ())), "msg": error.get("msg")}
+        for error in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 
 @app.get("/")
@@ -108,6 +133,11 @@ def format_distance_js() -> FileResponse:
 @app.get("/sw.js")
 def service_worker_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "sw.js", media_type="text/javascript")
+
+
+@app.get("/walk-speed.js")
+def walk_speed_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "walk-speed.js", media_type="text/javascript")
 
 
 @app.get("/place-icons.js")
@@ -188,7 +218,10 @@ def arrivals(
     leg2_ride_minutes: Annotated[float | None, Query()] = None,
     leg1_direction: Annotated[int | None, Query()] = None,
     reroute: Annotated[int | None, Query()] = None,
+    walk_speed: Annotated[str | None, Query()] = None,
+    walk_speed_source: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
+    speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     stop_code = stop_code.strip()
     service_no = service_no.strip()
     if not stop_code or not service_no:
@@ -256,6 +289,7 @@ def arrivals(
             cache=cache,
             reach_speed_m_s=TRANSFER_BUS_SPEED_MPS if on_vehicle else None,
             reach_range_fraction=LEG2_REACH_RANGE_FRACTION,
+            walk_speed_m_s=speed,
         )
     except ArrivalUnavailable:
         content = {
@@ -265,6 +299,8 @@ def arrivals(
         if demo.timeout_is_active():
             content["simulated"] = True
         return JSONResponse(status_code=503, content=content)
+    payload.update(response_fields(speed, speed_source))
+    payload["near_stop"] = False if on_vehicle else _near_stop(cache, stop_code, lat, lon)
     if on_vehicle:
         payload["reach_stop"] = _reach_window(cache, stop_code, lat, lon, moment)
     if demo.apply_stale(payload, moment):
@@ -281,6 +317,7 @@ def arrivals(
             user_lon=lon,
             cache=cache,
             now=moment,
+            walk_speed_m_s=speed,
         )
         payload["pinned_eta_timestamp"] = updated_pin
     fired = False
@@ -293,7 +330,7 @@ def arrivals(
         and reroute_enabled(route_type, leg_index)
         and reroute != 0  # Page C is open: the page asks the server to skip this evaluation. Nothing else changes.
     ):
-        load_alternate = _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code)
+        load_alternate = _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code, speed)
 
         evaluation = payload
         if target is not None:
@@ -316,6 +353,7 @@ def arrivals(
             now=moment,
             loader=load_alternate,
             write_observation=False,
+            walk_speed_m_s=speed,
         )
         payload["reroute"] = decision
         fired = bool(decision.get("switched"))
@@ -348,6 +386,7 @@ def arrivals(
             in_flight=explanation_in_flight == 1,
             reroute_fired=fired,
             reach_distance_m=(payload.get("reach_stop") or {}).get("distance_m") if on_vehicle else None,
+            walk_speed_m_s=speed,
         )
         if pack is not None:
             payload["explanation"] = pack
@@ -378,8 +417,21 @@ def arrivals(
         leg1_ride_minutes=leg1_ride_minutes,
         leg2_ride_minutes=leg2_ride_minutes,
         leg1_direction=leg1_direction,
+        walk_speed_m_s=speed,
     )
     return payload
+
+
+def _near_stop(cache, stop_code, lat, lon) -> bool:
+    """True when the user is inside the 30 m rule that hides pace guidance (pace.is_near_stop)."""
+    stop = cache.stop_by_code(stop_code) if cache is not None else None
+    if not isinstance(stop, dict) or lat is None or lon is None:
+        return False
+    try:
+        distance = haversine_m(lat, lon, float(stop["Latitude"]), float(stop["Longitude"]))
+    except (KeyError, TypeError, ValueError):
+        return False
+    return is_near_stop(distance)
 
 
 def _reach_window(cache, stop_code, lat, lon, now) -> dict | None:
@@ -414,7 +466,11 @@ class _StopLoader:
     single-service lookup.
     """
 
-    def __init__(self, cache, lat, lon, accuracy, location_timestamp, moment, destination_code):
+    def __init__(
+        self, cache, lat, lon, accuracy, location_timestamp, moment, destination_code,
+        walk_speed_m_s=WALK_SPEED_DEFAULT_MPS,
+    ):
+        self.walk_speed_m_s = walk_speed_m_s
         self.cache = cache
         self.lat = lat
         self.lon = lon
@@ -436,6 +492,7 @@ class _StopLoader:
                 accuracy=self.accuracy,
                 location_timestamp=self.location_timestamp,
                 cache=self.cache,
+                walk_speed_m_s=self.walk_speed_m_s,
             )
         except ArrivalUnavailable as exc:
             return exc
@@ -467,6 +524,7 @@ class _StopLoader:
                 accuracy=self.accuracy,
                 location_timestamp=self.location_timestamp,
                 cache=self.cache,
+                walk_speed_m_s=self.walk_speed_m_s,
             )
         elif isinstance(entry, ArrivalUnavailable):
             raise entry
@@ -498,9 +556,13 @@ class _StopLoader:
         return self.get(code, service)
 
 
-def _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code):
+def _alternate_loader(
+    cache, lat, lon, accuracy, location_timestamp, moment, destination_code, walk_speed_m_s=WALK_SPEED_DEFAULT_MPS
+):
     """One BusArrival lookup per stop, scored and logged the same way as a poll."""
-    return _StopLoader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code)
+    return _StopLoader(
+        cache, lat, lon, accuracy, location_timestamp, moment, destination_code, walk_speed_m_s
+    )
 
 
 @app.get("/api/reroute-options", response_model=None)
@@ -517,6 +579,8 @@ def reroute_options(
     arrive_by: Annotated[str | None, Query()] = None,
     missed_eta: Annotated[float | None, Query()] = None,
     entry: Annotated[str, Query()] = "recommended",
+    walk_speed: Annotated[str | None, Query()] = None,
+    walk_speed_source: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
     """On-demand options (the missed entry and the unlikely entry). Same candidates and calls as the automatic search.
 
@@ -534,8 +598,9 @@ def reroute_options(
     except ValueError:
         return JSONResponse(status_code=422, content={"detail": "arrive_by must be an ISO timestamp."})
     moment = datetime.now(SGT)
+    speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     destination_code = destination_stop_code.strip()
-    loader = _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code)
+    loader = _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code, speed)
     current_stop = stop_code.strip()
     current_service = service_no.strip()
     # The current stop (every reaching service, one call) and the alternate stops are fetched together.
@@ -563,8 +628,10 @@ def reroute_options(
         loader=loader,
         missed_eta_epoch=missed_eta,
         entry=entry,
+        walk_speed_m_s=speed,
     )
     return {
+        **response_fields(speed, speed_source),
         "status": "ok",
         "stop_code": current.get("stop_code"),
         "service_no": current.get("service_no"),
@@ -643,6 +710,7 @@ def _attach_arrival_estimate(
     leg1_ride_minutes: float | None,
     leg2_ride_minutes: float | None,
     leg1_direction: int | None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> None:
     """Step 9 window and the second-arrival line from data this poll already has."""
     if (
@@ -671,6 +739,7 @@ def _attach_arrival_estimate(
         leg2_ride_minutes=leg2_ride_minutes,
         leg1_service_no=service_no,
         leg1_direction=leg1_direction,
+        walk_speed_m_s=walk_speed_m_s,
     )
     if built.get("arrival_point"):
         estimate = {
@@ -683,7 +752,10 @@ def _attach_arrival_estimate(
         # The tracked bus's live arrival anchors the estimate; without one the planned basis stays.
         tracked = _scored_journey_bus(payload.get("buses") or [])
         eta = _live_eta(tracked, now)
-        window = bus_arrival_window(now, built.get("arrival_terms"), eta, live=eta is not None, arrive_by=arrive_by)
+        window = bus_arrival_window(
+            now, built.get("arrival_terms"), eta, live=eta is not None, arrive_by=arrive_by,
+            walk_speed_m_s=walk_speed_m_s,
+        )
         if eta is not None and window is not None:
             estimate = {
                 "estimated_arrival": window["estimated_arrival"].replace(microsecond=0).isoformat(),
@@ -702,6 +774,7 @@ def _attach_arrival_estimate(
         built.get("arrival_terms"),
         arrive_by,
         tracked=_scored_journey_bus(payload.get("buses") or []),
+        walk_speed_m_s=walk_speed_m_s,
     )
 
 
@@ -829,7 +902,10 @@ def destination_stops(
     user_lon: Annotated[float, Query(ge=-180, le=180)],
     boarding_stop_code: Annotated[str | None, Query()] = None,
     service_no: Annotated[str | None, Query()] = None,
+    walk_speed: Annotated[str | None, Query()] = None,
+    walk_speed_source: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
+    speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     coordinates = (dest_lat, dest_lon, user_lat, user_lon)
     if any(not math.isfinite(value) for value in coordinates):
         return JSONResponse(
@@ -861,7 +937,7 @@ def destination_stops(
                 "detail": "Static stop data is unavailable.",
             },
         )
-    return list_destination_stops(
+    listed = list_destination_stops(
         cache,
         dest_lat,
         dest_lon,
@@ -869,7 +945,9 @@ def destination_stops(
         user_lon,
         boarding_stop_code=boarding,
         service_no=service,
+        walk_speed_m_s=speed,
     )
+    return {**listed, **response_fields(speed, speed_source)}
 
 
 @app.get("/api/journey", response_model=None)
@@ -889,7 +967,10 @@ def journey(
     leg2_ride_minutes: Annotated[float | None, Query()] = None,
     leg1_service_no: Annotated[str | None, Query()] = None,
     leg1_direction: Annotated[int | None, Query()] = None,
+    walk_speed: Annotated[str | None, Query()] = None,
+    walk_speed_source: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
+    speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     coordinates = (dest_lat, dest_lon, user_lat, user_lon)
     if any(not math.isfinite(value) for value in coordinates):
         return JSONResponse(
@@ -940,7 +1021,7 @@ def journey(
                 "detail": "Static stop data is unavailable.",
             },
         )
-    return build_journey(
+    built = build_journey(
         cache,
         dest_lat,
         dest_lon,
@@ -957,7 +1038,9 @@ def journey(
         leg2_ride_minutes=leg2_ride_minutes,
         leg1_service_no=leg1_service_no,
         leg1_direction=leg1_direction,
+        walk_speed_m_s=speed,
     )
+    return {**built, **response_fields(speed, speed_source)}
 
 
 @app.get("/api/journey-plan", response_model=None)
@@ -968,8 +1051,11 @@ def journey_plan(
     dest_lat: Annotated[float, Query(ge=-90, le=90)],
     dest_lon: Annotated[float, Query(ge=-180, le=180)],
     arrive_by: Annotated[str | None, Query()] = None,
+    walk_speed: Annotated[str | None, Query()] = None,
+    walk_speed_source: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
     """The app picks the boarding stop and the route. Static data only."""
+    speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     coordinates = (user_lat, user_lon, dest_lat, dest_lon)
     if any(not math.isfinite(value) for value in coordinates):
         return JSONResponse(
@@ -998,7 +1084,7 @@ def journey_plan(
                 "detail": "Static stop data is unavailable.",
             },
         )
-    return plan_journey(
+    planned = plan_journey(
         cache,
         user_lat=user_lat,
         user_lon=user_lon,
@@ -1006,7 +1092,9 @@ def journey_plan(
         dest_lat=dest_lat,
         dest_lon=dest_lon,
         arrive_by=parsed_arrive_by,
+        walk_speed_m_s=speed,
     )
+    return {**planned, **response_fields(speed, speed_source)}
 
 
 @app.get("/api/arrivals/peek", response_model=None)
@@ -1052,7 +1140,10 @@ def route_plan(
     dest_lon: Annotated[float, Query(ge=-180, le=180)],
     alternate_stops: Annotated[str | None, Query()] = None,
     arrive_by: Annotated[str | None, Query()] = None,
+    walk_speed: Annotated[str | None, Query()] = None,
+    walk_speed_source: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
+    speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     coordinates = (user_lat, user_lon, dest_lat, dest_lon)
     if any(not math.isfinite(value) for value in coordinates):
         return JSONResponse(
@@ -1094,6 +1185,7 @@ def route_plan(
         dest_lon,
         alternates,
         now=moment,
+        walk_speed_m_s=speed,
     )
     options = planned.get("options") or []
     minutes = [option.get("generalized_time_minutes") for option in options]
@@ -1101,4 +1193,5 @@ def route_plan(
         alternate = planned.get("alternate_stop") or {}
         minutes = [alternate.get("generalized_time_minutes")]
     planned["planning_warning"] = planning_warning(moment, parsed_arrive_by, minutes)
+    planned.update(response_fields(speed, speed_source))
     return planned

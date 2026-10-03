@@ -5,11 +5,13 @@ Distance is straight-line haversine, not a walking route.
 
 import math
 
+from config import WALK_SPEED_DEFAULT_MPS
 from lta_static import StopAndRouteCache
+from walk_speed import walk_minutes as _walk_minutes
 
 EARTH_RADIUS_M = 6_371_000
 BOARDING_RADIUS_M = 400
-WALK_SPEED_M_S = 1.25
+WALK_SPEED_M_S = WALK_SPEED_DEFAULT_MPS
 
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -25,9 +27,9 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return EARTH_RADIUS_M * arc
 
 
-def walk_minutes(distance_m: float) -> int:
-    """Nearest minute at 1.25 m/s. Half a minute rounds up."""
-    return int((distance_m / WALK_SPEED_M_S) / 60 + 0.5)
+def walk_minutes(distance_m: float, speed_m_s: float = WALK_SPEED_DEFAULT_MPS) -> int:
+    """Nearest minute at the walking speed, at least 1. Half a minute rounds up (the "display" mode)."""
+    return _walk_minutes(distance_m, speed_m_s, "display")
 
 
 def nearby_boarding_stops(
@@ -35,6 +37,7 @@ def nearby_boarding_stops(
     latitude: float,
     longitude: float,
     radius_m: float = BOARDING_RADIUS_M,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> list[dict]:
     services = _services_by_stop(cache.routes)
     found = []
@@ -58,7 +61,7 @@ def nearby_boarding_stops(
                 "latitude": stop["Latitude"],
                 "longitude": stop["Longitude"],
                 "distance_m": distance_m,
-                "walk_minutes": walk_minutes(distance_m),
+                "walk_minutes": walk_minutes(distance_m, walk_speed_m_s),
                 "_raw_m": raw,
             }
         )

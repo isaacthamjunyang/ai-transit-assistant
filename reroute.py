@@ -10,12 +10,13 @@ from datetime import datetime, timedelta, timezone
 
 from arrivals import BUS_POSITIONS, ArrivalUnavailable
 from catch_heuristic import MISSED_AFTER_S, is_location_uncertain, location_age_seconds, ring_band
-from config import MIN_REAL_CHANCE_RANGE_HIGH
+from config import MIN_REAL_CHANCE_RANGE_HIGH, WALK_SPEED_DEFAULT_MPS
 from destination_stops import _arrival_terms, _hops, _links, _total_minutes
 from explain import ACTION_ADVICE, compose_option_text
 from journey import bus_arrival_window, leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
 from nearby import BOARDING_RADIUS_M, haversine_m, walk_minutes
+from walk_speed import range_speeds
 from observations import record_observation
 from recommend import arrival_key, natural_key, pills, reason_text, recommend_option
 
@@ -53,6 +54,7 @@ def plan_reroute(
     loader,
     db_path=None,
     write_observation: bool = False,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """Score alternatives for this fresh poll and decide whether to switch."""
     moment = _as_sgt(now)
@@ -70,6 +72,7 @@ def plan_reroute(
         last_reroute_at=last_reroute_at,
         now=moment,
         loader=loader,
+        walk_speed_m_s=walk_speed_m_s,
     )
     # The arrivals pipeline inserts the scored-poll row. This flag does not.
     del write_observation, db_path
@@ -127,6 +130,7 @@ def apply_active_target(
     user_lon: float | None,
     cache,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> None:
     """Point leave-by and leave-now at an already-scored bus.
 
@@ -153,6 +157,7 @@ def apply_active_target(
         user_lon=user_lon,
         cache=cache,
         now=now,
+        walk_speed_m_s=walk_speed_m_s,
     )
     payload["leave_by"] = leave_by
     payload["notification_time"] = notification_time_iso(leave_by)
@@ -270,6 +275,7 @@ def _decide(
     last_reroute_at: datetime | None,
     now: datetime,
     loader,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     held = _hold()
     if current.get("status") != "ok":
@@ -312,8 +318,9 @@ def _decide(
         arrive_by=arrive_by,
         now=now,
         loader=loader,
+        walk_speed_m_s=walk_speed_m_s,
     )
-    rows = build_rows(cache, candidates, user_lat, user_lon, current)
+    rows = build_rows(cache, candidates, user_lat, user_lon, current, walk_speed_m_s)
     # The improvement rule decides whether a proposal exists; the recommender chooses among those that pass it.
     passing = {
         _option_id(candidate)
@@ -343,7 +350,7 @@ def _decide(
         old_point=current_point,
         winner=winner,
     )
-    stop = _stop_payload(cache, winner["stop_code"], user_lat, user_lon)
+    stop = _stop_payload(cache, winner["stop_code"], user_lat, user_lon, walk_speed_m_s)
     if winner["service_no"] not in stop["services"]:
         stop["services"].append(winner["service_no"])
     decision = {
@@ -366,7 +373,7 @@ def _decide(
             "data_quality": winner.get("data_quality"),
             "walk_minutes": stop.get("walk_minutes"),
             "estimated_arrival": _iso_or_none(winner.get("estimated_arrival")),
-            "leave_by": _leave_by_iso(winner["eta"], stop.get("distance_m")),
+            "leave_by": _leave_by_iso(winner["eta"], stop.get("distance_m"), walk_speed_m_s),
         },
         "alternatives": _alternatives(cache, candidates, winner, arrive_by is not None, user_lat, user_lon),
         "options": rank_options(rows, recommendation, arrive_by, "better"),
@@ -401,6 +408,7 @@ def _candidates(
     loader,
     include_primary: bool = False,
     missed_eta_epoch: float | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> list[dict]:
     found = []
     current_stop = current.get("stop_code") or ""
@@ -429,6 +437,7 @@ def _candidates(
             place_lon=place_lon,
             arrive_by=arrive_by,
             now=now,
+            walk_speed_m_s=walk_speed_m_s,
         )
         if candidate is not None:
             found.append(candidate)
@@ -472,6 +481,7 @@ def _candidates(
                     place_lon=place_lon,
                     arrive_by=arrive_by,
                     now=now,
+                    walk_speed_m_s=walk_speed_m_s,
                 )
                 if candidate is not None:
                     found.append(candidate)
@@ -491,6 +501,7 @@ def _candidate_from_bus(
     place_lon: float,
     arrive_by: datetime | None,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     if bus.get("is_missed"):
         return None
@@ -519,8 +530,10 @@ def _candidate_from_bus(
     monitored = bus.get("monitored")
     # The same Step 9 terms and the same estimate function as the live tile and the overview.
     # A late option stays: the recommender and the row label handle "after the target".
-    terms = _option_terms(cache, links, destination_stop_code, place_lat, place_lon, now)
-    window = bus_arrival_window(now, terms, eta, live=monitored is True, arrive_by=arrive_by)
+    terms = _option_terms(cache, links, destination_stop_code, place_lat, place_lon, now, walk_speed_m_s)
+    window = bus_arrival_window(
+        now, terms, eta, live=monitored is True, arrive_by=arrive_by, walk_speed_m_s=walk_speed_m_s
+    )
     estimated = None if window is None else window["estimated_arrival"]
     return {
         "service_no": service_no,
@@ -541,11 +554,12 @@ def _iso_or_none(value) -> str | None:
     return value.replace(microsecond=0).isoformat() if isinstance(value, datetime) else None
 
 
-def _leave_by_iso(eta: datetime, distance_m) -> str | None:
+def _leave_by_iso(eta: datetime, distance_m, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS) -> str | None:
     """The existing leave-by rule for the proposed bus (display only)."""
     if isinstance(distance_m, bool) or not isinstance(distance_m, (int, float)):
         return None
-    return leave_by_time(eta, float(distance_m)).replace(microsecond=0).isoformat()
+    slow_speed = range_speeds(walk_speed_m_s)[1]
+    return leave_by_time(eta, float(distance_m), slow_speed).replace(microsecond=0).isoformat()
 
 
 def _alternatives(cache, candidates, winner, arrive_by_set, user_lat, user_lon, limit=3) -> list[dict]:
@@ -627,8 +641,11 @@ def rank_options(rows: list[dict], recommendation: dict | None, arrive_by: datet
     }
 
 
-def _option_row(cache, candidate: dict, user_lat, user_lon, current_stop: str, current_service: str) -> dict:
-    stop = _stop_payload(cache, candidate["stop_code"], user_lat, user_lon)
+def _option_row(
+    cache, candidate: dict, user_lat, user_lon, current_stop: str, current_service: str,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+) -> dict:
+    stop = _stop_payload(cache, candidate["stop_code"], user_lat, user_lon, walk_speed_m_s)
     if candidate["service_no"] not in stop["services"]:
         stop["services"].append(candidate["service_no"])
     service = candidate["service_no"]
@@ -655,7 +672,7 @@ def _option_row(cache, candidate: dict, user_lat, user_lon, current_stop: str, c
         "at_current_stop": at_current,
         "next_of_same_service": at_current and service == current_service,
         "monitored": candidate.get("monitored"),
-        "leave_by": _leave_by_iso(candidate["eta"], stop.get("distance_m")),
+        "leave_by": _leave_by_iso(candidate["eta"], stop.get("distance_m"), walk_speed_m_s),
         "reroute": {
             "service_no": service,
             "stop": stop,
@@ -671,7 +688,7 @@ def _option_row(cache, candidate: dict, user_lat, user_lon, current_stop: str, c
     }
 
 
-def build_rows(cache, candidates, user_lat, user_lon, current) -> list[dict]:
+def build_rows(cache, candidates, user_lat, user_lon, current, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS) -> list[dict]:
     """One row per (service, stop, arrival). Uses no data the search did not already fetch."""
     current_stop = current.get("stop_code") or ""
     current_service = current.get("service_no") or ""
@@ -682,7 +699,9 @@ def build_rows(cache, candidates, user_lat, user_lon, current) -> list[dict]:
         if key in seen:
             continue
         seen.add(key)
-        rows.append(_option_row(cache, candidate, user_lat, user_lon, current_stop, current_service))
+        rows.append(
+            _option_row(cache, candidate, user_lat, user_lon, current_stop, current_service, walk_speed_m_s)
+        )
     return rows
 
 
@@ -700,6 +719,7 @@ def plan_options(
     loader,
     missed_eta_epoch: float | None = None,
     entry: str = "recommended",
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """On-demand search (missed or unlikely entry). It ignores the unlikely-trigger and the improvement rule."""
     moment = _as_sgt(now)
@@ -719,8 +739,9 @@ def plan_options(
         loader=loader,
         include_primary=True,
         missed_eta_epoch=missed_eta_epoch,
+        walk_speed_m_s=walk_speed_m_s,
     )
-    rows = build_rows(cache, candidates, user_lat, user_lon, current)
+    rows = build_rows(cache, candidates, user_lat, user_lon, current, walk_speed_m_s)
     return rank_options(rows, recommend_option(rows, arrive_by), arrive_by, entry)
 
 
@@ -755,7 +776,9 @@ def _reaching_services(cache, origin_code: str, dest_code: str) -> list[str]:
     return found
 
 
-def _option_terms(cache, links, dest_code, place_lat, place_lon, now) -> dict | None:
+def _option_terms(
+    cache, links, dest_code, place_lat, place_lon, now, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS
+) -> dict | None:
     """The four Step 9 terms of the quickest usable link, as the overview chooses it."""
     usable = [link for link in links if link.get("route_km") is not None]
     if not usable:
@@ -766,12 +789,14 @@ def _option_terms(cache, links, dest_code, place_lat, place_lon, now) -> dict | 
     place_m = haversine_m(place_lat, place_lon, dest["Latitude"], dest["Longitude"])
 
     def duration(link: dict) -> float:
-        return _total_minutes(cache, link, place_m, now)
+        return _total_minutes(cache, link, place_m, now, walk_speed_m_s)
 
-    return _arrival_terms(cache, min(usable, key=duration), place_m, now)
+    return _arrival_terms(cache, min(usable, key=duration), place_m, now, walk_speed_m_s)
 
 
-def _stop_payload(cache, stop_code: str, user_lat: float, user_lon: float) -> dict:
+def _stop_payload(
+    cache, stop_code: str, user_lat: float, user_lon: float, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS
+) -> dict:
     stop = cache.stop_by_code(stop_code) or {}
     lat = stop.get("Latitude")
     lon = stop.get("Longitude")
@@ -793,7 +818,7 @@ def _stop_payload(cache, stop_code: str, user_lat: float, user_lon: float) -> di
         "latitude": lat,
         "longitude": lon,
         "distance_m": distance,
-        "walk_minutes": walk_minutes(distance),
+        "walk_minutes": walk_minutes(distance, walk_speed_m_s),
         "services": services,
     }
 

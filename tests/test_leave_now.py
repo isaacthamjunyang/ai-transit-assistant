@@ -198,7 +198,9 @@ def test_permission_card_is_explicit_and_not_requested_on_load():
     confirm_fn = html[confirm_start:confirm_end]
     assert "renderNotificationPermission()" in confirm_fn
     assert "Notification.requestPermission" not in confirm_fn
-    assert "requestPermission" not in html[html.find("function requestLocation"):]
+    # The notification permission is never asked on load. (The motion permission is a different API: it is asked only
+    # inside the Start journey tap, see test_walk_speed_wiring.)
+    assert "Notification.requestPermission" not in html[html.find("function requestLocation"):]
     assert "function loadJourney" in html
     load_start = html.find("function loadJourney")
     load_end = html.find('confirmDestinationStop.addEventListener("click"')

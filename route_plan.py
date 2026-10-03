@@ -7,15 +7,16 @@ import math
 from datetime import datetime, timedelta, timezone
 
 from catch_heuristic import headway_seconds
+from config import WALK_SPEED_DEFAULT_MPS
 from destination_stops import (
     BUS_SPEED_KM_H,
-    WALK_SPEED_M_S,
     _kilometres,
     _route_km,
     _service_record,
 )
 from lta_static import StopAndRouteCache
 from nearby import haversine_m
+from walk_speed import walk_minutes
 
 SGT = timezone(timedelta(hours=8))
 TRANSFER_PENALTY_MINUTES = 10
@@ -43,6 +44,7 @@ def plan_route(
     dest_lat: float,
     dest_lon: float,
     now: datetime | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """Rank a direct or one-transfer route from the selected boarding stop."""
     origin = boarding_stop_code.strip()
@@ -58,8 +60,8 @@ def plan_route(
     candidates.extend(_transfer_candidates(sequences, origin, destination, coordinates))
     if not candidates:
         return _no_feasible()
-    walk_origin = _walk_minutes(cache, origin, user_lat, user_lon)
-    walk_place = _walk_minutes(cache, destination, dest_lat, dest_lon)
+    walk_origin = _walk_minutes(cache, origin, user_lat, user_lon, walk_speed_m_s)
+    walk_place = _walk_minutes(cache, destination, dest_lat, dest_lon, walk_speed_m_s)
     rankable = []
     for candidate in candidates:
         _attach_duration(cache, candidate, walk_origin, walk_place, moment)
@@ -90,10 +92,12 @@ def suggest_alternate_boarding(
     dest_lon: float,
     alternate_codes: list[str],
     now: datetime | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """If the chosen origin has no route, rank other static nearby origins."""
     chosen = plan_route(
-        cache, origin, destination, user_lat, user_lon, dest_lat, dest_lon, now=now
+        cache, origin, destination, user_lat, user_lon, dest_lat, dest_lon, now=now,
+        walk_speed_m_s=walk_speed_m_s,
     )
     others = []
     for code in alternate_codes:
@@ -105,7 +109,8 @@ def suggest_alternate_boarding(
     ranked = []
     for code in others:
         planned = plan_route(
-            cache, code, destination, user_lat, user_lon, dest_lat, dest_lon, now=now
+            cache, code, destination, user_lat, user_lon, dest_lat, dest_lon, now=now,
+            walk_speed_m_s=walk_speed_m_s,
         )
         options = planned.get("options") or []
         if planned.get("route_status") != "ok" or not options:
@@ -576,6 +581,7 @@ def _walk_minutes(
     stop_code: str,
     lat: float,
     lon: float,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> float | None:
     stop = cache.stop_by_code(stop_code)
     if stop is None:
@@ -590,4 +596,4 @@ def _walk_minutes(
         return None
     if not math.isfinite(lat) or not math.isfinite(lon):
         return None
-    return haversine_m(lat, lon, float(stop_lat), float(stop_lon)) / WALK_SPEED_M_S / 60
+    return walk_minutes(haversine_m(lat, lon, float(stop_lat), float(stop_lon)), walk_speed_m_s)

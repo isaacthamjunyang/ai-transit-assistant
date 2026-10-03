@@ -4384,3 +4384,28 @@ body.is-entry-loading #see-arrivals-bar,
 body.is-entry-loading #alert-slot {
   display: none;
 }
+
+/* Developer readout for the walking-speed estimator. Shown only with ?pace=debug; remove before submission. */
+.pace-debug {
+  position: fixed;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 50;
+  max-width: calc(100vw - 2 * var(--space-2));
+  margin: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: var(--type-caption);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+/* The style guide shows the readout in the page flow instead of fixed to the corner. */
+.pace-debug--sample {
+  position: static;
+  max-width: none;
+}

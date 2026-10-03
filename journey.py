@@ -13,9 +13,11 @@ from catch_heuristic import (
     SLOW_WALK_M_S,
     headway_seconds,
 )
-from destination_stops import WALK_SPEED_M_S, _service_record, list_destination_stops
+from config import WALK_SPEED_DEFAULT_MPS
+from destination_stops import _service_record, list_destination_stops
 from lta_static import StopAndRouteCache
 from nearby import haversine_m
+from walk_speed import range_speeds, walk_minutes
 
 SGT = timezone(timedelta(hours=8))
 ON_TRACK_LABEL = "Arrive-by check: On track"
@@ -28,8 +30,6 @@ COMPARISON_NOTE = (
     "Destination ride duration unavailable; cannot verify target arrival time."
 )
 RIDE_TOLERANCE = 0.15
-END_WALK_LOW_M_S = 1.4
-END_WALK_HIGH_M_S = 1.1
 CHIP_STEP_MINUTES = 5
 PAST_ARRIVE_BY = "That time has already passed. Choose a later time."
 
@@ -52,6 +52,7 @@ def build_journey(
     leg2_ride_minutes: float | None = None,
     leg1_service_no: str | None = None,
     leg1_direction: int | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     """Ride label, arrive-by comparison, and leave-by for one confirmed stop."""
     moment = _as_sgt(now if now is not None else datetime.now(SGT))
@@ -64,6 +65,7 @@ def build_journey(
         boarding_stop_code=boarding_stop_code,
         service_no=service_no,
         now=moment,
+        walk_speed_m_s=walk_speed_m_s,
     )
     stop = _find_stop(listed, destination_stop_code)
     if transfer:
@@ -80,12 +82,13 @@ def build_journey(
             leg1_ride_minutes=leg1_ride_minutes,
             leg2_ride_minutes=leg2_ride_minutes,
             now=moment,
+            walk_speed_m_s=walk_speed_m_s,
         )
         ride_minutes = None if terms is None else math.ceil(
             terms["board_walk_minutes"]
             + terms["wait_minutes"]
             + terms["ride_minutes"]
-            + terms["end_walk_metres"] / WALK_SPEED_M_S / 60
+            + walk_minutes(terms["end_walk_metres"], walk_speed_m_s)
         )
     else:
         terms = None if stop is None else stop.get("arrival_terms")
@@ -104,6 +107,7 @@ def build_journey(
             end_walk_metres=terms["end_walk_metres"],
             arrive_by=arrive_by,
             basis="planned",
+            walk_speed_m_s=walk_speed_m_s,
         )
         if window is not None and window["point_minutes"] != ride_minutes:
             window = _shift_window(window, ride_minutes - window["point_minutes"], arrive_by)
@@ -113,6 +117,7 @@ def build_journey(
         distance_m=distance_m,
         arrival_status=arrival_status,
         now=moment,
+        walk_speed_m_s=walk_speed_m_s,
     )
     return {
         "status": "ok",
@@ -139,6 +144,7 @@ def resolve_leave_by(
     distance_m: float | None,
     arrival_status: str,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> datetime | None:
     """Leave-by from a fresh ETA. Stale, missed, and missing ETAs have no clock."""
     if arrival_status != "ok" or eta is None or distance_m is None:
@@ -149,12 +155,12 @@ def resolve_leave_by(
     arrival = _as_sgt(eta)
     if (arrival - moment).total_seconds() < -MISSED_AFTER_S:
         return None
-    return leave_by_time(arrival, distance_m)
+    return leave_by_time(arrival, distance_m, range_speeds(walk_speed_m_s)[1])
 
 
-def leave_by_time(eta: datetime, distance_m: float) -> datetime:
-    """leave_by = ETA - slow_walk - 45s, with slow_walk = distance / 1.1."""
-    slow_walk_s = distance_m / SLOW_WALK_M_S
+def leave_by_time(eta: datetime, distance_m: float, slow_speed_m_s: float = SLOW_WALK_M_S) -> datetime:
+    """leave_by = ETA - slow_walk - 45s, with slow_walk = distance / the slow end (1.1 m/s at the default)."""
+    slow_walk_s = distance_m / slow_speed_m_s
     return eta - timedelta(seconds=slow_walk_s + BOARDING_BUFFER_S)
 
 
@@ -166,6 +172,7 @@ def leave_by_for_buses(
     user_lon: float | None,
     cache: StopAndRouteCache | None,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> str | None:
     """Leave-by for the primary bus on a fresh arrival poll."""
     if (
@@ -183,6 +190,7 @@ def leave_by_for_buses(
         distance_m=distance_m,
         arrival_status="ok",
         now=now,
+        walk_speed_m_s=walk_speed_m_s,
     )
     if leave_by is None:
         return None
@@ -213,6 +221,7 @@ def arrival_window(
     arrive_by: datetime | None = None,
     basis: str = "planned",
     anchor: datetime | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     """Point, range, and spare minutes from the Step 9 terms.
 
@@ -230,12 +239,13 @@ def arrival_window(
         gap = max(0.0, (_as_sgt(anchor) - moment).total_seconds() / 60)
         board = max(board, gap)
         wait = 0.0
-    point_minutes = _span_minutes(board, wait, ride, end_walk_metres, 1.0, WALK_SPEED_M_S)
+    point_speed, slow_speed, fast_speed = range_speeds(walk_speed_m_s)
+    point_minutes = _span_minutes(board, wait, ride, end_walk_metres, 1.0, point_speed)
     low_minutes = _span_minutes(
-        board, wait, ride, end_walk_metres, 1 - RIDE_TOLERANCE, END_WALK_LOW_M_S
+        board, wait, ride, end_walk_metres, 1 - RIDE_TOLERANCE, fast_speed
     )
     high_minutes = _span_minutes(
-        board, wait, ride, end_walk_metres, 1 + RIDE_TOLERANCE, END_WALK_HIGH_M_S
+        board, wait, ride, end_walk_metres, 1 + RIDE_TOLERANCE, slow_speed
     )
     low_minutes = min(low_minutes, point_minutes)
     high_minutes = max(high_minutes, point_minutes)
@@ -257,6 +267,7 @@ def bus_arrival_window(
     *,
     live: bool,
     arrive_by: datetime | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     """The one estimate for a bus: anchored on its arrival when it is live, otherwise planned.
 
@@ -276,6 +287,7 @@ def bus_arrival_window(
         arrive_by=arrive_by,
         basis="live" if anchored else "planned",
         anchor=eta if anchored else None,
+        walk_speed_m_s=walk_speed_m_s,
     )
 
 
@@ -341,6 +353,7 @@ def miss_line(
     terms: dict | None,
     arrive_by: datetime | None,
     tracked: dict | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     """The first later arrival of the same service after the tracked one, with its Step 9 estimate.
 
@@ -383,7 +396,9 @@ def miss_line(
     ride = None if not isinstance(terms, dict) else terms.get("ride_minutes")
     if _usable_ride(ride) is None:
         return body
-    window = bus_arrival_window(now, terms, eta, live=later.get("monitored") is True, arrive_by=arrive_by)
+    window = bus_arrival_window(
+        now, terms, eta, live=later.get("monitored") is True, arrive_by=arrive_by, walk_speed_m_s=walk_speed_m_s
+    )
     if window is None:
         return body
     body["estimated_arrival"] = _as_sgt_iso(window["estimated_arrival"])
@@ -440,6 +455,7 @@ def transfer_arrive_minutes(
     leg1_ride_minutes: float | None,
     leg2_ride_minutes: float | None,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> int | None:
     """Door-to-door minutes for a transfer: both rides, one walk pair, one half-headway."""
     terms = transfer_arrival_terms(
@@ -455,6 +471,7 @@ def transfer_arrive_minutes(
         leg1_ride_minutes=leg1_ride_minutes,
         leg2_ride_minutes=leg2_ride_minutes,
         now=now,
+        walk_speed_m_s=walk_speed_m_s,
     )
     if terms is None:
         return None
@@ -462,7 +479,7 @@ def transfer_arrive_minutes(
         terms["board_walk_minutes"]
         + terms["wait_minutes"]
         + terms["ride_minutes"]
-        + terms["end_walk_metres"] / WALK_SPEED_M_S / 60
+        + walk_minutes(terms["end_walk_metres"], walk_speed_m_s)
     )
     return math.ceil(total)
 
@@ -481,14 +498,15 @@ def transfer_arrival_terms(
     leg1_ride_minutes: float | None,
     leg2_ride_minutes: float | None,
     now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     """Both rides plus one walk pair and Leg 1's half-headway. Either null ride yields nothing."""
     ride_1 = _usable_ride(leg1_ride_minutes)
     ride_2 = _usable_ride(leg2_ride_minutes)
     if ride_1 is None or ride_2 is None:
         return None
-    walk_origin = _walk_minutes(cache, boarding_stop_code, user_lat, user_lon)
-    walk_place = _walk_minutes(cache, destination_stop_code, dest_lat, dest_lon)
+    walk_origin = _walk_minutes(cache, boarding_stop_code, user_lat, user_lon, walk_speed_m_s)
+    walk_place = _walk_minutes(cache, destination_stop_code, dest_lat, dest_lon, walk_speed_m_s)
     if walk_origin is None or walk_place is None:
         return None
     headway = _leg1_headway_seconds(
@@ -498,7 +516,7 @@ def transfer_arrival_terms(
         "board_walk_minutes": walk_origin,
         "wait_minutes": (headway / 2) / 60,
         "ride_minutes": ride_1 + ride_2,
-        "end_walk_metres": walk_place * WALK_SPEED_M_S * 60,
+        "end_walk_metres": walk_place * walk_speed_m_s * 60,
     }
 
 
@@ -516,6 +534,7 @@ def _walk_minutes(
     stop_code: str | None,
     lat: float,
     lon: float,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> float | None:
     if cache is None or not stop_code:
         return None
@@ -532,7 +551,7 @@ def _walk_minutes(
         return None
     if not math.isfinite(stop_lat) or not math.isfinite(stop_lon):
         return None
-    return haversine_m(lat, lon, float(stop_lat), float(stop_lon)) / WALK_SPEED_M_S / 60
+    return walk_minutes(haversine_m(lat, lon, float(stop_lat), float(stop_lon)), walk_speed_m_s)
 
 
 def _leg1_headway_seconds(
