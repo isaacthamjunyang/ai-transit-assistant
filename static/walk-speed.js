@@ -66,7 +66,12 @@
     SLEW_MIN_INTERVAL_MS: 2000,  // one slew step at most per this interval (one step per poll)
     REMEMBER_SAVE_EVERY_S: 30,   // how often the remembered pace may be rewritten
     RUN_REJECT_RATIO: 1.3,       // a peak above CADENCE_MAX this many times the in-range score rejects the second
-    GPS_ONLY_CV_MAX: 0.20,       // coefficient of variation limit for walking established by GPS speed alone
+    GPS_ONLY_CV_MAX: 0.30,       // coefficient of variation limit for walking established by GPS speed alone
+    GPS_ONLY_LOW_ALLOWED: 1,     // readings below GPS_ONLY_WALK_MIN tolerated in the GPS-only window
+    VEHICLE_CONFIRM_READINGS: 2, // consecutive readings at or above VEHICLE_SPEED_MIN before the veto applies
+    STRIDE_MIN_HZ: 0.6,          // stride rhythm range (one leg cycle = two steps): lowest rate accepted
+    STRIDE_MAX_HZ: 1.4,          // ... and highest
+    STRIDE_MIN_SCORE: 0.5,       // smallest autocorrelation score of a stride peak that gives a cadence
     LEARN_MIN_VALID_CADENCE: 10, // valid-cadence seconds needed in a learning window (cadence median and CV use them)
     DIAG_CADENCE_MIN: 0.6,       // debug only: the diagnostic autocorrelation search goes down to this rate
     RAW_HZ: 25,                  // debug only: rate of the raw motion capture
@@ -232,7 +237,9 @@
     var lagMin = Math.max(2, Math.floor(fs / C.RUN_CADENCE_MAX));
     var lagMax = Math.min(n - 2, Math.ceil(fs / C.CADENCE_MIN) + 1);
     var inMin = Math.max(lagMin, Math.ceil(fs / C.CADENCE_MAX));
-    var lagDiag = Math.max(lagMax, Math.min(n - 2, Math.floor(fs / C.DIAG_CADENCE_MIN)));
+    var lagDiag = Math.max(lagMax, Math.min(n - 2, Math.floor(fs / Math.min(C.DIAG_CADENCE_MIN, C.STRIDE_MIN_HZ))));
+    var strideLagMin = Math.max(lagMin, Math.ceil(fs / C.STRIDE_MAX_HZ));
+    var strideLagMax = Math.min(n - 2, Math.floor(fs / C.STRIDE_MIN_HZ));
     var r = {};
     for (var lag = lagMin - 1; lag <= lagDiag + 1; lag++) {
       r[lag] = autocorr(x, lag, power);
@@ -254,9 +261,15 @@
     var lowLag = 0;
     var allBest = 0;
     var allLag = 0;
+    var strideBest = 0;
+    var strideLag = 0;
     for (lag = lagMin; lag <= lagDiag; lag++) {
       if (!(r[lag] > 0 && r[lag] >= r[lag - 1] && r[lag] > r[lag + 1])) {
         continue;
+      }
+      if (lag >= strideLagMin && lag <= strideLagMax && r[lag] > strideBest) {
+        strideBest = r[lag];
+        strideLag = lag;
       }
       if (r[lag] > allBest) {
         allBest = r[lag];
@@ -294,7 +307,29 @@
       diag.fastScore = fastBest;
     }
     var fastFreq = fastLag ? freqAt(fastLag) : null;
+    // With no valid in-range pick, a stride-rhythm peak (one leg cycle, 0.6 to 1.4 per second) gives the cadence as
+    // twice its rate. It never overrides a valid in-range pick, and a fast peak at RUN_REJECT_RATIO times its score
+    // or more still rejects the second. Peaks below STRIDE_MIN_HZ are never accepted.
+    var tryStride = function () {
+      if (!strideLag || strideBest < C.STRIDE_MIN_SCORE) {
+        return null;
+      }
+      var doubled = 2 * freqAt(strideLag);
+      if (fastLag && fastBest >= C.RUN_REJECT_RATIO * strideBest) {
+        diag.chosenScore = strideBest;
+        return finish({ valid: false, cadence: fastFreq, score: fastBest, reason: "fast", rms: rms }, "reject_ratio");
+      }
+      if (doubled < C.CADENCE_MIN || doubled > C.CADENCE_MAX) {
+        return null;
+      }
+      diag.chosenScore = strideBest;
+      return finish({ valid: true, cadence: doubled, score: strideBest, reason: "ok", rms: rms }, "stride_doubled");
+    };
     if (!inPeaks.length || inBest < C.AUTOCORR_MIN) {
+      var strided = tryStride();
+      if (strided !== null) {
+        return strided;
+      }
       if (fastBest >= C.AUTOCORR_MIN) {
         return finish({ valid: false, cadence: fastFreq, score: fastBest, reason: "fast", rms: rms }, "fast_only");
       }
@@ -312,6 +347,10 @@
     var score = r[chosen];
     diag.chosenScore = score;
     if (score < C.AUTOCORR_MIN) {
+      var strided2 = tryStride();
+      if (strided2 !== null) {
+        return strided2;
+      }
       return finish({ valid: false, cadence: null, score: score, reason: "weak", rms: rms }, "weak_chosen");
     }
     if (fastLag && fastBest >= C.RUN_REJECT_RATIO * score) {
@@ -389,7 +428,21 @@
      recs are the one-per-second records {t, cadence (number or null)}, oldest first. */
   function detectWalking(recs, gps, nowMs, constants) {
     var C = constants || CONSTANTS;
-    if (gps && isNumber(gps.speed) && gps.speed >= C.VEHICLE_SPEED_MIN) {
+    // The veto needs VEHICLE_CONFIRM_READINGS consecutive readings at or above the limit: one isolated reading
+    // (or the newest one, still pending) does not veto. A real vehicle is therefore vetoed one second later.
+    var highRun = 0;
+    for (var h = recs.length - 1; h >= 0; h--) {
+      if (isNumber(recs[h].gpsSpeed) && recs[h].gpsSpeed >= C.VEHICLE_SPEED_MIN) {
+        highRun += 1;
+      } else {
+        break;
+      }
+    }
+    if (highRun === 0 && gps && isNumber(gps.speed) && gps.speed >= C.VEHICLE_SPEED_MIN &&
+        recs.length && recs[recs.length - 1].gpsSpeed === undefined) {
+      highRun = 1;  // callers that pass only the live reading
+    }
+    if (highRun >= C.VEHICLE_CONFIRM_READINGS) {
       return { walking: false, reason: "vehicle", cv: null };
     }
     // A good fix whose speed has stayed under GPS_WALK_MIN_MPS for GPS_STILL_REJECT_S seconds in a row means
@@ -431,8 +484,11 @@
 
   /* Steady GPS speed from GPS_ONLY_WALK_MIN up to VEHICLE_SPEED_MIN over REGULAR_S seconds is walking. This is
      used when there is no motion sensor (permission denied, unavailable or no event) and also when the sensor is
-     present but the cadence is irregular or missing. Returns {walking, reason, cv, n, nulls, inRange, outRange}:
-     the readings in the window, those with no GPS speed, those in range, those out of range, and the failed
+     present but the cadence is irregular or missing. Tolerances: one reading below GPS_ONLY_WALK_MIN is allowed
+     in the window; a reading at or above VEHICLE_SPEED_MIN with neighbours below it (or the newest, still pending)
+     is an outlier and is left out of the count and the CV; VEHICLE_CONFIRM_READINGS in a row is a vehicle.
+     Returns {walking, reason, cv, n, nulls, inRange, outRange, outliers}: the readings in the window, those with
+     no GPS speed, those in range, those out of range (low or confirmed vehicle), the outliers, and the failed
      condition as the reason ("no gps", "short", "slow", "vehicle", "irregular" or "ok"). */
   function detectWalkingGpsOnly(recs, nowMs, constants) {
     var C = constants || CONSTANTS;
@@ -440,28 +496,39 @@
     var speeds = [];
     var n = 0;
     var nulls = 0;
-    var slow = 0;
+    var low = 0;
     var vehicle = 0;
-    var firstOut = null;
+    var outliers = 0;
+    var isHigh = function (index) {
+      return index >= 0 && index < recs.length && isNumber(recs[index].gpsSpeed) &&
+        recs[index].gpsSpeed >= C.VEHICLE_SPEED_MIN;
+    };
     for (var i = 0; i < recs.length; i++) {
-      if (recs[i].t >= from) {
-        n += 1;
-        var speed = recs[i].gpsSpeed;
-        if (!isNumber(speed)) {
-          nulls += 1;
-          continue;
-        }
-        speeds.push(speed);
-        if (speed < C.GPS_ONLY_WALK_MIN) {
-          slow += 1;
-          firstOut = firstOut || "slow";
-        } else if (speed >= C.VEHICLE_SPEED_MIN) {
+      if (!(recs[i].t >= from)) {
+        continue;
+      }
+      n += 1;
+      var speed = recs[i].gpsSpeed;
+      if (!isNumber(speed)) {
+        nulls += 1;
+        continue;
+      }
+      if (speed >= C.VEHICLE_SPEED_MIN) {
+        if (isHigh(i - 1) || isHigh(i + 1)) {
           vehicle += 1;
-          firstOut = firstOut || "vehicle";
+          speeds.push(speed);
+        } else {
+          outliers += 1;
         }
+        continue;
+      }
+      speeds.push(speed);
+      if (speed < C.GPS_ONLY_WALK_MIN) {
+        low += 1;
       }
     }
-    var detail = { n: n, nulls: nulls, inRange: speeds.length - slow - vehicle, outRange: slow + vehicle, cv: null };
+    var detail = { n: n, nulls: nulls, inRange: speeds.length - low - vehicle, outRange: low + vehicle,
+      outliers: outliers, cv: null };
     var result = function (walking, reason, variation) {
       detail.walking = walking;
       detail.reason = reason;
@@ -474,8 +541,11 @@
     if (speeds.length < C.REGULAR_MIN_READINGS) {
       return result(false, "short", null);
     }
-    if (firstOut !== null) {
-      return result(false, firstOut, null);
+    if (vehicle > 0) {
+      return result(false, "vehicle", null);
+    }
+    if (low > C.GPS_ONLY_LOW_ALLOWED) {
+      return result(false, "slow", null);
     }
     var variation = cv(speeds);
     if (!(variation < C.GPS_ONLY_CV_MAX)) {
@@ -1114,9 +1184,10 @@
       "fix_age", "speed_fix_age", "walking", "reason", "source", "mode", "used", "null_cad", "go_n", "go_in",
       "go_out", "go_cv", "go_fail", "step", "n", "learn", "best_in_range_f", "best_in_range_score",
       "best_overall_f", "best_overall_score", "best_low_f", "best_low_score", "cad_pick_reason", "used_src",
-      "smoothed"];
+      "smoothed", "go_outliers"];
     var TRACE_CONSTANTS = ["RUN_REJECT_RATIO", "GPS_ONLY_CV_MAX", "LEARN_MIN_VALID_CADENCE", "AUTOCORR_MIN",
-      "MOTION_RMS_MIN", "STEADY_CV_MAX"];
+      "MOTION_RMS_MIN", "STEADY_CV_MAX", "STRIDE_MIN_HZ", "STRIDE_MAX_HZ", "STRIDE_MIN_SCORE",
+      "VEHICLE_CONFIRM_READINGS"];
     var debugEl = null;
     var debugOpen = false;
 
@@ -1256,7 +1327,8 @@
         "gps " + num(s.gpsSpeed, 2) + " m/s " + s.gpsKind + " acc " + num(s.gpsAccuracy, 0) + " m age " +
           num(s.speedFixAge, 1) + " s",
         "fix age " + num(s.fixAge, 1) + " s, stale ignored " + s.ignoredStale,
-        "gps-only n " + s.gpsOnly.n + " in " + s.gpsOnly.inRange + " out " + s.gpsOnly.outRange + " cv " +
+        "gps-only n " + s.gpsOnly.n + " in " + s.gpsOnly.inRange + " out " + s.gpsOnly.outRange + " outliers " +
+          s.gpsOnly.outliers + " cv " +
           num(s.gpsOnly.cv, 2) + " " + s.gpsOnly.reason,
         "pick " + s.cadenceDiag.pick + " in " + num(s.cadenceDiag.bestInF, 2) + "/" +
           num(s.cadenceDiag.bestInScore, 2) + " all " + num(s.cadenceDiag.bestOverallF, 2) + "/" +
@@ -1342,7 +1414,8 @@
         num(d.bestLowScore, 2),
         d.pick || "-",
         send ? send.source : "-",
-        num(est.smoothed, 2)
+        num(est.smoothed, 2),
+        go.outliers
       ];
       trace.rows.push(row.join(","));
       if (trace.rows.length >= C.TRACE_SECONDS) {
@@ -1610,7 +1683,7 @@
           fixAge: est.lastFix && est.lastTickAt !== null ? (est.lastTickAt - est.lastFix.t) / 1000 : null,
           ignoredStale: est.ignoredStale,
           cadenceDiag: est.cadence,
-          gpsOnly: est.gpsOnly || { n: 0, nulls: 0, inRange: 0, outRange: 0, cv: null, reason: "-" }
+          gpsOnly: est.gpsOnly || { n: 0, nulls: 0, inRange: 0, outRange: 0, outliers: 0, cv: null, reason: "-" }
         };
       },
 

@@ -258,7 +258,8 @@ def test_the_new_speed_age_constants():
 def test_the_phase_2b_constants_are_named_in_the_constants_block():
     source = (ROOT / "static" / "walk-speed.js").read_text(encoding="utf-8")
     block = source.split("var CONSTANTS = {", 1)[1].split("};", 1)[0]
-    for line in ("RUN_REJECT_RATIO: 1.3,", "GPS_ONLY_CV_MAX: 0.20,", "LEARN_MIN_VALID_CADENCE: 10,",
+    for line in ("RUN_REJECT_RATIO: 1.3,", "GPS_ONLY_CV_MAX: 0.30,", "GPS_ONLY_LOW_ALLOWED: 1,", "VEHICLE_CONFIRM_READINGS: 2,",
+                 "STRIDE_MIN_HZ: 0.6,", "STRIDE_MAX_HZ: 1.4,", "STRIDE_MIN_SCORE: 0.5,", "LEARN_MIN_VALID_CADENCE: 10,",
                  "STEADY_CV_MAX: 0.15,", "AUTOCORR_MIN: 0.3,", "DIAG_CADENCE_MIN: 0.6,", "RAW_HZ: 25,"):
         assert line in block, line
     # nothing below CADENCE_MIN is ever accepted; the diagnostic search is for the trace only

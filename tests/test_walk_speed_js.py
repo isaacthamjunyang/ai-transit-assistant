@@ -15,7 +15,7 @@ from edge_runner import dump_dom, file_url, find_edge
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "tests" / "js" / "estimator_harness.html"
 SCRIPT = ROOT / "static" / "walk-speed.js"
-GROUPS = ["cadence", "gps", "learning", "fusion", "persistence", "permission", "lifecycle", "readout", "handheld", "octave"]
+GROUPS = ["cadence", "gps", "learning", "fusion", "persistence", "permission", "lifecycle", "readout", "handheld", "octave", "stride"]
 
 
 @pytest.fixture(scope="module")

@@ -1201,7 +1201,7 @@
     S.est.traceStart();
     run(S, 100, { motion: handheldSignal(57), gps: slowGps(1.3) });
     var all = S.est.traceText().split("\n");
-    check(/^# RUN_REJECT_RATIO=1\.3 GPS_ONLY_CV_MAX=0\.2 LEARN_MIN_VALID_CADENCE=10 AUTOCORR_MIN=0\.3 MOTION_RMS_MIN=0\.4 STEADY_CV_MAX=0\.15$/.test(all[0]), "constants line: " + all[0]);
+    check(/^# RUN_REJECT_RATIO=1\.3 GPS_ONLY_CV_MAX=0\.3 LEARN_MIN_VALID_CADENCE=10 AUTOCORR_MIN=0\.3 MOTION_RMS_MIN=0\.4 STEADY_CV_MAX=0\.15 STRIDE_MIN_HZ=0\.6 STRIDE_MAX_HZ=1\.4 STRIDE_MIN_SCORE=0\.5 VEHICLE_CONFIRM_READINGS=2$/.test(all[0]), "constants line: " + all[0]);
     var lines = all.slice(1);
     var head = lines[0].split(",");
     ["t", "cadence", "score", "cad_cv", "rms", "gps", "gps_kind", "gps_acc", "fix_age", "speed_fix_age", "walking",
@@ -1413,7 +1413,8 @@
   });
 
   test("octave", "the constants have the agreed values", function () {
-    check(C.RUN_REJECT_RATIO === 1.3 && C.GPS_ONLY_CV_MAX === 0.2 && C.LEARN_MIN_VALID_CADENCE === 10, "values");
+    check(C.RUN_REJECT_RATIO === 1.3 && C.GPS_ONLY_CV_MAX === 0.3 && C.LEARN_MIN_VALID_CADENCE === 10, "values");
+    check(C.STRIDE_MIN_HZ === 0.6 && C.STRIDE_MAX_HZ === 1.4 && C.STRIDE_MIN_SCORE === 0.5 && C.VEHICLE_CONFIRM_READINGS === 2, "stride and veto values");
     check(C.STEADY_CV_MAX === 0.15 && C.AUTOCORR_MIN === 0.3 && C.CADENCE_MAX === 2.8, "unchanged values");
   });
 
@@ -1421,13 +1422,13 @@
     return speeds.map(function (v, i) { return { t: i * 1000, gpsSpeed: v }; });
   }
 
-  test("octave", "GPS-only steadiness: a ramp-up and CV 0.15 to 0.19 pass, a noisy 0.25 fails", function () {
+  test("octave", "GPS-only steadiness: a ramp-up and CV 0.15 to 0.19 pass, a noisy 0.38 fails", function () {
     var ramp = W.detectWalkingGpsOnly(gpsRecs([0.8, 0.95, 1.1, 1.2, 1.25, 1.3, 1.3, 1.3, 1.3]), 8000);
     check(ramp.walking && ramp.cv > 0.08 && ramp.cv < 0.2, "ramp " + ramp.reason + " " + ramp.cv);
     var edge = W.detectWalkingGpsOnly(gpsRecs([1.02, 1.38, 1.02, 1.38, 1.02, 1.38, 1.02, 1.38, 1.02]), 8000);
     check(edge.walking && edge.cv >= C.STEADY_CV_MAX && edge.cv < C.GPS_ONLY_CV_MAX, "edge " + edge.reason + " " + edge.cv);
-    var noisy = W.detectWalkingGpsOnly(gpsRecs([0.9, 1.5, 0.9, 1.5, 0.9, 1.5, 0.9, 1.5, 0.9]), 8000);
-    check(!noisy.walking && noisy.reason === "irregular" && noisy.cv > 0.2, "noisy " + noisy.reason + " " + noisy.cv);
+    var noisy = W.detectWalkingGpsOnly(gpsRecs([0.8, 1.8, 0.8, 1.8, 0.8, 1.8, 0.8, 1.8, 0.8]), 8000);
+    check(!noisy.walking && noisy.reason === "irregular" && noisy.cv > 0.3, "noisy " + noisy.reason + " " + noisy.cv);
   });
 
   test("octave", "the cadence rule still uses STEADY_CV_MAX (0.15), not the GPS-only limit", function () {
@@ -1532,7 +1533,7 @@
     var head = S.est.traceText().split("\n")[1].split(",");
     var used = head.indexOf("used");
     rows.forEach(function (row) { check(row.split(",")[used] === "-", "used " + row.split(",")[used]); });
-    check(head[head.length - 1] === "smoothed" && head[head.length - 2] === "used_src", "columns");
+    check(head[head.length - 1] === "go_outliers" && head[head.length - 2] === "smoothed" && head.indexOf("used_src") === head.length - 3, "columns");
     S.est.stop("test");
   });
 
@@ -1615,6 +1616,196 @@
         return U.est.copyRaw().then(function (how3) { check(how3 === "empty", "empty raw " + how3); });
       });
     });
+  });
+
+
+  // ---------- the stride rule, the two-reading vehicle veto, the GPS-only tolerance ----------
+
+  /* A master rhythm at f0 (2% jitter per cycle) with harmonics [k, amplitude], plus noise. A constant offset keeps
+     the magnitude positive so the harness's |x| does not rectify it. */
+  function toneSignal(f0, tones, seed, jitter) {
+    var r = rng(seed);
+    var phase = 0;
+    var last = null;
+    var freq = f0;
+    var idx = -1;
+    var offset = 0.3 * 3;
+    tones.forEach(function (tone) { offset += tone[1]; });
+    return function (t) {
+      var dt = last === null ? 0 : t - last;
+      last = t;
+      phase += freq * dt;
+      if (Math.floor(phase) !== idx) {
+        idx = Math.floor(phase);
+        freq = f0 * Math.min(1.1, Math.max(0.9, 1 + (jitter === undefined ? 0.02 : jitter) * gauss(r)));
+      }
+      var v = offset + 0.3 * gauss(r);
+      tones.forEach(function (tone) { v += tone[1] * Math.cos(2 * Math.PI * tone[0] * phase); });
+      return v;
+    };
+  }
+
+  function pocketTones() { return [[1, 1.0], [2, 0.8], [3, 0.5], [4, 0.47]]; }
+  function handTones() { return [[1, 0.3], [2, 0.5], [3, 0.4], [4, 1.0]]; }
+
+  function picks(make, seeds, truth, gpsFn) {
+    var out = { total: 0, good: 0, stride: 0, invalid: 0 };
+    seeds.forEach(function (seed) {
+      var S = scenario();
+      run(S, 40, { motion: make(seed), gps: gpsFn }, function (snap) {
+        if (S.t < 10500) {
+          return;
+        }
+        out.total += 1;
+        if (snap.cadence === null) {
+          out.invalid += 1;
+        } else if (Math.abs(snap.cadence - truth) <= 0.06) {
+          out.good += 1;
+        }
+        if (snap.cadenceDiag.pick === "stride_doubled") {
+          out.stride += 1;
+        }
+      });
+    });
+    return out;
+  }
+
+  test("stride", "a pocket-like rhythm (stride 1.0 Hz with harmonics) gives 2.0 by doubling the stride", function () {
+    var out = picks(function (seed) { return toneSignal(1.0, pocketTones(), seed); }, [91, 92, 93], 2.0);
+    check(out.good >= 0.9 * out.total, out.good + " of " + out.total + " (stride " + out.stride + ")");
+    check(out.stride >= 0.9 * out.total, "stride_doubled in " + out.stride + " of " + out.total);
+  });
+
+  test("stride", "a hand-like rhythm (2.08 Hz step with a strong 4.15 Hz) gives 2.08 and does not use the stride", function () {
+    var out = picks(function (seed) { return toneSignal(1.04, handTones(), seed); }, [94, 95, 96], 2.08);
+    check(out.good >= 0.9 * out.total, out.good + " of " + out.total);
+    check(out.stride <= 0.1 * out.total, "stride_doubled in " + out.stride + " of " + out.total);
+  });
+
+  test("stride", "running at 3.2 steps/s behaves as before: never a valid cadence above 2.8, 40% not valid", function () {
+    var out = share(function (seed) { return periodicSignal(3.2, 0.1, seed); }, [71, 72, 73], 1.6);
+    check(out.highValid === 0 && out.invalid >= 0.4 * out.total, out.invalid + " of " + out.total);
+    var strided = 0;
+    [71, 72, 73].forEach(function (seed) {
+      var S = scenario();
+      run(S, 40, { motion: periodicSignal(3.2, 0.1, seed) }, function (snap) {
+        if (snap.cadenceDiag.pick === "stride_doubled") { strided += 1; }
+      });
+    });
+    check(strided === 0, "the stride rule turned a running second into a cadence: " + strided);
+  });
+
+  test("stride", "a phone shaken at 1 Hz with a GPS speed near 0 stays not walking", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: toneSignal(1.0, pocketTones(), 97), gps: slowGps(0, 0.04) });
+    check(!snap.walking && snap.walkingReason === "gps still" && snap.mode !== "gps", snap.walkingReason + " " + snap.mode);
+  });
+
+  test("stride", "a 1 Hz sway with a GPS speed of 5 m/s is not walking", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: toneSignal(1.0, pocketTones(), 98), gps: slowGps(5) });
+    check(!snap.walking && snap.walkingReason === "vehicle" && snap.mode !== "gps" && snap.mode !== "cadence",
+      snap.walkingReason + " " + snap.mode);
+  });
+
+  test("stride", "a 0.5 Hz rocking is not accepted as a cadence", function () {
+    var accepted = 0;
+    var S = scenario();
+    run(S, 30, { motion: toneSignal(0.5, [[1, 3]], 99, 0.0) }, function (snap) {
+      if (snap.cadence !== null || snap.cadenceDiag.pick === "stride_doubled") { accepted += 1; }
+    });
+    check(accepted === 0, "accepted in " + accepted + " seconds");
+  });
+
+  test("stride", "a stride peak never overrides a valid in-range pick", function () {
+    var tones = [[1, 0.6], [2, 1.0]];  // a strong 2.08 step and a weaker stride
+    var seen = 0;
+    var S = scenario();
+    run(S, 30, { motion: toneSignal(1.04, tones, 100) }, function (snap) {
+      if (snap.cadenceDiag.pick === "stride_doubled") { seen += 1; }
+    });
+    check(seen === 0, "stride_doubled used with a valid in-range pick in " + seen + " seconds");
+  });
+
+  // ---- the vehicle veto needs two readings in a row
+
+  function walkRecs(speeds) {
+    return speeds.map(function (v, i) { return { t: i * 1000, cadence: 1.8, gpsSpeed: v }; });
+  }
+
+  test("stride", "the hand sequence 1.58, 2.20, 1.34 keeps walking, 2.4 then 2.5 is vetoed one second later", function () {
+    var base = [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5];
+    var spike = walkRecs(base.concat([1.58, 2.2, 1.34]));
+    var verdict = W.detectWalking(spike, { speed: 1.34 }, 9000);
+    check(verdict.walking && verdict.reason === "ok", "walking after a spike: " + verdict.reason);
+    var pending = walkRecs(base.concat([1.58, 2.4]));
+    check(W.detectWalking(pending, { speed: 2.4 }, 8000).walking, "a pending reading vetoed at once");
+    var go = W.detectWalkingGpsOnly(pending, 8000);
+    check(go.walking && go.outliers === 1, "pending reading: " + go.reason + " " + go.outliers);
+    var confirmed = walkRecs(base.concat([1.58, 2.4, 2.5]));
+    var vetoed = W.detectWalking(confirmed, { speed: 2.5 }, 9000);
+    check(!vetoed.walking && vetoed.reason === "vehicle", "no veto after two in a row: " + vetoed.reason);
+    var goVehicle = W.detectWalkingGpsOnly(confirmed, 9000);
+    check(!goVehicle.walking && goVehicle.reason === "vehicle", "gps-only: " + goVehicle.reason);
+  });
+
+  test("stride", "alternating isolated spikes 1.5, 2.3, 1.4, 2.3, 1.4 keep walking and show as outliers", function () {
+    var recsList = walkRecs([1.5, 1.5, 1.5, 1.5, 2.3, 1.4, 2.3, 1.4, 1.5]);
+    var go = W.detectWalkingGpsOnly(recsList, 8000);
+    check(go.walking && go.outliers === 2 && go.reason === "ok", JSON.stringify(go));
+    check(W.detectWalking(recsList, { speed: 1.5 }, 8000).walking, "the cadence path was vetoed");
+    var S = scenario();
+    var n = 0;
+    var seen = 0;
+    var vetoed = 0;
+    run(S, 40, { motion: walkSignal(1.8, 1, 101), gps: function () {
+      n += 1;
+      var v = n >= 20 && n % 2 === 0 && n < 26 ? 2.3 : 1.5;
+      return { speed: v, report: v, acc: 14 };
+    } }, function (snap) {
+      if (snap.gpsOnly.outliers > 0) { seen += 1; }
+      if (S.t > 12000 && !snap.walking) { vetoed += 1; }
+    });
+    check(seen > 0 && vetoed === 0, "outlier ticks " + seen + ", not walking after warm-up " + vetoed);
+  });
+
+  // ---- GPS-only tolerance
+
+  function noisySeries() {
+    var z = [-1.4, 0.9, 0.2, -0.6, 1.5, -0.3, 0.8, -1.1, 0.0];
+    return z.map(function (v) { return Math.max(0, 1.3 + 0.29 * v); });
+  }
+
+  test("stride", "a noisy steady series (mean 1.3, sd 0.29) is accepted at 0.30 and was rejected at 0.20", function () {
+    var series = noisySeries();
+    var verdict = W.detectWalkingGpsOnly(gpsRecs(series), 8000);
+    check(verdict.walking && verdict.cv > 0.15 && verdict.cv < 0.3, verdict.reason + " " + verdict.cv);
+    var old = W.detectWalkingGpsOnly(gpsRecs(series), 8000, Object.assign({}, C, { GPS_ONLY_CV_MAX: 0.20 }));
+    check(!old.walking && old.reason === "irregular", "at 0.20: " + old.reason + " " + old.cv);
+  });
+
+  test("stride", "one reading below 0.7 is accepted, two are rejected, standing is never walking", function () {
+    var dip = [1.3, 1.4, 1.2, 1.3, 0.5, 1.3, 1.4, 1.2, 1.3];
+    var one = W.detectWalkingGpsOnly(gpsRecs(dip), 8000);
+    check(one.walking && one.outRange === 1, "one dip: " + one.reason);
+    var two = W.detectWalkingGpsOnly(gpsRecs([1.3, 1.4, 0.5, 1.3, 0.6, 1.3, 1.4, 1.2, 1.3]), 8000);
+    check(!two.walking && two.reason === "slow" && two.outRange === 2, "two dips: " + two.reason);
+    var standing = W.detectWalkingGpsOnly(gpsRecs([0.02, 0.0, 0.05, 0.1, 0.0, 0.03, 0.0, 0.04, 0.02]), 8000);
+    check(!standing.walking, "standing counted as walking");
+  });
+
+  test("stride", "the gps-still rule still applies first, and a vehicle second is never tolerated as a low reading", function () {
+    var rows = [];
+    for (var i = 0; i < 9; i++) {
+      rows.push({ t: i * 1000, cadence: 1.8, gpsSpeed: 0.1 });
+    }
+    var verdict = W.detectWalking(rows, { speed: 0.1 }, 8000);
+    check(!verdict.walking && verdict.reason === "gps still", verdict.reason);
+    var S = scenario();
+    var snap = run(S, 25, { motion: walkSignal(1.8, 1, 102), gps: slowGps(0, 0.1) });
+    check(!snap.walking && snap.walkingReason === "gps still", snap.walkingReason);
+    var mixed = W.detectWalkingGpsOnly(gpsRecs([1.3, 1.4, 2.3, 2.4, 1.3, 1.4, 1.2, 1.3, 1.3]), 8000);
+    check(!mixed.walking && mixed.reason === "vehicle", "two in a row: " + mixed.reason);
   });
 
   // ---------- done ----------
