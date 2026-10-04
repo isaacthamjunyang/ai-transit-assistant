@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -16,7 +16,7 @@ import httpx
 import access_log_filter
 from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals
 import demo
-from config import LEG2_REACH_RANGE_FRACTION, PAGE_CONSTANTS, TRANSFER_BUS_SPEED_MPS, WALK_SPEED_DEFAULT_MPS
+from config import PAGE_CONSTANTS, WALK_SPEED_DEFAULT_MPS
 from explain import (
     ai_explanation_enabled,
     build_poll_explanation,
@@ -277,7 +277,6 @@ def arrivals(
     moment = datetime.now(SGT)
     accuracy, location_timestamp = demo.scoring_location(accuracy, location_timestamp, moment)
     demo.begin_arrival_poll(stop_code, service_no)
-    on_vehicle = route_type == "one_transfer" and leg_index == 2
     try:
         payload = fetch_arrivals(
             stop_code,
@@ -287,8 +286,6 @@ def arrivals(
             accuracy=accuracy,
             location_timestamp=location_timestamp,
             cache=cache,
-            reach_speed_m_s=TRANSFER_BUS_SPEED_MPS if on_vehicle else None,
-            reach_range_fraction=LEG2_REACH_RANGE_FRACTION,
             walk_speed_m_s=speed,
         )
     except ArrivalUnavailable:
@@ -300,9 +297,7 @@ def arrivals(
             content["simulated"] = True
         return JSONResponse(status_code=503, content=content)
     payload.update(response_fields(speed, speed_source))
-    payload["near_stop"] = False if on_vehicle else _near_stop(cache, stop_code, lat, lon)
-    if on_vehicle:
-        payload["reach_stop"] = _reach_window(cache, stop_code, lat, lon, moment)
+    payload["near_stop"] = _near_stop(cache, stop_code, lat, lon)
     if demo.apply_stale(payload, moment):
         return payload
     if demo.arrival_is_simulated():
@@ -385,7 +380,6 @@ def arrivals(
             explained_advice=explained_advice,
             in_flight=explanation_in_flight == 1,
             reroute_fired=fired,
-            reach_distance_m=(payload.get("reach_stop") or {}).get("distance_m") if on_vehicle else None,
             walk_speed_m_s=speed,
         )
         if pack is not None:
@@ -432,28 +426,6 @@ def _near_stop(cache, stop_code, lat, lon) -> bool:
     except (KeyError, TypeError, ValueError):
         return False
     return is_near_stop(distance)
-
-
-def _reach_window(cache, stop_code, lat, lon, now) -> dict | None:
-    """Leg 2 display: now plus the time to reach the stop by vehicle, with its range."""
-    stop = cache.stop_by_code(stop_code) if cache is not None else None
-    if not isinstance(stop, dict) or lat is None or lon is None:
-        return None
-    try:
-        distance = haversine_m(lat, lon, float(stop["Latitude"]), float(stop["Longitude"]))
-    except (KeyError, TypeError, ValueError):
-        return None
-    seconds = distance / TRANSFER_BUS_SPEED_MPS
-
-    def at(factor: float) -> str:
-        return (now + timedelta(seconds=seconds * factor)).replace(microsecond=0).isoformat()
-
-    return {
-        "point": at(1),
-        "low": at(1 - LEG2_REACH_RANGE_FRACTION),
-        "high": at(1 + LEG2_REACH_RANGE_FRACTION),
-        "distance_m": int(distance + 0.5),
-    }
 
 
 class _StopLoader:

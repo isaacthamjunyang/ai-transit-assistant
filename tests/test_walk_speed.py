@@ -396,8 +396,6 @@ def test_near_stop_uses_the_30_metre_rule(client):
     assert near["near_stop"] is True
     edge = _poll(client, extra={"lat": LAT + math.degrees(40 / EARTH_RADIUS_M), "lon": LON})
     assert edge["near_stop"] is False
-    leg2 = _poll(client, extra={"lat": near_lat, "lon": LON, "route_type": "one_transfer", "leg_index": 2})
-    assert leg2["near_stop"] is False  # the Leg 2 page never runs the estimator
 
 
 # ---- leave-now fires once

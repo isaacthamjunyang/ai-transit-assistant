@@ -32,7 +32,6 @@ from explain import (
     overview_walk_minutes,
     produce_explanation,
     read_openai_api_key,
-    reach_minutes,
     reset_explanation_gate,
     sentence_one,
     sentence_two,
@@ -44,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / "static" / "index.html"
 SGT = timezone(timedelta(hours=8))
 NOW = datetime(2026, 9, 29, 14, 0, tzinfo=SGT)
-CTX = {"band": "ok", "uncertain": False, "leg2": False}
+CTX = {"band": "ok", "uncertain": False}
 
 
 @pytest.fixture(autouse=True)
@@ -106,7 +105,6 @@ def test_walk_minutes_use_the_overview_rounding():
     assert overview_walk_minutes(225) == 3 and overview_walk_minutes(262) == 3 and overview_walk_minutes(263) == 4
     html = INDEX.read_text(encoding="utf-8")
     assert "Math.max(1, Math.round(metres / serverWalkSpeed / 60))" in html
-    assert reach_minutes(450) == 2  # Leg 2: 450 m at 18 km/h
 
 
 def test_the_example_from_the_prompt():
@@ -128,45 +126,39 @@ def test_sentence_one_variants():
 
 
 def test_sentence_two_default_singular_and_plural():
-    assert sentence_two(sheet(10, 3), band="ok", uncertain=False, leg2=False) == \
+    assert sentence_two(sheet(10, 3), band="ok", uncertain=False) == \
         "Given the walking time is only 3 minutes, you have 7 minutes to get to the bus stop."
-    assert sentence_two(sheet(5, 4), band="ok", uncertain=False, leg2=False) == \
+    assert sentence_two(sheet(5, 4), band="ok", uncertain=False) == \
         "Given the walking time is only 4 minutes, you have 1 minute to get to the bus stop."
-    assert sentence_two(sheet(6, 1), band="ok", uncertain=False, leg2=False) == \
+    assert sentence_two(sheet(6, 1), band="ok", uncertain=False) == \
         "Given the walking time is only 1 minute, you have 5 minutes to get to the bus stop."
 
 
 def test_sentence_two_may_not_reach_when_walking_takes_as_long_as_the_bus():
-    assert sentence_two(sheet(3, 3), band="ok", uncertain=False, leg2=False) == \
+    assert sentence_two(sheet(3, 3), band="ok", uncertain=False) == \
         "Given the walking time is 3 minutes, you may not reach the stop before the bus."
-    assert sentence_two(sheet(2, 5), band="mid", uncertain=False, leg2=False) == \
+    assert sentence_two(sheet(2, 5), band="mid", uncertain=False) == \
         "Given the walking time is 5 minutes, you may not reach the stop before the bus."
-    assert sentence_two(sheet(0, 1), band="ok", uncertain=False, leg2=False).endswith("before the bus.")
+    assert sentence_two(sheet(0, 1), band="ok", uncertain=False).endswith("before the bus.")
 
 
 def test_sentence_two_unlikely_for_a_low_band_or_switch_or_do_not_rely():
     expected = "Given the walking time is 3 minutes, catching this bus is unlikely."
-    assert sentence_two(sheet(10, 3), band="low", uncertain=False, leg2=False) == expected
-    assert sentence_two(sheet(10, 3, "switch_route"), band="ok", uncertain=False, leg2=False) == expected
-    assert sentence_two(sheet(10, 3, "do_not_rely"), band="ok", uncertain=False, leg2=False) == expected
+    assert sentence_two(sheet(10, 3), band="low", uncertain=False) == expected
+    assert sentence_two(sheet(10, 3, "switch_route"), band="ok", uncertain=False) == expected
+    assert sentence_two(sheet(10, 3, "do_not_rely"), band="ok", uncertain=False) == expected
 
 
 def test_sentence_two_location_uncertain_wins():
     expected = "Your location is uncertain, so the walking time may be off."
-    assert sentence_two(sheet(10, 3), band="low", uncertain=True, leg2=False) == expected
-    assert sentence_two(sheet(2, 5, "do_not_rely"), band="low", uncertain=True, leg2=True) == expected
-
-
-def test_sentence_two_leg_2_uses_the_distance_wording():
-    assert sentence_two(sheet(6, 2), band="ok", uncertain=False, leg2=True) == \
-        "Given you are about 2 minutes from the stop, you have 4 minutes to get to the bus stop."
-    assert sentence_two(sheet(6, 1), band="ok", uncertain=False, leg2=True).startswith("Given you are about 1 minute from the stop")
+    assert sentence_two(sheet(10, 3), band="low", uncertain=True) == expected
+    assert sentence_two(sheet(2, 5, "do_not_rely"), band="low", uncertain=True) == expected
 
 
 def test_variant_priority_first_match_wins():
     # uncertain, then low band or switch or do-not-rely, then may-not-reach, then the default.
-    assert "unlikely" in sentence_two(sheet(2, 5, "do_not_rely"), band="ok", uncertain=False, leg2=False)
-    assert "may not reach" in sentence_two(sheet(2, 5), band="mid", uncertain=False, leg2=False)
+    assert "unlikely" in sentence_two(sheet(2, 5, "do_not_rely"), band="ok", uncertain=False)
+    assert "may not reach" in sentence_two(sheet(2, 5), band="mid", uncertain=False)
 
 
 def test_copy_templates_match_python():
@@ -176,7 +168,6 @@ def test_copy_templates_match_python():
                  "Given the walking time is {w} minutes, you may not reach the stop before the bus.",
                  "Given the walking time is {w} minutes, catching this bus is unlikely.",
                  "Your location is uncertain, so the walking time may be off.",
-                 "Given you are about {w} minutes from the stop, you have {t} minutes to get to the bus stop.",
                  "It is advisable to {advice}."):
         assert text in copy, text
     for clause in ACTION_ADVICE.values():
@@ -185,13 +176,13 @@ def test_copy_templates_match_python():
 
 # ---- no heading, no probability, no seconds, no spare
 
-ALL_CASES = [(e, w, a, band, unc, leg2) for e in (0, 1, 2, 10) for w in (1, 3, 12) for a in explain.ACTIONS
-             for band in ("ok", "mid", "low", None) for unc in (False, True) for leg2 in (False, True)]
+ALL_CASES = [(e, w, a, band, unc) for e in (0, 1, 2, 10) for w in (1, 3, 12) for a in explain.ACTIONS
+             for band in ("ok", "mid", "low", None) for unc in (False, True)]
 
 
 def test_no_explanation_has_a_heading_probability_seconds_or_spare():
-    for e, w, action, band, unc, leg2 in ALL_CASES:
-        text = compose_text(sheet(e, w, action), ACTION_ADVICE[action], band=band, uncertain=unc, leg2=leg2)
+    for e, w, action, band, unc in ALL_CASES:
+        text = compose_text(sheet(e, w, action), ACTION_ADVICE[action], band=band, uncertain=unc)
         assert len(re.findall(r"[.]", text)) == 3, text  # exactly three sentences
         assert "\n" not in text and ":" not in text and "%" not in text
         lowered = text.lower()
@@ -376,12 +367,6 @@ def test_context_chooses_the_sentence_two_variant_and_the_model_never_sees_it():
     assert set(unc["fact_sheet"]) == set(FACT_SHEET_KEYS) and "band" not in unc["fact_sheet"]
     stale = _poll(_payload(600, quality="stale"))
     assert stale["call"] is False  # no model call for stale or unavailable data
-
-
-def test_leg_2_uses_the_vehicle_input():
-    leg2 = _poll(_payload(600), reach_distance_m=450.0)
-    assert leg2["context"]["leg2"] is True and leg2["fact_sheet"]["walk_minutes"] == 2
-    assert leg2["text"].startswith("The bus is 10 minutes away. Given you are about 2 minutes from the stop, you have 8 minutes")
 
 
 def test_a_reroute_uses_the_winners_numbers():

@@ -40,7 +40,6 @@ var copy = {
     walkMayNotReach: "Given the walking time is {w} minutes, you may not reach the stop before the bus.",
     walkUnlikely: "Given the walking time is {w} minutes, catching this bus is unlikely.",
     locationUncertain: "Your location is uncertain, so the walking time may be off.",
-    leg2Default: "Given you are about {w} minutes from the stop, you have {t} minutes to get to the bus stop.",
     adviceSentence: "It is advisable to {advice}.",
     advice: {
       wait: "wait for your leave-by alert",
@@ -214,9 +213,9 @@ var copy = {
     reasonTargetMet: "Chosen for you: it should get you there by your arrive-by time.",
     reasonTargetMissed: "No route meets your arrive-by time. This one should get you there earliest.",
     reasonNoTarget: "Chosen for you: the quickest option we found.",
-    leg2Note: "Live tracking starts when you reach the transfer stop.",
-    /* omitted when the headway is not available */
-    leg2Headway: "Schedule: about every {minutes} min."
+    /* proposed: shown on the second bus of a transfer route; the headway line is omitted when it is not available */
+    firstBusOnly: "Live tracking covers your first bus only.",
+    headway: "Schedule: about every {minutes} min."
   },
   liveCatch: {
     /* proposed, needs approval; a deliberate deviation from mockup 7, recorded in the plan */
@@ -233,8 +232,6 @@ var copy = {
     ringEtaSoon: " arriving in under 1 minute",
     ringEtaNow: " arriving now",
     ringAt: " at {stop}",
-    /* proposed, needs approval */
-    chanceToCatchLeg2: "Chance to catch Bus {service} at {stop}",
     range: "Range: {range_low} – {range_high}%",
     caption: "if you leave now and walk at a normal pace",
     /* proposed, approved: the caption follows the source the server reports for the walking speed */
@@ -329,7 +326,7 @@ var copy = {
     minutesAgo: "{minutes} min {seconds} sec ago",
     noValue: "—"
   },
-  /* proposed, needs approval: every string in catchPrompt, transferAlert and leg2 */
+  /* proposed, needs approval: every string in catchPrompt */
   catchPrompt: {
     seeArrivals: "See bus arrival times",
     thenBus: "Then Bus {service} at {stop}",
@@ -340,19 +337,7 @@ var copy = {
     endMax: "Tracking stopped after 60 minutes.",
     planNew: "Plan a new journey",
     onWayTitle: "On your way",
-    boarded: "On board",
-    transferNote: "We'll alert you when you're near {transfer stop}. Keep this page open."
-  },
-  transferAlert: {
-    prompt: "You are reaching the second bus stop",
-    next: "Next",
-    notificationTitle: "Get ready to change bus",
-    notificationBody: "You are reaching {stop name}. Tap to check your chance of catching Bus {service}.",
-    noGps: "Turn on location to get a transfer alert."
-  },
-  leg2: {
-    caption: "based on how far you are from the stop",
-    reachLabel: "Reach the stop"
+    boarded: "On board"
   },
   liveMap: {
     fullRoute: "Full route",

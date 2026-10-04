@@ -26,7 +26,7 @@ def test_start_runs_nothing_before_the_tap_and_asks_for_motion_inside_it(app):
     assert not any("walk_speed" in url for url in report["requestsBeforeStart"])
 
 
-STOP_CASES = ["yes", "no", "end", "leave", "back", "hidden", "leg2", "onway", "newjourney", "demo", "ended-by-unanswered"]
+STOP_CASES = ["yes", "yes-transfer", "no", "end", "leave", "back", "hidden", "onway", "newjourney", "demo", "ended-by-unanswered"]
 
 
 @pytest.fixture(scope="module")
@@ -171,11 +171,9 @@ def test_the_real_poll_with_no_value_is_the_normal_pace(ui):
     assert real["card"]["caption"] == "if you leave now and walk at a normal pace"
 
 
-def test_an_unknown_source_falls_back_to_the_normal_pace_and_leg2_has_no_pace_line(ui):
+def test_an_unknown_source_falls_back_to_the_normal_pace(ui):
     bogus = ui["captions"]["bogus"]
     assert bogus["caption"] == CAPTIONS["default"][0] and bogus["line"] == "Walking pace: 4.5 km/h · normal pace"
-    leg2 = ui["captions"]["leg2"]
-    assert leg2["caption"] == "based on how far you are from the stop" and leg2["line"] == ""
 
 
 def test_the_overview_shows_the_privacy_line_or_the_sensor_off_line(ui):
@@ -183,3 +181,27 @@ def test_the_overview_shows_the_privacy_line_or_the_sensor_off_line(ui):
     assert ui["notes_missing"]["onOverview"]["overview"] == SENSOR_OFF
     assert ui["notes_denied"]["afterDenied"]["newJourney"] == SENSOR_OFF
     assert ui["notes_demo"]["inDemo"] == {"overview": "", "newJourney": ""}
+
+
+def test_yes_on_a_transfer_route_shows_the_overview_and_stops_everything(stop_reports):
+    report = stop_reports["yes-transfer"]
+    assert report["afterYes"] == {"screen": "onway", "monitoring": False, "poll": True, "display": True,
+                                  "pace": False, "proposal": ""}
+    text = report["onWayText"]
+    assert "On board" in text and "Bus 18" in text and "Bus 14" in text
+    assert "Schedule: about every 12 min." in text
+    assert "Live tracking covers your first bus only." in text
+    assert "alert you" not in text
+
+
+def test_the_debug_bar_sits_on_top_of_the_page_stays_one_line_and_survives_navigation(app):
+    report = run_scenario("debugbar", app)["result"]
+    for step in ("beforeStart", "onOverview", "onLive", "afterHome"):
+        bar = report[step]
+        assert bar["onTop"] and bar["top"] <= 1 and bar["height"] <= 40 and bar["width"] <= bar["vw"], (step, bar)
+        assert bar["search"] == "?pace=debug", (step, bar)
+        assert bar["text"].startswith("mode "), (step, bar)
+    assert report["beforeStart"]["text"].endswith("journey not started")
+    assert report["open"]["hidden"] is False and report["open"]["onTop"] and report["open"]["buttons"] == 3
+    assert report["open"]["bottom"] <= report["open"]["vh"]
+    assert report["boxes"] == 1

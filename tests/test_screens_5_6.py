@@ -50,8 +50,9 @@ def test_transfer_variant_adds_a_transfer_stop_and_a_schedule_only_second_bus():
     assert 'typeof leg.published_headway_minutes === "number"' in render
     copy = COPY.read_text(encoding="utf-8")
     assert "/* proposed, needs approval */" in copy
-    assert 'leg2Note: "Live tracking starts when you reach the transfer stop."' in copy
-    assert 'leg2Headway: "Schedule: about every {minutes} min."' in copy
+    assert 'firstBusOnly: "Live tracking covers your first bus only."' in copy
+    assert 'headway: "Schedule: about every {minutes} min."' in copy
+    assert "FIRST_BUS_ONLY_NOTE" in render and "SCHEDULE_HEADWAY" in render
 
 
 def test_bottom_button_runs_the_existing_select_and_start_action():

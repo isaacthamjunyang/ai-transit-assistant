@@ -195,22 +195,10 @@ def score_buses(
     stop_code: str,
     now: datetime,
     location_timestamp: float | None = None,
-    reach_speed_m_s: float | None = None,
-    reach_range_fraction: float = 0.25,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> list[dict]:
-    """Return buses with probability filled in. Does not reorder them.
-
-    reach_speed_m_s is set only while the user is on a vehicle (Leg 2 of a transfer). The
-    time to reach the stop is then distance / speed, with a range of plus or minus
-    reach_range_fraction, in place of the three walking speeds. Nothing else changes.
-    """
-    if reach_speed_m_s is not None:
-        point_speed = reach_speed_m_s
-        slow_speed = reach_speed_m_s / (1 + reach_range_fraction)
-        fast_speed = reach_speed_m_s / (1 - reach_range_fraction)
-    else:
-        point_speed, slow_speed, fast_speed = range_speeds(walk_speed_m_s)
+    """Return buses with probability filled in. Does not reorder them."""
+    point_speed, slow_speed, fast_speed = range_speeds(walk_speed_m_s)
     moment = _as_sgt(now)
     age_seconds = (
         None
@@ -288,7 +276,7 @@ def score_buses(
             "is_missed": False,
         }
         item["probability"]["band"] = ring_band(item["probability"]["point"])
-        item["probability"]["pace"] = None if reach_speed_m_s is not None else pace_guidance(
+        item["probability"]["pace"] = pace_guidance(
             point=item["probability"]["point"],
             range_low=item["probability"]["range_low"],
             range_high=item["probability"]["range_high"],
@@ -296,7 +284,7 @@ def score_buses(
             location_uncertain=quality == "location uncertain",
             distance_to_stop_m=distance_m,
             previous_category=None,
-            headroom_mps=None if reach_speed_m_s is not None else fast_speed - point_speed,
+            headroom_mps=fast_speed - point_speed,
         )
         scored.append(item)
     return scored

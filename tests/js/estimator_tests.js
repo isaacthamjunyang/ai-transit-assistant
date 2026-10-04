@@ -139,7 +139,7 @@
     var geo = {
       watches: 0,
       cleared: 0,
-      watchPosition: function () { geo.watches += 1; return 7; },
+      watchPosition: function (success) { geo.watches += 1; geo.success = success; return 7; },
       clearWatch: function () { geo.cleared += 1; }
     };
     var win = {
@@ -151,7 +151,8 @@
         removeEventListener: function () {}
       },
       navigator: { geolocation: o.noGeo ? undefined : geo },
-      location: { search: "" },
+      location: { search: o.debug ? "?pace=debug" : "" },
+      performance: { timeOrigin: 0 },
       isSecureContext: o.secure !== false,
       addEventListener: function (type, fn) { (listeners[type] = listeners[type] || []).push(fn); },
       removeEventListener: function (type, fn) {
@@ -169,6 +170,11 @@
     if (o.motion !== undefined) {
       win.DeviceMotionEvent = o.motion;
     }
+    if (o.debug) {
+      win.document.createElement = function (tag) { return document.createElement(tag); };
+      win.document.getElementById = function (id) { return document.getElementById(id); };
+      win.document.body = document.body;
+    }
     return win;
   }
 
@@ -180,7 +186,10 @@
       win: o.win || fakeWin({ motion: function () {} }),
       now: function () { return S.t; },
       storage: o.storage === undefined ? memStorage() : o.storage,
-      timers: o.timers || manualTimers()
+      timers: o.timers || manualTimers(),
+      debug: o.debug,
+      debugContext: o.debugContext,
+      clipboard: o.clipboard
     });
     S.est = est;
     return S;
@@ -189,7 +198,7 @@
   /* Advance seconds of simulated time. cfg.motion(tSec) gives the magnitude (or null for no motion events);
      cfg.motionG(tSec) gives an accelerationIncludingGravity vector; cfg.gps(tSec) gives
      {speed (true m/s), report (number or null), acc} or null for no fix. */
-  function run(S, seconds, cfg) {
+  function run(S, seconds, cfg, onTick) {
     var dtMs = 1000 / 60;
     var target = S.t + seconds * 1000;
     while (S.t < target) {
@@ -206,7 +215,7 @@
         if (g) {
           S.dist += g.speed;
           S.est.ingestFix({
-            t: S.t,
+            t: S.t - (g.age || 0) * 1000,
             lat: LAT0 + S.dist / 111195,
             lon: 103.8,
             accuracy: g.acc,
@@ -214,6 +223,9 @@
           });
         }
         S.est.tick(S.t);
+        if (onTick) {
+          onTick(S.est.snapshot());
+        }
       }
     }
     return S.est.snapshot();
@@ -254,10 +266,10 @@
     near(snap.cadence, 1.8, 1.8 * 0.05, "cadence");
   });
 
-  test("cadence", "a signal at 3.5 Hz (running) is rejected", function () {
+  test("cadence", "a running rhythm with a GPS speed at the vehicle limit is not walking", function () {
     var S = scenario();
-    var snap = run(S, 25, { motion: walkSignal(3.5, 1, 13) });
-    check(!snap.walking && snap.cadence === null && snap.cadenceReason === "fast", "reason " + snap.cadenceReason);
+    var snap = run(S, 25, { motion: walkSignal(3.5, 1, 13), gps: function () { return { speed: 3.4, acc: 8 }; } });
+    check(!snap.walking && snap.walkingReason === "vehicle" && snap.mode !== "gps", "reason " + snap.walkingReason);
   });
 
   test("cadence", "the phone's orientation does not matter (gravity removed by low-pass)", function () {
@@ -336,8 +348,9 @@
     check(heard.length === 1 && heard[0] === 31, "the page was not told about a poor fix (it stamps the fix age)");
     check(S.est.snapshot().gpsSpeed === null, "a poor fix was used for speed");
     check(W.gpsSpeed([fix(0, 0, 40, 1.2)], 1000) === null, "accuracy 40 m accepted");
-    check(W.gpsSpeed([fix(0, 0, 10, 1.2)], 11000) === null, "an 11 s old fix accepted");
-    near(W.gpsSpeed([fix(0, 0, 10, 1.2)], 10000).speed, 1.2, 1e-9);
+    check(W.gpsSpeed([fix(0, 0, 10, 1.2)], 3500) === null, "a 3.5 s old fix gave a speed");
+    near(W.gpsSpeed([fix(0, 0, 10, 1.2)], 3000).speed, 1.2, 1e-9);
+    near(W.gpsSpeed([fix(0, 0, 10, 1.2)], 3000).age, 3, 1e-9);
   });
 
   test("gps", "a vehicle speed (8 m/s) is ignored and nothing is learned", function () {
@@ -578,7 +591,8 @@
 
   test("fusion", "with no motion sensor the page is GPS-only and steady GPS walking still counts", function () {
     var before = scenario();
-    check(!run(before, 20, { gps: goodGps(1.1) }).walking, "GPS alone counted before the sensor was declared off");
+    var early = run(before, 20, { gps: goodGps(1.1) });
+    check(early.walking && early.walkingSource === "gps" && early.mode === "gps", "GPS alone did not count");
     return gpsOnly().then(function (S) {
       var snap = run(S, 20, { gps: goodGps(1.1) });
       check(snap.walking && snap.mode === "gps", "GPS-only: " + snap.walkingReason + " " + snap.mode);
@@ -890,6 +904,717 @@
     on.tick(1000);
     var box = document.getElementById("pace-debug");
     check(box && /mode /.test(box.textContent) && box.className === "pace-debug", "no readout");
+  });
+
+
+  // ---------- hand-held walking, GPS alone, fresh fixes ----------
+
+  /* A weak, noisy step rhythm with an arm swing at half the step rate and about 10% jitter in each step. */
+  function handheldSignal(seed, base) {
+    var r = rng(seed);
+    var f0 = base || 1.8;
+    var phase = 0;
+    var last = null;
+    var freq = f0;
+    var index = -1;
+    return function (t) {
+      var dt = last === null ? 0 : t - last;
+      last = t;
+      phase += freq * dt;
+      if (Math.floor(phase) !== index) {
+        index = Math.floor(phase);
+        freq = f0 * Math.min(1.25, Math.max(0.75, 1 + 0.1 * gauss(r)));
+      }
+      var frac = phase - Math.floor(phase);
+      var amp = index % 2 === 0 ? 0.9 : 0.5;
+      var bump = frac < 0.5 ? Math.pow(Math.sin(Math.PI * frac / 0.5), 2) : 0;
+      return 1.1 * amp * bump + 0.45 * Math.abs(gauss(r)) * 0.6;
+    };
+  }
+
+  function irregularSignal(seed) {
+    var r = rng(seed);
+    var nextStep = 0;
+    var start = 0;
+    return function (t) {
+      if (t >= nextStep) {
+        nextStep = t + 0.35 + 0.55 * r();
+        start = t;
+      }
+      var age = t - start;
+      return age < 0.2 ? 3 * Math.pow(Math.sin(Math.PI * age / 0.2), 2) : 0;
+    };
+  }
+
+  /* GPS at 1 Hz with 15 to 25 m accuracy; the reported speed is noisy. */
+  function slowGps(speed, report) {
+    var r = rng(91);
+    return function () {
+      return { speed: speed, report: report === undefined ? speed + 0.08 * gauss(r) : report, acc: 15 + 10 * r() };
+    };
+  }
+
+  test("handheld", "hand-held walking with slow, poor GPS: walking is detected and the speed used is the GPS speed", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: handheldSignal(31), gps: slowGps(1.3) });
+    check(snap.walking && snap.mode === "gps", "walking " + snap.walking + " " + snap.walkingReason + " mode " + snap.mode);
+    near(snap.smoothed, 1.3, 0.12, "speed used");
+  });
+
+  test("handheld", "GPS alone establishes walking while the cadence is irregular", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: irregularSignal(32), gps: slowGps(1.3) });
+    check(snap.cadence === null, "the irregular rhythm gave a cadence");
+    check(snap.walking && snap.walkingSource === "gps" && snap.mode === "gps", snap.walkingReason + " " + snap.mode);
+    near(snap.smoothed, 1.3, 0.12, "speed used");
+    check(snap.stepCount === 0, "learned from an irregular cadence");
+  });
+
+  test("handheld", "GPS alone establishes walking when the motion sensor shows nothing", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: stillSignal(33), gps: slowGps(1.2) });
+    check(snap.walking && snap.walkingSource === "gps" && snap.mode === "gps", snap.walkingReason + " " + snap.mode);
+  });
+
+  test("handheld", "cadence mode still needs learned samples", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: walkSignal(1.8, 1, 34) });
+    check(snap.walking && snap.walkingSource === "cadence", "walking " + snap.walking + " " + snap.walkingReason);
+    check(snap.mode !== "cadence", "cadence mode with no learned step length");
+    var learned = scenario({ storage: memStorage({ "bus-catch-step-length": JSON.stringify({ length: 0.7, count: 3, savedAt: 0 }) }) });
+    var snap2 = run(learned, 30, { motion: walkSignal(1.8, 1, 35) });
+    check(snap2.mode === "cadence", "mode " + snap2.mode);
+    near(snap2.smoothed, 1.8 * 0.7, 0.1, "speed used");
+  });
+
+  test("handheld", "standing is not walking", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: stillSignal(36), gps: slowGps(0, 0.05) });
+    check(!snap.walking && snap.mode !== "gps", "walking " + snap.walking);
+    var T = scenario();
+    var snap2 = run(T, 30, { motion: stillSignal(37) });
+    check(!snap2.walking, "standing with no GPS counted as walking");
+  });
+
+  test("handheld", "a vehicle speed is not walking", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: handheldSignal(38), gps: slowGps(4.0) });
+    check(!snap.walking && snap.walkingReason === "vehicle" && snap.mode !== "gps", snap.walkingReason + " " + snap.mode);
+    var T = scenario();
+    var snap2 = run(T, 30, { motion: irregularSignal(39), gps: slowGps(4.0) });
+    check(!snap2.walking, "a vehicle on irregular motion counted as walking");
+  });
+
+  test("handheld", "a shaken phone with a GPS speed near 0 is not walking", function () {
+    var S = scenario();
+    var snap = run(S, 30, { motion: shakeSignal(40), gps: slowGps(0, 0.04) });
+    check(!snap.walking && snap.mode !== "gps", "walking " + snap.walking);
+    var T = scenario();
+    var snap2 = run(T, 30, { motion: walkSignal(1.8, 1, 41), gps: slowGps(0, 0.04) });
+    check(!snap2.walking && snap2.walkingReason === "gps still", snap2.walkingReason);
+  });
+
+  test("handheld", "a cached fix gives no speed", function () {
+    var S = scenario();
+    S.t = 20000;
+    check(S.est.ingestFix({ t: 12000, lat: LAT0, lon: 103.8, accuracy: 10, speed: 1.3 }) === false, "an 8 s old fix was kept");
+    S.est.tick(S.t);
+    check(S.est.snapshot().gpsSpeed === null && S.est.snapshot().ignoredStale === 1, "a cached fix gave a speed");
+    check(S.est.ingestFix({ t: 16000, lat: LAT0, lon: 103.8, accuracy: 10, speed: 1.3 }) === true, "a 4 s old fix was dropped");
+    S.est.tick(S.t);
+    check(S.est.snapshot().gpsSpeed === null, "a 4 s old fix gave a speed");
+    S.est.ingestFix({ t: 19500, lat: LAT0, lon: 103.8, accuracy: 10, speed: 1.3 });
+    S.est.tick(S.t);
+    near(S.est.snapshot().gpsSpeed, 1.3, 1e-9, "a fresh fix");
+    check(W.gpsSpeed([fix(0, 0, 10, 1.3)], 3100) === null, "a speed was reused after 3 s");
+  });
+
+  test("handheld", "a speed of 0 from a stale fix never counts as gps still, a fresh 0 does", function () {
+    var stale = scenario();
+    var snap = run(stale, 30, {
+      motion: walkSignal(1.8, 1, 42),
+      gps: function () { return { speed: 0, report: 0, acc: 10, age: 4 }; }
+    });
+    check(snap.gpsSpeed === null, "a stale speed was used");
+    check(snap.walkingReason !== "gps still", "a stale 0 counted as still");
+    var fresh = scenario();
+    var snap2 = run(fresh, 30, { motion: walkSignal(1.8, 1, 43), gps: function () { return { speed: 0, report: 0, acc: 10 }; } });
+    check(!snap2.walking && snap2.walkingReason === "gps still", "a fresh 0 did not count as still: " + snap2.walkingReason);
+  });
+
+  test("handheld", "the gps-only gate details are reported", function () {
+    var S = scenario();
+    var snap = run(S, 14, { motion: irregularSignal(44), gps: slowGps(1.3) });
+    var g = snap.gpsOnly;
+    check(g.reason === "ok" && g.inRange >= 7 && g.outRange === 0 && g.nulls === 0 && g.cv < C.STEADY_CV_MAX, JSON.stringify(g));
+    var T = scenario();
+    var n = 0;
+    var snap2 = run(T, 14, { motion: irregularSignal(45), gps: function () { n += 1; var v = n % 2 ? 0.4 : 1.3; return { speed: v, report: v, acc: 10 }; } });
+    check(snap2.gpsOnly.reason === "slow" && snap2.gpsOnly.outRange > 0 && !snap2.walking, JSON.stringify(snap2.gpsOnly));
+  });
+
+  // ---------- iOS: event time stamps, event.interval, null acceleration, watch time stamps ----------
+
+  test("handheld", "events delivered in a burst keep their own spacing and event.interval is ignored", function () {
+    var win = fakeWin({ motion: function () {} });
+    var S = scenario({ win: win });
+    S.est.start();
+    var sig = walkSignal(1.8, 1, 46);
+    for (var second = 1; second <= 14; second++) {
+      var base = (second - 1) * 1000;
+      for (var i = 0; i < 60; i++) {
+        var at = base + i * (1000 / 60);
+        S.t = second * 1000;  // the handler runs late and all at once
+        win.fire("devicemotion", {
+          acceleration: { x: sig(at / 1000), y: 0, z: 0 },
+          accelerationIncludingGravity: null,
+          interval: 5000,
+          timeStamp: at + 1000 / 60
+        });
+      }
+      S.est.tick(S.t);
+    }
+    near(S.est.snapshot().cadence, 1.8, 0.1, "cadence");
+    S.est.stop("test");
+  });
+
+  test("handheld", "a null or partly null linear acceleration falls back to gravity removed", function () {
+    [{ x: null, y: null, z: null }, { x: 0.2, y: null, z: 0.1 }, null].forEach(function (lin) {
+      var win = fakeWin({ motion: function () {} });
+      var S = scenario({ win: win });
+      S.est.start();
+      var sig = walkSignal(1.8, 1, 47);
+      for (var second = 1; second <= 14; second++) {
+        for (var i = 0; i < 60; i++) {
+          var at = (second - 1) * 1000 + i * (1000 / 60);
+          S.t = at + 1000 / 60;
+          win.fire("devicemotion", {
+            acceleration: lin,
+            accelerationIncludingGravity: { x: 9.5 + sig(at / 1000), y: 0.3, z: 2.0 },
+            timeStamp: S.t
+          });
+        }
+        S.est.tick(second * 1000);
+      }
+      near(S.est.snapshot().cadence, 1.8, 0.1, "cadence");
+      S.est.stop("test");
+    });
+  });
+
+  test("handheld", "a watch fix is stamped with the position time, not the callback time", function () {
+    var win = fakeWin({ motion: function () {} });
+    var S = scenario({ win: win });
+    S.t = 30000;
+    S.est.start();
+    win.geo.success({ coords: { latitude: LAT0, longitude: 103.8, accuracy: 10, speed: 1.2 }, timestamp: 21000 });
+    S.est.tick(S.t);
+    check(S.est.snapshot().gpsSpeed === null && S.est.snapshot().ignoredStale === 1, "a cached position was used");
+    win.geo.success({ coords: { latitude: LAT0, longitude: 103.8, accuracy: 10, speed: 1.2 }, timestamp: 29200 });
+    S.est.tick(S.t);
+    near(S.est.snapshot().gpsSpeed, 1.2, 1e-9);
+    near(S.est.snapshot().speedFixAge, 0.8, 1e-6, "age of the fix that supplied the speed");
+    S.est.stop("test");
+  });
+
+  // ---------- the debug bar, the reasons and the trace ----------
+
+  function dbg(options) {
+    var o = options || {};
+    o.win = fakeWin({ motion: function () {}, debug: true });
+    o.debug = true;
+    return scenario(o);
+  }
+
+  test("readout", "the bar is one line, shows mode, speed used and one reason, and a tap opens the panel", function () {
+    var S = dbg();
+    var root = document.getElementById("pace-debug");
+    var bar = root.querySelector(".pace-debug__bar");
+    check(bar && bar.tagName === "BUTTON" && /^mode none .* used - m\/s .* journey not started$/.test(bar.textContent), bar && bar.textContent);
+    check(root.className === "pace-debug" && root.querySelector(".pace-debug__panel").hidden, "the panel was open");
+    bar.click();
+    check(root.className === "pace-debug is-open" && !root.querySelector(".pace-debug__panel").hidden, "the tap did not open it");
+    bar.click();
+    check(root.querySelector(".pace-debug__panel").hidden, "the second tap did not close it");
+    check(!!root.querySelector(".pace-debug__area") && root.querySelectorAll(".pace-debug__button").length === 3, "buttons");
+  });
+
+  test("readout", "each reason shows in the bar", function () {
+    var seen = {};
+    var S = dbg();
+    S.est.start();
+    S.est.tick(S.t + 1000);
+    seen.noEvents = S.est.debugWhy();
+    var T = dbg();
+    T.est.start();
+    run(T, 3, { motion: walkSignal(1.8, 1, 51) });
+    seen.short = T.est.debugWhy();
+    var U = dbg();
+    U.est.start();
+    run(U, 30, { motion: irregularSignal(52) });
+    seen.irregular = U.est.debugWhy();
+    var V = dbg();
+    V.est.start();
+    run(V, 30, { motion: walkSignal(1.8, 1, 53), gps: slowGps(0, 0) });
+    seen.still = V.est.debugWhy();
+    var X = dbg();
+    X.est.start();
+    run(X, 30, { motion: walkSignal(1.8, 1, 54), gps: slowGps(4) });
+    seen.vehicle = X.est.debugWhy();
+    var Y = dbg();
+    Y.est.start();
+    run(Y, 30, { motion: walkSignal(1.8, 1, 55), gps: slowGps(1.3) });
+    seen.ok = Y.est.debugWhy();
+    var Z = dbg();
+    Z.est.start();
+    run(Z, 30, { motion: walkSignal(1.8, 1, 56) });
+    seen.noGps = Z.est.debugWhy();
+    var N = dbg();
+    N.est.start();
+    N.est.noteNearStop(true);
+    N.est.noteNearStop(true);
+    seen.near = N.est.debugWhy();
+    var D = dbg({ debugContext: function () { return { demo: true }; } });
+    seen.demo = D.est.debugWhy();
+    var P = dbg();
+    P.est.start();
+    return P.est.requestPermission().then(function () {
+      seen.granted = P.est.debugWhy();
+      var Q = scenario({ win: fakeWin({ motion: { requestPermission: function () { return Promise.resolve("denied"); } }, debug: true }), debug: true });
+      Q.est.start();
+      return Q.est.requestPermission().then(function () {
+        seen.denied = Q.est.debugWhy();
+        var want = {
+          noEvents: "no motion events", short: "short window", irregular: "irregular cadence", still: "gps still",
+          vehicle: "not walking", ok: "ok", noGps: "no GPS speed", near: "near stop (estimator off)",
+          demo: "demo mode", granted: "no motion events", denied: "no motion permission"
+        };
+        Object.keys(want).forEach(function (key) {
+          check(seen[key] === want[key], key + ": " + seen[key]);
+        });
+      });
+    });
+  });
+
+  test("readout", "a trace of 90 rows has the listed columns and no position", function () {
+    var S = dbg();
+    S.est.start();
+    S.est.traceStart();
+    run(S, 100, { motion: handheldSignal(57), gps: slowGps(1.3) });
+    var all = S.est.traceText().split("\n");
+    check(/^# RUN_REJECT_RATIO=1\.3 GPS_ONLY_CV_MAX=0\.2 LEARN_MIN_VALID_CADENCE=10 AUTOCORR_MIN=0\.3 MOTION_RMS_MIN=0\.4 STEADY_CV_MAX=0\.15$/.test(all[0]), "constants line: " + all[0]);
+    var lines = all.slice(1);
+    var head = lines[0].split(",");
+    ["t", "cadence", "score", "cad_cv", "rms", "gps", "gps_kind", "gps_acc", "fix_age", "speed_fix_age", "walking",
+      "reason", "used", "null_cad", "go_n", "go_in", "go_out", "go_cv", "go_fail", "step", "n", "learn",
+      "best_in_range_f", "best_in_range_score", "best_overall_f", "best_overall_score", "best_low_f",
+      "best_low_score", "cad_pick_reason", "smoothed"].forEach(function (name) {
+      check(head.indexOf(name) !== -1, "missing column " + name);
+    });
+    check(lines.length === 91, "rows " + (lines.length - 1));
+    lines.slice(1).forEach(function (line, i) {
+      var cells = line.split(",");
+      check(cells.length === head.length, "row " + i + " has " + cells.length + " cells");
+      check(Number(cells[0]) === i, "row " + i + " starts at " + cells[0]);
+    });
+    check(lines[60].split(",")[head.indexOf("gps_kind")] === "reported", "gps kind");
+    check(/trace ready: 90 rows/.test(document.getElementById("pace-debug").textContent), "status");
+    S.est.stop("test");
+  });
+
+  test("readout", "copy uses the clipboard and falls back to a visible text area", function () {
+    var written = [];
+    var S = dbg({ clipboard: { writeText: function (text) { written.push(text); return Promise.resolve(); } } });
+    S.est.start();
+    S.est.traceStart();
+    run(S, 5, { motion: walkSignal(1.8, 1, 58), gps: slowGps(1.3) });
+    return S.est.copyTrace().then(function (how) {
+      check(how === "copied" && written.length === 1 && written[0] === S.est.traceText(), "clipboard " + how);
+      check(S.est.debugArea().hidden, "area shown after a copy");
+      var T = dbg({ clipboard: { writeText: function () { return Promise.reject(new Error("blocked")); } } });
+      T.est.start();
+      T.est.traceStart();
+      run(T, 5, { motion: walkSignal(1.8, 1, 59), gps: slowGps(1.3) });
+      return T.est.copyTrace().then(function (how2) {
+        var area = T.est.debugArea();
+        check(how2 === "shown" && !area.hidden && area.value === T.est.traceText(), "fallback " + how2);
+        var U = dbg({ clipboard: null });
+        U.est.traceStart();
+        return U.est.copyTrace().then(function (how3) {
+          check(how3 === "empty", "an empty trace was copied " + how3);
+        });
+      });
+    });
+  });
+
+
+  // ---------- the cadence octave rule, learning gate, GPS-only steadiness, clearing, raw capture ----------
+
+  /* A step rhythm at f0 plus a second harmonic of relative size h, 10% jitter per cycle, noise. */
+  function harmonicSignal(f0, h, seed) {
+    var r = rng(seed);
+    var phase = 0;
+    var last = null;
+    var freq = f0;
+    var idx = -1;
+    return function (t) {
+      var dt = last === null ? 0 : t - last;
+      last = t;
+      phase += freq * dt;
+      if (Math.floor(phase) !== idx) {
+        idx = Math.floor(phase);
+        freq = f0 * Math.min(1.25, Math.max(0.75, 1 + 0.1 * gauss(r)));
+      }
+      // a constant offset keeps the magnitude positive, so the harness's |x| does not rectify the rhythm
+      return 3 + h + Math.cos(2 * Math.PI * phase) + h * Math.cos(4 * Math.PI * phase) + 0.3 * gauss(r);
+    };
+  }
+
+  /* Equal steps at f (a running-like rhythm), optional jitter. */
+  function periodicSignal(f, jitter, seed) {
+    var r = rng(seed);
+    var phase = 0;
+    var last = null;
+    var freq = f;
+    var idx = -1;
+    return function (t) {
+      var dt = last === null ? 0 : t - last;
+      last = t;
+      phase += freq * dt;
+      if (jitter && Math.floor(phase) !== idx) {
+        idx = Math.floor(phase);
+        freq = f * Math.min(1.25, Math.max(0.75, 1 + jitter * gauss(r)));
+      }
+      var p = phase % 1;
+      return 3 * (p < 0.5 ? Math.pow(Math.sin(Math.PI * p / 0.5), 2) : 0) + 0.15 * gauss(r);
+    };
+  }
+
+  /* Seconds of a signal after the 10 s warm-up: how many give the true cadence, how many are not valid. */
+  function share(make, seeds, truth, withGps) {
+    var out = { total: 0, good: 0, invalid: 0, highValid: 0 };
+    seeds.forEach(function (seed) {
+      var S = scenario();
+      run(S, 40, { motion: make(seed), gps: withGps }, function (snap) {
+        if (S.t < 10500) {
+          return;
+        }
+        out.total += 1;
+        if (snap.cadence === null) {
+          out.invalid += 1;
+        } else {
+          if (Math.abs(snap.cadence - truth) <= truth * 0.06) {
+            out.good += 1;
+          }
+          if (snap.cadence > C.CADENCE_MAX) {
+            out.highValid += 1;
+          }
+        }
+      });
+    });
+    return out;
+  }
+
+  [0.8, 1.0, 1.2].forEach(function (h) {
+    test("octave", "a 1.9 steps/s rhythm with a second harmonic of " + h + " times the fundamental gives 1.9", function () {
+      var out = share(function (seed) { return harmonicSignal(1.9, h, seed); }, [61, 62, 63], 1.9);
+      check(out.good >= 0.9 * out.total, out.good + " of " + out.total);
+    });
+  });
+
+  test("octave", "with a second harmonic of 2.0 times the fundamental at least 90% of seconds give 1.9", function () {
+    var out = share(function (seed) { return harmonicSignal(1.9, 2.0, seed); }, [64, 65, 66], 1.9);
+    check(out.good >= 0.9 * out.total, out.good + " of " + out.total);
+  });
+
+  test("octave", "with a second harmonic of 3.0 times the fundamental 3.8 is never valid and 60% give 1.9", function () {
+    var out = share(function (seed) { return harmonicSignal(1.9, 3.0, seed); }, [67, 68, 69], 1.9);
+    check(out.highValid === 0, "a valid cadence above 2.8");
+    check(out.good >= 0.6 * out.total, out.good + " of " + out.total);
+  });
+
+  test("octave", "a 3.2 steps/s running rhythm with jitter: 40% of seconds are not valid and none is above 2.8", function () {
+    var out = share(function (seed) { return periodicSignal(3.2, 0.1, seed); }, [71, 72, 73], 1.6);
+    check(out.highValid === 0, "a valid cadence above 2.8");
+    check(out.invalid >= 0.4 * out.total, "only " + out.invalid + " of " + out.total + " not valid");
+  });
+
+  test("octave", "running with a GPS speed at or above 2.2 m/s is not walking", function () {
+    [2.2, 3.5].forEach(function (speed) {
+      var S = scenario();
+      var snap = run(S, 30, { motion: periodicSignal(3.2, 0.1, 74), gps: function () { return { speed: speed, acc: 8 }; } });
+      check(!snap.walking && snap.walkingReason === "vehicle" && snap.mode !== "gps" && snap.mode !== "cadence",
+        speed + ": " + snap.walkingReason + " " + snap.mode);
+    });
+  });
+
+  test("octave", "a half-rate arm swing does not give 0.95", function () {
+    var seen = [];
+    var S = scenario();
+    run(S, 30, { motion: walkSignal(1.9, 0.5, 75) }, function (snap) {
+      if (snap.cadence !== null) {
+        seen.push(snap.cadence);
+      }
+    });
+    check(seen.length > 10, "no valid cadence at all");
+    seen.forEach(function (value) { check(Math.abs(value - 0.95) > 0.2 && Math.abs(value - 1.9) <= 0.1, "cadence " + value); });
+  });
+
+  /* 8 s of a jittered periodic rhythm, as samples at 50 Hz. */
+  function periodicSamples(f, jitter, seed) {
+    var g = periodicSignal(f, jitter, seed);
+    var out = [];
+    for (var i = 0; i < 400; i++) {
+      out.push(g(i / 50));
+    }
+    return out;
+  }
+
+  test("octave", "a fast peak just above 1.3 times the in-range score is rejected, just below is accepted", function () {
+    var above = null;
+    var below = null;
+    for (var seed = 1; seed <= 600 && (above === null || below === null); seed++) {
+      var e = W.estimateCadence(periodicSamples(3.2, 0.1, seed), 50);
+      if (e.fastScore === null || e.chosenScore === null || e.chosenScore < C.AUTOCORR_MIN) {
+        continue;
+      }
+      var ratio = e.fastScore / e.chosenScore;
+      if (ratio >= C.RUN_REJECT_RATIO && ratio < C.RUN_REJECT_RATIO + 0.1 && above === null) {
+        above = { e: e, ratio: ratio };
+      } else if (ratio < C.RUN_REJECT_RATIO && ratio >= C.RUN_REJECT_RATIO - 0.1 && below === null) {
+        below = { e: e, ratio: ratio };
+      }
+    }
+    check(above !== null && below !== null, "no windows near the limit");
+    check(!above.e.valid && above.e.reason === "fast" && above.e.pick === "reject_ratio" && above.e.cadence > C.CADENCE_MAX,
+      "above " + above.ratio + ": " + above.e.reason + " " + above.e.pick);
+    check(below.e.valid && below.e.cadence > 1.5 && below.e.cadence < 1.7, "below " + below.ratio + ": " + below.e.reason);
+  });
+
+  test("octave", "DOCUMENTED LIMITATION: a perfectly periodic 3.2 steps/s rhythm with no GPS can read as about 1.6, and the speed stays capped", function () {
+    [0.95, 0.7].forEach(function (length) {
+      var storage = memStorage({ "bus-catch-step-length": JSON.stringify({ length: length, count: 3, savedAt: 0 }) });
+      var S = scenario({ storage: storage });
+      var valid = 0;
+      var top = 0;
+      var snap = run(S, 40, { motion: periodicSignal(3.2, 0, 76) }, function (sn) {
+        if (sn.cadence !== null) {
+          valid += 1;
+          check(sn.cadence > 1.5 && sn.cadence < 1.7, "cadence " + sn.cadence);
+        }
+        if (sn.smoothed !== null) {
+          top = Math.max(top, sn.smoothed);
+          check(sn.smoothed <= C.SPEED_MAX + 1e-9, "speed " + sn.smoothed);
+          check(sn.smoothed <= 1.7 * sn.stepLength + 1e-9, "speed above cadence x step length");
+        }
+      });
+      check(valid > 10, "the limitation did not show: " + valid);
+      check(snap.mode === "cadence" && top > 0, "mode " + snap.mode);
+    });
+  });
+
+  test("octave", "the constants have the agreed values", function () {
+    check(C.RUN_REJECT_RATIO === 1.3 && C.GPS_ONLY_CV_MAX === 0.2 && C.LEARN_MIN_VALID_CADENCE === 10, "values");
+    check(C.STEADY_CV_MAX === 0.15 && C.AUTOCORR_MIN === 0.3 && C.CADENCE_MAX === 2.8, "unchanged values");
+  });
+
+  function gpsRecs(speeds) {
+    return speeds.map(function (v, i) { return { t: i * 1000, gpsSpeed: v }; });
+  }
+
+  test("octave", "GPS-only steadiness: a ramp-up and CV 0.15 to 0.19 pass, a noisy 0.25 fails", function () {
+    var ramp = W.detectWalkingGpsOnly(gpsRecs([0.8, 0.95, 1.1, 1.2, 1.25, 1.3, 1.3, 1.3, 1.3]), 8000);
+    check(ramp.walking && ramp.cv > 0.08 && ramp.cv < 0.2, "ramp " + ramp.reason + " " + ramp.cv);
+    var edge = W.detectWalkingGpsOnly(gpsRecs([1.02, 1.38, 1.02, 1.38, 1.02, 1.38, 1.02, 1.38, 1.02]), 8000);
+    check(edge.walking && edge.cv >= C.STEADY_CV_MAX && edge.cv < C.GPS_ONLY_CV_MAX, "edge " + edge.reason + " " + edge.cv);
+    var noisy = W.detectWalkingGpsOnly(gpsRecs([0.9, 1.5, 0.9, 1.5, 0.9, 1.5, 0.9, 1.5, 0.9]), 8000);
+    check(!noisy.walking && noisy.reason === "irregular" && noisy.cv > 0.2, "noisy " + noisy.reason + " " + noisy.cv);
+  });
+
+  test("octave", "the cadence rule still uses STEADY_CV_MAX (0.15), not the GPS-only limit", function () {
+    var rows = [];
+    for (var i = 0; i < 9; i++) {
+      rows.push({ t: i * 1000, cadence: i % 2 ? 2.2 : 1.6, gpsSpeed: null });  // CV about 0.16
+    }
+    var verdict = W.detectWalking(rows, null, 8000);
+    check(!verdict.walking && verdict.reason === "irregular" && verdict.cv > 0.15 && verdict.cv < 0.2, verdict.reason + " " + verdict.cv);
+  });
+
+  // ---- the learning gate: enough valid-cadence seconds
+
+  test("learning", "a window with 11 valid seconds and 3 doubled (null) ones learns", function () {
+    var window14 = recs({ n: 14, cadence: function (i) { return i === 2 || i === 6 || i === 10 ? null : 1.8; } });
+    var valid = window14.filter(function (r) { return r.cadence !== null; }).length;
+    var out = W.learnStep(window14, { length: 0.7, count: 0 });
+    check(valid === 11 && out.accepted, valid + " valid, " + out.reason);
+  });
+
+  test("learning", "9 valid seconds do not learn", function () {
+    var out = W.learnStep(recs({ n: 14, cadence: function (i) { return i < 9 ? 1.8 : null; } }), { length: 0.7, count: 0 });
+    check(!out.accepted && out.reason === "few valid cadence", out.reason);
+  });
+
+  test("learning", "10 valid seconds learn, with the median and CV over the valid ones only", function () {
+    var out = W.learnStep(recs({ n: 14, cadence: function (i) { return i < 10 ? 1.8 : null; } }), { length: 0.7, count: 0 });
+    check(out.accepted, out.reason);
+    var unsteady = W.learnStep(recs({ n: 14, cadence: function (i) { return i < 10 ? (i % 2 ? 2.4 : 1.6) : null; } }), { length: 0.7, count: 0 });
+    check(!unsteady.accepted && unsteady.reason === "cadence not steady", unsteady.reason);
+  });
+
+  test("learning", "a vehicle second or a not-walking second blocks learning", function () {
+    var vehicle = W.learnStep(recs({ n: 14, speed: function (i) { return i === 6 ? 3.0 : 1.26; } }), { length: 0.7, count: 0 });
+    check(!vehicle.accepted, "a vehicle second learned");
+    var notWalking = recs({ n: 14 });
+    notWalking[5].walking = false;
+    var out = W.learnStep(notWalking, { length: 0.7, count: 0 });
+    check(!out.accepted && out.reason === "not walking", out.reason);
+    var missingGps = W.learnStep(recs({ n: 14, speed: function (i) { return i === 3 ? null : 1.26; } }), { length: 0.7, count: 0 });
+    check(!missingGps.accepted && missingGps.reason === "missing", missingGps.reason);
+  });
+
+  test("learning", "the estimator learns from a walk with doubled seconds in between", function () {
+    var S = scenario();
+    var n = 0;
+    run(S, 60, {
+      motion: harmonicSignal(1.9, 2.0, 77),
+      gps: function () { return { speed: 1.2, report: 1.2 + 0.01 * ((n++ % 3) - 1), acc: 8 }; }
+    });
+    check(S.est.snapshot().stepCount >= 1, "no step sample learned: " + S.est.snapshot().lastLearn);
+  });
+
+  // ---- the stale speed is cleared on a new journey, not on a pause
+
+  test("lifecycle", "a new Start journey tap clears the smoothed value, the hold and the slew state", function () {
+    var S = scenario();
+    run(S, 30, { motion: walkSignal(1.8, 1, 78), gps: goodGps(1.2) });
+    check(S.est.snapshot().smoothed !== null && S.est.pollValue() !== null, "no speed to clear");
+    S.est.stop("yes");
+    S.est.resetLeg();
+    S.est.start();
+    var snap = S.est.snapshot();
+    check(snap.smoothed === null && snap.mode === "none" && snap.sent === null, "kept " + snap.smoothed + " " + snap.mode);
+    check(S.est.pollValue() === null, "a stale speed was sent");
+    S.est.tick(S.t + 1000);
+    check(S.est.snapshot().smoothed === null && S.est.pollValue() === null, "a stale speed came back through the hold");
+    S.est.stop("test");
+  });
+
+  test("lifecycle", "a pause and a resume keep the smoothed speed", function () {
+    var S = scenario();
+    run(S, 30, { motion: walkSignal(1.8, 1, 79), gps: goodGps(1.2) });
+    var before = S.est.snapshot().smoothed;
+    S.est.stop("paused");
+    S.est.start();
+    check(S.est.snapshot().smoothed === before && before !== null, "the speed was cleared by a resume");
+    S.est.stop("test");
+  });
+
+  test("lifecycle", "with a remembered pace loaded a new journey uses it with source remembered", function () {
+    var storage = memStorage({ "bus-catch-pace": JSON.stringify({ pace: 1.0, savedAt: 0 }) });
+    var S = scenario({ storage: storage });
+    run(S, 30, { motion: walkSignal(1.8, 1, 80), gps: goodGps(1.3) });
+    S.est.stop("yes");
+    S.est.resetLeg();
+    S.est.start();
+    check(S.est.snapshot().smoothed === null, "kept the smoothed speed");
+    var sent = S.est.pollValue();
+    check(sent && sent.source === "remembered" && Math.abs(sent.speed - 1.0) < 1e-9, JSON.stringify(sent));
+    S.est.stop("test");
+  });
+
+  // ---- the diagnostics, the stride-rate peak and the raw capture
+
+  test("handheld", "used in the trace is what a poll would send, or a dash", function () {
+    var S = dbg();
+    S.est.start();
+    S.est.traceStart();
+    run(S, 3, { motion: stillSignal(81) });
+    var rows = S.est.traceText().split("\n").slice(2);
+    var head = S.est.traceText().split("\n")[1].split(",");
+    var used = head.indexOf("used");
+    rows.forEach(function (row) { check(row.split(",")[used] === "-", "used " + row.split(",")[used]); });
+    check(head[head.length - 1] === "smoothed" && head[head.length - 2] === "used_src", "columns");
+    S.est.stop("test");
+  });
+
+  test("handheld", "a stride-rate peak below 1.2 is visible in the diagnostics but never accepted", function () {
+    function pocket(seed) {
+      var r = rng(seed);
+      var ph = 0;
+      var fr = 1.9;
+      var idx = -1;
+      return function (t) {
+        if (pocket.last === undefined) { pocket.last = t; }
+        ph += fr * (t - pocket.last);
+        pocket.last = t;
+        if (Math.floor(ph) !== idx) {
+          idx = Math.floor(ph);
+          fr = 1.9 * Math.min(1.25, Math.max(0.75, 1 + 0.1 * gauss(r)));
+        }
+        var f = ph - Math.floor(ph);
+        var amp = idx % 2 === 0 ? 1 : 0.3;
+        var bump = f < 0.5 ? Math.pow(Math.sin(Math.PI * f / 0.5), 2) : 0;
+        return 3 * amp * bump + 2 * (1 + Math.cos(Math.PI * ph)) + 0.5 * Math.abs(gauss(r));
+      };
+    }
+    var seen = { low: 0, total: 0, accepted: 0 };
+    var S = scenario();
+    run(S, 30, { motion: pocket(82) }, function (snap) {
+      if (S.t < 10500) {
+        return;
+      }
+      seen.total += 1;
+      var d = snap.cadenceDiag;
+      if (d.bestLowF !== null && d.bestLowF > 0.8 && d.bestLowF < 1.1 && d.bestLowScore > 0.3) {
+        seen.low += 1;
+      }
+      if (snap.cadence !== null) {
+        seen.accepted += 1;
+        check(snap.cadence >= C.CADENCE_MIN, "accepted below the range");
+      }
+    });
+    check(seen.low >= 0.7 * seen.total, "the stride peak was visible in " + seen.low + " of " + seen.total);
+  });
+
+  test("readout", "one record tap also captures raw motion at 25 Hz, 25 values a line, in memory only", function () {
+    var S = dbg();
+    S.est.start();
+    S.est.traceStart();
+    run(S, 100, { motion: handheldSignal(83), gps: slowGps(1.3) });
+    var lines = S.est.rawText().split("\n");
+    check(lines[0] === "hz=25", "first line " + lines[0]);
+    var values = lines.slice(1).join(",").split(",");
+    check(values.length === 2250, "values " + values.length);
+    check(lines.length === 91 && lines.slice(1).every(function (l) { return l.split(",").length === 25; }), "lines " + lines.length);
+    check(values.every(function (v) { return /^-?\d+\.\d\d$/.test(v); }), "format");
+    check(!/[a-zA-Z]/.test(lines.slice(1).join("")), "not numbers only");
+    // the values follow the signal: a walking magnitude is not flat
+    var nums = values.map(Number);
+    var lo = Math.min.apply(null, nums);
+    var hi = Math.max.apply(null, nums);
+    check(hi - lo > 0.5, "flat series");
+    check(/raw 2250 values/.test(document.getElementById("pace-debug").textContent), "status");
+    S.est.stop("test");
+  });
+
+  test("readout", "Copy raw motion uses the clipboard and falls back to the text area", function () {
+    var written = [];
+    var S = dbg({ clipboard: { writeText: function (text) { written.push(text); return Promise.resolve(); } } });
+    S.est.start();
+    S.est.traceStart();
+    run(S, 12, { motion: handheldSignal(84), gps: slowGps(1.3) });
+    return S.est.copyRaw().then(function (how) {
+      check(how === "copied" && written.length === 1 && written[0] === S.est.rawText(), "clipboard " + how);
+      var T = dbg({ clipboard: null });
+      T.est.start();
+      T.est.traceStart();
+      run(T, 12, { motion: handheldSignal(85), gps: slowGps(1.3) });
+      return T.est.copyRaw().then(function (how2) {
+        var area = T.est.debugArea();
+        check(how2 === "shown" && !area.hidden && area.value === T.est.rawText(), "fallback " + how2);
+        var U = dbg({ clipboard: null });
+        return U.est.copyRaw().then(function (how3) { check(how3 === "empty", "empty raw " + how3); });
+      });
+    });
   });
 
   // ---------- done ----------

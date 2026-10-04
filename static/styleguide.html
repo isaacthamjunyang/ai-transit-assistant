@@ -274,7 +274,7 @@
         <span data-copy="arriveBy.na"></span>
       </p>
       <p data-copy="arriveBy.naMessage"></p>
-      <p class="field__hint">Leg 2 schedule expectation sits here. The plan does not lock one sentence for that line.</p>
+      <p class="field__hint">The second bus schedule line sits here.</p>
     </section>
 
     <section class="stack" aria-labelledby="arrive-panel-heading">
@@ -361,7 +361,7 @@
     </section>
 
     <section class="stack" aria-labelledby="flow-heading">
-      <h2 id="flow-heading">Live flow: no-service layout, map, question bar, overviews, reroute options, Leg 2</h2>
+      <h2 id="flow-heading">Live flow: no-service layout, map, question bar, overviews, reroute options</h2>
       <div class="place-row-samples theme-sample-light">
         <h3>Light</h3>
         <div id="flow-sample-light" class="stack"></div>
@@ -916,7 +916,7 @@
       ];
       if (withTransfer) {
         items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza (09048)"), sgDetail(jo.walk.replace("{minutes}", "2"))], ""));
-        items.push(sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "106") + "</span></p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.leg2Note + " " + jo.leg2Headway.replace("{minutes}", "12"))], ""));
+        items.push(sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "106") + "</span></p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.headway.replace("{minutes}", "12")), sgDetail(jo.firstBusOnly)], ""));
       }
       items.push(sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands"), sgDetail(jo.walkToDestination.replace("{minutes}", "3"))], jo.editDestinationStop));
       items.push(sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], jo.editDestination));
@@ -1099,15 +1099,13 @@
       var t = e - w;
       var one = e < 1 ? x.busArrivingNow : e === 1 ? x.busOneMinute : x.busMinutes.replace("{e}", e);
       var two;
-      var lead = opts.leg2 ? "Given you are about " + sgMinutes(w) + " from the stop" : "Given the walking time is " + sgMinutes(w);
+      var lead = "Given the walking time is " + sgMinutes(w);
       if (opts.uncertain) {
         two = x.locationUncertain;
       } else if (opts.band === "low" || opts.action === "switchRoute" || opts.action === "doNotRely") {
         two = lead + ", catching this bus is unlikely.";
       } else if (w >= e) {
         two = lead + ", you may not reach the stop before the bus.";
-      } else if (opts.leg2) {
-        two = x.leg2Default.replace("{w}", w).replace("{t}", t).replace(/ 1 minutes/g, " 1 minute");
       } else {
         two = "Given the walking time is only " + sgMinutes(w) + ", you have " + sgMinutes(t) + " to get to the bus stop.";
       }
@@ -1218,12 +1216,18 @@
         + "<h4>Walking pace: your usual pace</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("remembered", "3.9"))
         + "<h4>Walking pace: normal pace (1.25 m/s)</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("default", "4.5"))
         + "<h4>Developer readout (only with ?pace=debug; delete before submission)</h4>"
-        + "<pre class=\"pace-debug pace-debug--sample\">mode gps (walking)
-cadence 1.82 score 0.91
-gps 1.30 m/s acc 8 m
+        + "<div class=\"pace-debug pace-debug--sample is-open\"><button type=\"button\" class=\"pace-debug__bar\">mode gps &middot; used 1.30 m/s &middot; ok</button>"
+        + "<div class=\"pace-debug__panel\"><pre class=\"pace-debug__text\">mode gps (walking by gps)
+cadence 1.82 score 0.91 rms 1.20 null 0 cv 0.04
+gps 1.30 m/s reported acc 8 m age 0.4 s
+fix age 0.4 s, stale ignored 0
+gps-only n 9 in 9 out 0 cv 0.05 ok
+pick ok_fast_below_ratio in 1.90/0.62 all 1.90/0.62 low 0.95/0.18
 step 0.72 m n=4 learn: ok
-used 1.30 m/s gps smooth 1.29
-motion on events 1420</pre>"
+used 1.30 m/s gps smooth 1.29 sent 1.28
+motion on events 1420
+trace: trace ready: 90 rows, raw 2250 values</pre>"
+        + "<div class=\"pace-debug__actions\"><button type=\"button\" class=\"pace-debug__button\">Record trace</button><button type=\"button\" class=\"pace-debug__button\">Copy trace</button><button type=\"button\" class=\"pace-debug__button\">Copy raw motion</button></div></div></div>"
         + "<h4>Page A heading with a long stop name (ellipsis, full name in the title)</h4>" + sgCatchCard("live", 64, 51, 78, SG_LONG_STOP)
         + "<h4>Page A heading with no ETA (stop name only)</h4>" + sgCatchCard("schedule", 41, 30, 52, "Tanjong Rhu Stn Exit 2", "")
         + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
@@ -1240,7 +1244,6 @@ motion on events 1420</pre>"
         + "<h4>Sentence 2: may not reach the stop</h4>" + sgAiCard("normal", { e: 3, w: 4, band: "mid", action: "leaveNow" })
         + "<h4>Sentence 2: catching this bus is unlikely (low band, switch)</h4>" + sgAiCard("normal", { e: 8, w: 3, band: "low", action: "doNotRely" }) + sgAiCard("normal", { e: 5, w: 2, band: "ok", action: "switchRoute" })
         + "<h4>Sentence 2: location uncertain</h4>" + sgAiCard("normal", { e: 8, w: 3, band: "ok", action: "wait", uncertain: true })
-        + "<h4>Sentence 2: Leg 2 (on a vehicle)</h4>" + sgAiCard("normal", { e: 6, w: 2, band: "ok", action: "wait", leg2: true })
         + "<h4>Sentence 3: every advice clause</h4>" + sgAiCard("normal", { e: 9, w: 3, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 4, w: 2, band: "ok", action: "leaveNow" })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
         + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
@@ -1312,9 +1315,7 @@ motion on events 1420</pre>"
     document.getElementById("quality-sample-light").innerHTML = qualitySample();
     document.getElementById("quality-sample-dark").innerHTML = qualitySample();
 
-    // Live flow samples: no-service layout, the map toggle, the question bar, overviews, reroute options, Leg 2.
-    var ta = copy.transferAlert;
-    var l2 = copy.leg2;
+    // Live flow samples: no-service layout, the map toggle, the question bar, overviews, reroute options.
     var CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     var ROUTE_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20 10 8l4 6 6-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     var PIN_SVG_SG = '<svg class="dest-pin__svg" viewBox="0 0 32 40" aria-hidden="true" focusable="false"><path class="dest-pin__body" d="M16 38s12-11.6 12-22a12 12 0 1 0-24 0c0 10.4 12 22 12 22z"></path><circle class="dest-pin__dot" cx="16" cy="16" r="4.5"></circle></svg>';
@@ -1349,7 +1350,7 @@ motion on events 1420</pre>"
       ];
       if (transfer) {
         items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza (09048)")], ""));
-        items.push(sgStep("bus", jo.busService, [sgDetail(jo.bus.replace("{service}", "106"), "journey-step__service"), sgDetail(cp.transferNote.replace("{transfer stop}", "Orchard Stn/Lucky Plaza (09048)"))], ""));
+        items.push(sgStep("bus", jo.busService, [sgDetail(jo.bus.replace("{service}", "106"), "journey-step__service"), sgDetail(jo.headway.replace("{minutes}", "12")), sgDetail(jo.firstBusOnly)], ""));
       }
       items.push(sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands")], ""));
       items.push(sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], ""));
@@ -1386,16 +1387,6 @@ motion on events 1420</pre>"
         + sgArriveBoxNoTarget() + '<button type="button" class="primary primary--icon"><span>' + jo.startJourney + '</span>' + ARROW_ICON + '</button>';
     }
 
-    function sgLeg2Card() {
-      return '<section class="card catch-card" aria-live="polite">'
-        + sgCardHead(lc.chanceToCatchLeg2.replace("{service}", "106").replace("{stop}", "Orchard Stn/Lucky Plaza"), sgSub(lc.arrivingIn.replace("{n}", "6"), ""), "live")
-        + '<div class="catch-card__row">' + sgRing(64, 51, 78, false, "") + '<div class="catch-card__copy"><p class="catch-card__range">' + lc.range.replace("{range_low}", "51").replace("{range_high}", "78") + '</p></div></div>'
-        + '<p class="catch-card__caption">' + l2.caption + '</p></section>'
-        + '<section class="leave-tiles"><div class="leave-tile"><span class="leave-tile__icon" aria-hidden="true">' + CLOCK_ICON + '</span><div><p class="leave-tile__label">' + l2.reachLabel + '</p><p class="leave-tile__value">6:12 PM</p><p class="leave-tile__meta">(6:11–6:13 PM)</p></div></div>'
-        + '<div class="leave-tile"><span class="leave-tile__icon" aria-hidden="true">' + TILE_FLAG_ICON + '</span><div><p class="leave-tile__label">' + lc.estimatedArrival + '</p><p class="leave-tile__value">6:30 PM</p><p class="leave-tile__meta">(6:27–6:34 PM)</p></div></div></section>'
-        + '<div class="card live-card">' + sgBusCard("live", "", false) + '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["4 min", "12 min", "24 min"]) + '</div>';
-    }
-
     function flowSample() {
       var rows = [
         sgOptionRow("7", 63, 55, 70, "2 min", "6:18 PM", rp.atYourStop, { pills: ["highest_chance", "fastest"] }),
@@ -1410,8 +1401,6 @@ motion on events 1420</pre>"
         + "<h4>Question bar</h4>" + sgQuestionBar()
         + "<h4>On your way: direct route</h4>" + sgOnWay(false)
         + "<h4>On your way: transfer route</h4>" + sgOnWay(true)
-        + "<h4>Top transfer prompt</h4>" + '<div class="transfer-top transfer-top--sample" role="presentation"><span class="bus-tile bus-tile--small" aria-hidden="true">' + BUS_SVG + '</span><p class="transfer-top__text">' + ta.prompt + ' <strong>Orchard Stn (02049)</strong></p><button type="button" class="primary">' + ta.next + '</button></div>'
-        + "<h4>Leg 2 page: reach-the-stop tile, no pace chip</h4>" + sgLeg2Card()
         + "<h4>End card</h4>" + '<div class="banner banner--info alert-row end-card"><span class="alert-row__icon" aria-hidden="true">' + INFO_ICON + '</span><div class="alert-row__copy"><p class="alert-row__title">' + cp.endUnanswered + '</p><button type="button" class="primary">' + cp.planNew + '</button></div></div>'
         + '<div class="banner banner--info alert-row end-card"><span class="alert-row__icon" aria-hidden="true">' + INFO_ICON + '</span><div class="alert-row__copy"><p class="alert-row__title">' + cp.endMax + '</p><button type="button" class="primary">' + cp.planNew + '</button></div></div>'
         + "<h4>Page C, unlikely entry (current-bus card, recommended card, refresh header, alternatives)</h4>" + sgPageCUnlikely()

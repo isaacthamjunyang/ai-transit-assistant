@@ -17,7 +17,8 @@
     AUTOCORR_MIN: 0.3,           // smallest normalised autocorrelation score that counts
     GPS_ACC_MAX_USE: 30,         // metres: a fix with worse accuracy is ignored
     GPS_ACC_MAX_LEARN: 15,       // metres: median accuracy needed to learn
-    GPS_FIX_MAX_AGE_S: 10,       // seconds: older fixes give no GPS speed
+    GPS_SPEED_MAX_AGE_S: 3,      // seconds: a fix older than this gives no GPS speed (a speed is never reused)
+    GPS_WATCH_STALE_S: 5,        // seconds: a watch fix already this old on delivery is a cached position: ignored
     LEARN_SPEED_MIN: 0.7,        // m/s
     LEARN_SPEED_MAX: 2.0,        // m/s
     VEHICLE_SPEED_MIN: 2.2,      // m/s: at or above this the user is not walking
@@ -47,7 +48,8 @@
     GPS_DERIVE_MIN_M: 40,        // metres of net displacement to derive a speed
     GPS_DERIVE_ACC_FACTOR: 4,    // ... and at least this many times the accuracy
     PEAK_RATIO: 0.8,             // shortest lag with at least this share of the best score wins
-    RUN_CADENCE_MAX: 4.5,        // search lags up to this rate so running is seen, then rejected
+    RUN_CADENCE_MAX: 4.5,        // search up to this rate so a faster peak can reject the second;
+                                 // running is not reliably recognised from motion alone (GPS decides)
     REGULAR_S: 8,                // seconds of valid, regular cadence before "walking detected"
     REGULAR_MIN_READINGS: 7,     // one-per-second readings needed inside that span
     MIN_WINDOW_S: 6,             // least data before a cadence is estimated
@@ -63,6 +65,12 @@
     TICK_MS: 1000,               // the fusion runs about once per second
     SLEW_MIN_INTERVAL_MS: 2000,  // one slew step at most per this interval (one step per poll)
     REMEMBER_SAVE_EVERY_S: 30,   // how often the remembered pace may be rewritten
+    RUN_REJECT_RATIO: 1.3,       // a peak above CADENCE_MAX this many times the in-range score rejects the second
+    GPS_ONLY_CV_MAX: 0.20,       // coefficient of variation limit for walking established by GPS speed alone
+    LEARN_MIN_VALID_CADENCE: 10, // valid-cadence seconds needed in a learning window (cadence median and CV use them)
+    DIAG_CADENCE_MIN: 0.6,       // debug only: the diagnostic autocorrelation search goes down to this rate
+    RAW_HZ: 25,                  // debug only: rate of the raw motion capture
+    TRACE_SECONDS: 90,           // debug only: length of a recorded trace and of the raw capture
     STEP_KEY: "bus-catch-step-length",
     PACE_KEY: "bus-catch-pace"
   };
@@ -185,15 +193,29 @@
   }
 
   /* Cadence (steps per second) from a uniformly sampled magnitude signal at fs hertz.
-     Returns {valid, cadence, score, reason}. Peaks are not counted. The dominant period comes from the
-     autocorrelation, taking the shortest lag whose score is at least PEAK_RATIO of the best, so an
-     arm-swing at half the step rate is not mistaken for the cadence. Valid only at AUTOCORR_MIN or more
-     and inside CADENCE_MIN to CADENCE_MAX. A faster rhythm (running) is rejected. */
+     Returns {valid, cadence, score, reason, rms, pick, ...diagnostics}. Peaks are not counted. The pick is made
+     inside the walking range [CADENCE_MIN, CADENCE_MAX] first: the shortest lag whose score is at least PEAK_RATIO
+     of the best in-range score, so an arm-swing at half the step rate is not mistaken for the cadence and a second
+     harmonic above CADENCE_MAX cannot take over. A peak above CADENCE_MAX only rejects the second: when its score is
+     at least RUN_REJECT_RATIO times the chosen in-range score the cadence is not valid (reason "fast"). Valid only
+     at AUTOCORR_MIN or more. The diagnostic fields (best in range, best overall, best below the range, down to
+     DIAG_CADENCE_MIN) are for the debug trace; nothing below CADENCE_MIN is ever accepted. */
   function estimateCadence(samples, fs, constants) {
     var C = constants || CONSTANTS;
     var n = samples.length;
+    var diag = {
+      bestInF: null, bestInScore: null, bestOverallF: null, bestOverallScore: null,
+      bestLowF: null, bestLowScore: null, fastScore: null, chosenScore: null, pick: ""
+    };
+    var finish = function (result, pick) {
+      diag.pick = pick;
+      for (var key in diag) {
+        result[key] = diag[key];
+      }
+      return result;
+    };
     if (n < C.MIN_WINDOW_S * fs * 0.9) {
-      return { valid: false, cadence: null, score: 0, reason: "short" };
+      return finish({ valid: false, cadence: null, score: 0, reason: "short", rms: null }, "short");
     }
     var m = mean(samples);
     var x = new Array(n);
@@ -203,52 +225,106 @@
       energy += x[i] * x[i];
     }
     var power = energy / n;
-    if (Math.sqrt(power) < C.MOTION_RMS_MIN) {
-      return { valid: false, cadence: null, score: 0, reason: "still" };
+    var rms = Math.sqrt(power);
+    if (rms < C.MOTION_RMS_MIN) {
+      return finish({ valid: false, cadence: null, score: 0, reason: "still", rms: rms }, "still");
     }
     var lagMin = Math.max(2, Math.floor(fs / C.RUN_CADENCE_MAX));
     var lagMax = Math.min(n - 2, Math.ceil(fs / C.CADENCE_MIN) + 1);
+    var inMin = Math.max(lagMin, Math.ceil(fs / C.CADENCE_MAX));
+    var lagDiag = Math.max(lagMax, Math.min(n - 2, Math.floor(fs / C.DIAG_CADENCE_MIN)));
     var r = {};
-    for (var lag = lagMin - 1; lag <= lagMax + 1; lag++) {
+    for (var lag = lagMin - 1; lag <= lagDiag + 1; lag++) {
       r[lag] = autocorr(x, lag, power);
     }
-    var peaks = [];
-    var best = 0;
-    for (lag = lagMin; lag <= lagMax; lag++) {
-      if (r[lag] > 0 && r[lag] >= r[lag - 1] && r[lag] > r[lag + 1]) {
-        peaks.push(lag);
-        if (r[lag] > best) {
-          best = r[lag];
+    var freqAt = function (at) {
+      var a = r[at - 1];
+      var b = r[at];
+      var c = r[at + 1];
+      var denom = a - 2 * b + c;
+      var shift = denom < 0 ? clamp(0.5 * (a - c) / denom, -0.5, 0.5) : 0;
+      return fs / (at + shift);
+    };
+    var inPeaks = [];
+    var inBest = 0;
+    var inBestLag = 0;
+    var fastBest = 0;
+    var fastLag = 0;
+    var lowBest = 0;
+    var lowLag = 0;
+    var allBest = 0;
+    var allLag = 0;
+    for (lag = lagMin; lag <= lagDiag; lag++) {
+      if (!(r[lag] > 0 && r[lag] >= r[lag - 1] && r[lag] > r[lag + 1])) {
+        continue;
+      }
+      if (r[lag] > allBest) {
+        allBest = r[lag];
+        allLag = lag;
+      }
+      if (lag < inMin) {
+        if (r[lag] > fastBest) {
+          fastBest = r[lag];
+          fastLag = lag;
         }
+      } else if (lag <= lagMax) {
+        inPeaks.push(lag);
+        if (r[lag] > inBest) {
+          inBest = r[lag];
+          inBestLag = lag;
+        }
+      } else if (r[lag] > lowBest) {
+        lowBest = r[lag];
+        lowLag = lag;
       }
     }
-    if (!peaks.length || best < C.AUTOCORR_MIN) {
-      return { valid: false, cadence: null, score: Math.max(0, best), reason: "weak" };
+    if (inBestLag) {
+      diag.bestInF = freqAt(inBestLag);
+      diag.bestInScore = inBest;
     }
-    var chosen = peaks[0];
-    for (var k = 0; k < peaks.length; k++) {
-      if (r[peaks[k]] >= C.PEAK_RATIO * best) {
-        chosen = peaks[k];
+    if (allLag) {
+      diag.bestOverallF = freqAt(allLag);
+      diag.bestOverallScore = allBest;
+    }
+    if (lowLag) {
+      diag.bestLowF = freqAt(lowLag);
+      diag.bestLowScore = lowBest;
+    }
+    if (fastLag) {
+      diag.fastScore = fastBest;
+    }
+    var fastFreq = fastLag ? freqAt(fastLag) : null;
+    if (!inPeaks.length || inBest < C.AUTOCORR_MIN) {
+      if (fastBest >= C.AUTOCORR_MIN) {
+        return finish({ valid: false, cadence: fastFreq, score: fastBest, reason: "fast", rms: rms }, "fast_only");
+      }
+      return finish({ valid: false, cadence: null, score: Math.max(0, inBest), reason: "weak", rms: rms },
+        inPeaks.length ? "weak_in_range" : "no_in_range_peak");
+    }
+    var chosen = inPeaks[0];
+    for (var k = 0; k < inPeaks.length; k++) {
+      if (r[inPeaks[k]] >= C.PEAK_RATIO * inBest) {
+        chosen = inPeaks[k];
         break;
       }
     }
-    var a = r[chosen - 1];
-    var b = r[chosen];
-    var c = r[chosen + 1];
-    var denom = a - 2 * b + c;
-    var shift = denom < 0 ? clamp(0.5 * (a - c) / denom, -0.5, 0.5) : 0;
-    var frequency = fs / (chosen + shift);
+    var frequency = freqAt(chosen);
     var score = r[chosen];
+    diag.chosenScore = score;
     if (score < C.AUTOCORR_MIN) {
-      return { valid: false, cadence: null, score: score, reason: "weak" };
+      return finish({ valid: false, cadence: null, score: score, reason: "weak", rms: rms }, "weak_chosen");
+    }
+    if (fastLag && fastBest >= C.RUN_REJECT_RATIO * score) {
+      return finish({ valid: false, cadence: fastFreq, score: fastBest, reason: "fast", rms: rms }, "reject_ratio");
     }
     if (frequency > C.CADENCE_MAX) {
-      return { valid: false, cadence: frequency, score: score, reason: "fast" };
+      return finish({ valid: false, cadence: frequency, score: score, reason: "fast", rms: rms }, "above_range");
     }
     if (frequency < C.CADENCE_MIN) {
-      return { valid: false, cadence: frequency, score: score, reason: "slow" };
+      return finish({ valid: false, cadence: frequency, score: score, reason: "slow", rms: rms }, "below_range");
     }
-    return { valid: true, cadence: frequency, score: score, reason: "ok" };
+    return finish({ valid: true, cadence: frequency, score: score, reason: "ok", rms: rms },
+      fastLag ? "ok_fast_below_ratio" : "ok");
   }
 
   function haversineMetres(lat1, lon1, lat2, lon2) {
@@ -261,19 +337,21 @@
     return radius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
   }
 
-  /* A fix is usable when its accuracy is at most GPS_ACC_MAX_USE. nowMs is the clock. */
+  /* A fix is usable for speed when its accuracy is at most GPS_ACC_MAX_USE. Its age is limited by
+     GPS_SPEED_MAX_AGE_S in gpsSpeed. */
   function fixUsable(fix, nowMs, constants) {
     var C = constants || CONSTANTS;
     if (!fix || !isNumber(fix.lat) || !isNumber(fix.lon) || !isNumber(fix.t) || !isNumber(fix.accuracy)) {
       return false;
     }
-    return fix.accuracy <= C.GPS_ACC_MAX_USE && (nowMs - fix.t) / 1000 <= C.GPS_FIX_MAX_AGE_S;
+    return fix.accuracy <= C.GPS_ACC_MAX_USE;
   }
 
-  /* GPS speed from the accepted fixes (oldest first). Uses coords.speed when it is a number on a fix
-     that is recent enough. Otherwise derives a speed from two fixes at least GPS_DERIVE_MIN_S apart, only
-     when the net displacement is at least max(GPS_DERIVE_MIN_M, GPS_DERIVE_ACC_FACTOR x accuracy).
-     Returns {speed, accuracy, derived} or null when there is no GPS speed. */
+  /* GPS speed from the accepted fixes (oldest first). Only a fix at most GPS_SPEED_MAX_AGE_S old gives a speed,
+     so the speed of an old fix is never reused. Uses coords.speed when it is a number. Otherwise derives a speed
+     from two fixes at least GPS_DERIVE_MIN_S apart, only when the net displacement is at least
+     max(GPS_DERIVE_MIN_M, GPS_DERIVE_ACC_FACTOR x accuracy). Returns {speed, accuracy, derived, age} (age in
+     seconds of the fix that supplied the speed) or null when there is no GPS speed. */
   function gpsSpeed(fixes, nowMs, constants) {
     var C = constants || CONSTANTS;
     if (!fixes.length) {
@@ -283,8 +361,12 @@
     if (!fixUsable(last, nowMs, C)) {
       return null;
     }
+    var age = Math.max(0, (nowMs - last.t) / 1000);
+    if (age > C.GPS_SPEED_MAX_AGE_S) {
+      return null;
+    }
     if (isNumber(last.speed) && last.speed >= 0) {
-      return { speed: last.speed, accuracy: last.accuracy, derived: false };
+      return { speed: last.speed, accuracy: last.accuracy, derived: false, age: age };
     }
     for (var i = fixes.length - 2; i >= 0; i--) {
       var older = fixes[i];
@@ -297,7 +379,7 @@
       if (metres < need) {
         return null;
       }
-      return { speed: metres / dt, accuracy: Math.max(older.accuracy, last.accuracy), derived: true };
+      return { speed: metres / dt, accuracy: Math.max(older.accuracy, last.accuracy), derived: true, age: age };
     }
     return null;
   }
@@ -347,36 +429,59 @@
     return { walking: true, reason: "ok", cv: variation };
   }
 
-  /* With no motion sensor (permission denied, unavailable or no event) the page is GPS-only. Walking is then
-     a steady GPS speed, from GPS_ONLY_WALK_MIN up to VEHICLE_SPEED_MIN, over REGULAR_S seconds. */
+  /* Steady GPS speed from GPS_ONLY_WALK_MIN up to VEHICLE_SPEED_MIN over REGULAR_S seconds is walking. This is
+     used when there is no motion sensor (permission denied, unavailable or no event) and also when the sensor is
+     present but the cadence is irregular or missing. Returns {walking, reason, cv, n, nulls, inRange, outRange}:
+     the readings in the window, those with no GPS speed, those in range, those out of range, and the failed
+     condition as the reason ("no gps", "short", "slow", "vehicle", "irregular" or "ok"). */
   function detectWalkingGpsOnly(recs, nowMs, constants) {
     var C = constants || CONSTANTS;
     var from = nowMs - (C.REGULAR_S + 0.5) * 1000;
     var speeds = [];
+    var n = 0;
+    var nulls = 0;
+    var slow = 0;
+    var vehicle = 0;
+    var firstOut = null;
     for (var i = 0; i < recs.length; i++) {
       if (recs[i].t >= from) {
-        if (!isNumber(recs[i].gpsSpeed)) {
-          return { walking: false, reason: "no gps", cv: null };
+        n += 1;
+        var speed = recs[i].gpsSpeed;
+        if (!isNumber(speed)) {
+          nulls += 1;
+          continue;
         }
-        speeds.push(recs[i].gpsSpeed);
+        speeds.push(speed);
+        if (speed < C.GPS_ONLY_WALK_MIN) {
+          slow += 1;
+          firstOut = firstOut || "slow";
+        } else if (speed >= C.VEHICLE_SPEED_MIN) {
+          vehicle += 1;
+          firstOut = firstOut || "vehicle";
+        }
       }
+    }
+    var detail = { n: n, nulls: nulls, inRange: speeds.length - slow - vehicle, outRange: slow + vehicle, cv: null };
+    var result = function (walking, reason, variation) {
+      detail.walking = walking;
+      detail.reason = reason;
+      detail.cv = variation;
+      return detail;
+    };
+    if (nulls > 0) {
+      return result(false, "no gps", null);
     }
     if (speeds.length < C.REGULAR_MIN_READINGS) {
-      return { walking: false, reason: "short", cv: null };
+      return result(false, "short", null);
     }
-    for (var j = 0; j < speeds.length; j++) {
-      if (speeds[j] < C.GPS_ONLY_WALK_MIN) {
-        return { walking: false, reason: "slow", cv: null };
-      }
-      if (speeds[j] >= C.VEHICLE_SPEED_MIN) {
-        return { walking: false, reason: "vehicle", cv: null };
-      }
+    if (firstOut !== null) {
+      return result(false, firstOut, null);
     }
     var variation = cv(speeds);
-    if (!(variation < C.STEADY_CV_MAX)) {
-      return { walking: false, reason: "irregular", cv: variation };
+    if (!(variation < C.GPS_ONLY_CV_MAX)) {
+      return result(false, "irregular", variation);
     }
-    return { walking: true, reason: "ok", cv: variation };
+    return result(true, "ok", variation);
   }
 
   /* One step-length learning sample from the last LEARN_MIN_STEADY_S seconds of one-per-second records
@@ -398,12 +503,17 @@
       if (!rec.walking) {
         return fail("not walking");
       }
-      if (!isNumber(rec.cadence) || !isNumber(rec.gpsSpeed) || !isNumber(rec.gpsAcc)) {
+      if (!isNumber(rec.gpsSpeed) || !isNumber(rec.gpsAcc)) {
         return fail("missing");
       }
-      cadences.push(rec.cadence);
+      if (isNumber(rec.cadence)) {
+        cadences.push(rec.cadence);
+      }
       speeds.push(rec.gpsSpeed);
       accuracies.push(rec.gpsAcc);
+    }
+    if (cadences.length < C.LEARN_MIN_VALID_CADENCE) {
+      return fail("few valid cadence");
     }
     if (!(cv(cadences) <= C.STEADY_CV_MAX)) {
       return fail("cadence not steady");
@@ -591,9 +701,16 @@
       times: [],
       values: [],
       lastMotionAt: null,
-      cadence: { valid: false, cadence: null, score: 0, reason: "short" },
+      cadence: { valid: false, cadence: null, score: 0, reason: "short", rms: null },
       fixes: [],
+      lastFix: null,
+      ignoredStale: 0,
       gps: null,
+      gpsOnly: null,
+      cadStats: { nulls: 0, count: 0, cv: null },
+      walkingSource: "",
+      trace: null,
+      raw: null,
       recs: [],
       step: loadStep(storage, C),
       lastLearnAt: -Infinity,
@@ -631,6 +748,7 @@
           /* a listener must never break the estimator */
         }
       }
+      renderDebug();
     }
 
     function setMotion(state) {
@@ -661,6 +779,9 @@
         }
         setMotion("on");
       }
+      if (est.lastMotionAt !== null && t <= est.lastMotionAt) {
+        return false;
+      }
       est.lastMotionAt = t;
       est.times.push(t);
       est.values.push(magnitude);
@@ -676,10 +797,12 @@
       return true;
     }
 
+    /* A fix is stamped with the time of the position itself (position.timestamp), never the time the callback ran,
+       so a cached position delivered by the watch is old and is ignored when it is more than GPS_WATCH_STALE_S old. */
     function ingestFix(fix) {
       var nowMs = clock();
       var item = {
-        t: isNumber(fix.t) ? fix.t : nowMs,
+        t: isNumber(fix.t) ? Math.min(fix.t, nowMs) : nowMs,
         lat: fix.lat,
         lon: fix.lon,
         accuracy: fix.accuracy,
@@ -688,7 +811,11 @@
       if (!isNumber(item.lat) || !isNumber(item.lon) || !isNumber(item.accuracy)) {
         return false;
       }
-      // Every watch success goes to the page, which may use it as a newer fix and so refresh the fix age.
+      if ((nowMs - item.t) / 1000 > C.GPS_WATCH_STALE_S) {
+        est.ignoredStale += 1;
+        return false;
+      }
+      // Every fresh watch success goes to the page, which may use it as a newer fix and so refresh the fix age.
       for (var i = 0; i < est.listeners.fix.length; i++) {
         try {
           est.listeners.fix[i](item);
@@ -700,6 +827,7 @@
       if (item.accuracy > C.GPS_ACC_MAX_USE) {
         return false;
       }
+      est.lastFix = item;
       est.fixes.push(item);
       var cutoff = item.t - 90000;
       while (est.fixes.length > 2 && est.fixes[0].t < cutoff) {
@@ -735,7 +863,7 @@
       var samples = windowSamples(nowMs);
       est.cadence = samples
         ? estimateCadence(samples, C.RESAMPLE_HZ, C)
-        : { valid: false, cadence: null, score: 0, reason: est.lastMotionAt === null ? "none" : "stale" };
+        : { valid: false, cadence: null, score: 0, reason: est.lastMotionAt === null ? "none" : "stale", rms: null };
       est.gps = gpsSpeed(est.fixes, nowMs, C);
 
       est.recs.push({
@@ -749,9 +877,21 @@
         est.recs.shift();
       }
       var motionDead = est.motion === "off" || est.permission === "denied" || est.permission === "unavailable";
-      var verdict = motionDead
-        ? detectWalkingGpsOnly(est.recs, nowMs, C)
-        : detectWalking(est.recs, est.gps, nowMs, C);
+      est.gpsOnly = detectWalkingGpsOnly(est.recs, nowMs, C);
+      est.cadStats = cadenceStats(est.recs, nowMs);
+      var verdict;
+      est.walkingSource = "cadence";
+      if (motionDead) {
+        verdict = est.gpsOnly;
+        est.walkingSource = "gps";
+      } else {
+        verdict = detectWalking(est.recs, est.gps, nowMs, C);
+        // A steady GPS speed from a fresh fix counts as walking even when the cadence is irregular or missing.
+        if (!verdict.walking && verdict.reason !== "vehicle" && verdict.reason !== "gps still" && est.gpsOnly.walking) {
+          verdict = { walking: true, reason: "ok", cv: est.gpsOnly.cv };
+          est.walkingSource = "gps";
+        }
+      }
       est.walking = verdict.walking;
       est.walkingReason = verdict.reason;
       est.recs[est.recs.length - 1].walking = verdict.walking;
@@ -784,8 +924,33 @@
           maybeRemember(nowMs);
         }
       }
+      if (est.trace !== null && est.trace.active) {
+        traceRow(nowMs);
+      }
+      if (est.raw !== null && est.raw.active) {
+        rawCollect();
+      }
       renderDebug();
       return api.snapshot();
+    }
+
+    /* Readings with no cadence in the walking window, and the variation of the ones that have it. */
+    function cadenceStats(recs, nowMs) {
+      var from = nowMs - (C.REGULAR_S + 0.5) * 1000;
+      var values = [];
+      var count = 0;
+      var nulls = 0;
+      for (var i = 0; i < recs.length; i++) {
+        if (recs[i].t >= from) {
+          count += 1;
+          if (isNumber(recs[i].cadence)) {
+            values.push(recs[i].cadence);
+          } else {
+            nulls += 1;
+          }
+        }
+      }
+      return { nulls: nulls, count: count, cv: values.length >= 2 ? cv(values) : null };
     }
 
     function learn(nowMs) {
@@ -819,9 +984,24 @@
 
     /* ----- attach and detach (sensors and the one location watch) ----- */
 
+    /* The time of a motion event: its own timeStamp when that agrees with the clock to within 2 s (so events
+       delivered in a burst keep their spacing), otherwise the time the handler ran. event.interval is never used. */
+    function eventTime(event) {
+      var now = clock();
+      var stamp = event ? event.timeStamp : undefined;
+      if (isNumber(stamp) && stamp > 0) {
+        var origin = win && win.performance && isNumber(win.performance.timeOrigin) ? win.performance.timeOrigin : null;
+        var epoch = stamp > 1e12 ? stamp : origin !== null ? origin + stamp : null;
+        if (epoch !== null && Math.abs(epoch - now) <= 2000) {
+          return epoch;
+        }
+      }
+      return now;
+    }
+
     function onMotionEvent(event) {
       ingestMotion({
-        t: clock(),
+        t: eventTime(event),
         acceleration: event.acceleration,
         accelerationIncludingGravity: event.accelerationIncludingGravity
       });
@@ -833,7 +1013,7 @@
         return;
       }
       ingestFix({
-        t: clock(),
+        t: isNumber(position.timestamp) ? position.timestamp : clock(),
         lat: coords.latitude,
         lon: coords.longitude,
         accuracy: coords.accuracy,
@@ -856,6 +1036,7 @@
       est.lastMotionAt = null;
       est.recs = [];
       est.fixes = [];
+      est.lastFix = null;
       est.lastTickAt = null;
       if (est.permission !== "denied" && est.permission !== "unavailable" && win) {
         win.addEventListener("devicemotion", onMotionEvent);
@@ -927,9 +1108,18 @@
       }
     }
 
-    /* ----- debug readout (only with ?pace=debug) ----- */
+    /* ----- debug readout and trace (only with ?pace=debug; remove before submission) ----- */
 
-    var debugBox = null;
+    var TRACE_COLUMNS = ["t", "cadence", "cad_ok", "score", "cad_cv", "rms", "gps", "gps_kind", "gps_acc",
+      "fix_age", "speed_fix_age", "walking", "reason", "source", "mode", "used", "null_cad", "go_n", "go_in",
+      "go_out", "go_cv", "go_fail", "step", "n", "learn", "best_in_range_f", "best_in_range_score",
+      "best_overall_f", "best_overall_score", "best_low_f", "best_low_score", "cad_pick_reason", "used_src",
+      "smoothed"];
+    var TRACE_CONSTANTS = ["RUN_REJECT_RATIO", "GPS_ONLY_CV_MAX", "LEARN_MIN_VALID_CADENCE", "AUTOCORR_MIN",
+      "MOTION_RMS_MIN", "STEADY_CV_MAX"];
+    var debugEl = null;
+    var debugOpen = false;
+
     function debugWanted() {
       if (opts.debug === true) {
         return true;
@@ -941,29 +1131,282 @@
       }
     }
 
+    function num(value, digits) {
+      return isNumber(value) ? value.toFixed(digits) : "-";
+    }
+
+    /* The one reason shown in the top bar. */
+    function whyReason() {
+      var context = typeof opts.debugContext === "function" ? opts.debugContext() : {};
+      if (context && context.demo) {
+        return "demo mode";
+      }
+      if (est.latched) {
+        return "near stop (estimator off)";
+      }
+      if (!est.wanted) {
+        return "journey not started";
+      }
+      if (est.permission === "denied" || est.permission === "unavailable") {
+        return "no motion permission";
+      }
+      if (est.motion === "off" || !est.motionSeen) {
+        return "no motion events";
+      }
+      if (est.walking) {
+        return est.mode === "gps" || est.mode === "cadence" || est.gps !== null ? "ok" : "no GPS speed";
+      }
+      switch (est.walkingReason) {
+        case "short": return "short window";
+        case "irregular": return "irregular cadence";
+        case "gps still": return "gps still";
+        case "no gps": return "no GPS speed";
+        default: return "not walking";
+      }
+    }
+
+    function buildDebug() {
+      var doc = win.document;
+      var old = doc.getElementById("pace-debug");
+      if (old && old.parentNode) {
+        old.parentNode.removeChild(old);
+      }
+      var make = function (tag, className) {
+        var node = doc.createElement(tag);
+        node.className = className;
+        return node;
+      };
+      var root = make("div", "pace-debug");
+      root.id = "pace-debug";
+      var bar = make("button", "pace-debug__bar");
+      bar.type = "button";
+      bar.setAttribute("aria-expanded", "false");
+      var panel = make("div", "pace-debug__panel");
+      panel.hidden = true;
+      var text = make("pre", "pace-debug__text");
+      var actions = make("div", "pace-debug__actions");
+      var record = make("button", "pace-debug__button");
+      record.type = "button";
+      record.textContent = "Record trace";
+      var copyButton = make("button", "pace-debug__button");
+      copyButton.type = "button";
+      copyButton.textContent = "Copy trace";
+      var rawButton = make("button", "pace-debug__button");
+      rawButton.type = "button";
+      rawButton.textContent = "Copy raw motion";
+      var status = make("p", "pace-debug__status");
+      var area = make("textarea", "pace-debug__area");
+      area.hidden = true;
+      area.readOnly = true;
+      area.rows = 6;
+      actions.appendChild(record);
+      actions.appendChild(copyButton);
+      actions.appendChild(rawButton);
+      panel.appendChild(text);
+      panel.appendChild(actions);
+      panel.appendChild(status);
+      panel.appendChild(area);
+      root.appendChild(bar);
+      root.appendChild(panel);
+      doc.body.appendChild(root);
+      bar.addEventListener("click", function () {
+        debugOpen = !debugOpen;
+        panel.hidden = !debugOpen;
+        root.classList.toggle("is-open", debugOpen);
+        bar.setAttribute("aria-expanded", debugOpen ? "true" : "false");
+      });
+      record.addEventListener("click", function () {
+        api.traceStart();
+      });
+      copyButton.addEventListener("click", function () {
+        api.copyTrace();
+      });
+      rawButton.addEventListener("click", function () {
+        api.copyRaw();
+      });
+      debugEl = { root: root, bar: bar, panel: panel, text: text, status: status, area: area };
+    }
+
+    function traceStatusText() {
+      if (est.trace === null) {
+        return "no trace recorded";
+      }
+      var raw = est.raw === null ? 0 : est.raw.values.length;
+      if (est.trace.active) {
+        return "recording " + est.trace.rows.length + "/" + C.TRACE_SECONDS + " s, raw " + raw;
+      }
+      return "trace ready: " + est.trace.rows.length + " rows, raw " + raw + " values";
+    }
+
     function renderDebug() {
-      if (!debugWanted() || !win || !win.document) {
+      if (!debugWanted() || !win || !win.document || !win.document.body) {
         return;
       }
-      if (debugBox === null) {
-        debugBox = win.document.createElement("pre");
-        debugBox.className = "pace-debug";
-        debugBox.setAttribute("aria-hidden", "true");
-        debugBox.id = "pace-debug";
-        win.document.body.appendChild(debugBox);
+      if (debugEl === null) {
+        buildDebug();
       }
       var s = api.snapshot();
-      var f = function (value, digits) {
-        return isNumber(value) ? value.toFixed(digits) : "-";
-      };
-      debugBox.textContent = [
-        "mode " + s.mode + (s.walking ? " (walking)" : " (" + s.walkingReason + ")"),
-        "cadence " + f(s.cadence, 2) + " score " + f(s.cadenceScore, 2),
-        "gps " + f(s.gpsSpeed, 2) + " m/s acc " + f(s.gpsAccuracy, 0) + " m",
-        "step " + f(s.stepLength, 2) + " m n=" + s.stepCount + " learn: " + s.lastLearn,
-        "used " + f(s.sent, 2) + " m/s " + (s.sentSource || "none") + " smooth " + f(s.smoothed, 2),
-        "motion " + s.motion + " events " + s.motionHandlerCalls
+      var send = peekSend(clock());
+      debugEl.bar.textContent = "mode " + s.mode + " · used " + num(send ? send.speed : null, 2) +
+        " m/s · " + whyReason();
+      debugEl.text.textContent = [
+        "mode " + s.mode + (s.walking ? " (walking by " + s.walkingSource + ")" : " (" + s.walkingReason + ")"),
+        "cadence " + num(s.cadence, 2) + " score " + num(s.cadenceScore, 2) + " rms " + num(s.motionRms, 2) +
+          " null " + s.nullCadence + " cv " + num(s.cadenceCv, 2),
+        "gps " + num(s.gpsSpeed, 2) + " m/s " + s.gpsKind + " acc " + num(s.gpsAccuracy, 0) + " m age " +
+          num(s.speedFixAge, 1) + " s",
+        "fix age " + num(s.fixAge, 1) + " s, stale ignored " + s.ignoredStale,
+        "gps-only n " + s.gpsOnly.n + " in " + s.gpsOnly.inRange + " out " + s.gpsOnly.outRange + " cv " +
+          num(s.gpsOnly.cv, 2) + " " + s.gpsOnly.reason,
+        "pick " + s.cadenceDiag.pick + " in " + num(s.cadenceDiag.bestInF, 2) + "/" +
+          num(s.cadenceDiag.bestInScore, 2) + " all " + num(s.cadenceDiag.bestOverallF, 2) + "/" +
+          num(s.cadenceDiag.bestOverallScore, 2) + " low " + num(s.cadenceDiag.bestLowF, 2) + "/" +
+          num(s.cadenceDiag.bestLowScore, 2),
+        "step " + num(s.stepLength, 2) + " m n=" + s.stepCount + " learn: " + s.lastLearn,
+        "used " + num(send ? send.speed : null, 2) + " m/s " + (send ? send.source : "-") + " smooth " +
+          num(s.smoothed, 2) + " sent " + num(s.sent, 2),
+        "motion " + s.motion + " events " + s.motionHandlerCalls,
+        "trace: " + traceStatusText()
       ].join("\n");
+      debugEl.status.textContent = traceStatusText();
+    }
+
+    /* The value a poll would send right now, without moving the slew state: {speed, source} or null. */
+    function pollTarget(nowMs) {
+      if (est.smoothed !== null && (est.mode !== "none" || est.frozen)) {
+        return { target: est.smoothed, source: est.mode === "remembered" ? "remembered" : est.lastMeasuredMode === "cadence" ? "cadence" : "gps" };
+      }
+      if (est.remembered && (nowMs - est.remembered.savedAt) / 86400000 <= C.REMEMBER_MAX_AGE_DAYS) {
+        return { target: est.remembered.pace, source: "remembered" };
+      }
+      return null;
+    }
+
+    function peekSend(nowMs) {
+      var t = pollTarget(nowMs);
+      if (t === null) {
+        return null;
+      }
+      var speed;
+      if (est.sent === null) {
+        speed = toSendable(t.target, C);
+      } else if (nowMs - est.sentAt >= C.SLEW_MIN_INTERVAL_MS) {
+        speed = toSendable(slew(est.sent, clampSpeed(t.target, C), C), C);
+      } else {
+        speed = est.sent;
+      }
+      return { speed: speed, source: t.source };
+    }
+
+    /* One row per second, numbers and short tokens only: no position and no time of any position. */
+    function traceRow(nowMs) {
+      var trace = est.trace;
+      if (trace.start === null) {
+        trace.start = nowMs;
+      }
+      var gps = est.gps;
+      var go = est.gpsOnly;
+      var d = est.cadence;
+      var send = peekSend(nowMs);
+      var row = [
+        Math.round((nowMs - trace.start) / 1000),
+        num(est.cadence.cadence, 2),
+        est.cadence.valid ? 1 : 0,
+        num(est.cadence.score, 2),
+        num(est.cadStats.cv, 3),
+        num(est.cadence.rms, 2),
+        num(gps ? gps.speed : null, 2),
+        gps ? (gps.derived ? "derived" : "reported") : "missing",
+        num(gps ? gps.accuracy : null, 0),
+        num(est.lastFix ? (nowMs - est.lastFix.t) / 1000 : null, 1),
+        num(gps ? gps.age : null, 1),
+        est.walking ? 1 : 0,
+        String(est.walkingReason).replace(/ /g, "_"),
+        est.walkingSource,
+        est.mode,
+        num(send ? send.speed : null, 2),
+        est.cadStats.nulls,
+        go.n,
+        go.inRange,
+        go.outRange,
+        num(go.cv, 3),
+        String(go.reason).replace(/ /g, "_"),
+        num(est.step.length, 2),
+        est.step.count,
+        String(est.lastLearn || "-").replace(/ /g, "_"),
+        num(d.bestInF, 2),
+        num(d.bestInScore, 2),
+        num(d.bestOverallF, 2),
+        num(d.bestOverallScore, 2),
+        num(d.bestLowF, 2),
+        num(d.bestLowScore, 2),
+        d.pick || "-",
+        send ? send.source : "-",
+        num(est.smoothed, 2)
+      ];
+      trace.rows.push(row.join(","));
+      if (trace.rows.length >= C.TRACE_SECONDS) {
+        trace.active = false;
+      }
+    }
+
+    /* Raw motion capture: the gravity-removed magnitude the estimator uses, resampled to RAW_HZ, two decimals. */
+    function rawCollect() {
+      var raw = est.raw;
+      var n = est.times.length;
+      if (n < 2) {
+        return;
+      }
+      var t1 = est.times[n - 1];
+      if (raw.next === null) {
+        raw.next = Math.max(raw.startAt, est.times[0]);
+      }
+      raw.next = Math.max(raw.next, est.times[0]);
+      if (raw.next > t1) {
+        return;
+      }
+      var grid = resample(est.times, est.values, raw.next, t1, C.RAW_HZ);
+      var limit = C.TRACE_SECONDS * C.RAW_HZ;
+      for (var i = 0; i < grid.length && raw.values.length < limit; i++) {
+        raw.values.push(Math.round(grid[i] * 100) / 100);
+      }
+      raw.next += grid.length * (1000 / C.RAW_HZ);
+      if (raw.values.length >= limit) {
+        raw.active = false;
+      }
+    }
+
+    /* Copies text with the clipboard, or shows it in the text area when that fails. Never stored or sent. */
+    function copyText(text) {
+      var clip = opts.clipboard !== undefined ? opts.clipboard : nav && nav.clipboard;
+      var showText = function () {
+        if (debugEl !== null) {
+          debugEl.area.hidden = false;
+          debugEl.area.value = text;
+          debugEl.area.select();
+        }
+      };
+      if (!text) {
+        return Promise.resolve("empty");
+      }
+      if (clip && typeof clip.writeText === "function") {
+        try {
+          return Promise.resolve(clip.writeText(text)).then(function () {
+            if (debugEl !== null) {
+              debugEl.area.hidden = true;
+            }
+            return "copied";
+          }, function () {
+            showText();
+            return "shown";
+          });
+        } catch (error) {
+          showText();
+          return Promise.resolve("shown");
+        }
+      }
+      showText();
+      return Promise.resolve("shown");
     }
 
     /* ================================ public API ================================ */
@@ -1057,6 +1500,17 @@
       resetLeg: function () {
         est.latched = false;
         est.nearCount = 0;
+        // A new Start journey tap or leg: no carry-over of the last smoothed speed, the hold or the slew state.
+        // A remembered pace, if one is loaded, is then what a poll sends (source "remembered").
+        est.smoothed = null;
+        est.lastSpeed = null;
+        est.lastWalkingAt = null;
+        est.lastMeasuredMode = null;
+        est.mode = "none";
+        est.sent = null;
+        est.sentAt = -Infinity;
+        est.sentSource = null;
+        renderDebug();
       },
 
       /* False when this browser has no motion sensor API or is not in a secure context. */
@@ -1081,29 +1535,19 @@
          SLEW_MIN_INTERVAL_MS so several requests in one poll agree. */
       pollValue: function () {
         var nowMs = clock();
-        var source;
-        var target;
-        if (est.smoothed !== null && (est.mode !== "none" || est.frozen)) {
-          target = est.smoothed;
-          source = est.lastMeasuredMode === "cadence" ? "cadence" : "gps";
-          if (est.mode === "remembered") {
-            source = "remembered";
-          }
-        } else if (est.remembered && (nowMs - est.remembered.savedAt) / 86400000 <= C.REMEMBER_MAX_AGE_DAYS) {
-          target = est.remembered.pace;
-          source = "remembered";
-        } else {
+        var t = pollTarget(nowMs);
+        if (t === null) {
           return null;
         }
         if (est.sent === null) {
-          est.sent = toSendable(target, C);
+          est.sent = toSendable(t.target, C);
           est.sentAt = nowMs;
         } else if (nowMs - est.sentAt >= C.SLEW_MIN_INTERVAL_MS) {
-          est.sent = toSendable(slew(est.sent, clampSpeed(target, C), C), C);
+          est.sent = toSendable(slew(est.sent, clampSpeed(t.target, C), C), C);
           est.sentAt = nowMs;
         }
-        est.sentSource = source;
-        return { speed: est.sent, source: source };
+        est.sentSource = t.source;
+        return { speed: est.sent, source: t.source };
       },
 
       /* "&walk_speed=1.23&walk_speed_source=gps", or "" when there is no value. */
@@ -1156,8 +1600,59 @@
           motion: est.motion,
           motionHandlerCalls: est.motionHandlerCalls,
           running: est.attached,
-          frozen: est.frozen
+          frozen: est.frozen,
+          walkingSource: est.walkingSource,
+          motionRms: est.cadence.rms,
+          cadenceCv: est.cadStats.cv,
+          nullCadence: est.cadStats.nulls,
+          gpsKind: est.gps ? (est.gps.derived ? "derived" : "reported") : "missing",
+          speedFixAge: est.gps ? est.gps.age : null,
+          fixAge: est.lastFix && est.lastTickAt !== null ? (est.lastTickAt - est.lastFix.t) / 1000 : null,
+          ignoredStale: est.ignoredStale,
+          cadenceDiag: est.cadence,
+          gpsOnly: est.gpsOnly || { n: 0, nulls: 0, inRange: 0, outRange: 0, cv: null, reason: "-" }
         };
+      },
+
+      /* Debug trace (only used by the ?pace=debug readout). Kept in memory, never stored or sent. */
+      traceStart: function () {
+        est.trace = { start: null, rows: [], active: true };
+        est.raw = { startAt: clock(), next: null, values: [], active: true };
+        renderDebug();
+      },
+
+      traceText: function () {
+        if (est.trace === null) {
+          return "";
+        }
+        var constants = TRACE_CONSTANTS.map(function (name) { return name + "=" + C[name]; }).join(" ");
+        return "# " + constants + "\n" + TRACE_COLUMNS.join(",") + "\n" + est.trace.rows.join("\n");
+      },
+
+      /* First line "hz=25", then the values, 25 to a line. */
+      rawText: function () {
+        if (est.raw === null || !est.raw.values.length) {
+          return "";
+        }
+        var lines = ["hz=" + C.RAW_HZ];
+        for (var i = 0; i < est.raw.values.length; i += C.RAW_HZ) {
+          lines.push(est.raw.values.slice(i, i + C.RAW_HZ).map(function (v) { return v.toFixed(2); }).join(","));
+        }
+        return lines.join("\n");
+      },
+
+      copyTrace: function () {
+        return copyText(est.trace === null || !est.trace.rows.length ? "" : api.traceText());
+      },
+
+      copyRaw: function () {
+        return copyText(api.rawText());
+      },
+
+      debugWhy: whyReason,
+
+      debugArea: function () {
+        return debugEl === null ? null : debugEl.area;
       },
 
       /* Test hooks: feed synthetic input and step the clock by hand. */
@@ -1167,6 +1662,7 @@
     };
 
     bindVisibility();
+    renderDebug();
     return api;
   }
 

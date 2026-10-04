@@ -4161,47 +4161,6 @@ body.is-screen-onway main.wrap {
   padding-top: var(--space-2);
 }
 
-/* Transfer alert prompt (above the header) and the Leg 2 page. */
-
-.transfer-top {
-  position: sticky;
-  top: 0;
-  z-index: 1300;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  box-sizing: border-box;
-  width: min(440px, 100%);
-  margin: 0 auto;
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-card);
-  color: var(--color-ink);
-  border-bottom: 1px solid var(--color-line);
-  box-shadow: var(--shadow-card);
-}
-
-.transfer-top__text {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.35;
-}
-
-.transfer-top__text strong {
-  display: block;
-}
-
-.transfer-top .primary {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 4.5rem;
-}
-
-body.is-leg2 #pace-slot {
-  display: none;
-}
-
 /* Style guide frames for the live flow samples. */
 
 .catch-bar.catch-bar--sample {
@@ -4210,13 +4169,6 @@ body.is-leg2 #pace-slot {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   transform: none;
-}
-
-.transfer-top.transfer-top--sample {
-  position: static;
-  width: 100%;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
 }
 
 .sample-live .map-dest-live.sample-pin {
@@ -4385,27 +4337,91 @@ body.is-entry-loading #alert-slot {
   display: none;
 }
 
-/* Developer readout for the walking-speed estimator. Shown only with ?pace=debug; remove before submission. */
+/* Developer readout for the walking-speed estimator. Shown only with ?pace=debug; remove before submission.
+   A one-line bar fixed to the top of the screen, above every sticky bar; a tap opens the full panel. */
 .pace-debug {
   position: fixed;
-  right: var(--space-2);
-  bottom: var(--space-2);
-  z-index: 50;
-  max-width: calc(100vw - 2 * var(--space-2));
-  margin: 0;
-  padding: var(--space-2);
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  margin: 0 auto;
+  padding-top: env(safe-area-inset-top);
   border: 1px solid var(--color-line-strong);
-  border-radius: var(--radius-control);
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
   background: var(--color-card);
   color: var(--color-ink);
   font-size: var(--type-caption);
   line-height: 1.4;
-  white-space: pre-wrap;
-  pointer-events: none;
 }
 
-/* The style guide shows the readout in the page flow instead of fixed to the corner. */
+.pace-debug__bar {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.pace-debug__panel {
+  max-height: 60vh;
+  padding: 0 var(--space-2) var(--space-2);
+  overflow: auto;
+}
+
+.pace-debug__panel[hidden],
+.pace-debug__area[hidden] {
+  display: none;
+}
+
+.pace-debug__text {
+  margin: 0 0 var(--space-2);
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.pace-debug__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.pace-debug__button {
+  flex: 1 1 0;
+  min-height: 36px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+  color: inherit;
+  font: inherit;
+}
+
+.pace-debug__status {
+  margin: var(--space-1) 0;
+}
+
+.pace-debug__area {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+}
+
+/* The style guide shows the readout in the page flow instead of fixed to the top. */
 .pace-debug--sample {
   position: static;
-  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding-top: 0;
+  border-radius: var(--radius-control);
 }

@@ -70,7 +70,7 @@ def test_header_button_resets_the_journey_and_keeps_the_fields():
     home = _between(html, "function goHome()", "function requestHome()")
     assert "exitJourney(true)" in home
     request = _between(html, "function requestHome()", "function requestLocation")
-    assert request.index("if (monitoringActive || transferWatchActive)") < request.index("openLeaveDialog()") < request.index("goHome()")
+    assert request.index("if (monitoringActive)") < request.index("openLeaveDialog()") < request.index("goHome()")
     assert 'pendingLeaveAction = "home"' in request
     assert 'screenStack[screenStack.length - 1] === "home"' in request
     leave = _between(html, "function confirmLeave()", "function chooseTheme")

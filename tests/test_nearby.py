@@ -223,11 +223,11 @@ def test_missing_cache_is_unavailable_and_has_no_fake_stops(api_client):
 def test_page_keeps_a_one_time_fix_and_allows_a_foreground_journey_watch(api_client):
     """Step 4 still takes one getCurrentPosition fix for the nearby list.
 
-    Any later watchPosition (the transfer alert) must be cleared. Foreground only.
+    The page has no watchPosition of its own: the walking-speed estimator owns the one watch. Foreground only.
     """
     html = api_client.get("/").text
     assert "navigator.geolocation.getCurrentPosition" in html
-    assert "clearWatch" in html
+    assert "watchPosition" not in html
     assert html.count("setInterval(") == 2
     assert "/api/arrivals" in html
     assert "datamall" not in html

@@ -47,7 +47,7 @@ def test_the_motion_permission_is_asked_only_inside_the_two_start_journey_taps()
 
 def test_the_estimator_follows_the_lifecycle_rules():
     run = _between(BLOCK, "function paceShouldRun() {", "function syncPaceEstimator()")
-    for condition in ("paceJourneyActive", "monitoringActive", "endedKind", "missedMode", "onLeg2()", "demoModeOn()",
+    for condition in ("paceJourneyActive", "monitoringActive", "endedKind", "missedMode", "demoModeOn()",
                       "isLatched()", '"live"', '"arrivals"'):
         assert condition in run, condition
     stop = _between(INDEX, "function stopTracking() {", "// After No, Yes or an end card")
@@ -57,13 +57,13 @@ def test_the_estimator_follows_the_lifecycle_rules():
     assert "syncPaceEstimator();" in _between(INDEX, "function applyScreen(name) {", "function syncHomeButton")
     assert "syncPaceEstimator();" in _between(INDEX, "function showDemoChrome(enabled) {", "function setArrivalSimulated")
     near = BLOCK.split("function notePaceNearStop(body) {", 1)[1]
-    assert "near_stop === true" in near and "onLeg2()" in near
+    assert "near_stop === true" in near
 
 
 def test_no_new_timers_or_background_apis_in_the_page_wiring():
     assert "setInterval(" not in BLOCK and "setTimeout(" not in BLOCK and "watchPosition" not in BLOCK
     assert "serviceWorker" not in BLOCK and "fetch(" not in BLOCK
-    assert INDEX.count("watchPosition(") == 1  # only the existing transfer watch; the estimator owns the other
+    assert INDEX.count("watchPosition(") == 0  # the estimator owns the one watch
     assert INDEX.count("setInterval(") == 2  # the existing display tick and poll timer, as before
     assert INDEX.count("getCurrentPosition(") == 2  # the load fix and the per-poll fix, unchanged
 
@@ -203,7 +203,7 @@ def test_the_style_guide_shows_every_caption_pace_line_note_and_the_readout_in_b
     for source in ("gps", "cadence", "remembered", "default"):
         assert f'sgWalk("{source}"' in GUIDE, source
     assert "jo.motionPrivacy" in GUIDE and "jo.motionOff" in GUIDE
-    assert 'class=\\"pace-debug pace-debug--sample\\"' in GUIDE
+    assert 'class=\\"pace-debug pace-debug--sample' in GUIDE and "pace-debug__bar" in GUIDE and "Copy raw motion" in GUIDE
     assert 'id="catch-sample-light"' in GUIDE and 'id="catch-sample-dark"' in GUIDE  # catchSample() fills both
     assert "function catchSample()" in GUIDE and "sgWalk(" in GUIDE.split("function catchSample()", 1)[1].split("function ", 1)[0]
 
@@ -227,3 +227,47 @@ def test_pace_guidance_keeps_its_python_rules_and_never_implies_more_than_1_4():
         point, _slow, fast = range_speeds(speed)
         assert fast <= 1.4 and fast >= point
     assert 'title: "Walk faster"' in COPY and 'title: "Walk slower"' in COPY
+
+
+def test_nothing_in_the_page_navigates_away_so_pace_debug_survives():
+    import re as _re
+
+    for forbidden in ("location.href", "location.assign", "location.replace", "window.open(", "location.search ="):
+        assert forbidden not in INDEX, forbidden
+    for call in _re.findall(r"history\.(?:pushState|replaceState)\(([^;]*)\);", INDEX):
+        assert call.count(",") == 1 or call.rstrip().endswith('""'), call  # (state, ""): no URL, so the query stays
+    assert "debugContext" in INDEX and "demoModeOn()" in INDEX.split("debugContext", 1)[1][:80]
+
+
+def test_the_debug_bar_is_above_every_other_layer():
+    import re as _re
+
+    css = (ROOT / "static" / "components.css").read_text(encoding="utf-8")
+    block = css.split(".pace-debug {", 1)[1].split("}", 1)[0]
+    mine = int(_re.search(r"z-index:\s*(\d+)", block).group(1))
+    others = [int(v) for v in _re.findall(r"z-index:\s*(\d+)", css.replace(block, ""))]
+    assert "position: fixed" in block and "top: 0" in block and mine > max(others)
+
+
+def test_the_new_speed_age_constants():
+    source = (ROOT / "static" / "walk-speed.js").read_text(encoding="utf-8")
+    assert "GPS_SPEED_MAX_AGE_S: 3," in source and "GPS_WATCH_STALE_S: 5," in source
+    assert "GPS_FIX_MAX_AGE_S" not in source  # dead: the 3 s speed limit always decides first
+
+
+def test_the_phase_2b_constants_are_named_in_the_constants_block():
+    source = (ROOT / "static" / "walk-speed.js").read_text(encoding="utf-8")
+    block = source.split("var CONSTANTS = {", 1)[1].split("};", 1)[0]
+    for line in ("RUN_REJECT_RATIO: 1.3,", "GPS_ONLY_CV_MAX: 0.20,", "LEARN_MIN_VALID_CADENCE: 10,",
+                 "STEADY_CV_MAX: 0.15,", "AUTOCORR_MIN: 0.3,", "DIAG_CADENCE_MIN: 0.6,", "RAW_HZ: 25,"):
+        assert line in block, line
+    # nothing below CADENCE_MIN is ever accepted; the diagnostic search is for the trace only
+    assert "CADENCE_MIN: 1.2," in block and "CADENCE_MAX: 2.8," in block
+
+
+def test_the_raw_capture_and_trace_are_never_stored_or_sent():
+    source = (ROOT / "static" / "walk-speed.js").read_text(encoding="utf-8")
+    debug = source.split("debug readout and trace", 1)[1].split("public API", 1)[0]
+    for banned in ("localStorage", "fetch(", "sendBeacon", "XMLHttpRequest", "latitude", "longitude"):
+        assert banned not in debug, banned
+    assert not re.search(r"\.(lat|lon)", debug)  # no position in the trace or the raw capture

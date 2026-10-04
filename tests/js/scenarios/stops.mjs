@@ -44,12 +44,21 @@ export default async function (h) {
     return out;
   }
 
-  if (which === "yes" || which === "no") {
+  if (which === "yes" || which === "no" || which === "yes-transfer") {
+    if (which === "yes-transfer") {
+      await h.eval(`activeRoutePlan = {route_type: "one_transfer", leg_index: 1, legs: [
+        {service_no: "18", boarding_stop_code: "01011", boarding_stop_name: "Origin", alighting_stop_code: "55555",
+         alighting_stop_name: "Transfer Stop", direction: 1, ride_minutes: 6},
+        {service_no: "14", boarding_stop_code: "55555", boarding_stop_name: "Transfer Stop",
+         alighting_stop_code: "99999", direction: 1, ride_minutes: 8, published_headway_minutes: 12}]}; true`);
+    }
     await h.eval("pushScreen('arrivals'); true");
     await h.until("!document.getElementById('catch-bar').hidden", 10000, "the catch question");
     out.beforeAnswer = await h.eval(state);
-    await h.eval("document.getElementById('catch-" + which + "').click(); true");
+    await h.eval("document.getElementById('catch-" + (which === "no" ? "no" : "yes") + "').click(); true");
     await h.sleep(500);
+    out.onWayText = await h.eval("document.getElementById('on-way-timeline').textContent");
+    out.afterYes = await h.eval("({screen: screenStack[screenStack.length - 1], monitoring: monitoringActive, poll: pollTimer === null, display: displayTimer === null, pace: paceJourneyActive, proposal: rerouteProposalKey})");
   } else if (which === "end") {
     await h.eval("endTracking('max'); true");
     out.endCardShown = await h.eval("!document.getElementById('end-card').hidden");
@@ -66,8 +75,6 @@ export default async function (h) {
     await h.eval("__setHidden(false); true");
     out.afterShown = await h.eval(state);
     return out;
-  } else if (which === "leg2") {
-    await h.eval("activeRoutePlan.route_type = 'one_transfer'; activeRoutePlan.leg_index = 2; syncPaceEstimator(); true");
   } else if (which === "onway") {
     await h.eval("pushScreen('onway'); true");
   } else if (which === "newjourney") {

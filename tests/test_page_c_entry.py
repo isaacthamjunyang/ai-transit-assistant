@@ -137,12 +137,12 @@ def test_nothing_eligible_shows_the_current_card_the_no_better_card_and_the_list
 
 
 def test_every_probability_names_its_bus_and_appears_once_per_option():
-    for text in ("Chance to catch Bus {service}", "Chance to catch your Bus {service}", "Chance to catch Bus {service} at {stop}"):
+    for text in ("Chance to catch Bus {service}", "Chance to catch your Bus {service}"):
         assert text in HTML and text in COPY, text
     assert "Chance to catch current Bus" not in HTML + COPY
     assert "Arriving in {n} min" in HTML and "Arriving in {n} min" in COPY
     heading = _function("catchHeading")
-    assert "CATCH_HEADING_LEG2_TEXT" in heading and "CATCH_HEADING_TEXT" in heading
+    assert "LEG2" not in heading and "CATCH_HEADING_TEXT" in heading
     assert 'getElementById("catch-title").textContent = catchHeading(false)' in _function("renderCatchCard")
     assert 'getElementById("pc-title").textContent = catchHeading(true)' in _function("updatePageCCurrent")
     assert 'setCatchSub("catch", hero)' in _function("renderCatchCard") and 'setCatchSub("pc", hero)' in _function("updatePageCCurrent")
@@ -442,9 +442,9 @@ def test_the_muted_line_and_the_ring_label_follow_the_agreed_wording():
     assert got["nowLabel"] == "92 percent chance of catching Bus 11 arriving now at Tanjong Rhu Stn Exit 2, range 80 to 95 percent"
 
 
-def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title_and_leg_2_shows_minutes_only():
+def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title__():
     sub = _function("setCatchSub")
-    assert 'var stop = onLeg2() ? "" : boardingStopName();' in sub
+    assert 'var stop = boardingStopName();' in sub
     assert 'stopEl.setAttribute("title", stop)' in sub
     assert "sepEl.hidden = !(eta && stop)" in sub and 'document.getElementById(prefix + "-sub").hidden = !(eta || stop)' in sub
     rule = between(CSS, ".catch-card__sub {", "}")

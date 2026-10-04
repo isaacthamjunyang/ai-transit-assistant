@@ -25,7 +25,5 @@ export default async function (h) {
   await h.eval("lastSuccess.walk_speed_source = 'bogus'; lastSuccess.walk_speed_used = 9; renderCatchCard(featuredBus(lastSuccess.buses)); true");
   out.bogus = await h.eval(CARD);
   await h.eval("lastSuccess.walk_speed_used = 1.25; lastSuccess.walk_speed_source = 'gps'; true");
-  await h.eval("activeRoutePlan.route_type = 'one_transfer'; activeRoutePlan.leg_index = 2; renderCatchCard(featuredBus(lastSuccess.buses)); true");
-  out.leg2 = await h.eval(CARD);
   return out;
 }

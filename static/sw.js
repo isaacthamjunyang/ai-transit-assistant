@@ -15,7 +15,6 @@ self.addEventListener("notificationclick", function (event) {
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (windows) {
       for (var i = 0; i < windows.length; i++) {
         if ("focus" in windows[i]) {
-          windows[i].postMessage({ type: "transfer-alert" });
           return windows[i].focus();
         }
       }

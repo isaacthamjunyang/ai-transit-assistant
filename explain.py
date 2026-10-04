@@ -13,7 +13,6 @@ import os
 import re
 from datetime import datetime
 
-from config import TRANSFER_BUS_SPEED_MPS
 from journey import parse_journey_time
 from lta_static import ENV_PATH, _read_env_value
 from config import WALK_SPEED_DEFAULT_MPS
@@ -211,11 +210,6 @@ def overview_walk_minutes(distance_m: float, walk_speed_m_s: float = WALK_SPEED_
     return walk_minutes(distance_m, walk_speed_m_s, "display")
 
 
-def reach_minutes(distance_m: float) -> int:
-    """Leg 2: minutes to reach the stop by vehicle, from the Leg 2 input. At least 1."""
-    return max(1, round_half_up(distance_m / TRANSFER_BUS_SPEED_MPS / 60))
-
-
 def boarding_walk_minutes(
     cache, stop_code: str, user_lat: float | None, user_lon: float | None, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS
 ) -> int | None:
@@ -259,28 +253,26 @@ def sentence_one(bus_minutes: int) -> str:
     return f"The bus is {minutes_text(bus_minutes)} away."
 
 
-def sentence_two(sheet: dict, *, band: str | None, uncertain: bool, leg2: bool) -> str:
+def sentence_two(sheet: dict, *, band: str | None, uncertain: bool) -> str:
     """First match wins: location uncertain, low band or switch or do-not-rely, may not reach, then the default."""
     e = sheet["bus_minutes"]
     w = sheet["walk_minutes"]
     t = sheet["minutes_before_leaving"]
-    lead = f"Given you are about {minutes_text(w)} from the stop" if leg2 else f"Given the walking time is {minutes_text(w)}"
+    lead = f"Given the walking time is {minutes_text(w)}"
     if uncertain:
         return "Your location is uncertain, so the walking time may be off."
     if band == "low" or sheet["chosen_action"] in ("switch_route", "do_not_rely"):
         return f"{lead}, catching this bus is unlikely."
     if w >= e:
         return f"{lead}, you may not reach the stop before the bus."
-    if leg2:
-        return f"{lead}, you have {minutes_text(t)} to get to the bus stop."
     return f"Given the walking time is only {minutes_text(w)}, you have {minutes_text(t)} to get to the bus stop."
 
 
-def compose_text(sheet: dict, advice: str, *, band: str | None, uncertain: bool, leg2: bool) -> str:
+def compose_text(sheet: dict, advice: str, *, band: str | None, uncertain: bool) -> str:
     return " ".join(
         (
             sentence_one(sheet["bus_minutes"]),
-            sentence_two(sheet, band=band, uncertain=uncertain, leg2=leg2),
+            sentence_two(sheet, band=band, uncertain=uncertain),
             f"It is advisable to {advice}.",
         )
     )
@@ -341,7 +333,6 @@ def parse_context(context: object) -> dict:
     return {
         "band": band if band in ("ok", "mid", "low") else None,
         "uncertain": bool(context.get("uncertain")) if isinstance(context, dict) else False,
-        "leg2": bool(context.get("leg2")) if isinstance(context, dict) else False,
     }
 
 
@@ -506,7 +497,6 @@ def build_poll_explanation(
     explained_advice: str | None,
     in_flight: bool,
     reroute_fired: bool,
-    reach_distance_m: float | None = None,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict | None:
     """The card's text for this poll, plus whether a model clause is needed for the action.
@@ -515,7 +505,6 @@ def build_poll_explanation(
     the action: it is reused while the action is unchanged and replaced by the fixed clause
     until the model's clause for a new action arrives.
     """
-    leg2 = reach_distance_m is not None
     if reroute_fired:
         decision = payload.get("reroute") if isinstance(payload.get("reroute"), dict) else {}
         score = decision.get("winner_score")
@@ -547,10 +536,7 @@ def build_poll_explanation(
         high = chance.get("range_high")
         band = chance.get("band")
         arrival = bus.get("arrival_time")
-        if leg2:
-            walk = reach_minutes(float(reach_distance_m))
-        else:
-            walk = boarding_walk_minutes(cache, stop_code, user_lat, user_lon, walk_speed_m_s)
+        walk = boarding_walk_minutes(cache, stop_code, user_lat, user_lon, walk_speed_m_s)
     bus_minutes = tile_minutes(arrival, now)
     if (
         bus_minutes is None
@@ -566,7 +552,7 @@ def build_poll_explanation(
         leave_by_seconds=seconds_until_leave_by(payload.get("leave_by"), now),
     )
     sheet = build_fact_sheet(bus_minutes=bus_minutes, walk_minutes=walk, chosen_action=action)
-    context = {"band": band if band in ("ok", "mid", "low") else None, "uncertain": quality == "location uncertain", "leg2": leg2}
+    context = {"band": band if band in ("ok", "mid", "low") else None, "uncertain": quality == "location uncertain"}
     cached = explained_advice if explained_action == action and advice_is_valid(explained_advice, action) else None
     advice = cached if cached is not None else deterministic_advice(action)
     needs_model = quality in ALLOWED_QUALITY and cached is None

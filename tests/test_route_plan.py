@@ -507,7 +507,7 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
         assert gone not in html, gone
     assert 'id="back-home"' in html
     assert ">Back</button>" in html
-    assert "clearWatch" in html
+    assert "watchPosition" not in html
     assert "No direct or 1-transfer bus connection available for this trip." in html
     assert 'journeyComparison.textContent = "Arrive-by check: N/A"' not in html
     journey_request = html.split("function loadJourney()", 1)[1].split("fetch(url)", 1)[0]
@@ -521,19 +521,10 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
     assert 'journeyLeaveBy.textContent = "Leave-by: " + formatTime(lastSuccess.leave_by, true);' in html
     assert "&route_type=" in html
     assert "&leg_index=" in html
-    start = html.split("function openLeg2()", 1)[1].split("function syncPlannedLegAfterReroute", 1)[0]
-    assert "activeRoutePlan.leg_index = 2" in start
-    assert "geolocation" not in start
-    assert "watchPosition" not in start
-    assert "setInterval" not in start
-    begin = html.split("function beginPlannedLeg()", 1)[1].split("function openLeg2()", 1)[0]
+    assert "openLeg2" not in html and "activeRoutePlan.leg_index = 2" not in html
+    begin = html.split("function beginPlannedLeg()", 1)[1].split("function syncPlannedLegAfterReroute", 1)[0]
     assert begin.index("leg.boarding_stop_code") < begin.index("startMonitoring(leg.service_no)")
     assert "Fastest Route" not in html  # labels stay server-side; the app picks one option
-    start_clears = start.index("beginPlannedLeg()")
-    assert start.index("lastRerouteAt = null") < start_clears
-    assert start.index("pinnedEtaTimestamp = null") < start_clears
-    assert start.index("lastNotifiedBusId = null") < start_clears
-    assert start.index("resetExplanationState()") < start_clears
     plan = html.split("function planJourney()", 1)[1].split("function peekOverviewArrivals", 1)[0]
     assert "beginPlannedLeg()" not in plan
     assert "startMonitoring" not in plan
@@ -554,7 +545,7 @@ def test_route_planning_does_not_use_demo_fixtures_or_add_scenarios():
     )
 
 
-def test_two_leg_plan_then_leg_2_poll_uses_the_transfer_stop(monkeypatch):
+def test_two_leg_plan_then_first_leg_poll_uses_the_boarding_stop(monkeypatch):
     transfer_lat = LAT + math.degrees(250 / EARTH_RADIUS_M)
     stops = [
         _stop(ORIGIN, "Origin Stop"),
@@ -685,49 +676,11 @@ def test_two_leg_plan_then_leg_2_poll_uses_the_transfer_stop(monkeypatch):
                 "explanation_rendered": 0,
             },
         )
-        second = client.get(
-            "/api/arrivals",
-            params={
-                **shared,
-                "stop_code": leg_2["boarding_stop_code"],
-                "service_no": leg_2["service_no"],
-                "route_type": "one_transfer",
-                "leg_index": 2,
-                "explanation_rendered": 0,
-            },
-        )
     assert first.status_code == 200
-    assert second.status_code == 200
     first_body = first.json()
-    second_body = second.json()
-    assert polls == [(ORIGIN, "36"), ("55555", "14")]
-    assert demo_polls == [(ORIGIN, "36"), ("55555", "14")]
+    assert polls == [(ORIGIN, "36")]
+    assert demo_polls == [(ORIGIN, "36")]
     assert "reroute" in first_body
-    assert "reroute" in second_body
-    assert reroute_seen == [None, None]
-    assert first_body["buses"][0]["probability"]["slack_seconds"] - second_body["buses"][0]["probability"]["slack_seconds"] == 200
-    assert first_body["leave_by"] != second_body["leave_by"]
-    assert second_body["explanation"]["call"] is True
-    # Leg 2 is on a vehicle: w comes from the Leg 2 input (distance to the stop at the ride speed), at least 1 minute.
-    assert second_body["explanation"]["fact_sheet"]["walk_minutes"] >= 1
-    assert second_body["explanation"]["context"]["leg2"] is True
-    assert second_body["explanation"]["text"].startswith("The bus is ")
+    assert reroute_seen == [None]
     assert first_body["leave_now"]["bus_id"].startswith("36|01011|")
-    assert second_body["leave_now"]["bus_id"].startswith("14|55555|")
-    held = second_body["explanation"]["fact_sheet"]
-    with TestClient(app) as client:
-        repeat = client.get(
-            "/api/arrivals",
-            params={
-                **shared,
-                "stop_code": "55555",
-                "service_no": "14",
-                "route_type": "one_transfer",
-                "leg_index": 2,
-                "explanation_rendered": 1,
-                "explained_action": held["chosen_action"],
-                "explained_advice": ACTION_ADVICE[held["chosen_action"]],
-            },
-        )
-    assert repeat.json()["explanation"]["call"] is False
-
+    assert set(first_body["explanation"]["context"]) == {"band", "uncertain"}

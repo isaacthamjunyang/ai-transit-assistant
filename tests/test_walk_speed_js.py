@@ -15,7 +15,7 @@ from edge_runner import dump_dom, file_url, find_edge
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "tests" / "js" / "estimator_harness.html"
 SCRIPT = ROOT / "static" / "walk-speed.js"
-GROUPS = ["cadence", "gps", "learning", "fusion", "persistence", "permission", "lifecycle", "readout"]
+GROUPS = ["cadence", "gps", "learning", "fusion", "persistence", "permission", "lifecycle", "readout", "handheld", "octave"]
 
 
 @pytest.fixture(scope="module")
@@ -61,7 +61,7 @@ def test_the_constants_block_has_the_agreed_starting_values():
     block = source.split("var CONSTANTS = {", 1)[1].split("};", 1)[0]
     expected = {
         "CADENCE_MIN": "1.2", "CADENCE_MAX": "2.8", "WINDOW_S": "8", "AUTOCORR_MIN": "0.3",
-        "GPS_ACC_MAX_USE": "30", "GPS_ACC_MAX_LEARN": "15", "GPS_FIX_MAX_AGE_S": "10",
+        "GPS_ACC_MAX_USE": "30", "GPS_ACC_MAX_LEARN": "15",
         "LEARN_SPEED_MIN": "0.7", "LEARN_SPEED_MAX": "2.0", "VEHICLE_SPEED_MIN": "2.2",
         "STEADY_CV_MAX": "0.15", "LEARN_MIN_STEADY_S": "15", "LEARN_ALPHA": "0.2",
         "STEP_LEN_PRIOR": "0.70", "STEP_LEN_MIN": "0.45", "STEP_LEN_MAX": "0.95",

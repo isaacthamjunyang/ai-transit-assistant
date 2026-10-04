@@ -44,8 +44,6 @@ def fetch_arrivals(
     accuracy: float | None = None,
     location_timestamp: float | None = None,
     cache: StopAndRouteCache | None = None,
-    reach_speed_m_s: float | None = None,
-    reach_range_fraction: float = 0.25,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> dict:
     key = read_account_key() if account_key is None else account_key.strip()
@@ -83,8 +81,6 @@ def fetch_arrivals(
         location_timestamp=location_timestamp,
         cache=cache,
         now=moment,
-        reach_speed_m_s=reach_speed_m_s,
-        reach_range_fraction=reach_range_fraction,
         walk_speed_m_s=walk_speed_m_s,
     )
     result["leave_by"] = leave_by_for_buses(
@@ -322,8 +318,6 @@ def _with_probability(
     location_timestamp: float | None,
     cache: StopAndRouteCache | None,
     now: datetime,
-    reach_speed_m_s: float | None = None,
-    reach_range_fraction: float = 0.25,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
 ) -> list[dict]:
     stop = cache.stop_by_code(stop_code) if cache is not None else None
@@ -344,8 +338,6 @@ def _with_probability(
         service_no=service_no,
         stop_code=stop_code,
         now=now,
-        reach_speed_m_s=reach_speed_m_s,
-        reach_range_fraction=reach_range_fraction,
         walk_speed_m_s=walk_speed_m_s,
     )
 

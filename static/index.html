@@ -16,11 +16,6 @@
   <link rel="stylesheet" href="components.css">
 </head>
 <body class="is-screen-home">
-  <div id="transfer-top" class="transfer-top" role="alert" hidden>
-    <span class="bus-tile bus-tile--small" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M5 11h14M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8.5" cy="14.5" r="1" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1" fill="currentColor"></circle></svg></span>
-    <p class="transfer-top__text">You are reaching the second bus stop <strong id="transfer-top-name"></strong></p>
-    <button type="button" id="transfer-next" class="primary">Next</button>
-  </div>
   <header class="app-header">
     <h1 class="app-header__heading">
       <button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Bus Catch Assistant, go to home" aria-current="page">
@@ -335,7 +330,6 @@
       <div class="card overview-card">
         <h2 id="on-way-title" class="overview-title">On your way</h2>
         <ol id="on-way-timeline" class="journey-steps"></ol>
-        <p id="on-way-note" class="overview-reason" hidden></p>
       </div>
       <div class="arrive-box">
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
@@ -509,7 +503,6 @@
         <div>
           <p id="tile-leave-label" class="leave-tile__label">Leave by</p>
           <p id="tile-leave-by" class="leave-tile__value">—</p>
-          <p id="tile-leave-meta" class="leave-tile__meta" hidden></p>
         </div>
       </div>
       <div class="leave-tile">
@@ -652,7 +645,7 @@
     var IF_CATCH_PREFIX = "If you catch this bus: ";
     var END_MAX_TEXT = "Tracking stopped after 60 minutes.";
     var ON_BOARD_TEXT = "On board";
-    var TRANSFER_NOTE = "We'll alert you when you're near {transfer stop}. Keep this page open.";
+    var FIRST_BUS_ONLY_NOTE = "Live tracking covers your first bus only.";
     var NO_BETTER_STANDARD = "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the 15% improvement threshold.";
     var selectedBoardingStop = null;
     var selectedDestination = null;
@@ -1089,8 +1082,6 @@
       displayFrozen = false;
       dataUnavailable = false;
       hideLeaveNowBanner();
-      stopTransferWatch();
-      hideTransferPrompt();
       resetTrackingState();
       lastMeter = null;
       lastHeroKey = "";
@@ -2873,14 +2864,7 @@
       if (!leg) {
         return;
       }
-      if (activeRoutePlan.leg_index >= 2) {
-        selectedBoardingStop = {
-          stop_code: leg.boarding_stop_code,
-          description: leg.boarding_stop_name || leg.boarding_stop_code,
-          services: [leg.service_no]
-        };
-        renderServiceChoices(selectedBoardingStop);
-      } else if (selectedBoardingStop) {
+      if (selectedBoardingStop) {
         var services = selectedBoardingStop.services ? selectedBoardingStop.services.slice() : [];
         if (services.indexOf(leg.service_no) === -1) {
           services.push(leg.service_no);
@@ -2895,24 +2879,6 @@
       if (!already) {
         startMonitoring(leg.service_no);
       }
-    }
-
-    function openLeg2() {
-      if (!activeRoutePlan || activeRoutePlan.route_type !== "one_transfer" || activeRoutePlan.leg_index !== 1) {
-        return;
-      }
-      if (!activeRoutePlan.legs || activeRoutePlan.legs.length < 2) {
-        return;
-      }
-      activeRoutePlan.leg_index = 2;
-      lastRerouteAt = null;
-      pinnedEtaTimestamp = null;
-      lastNotifiedBusId = null;
-      fiveMinuteNotifiedKey = null;
-      resetPaceGuidance();
-      resetExplanationState();
-      clearRerouteState();
-      beginPlannedLeg();
     }
 
     function syncPlannedLegAfterReroute(reroute) {
@@ -3798,9 +3764,6 @@
     }
 
     function deliverLeaveNow(busId) {
-      if (onLeg2()) {
-        return;
-      }
       if (journeyPanel.hidden || !monitoringActive || !lastSuccess || lastSuccess.status !== "ok") {
         return;
       }
@@ -3891,11 +3854,6 @@
     }
 
     function syncLeaveNow(body) {
-      if (onLeg2()) {
-        clearLeaveNowTimer();
-        hideLeaveNowBanner();
-        return;
-      }
       if (leaveNowBanner.shown && !leaveNowStillHolds(body)) {
         hideLeaveNowBanner();
       }
@@ -4041,7 +3999,7 @@
         window.scrollTo(0, 0);
         return;
       }
-      if (monitoringActive || transferWatchActive) {
+      if (monitoringActive) {
         pendingLeaveAction = "home";
         openLeaveDialog();
         return;
@@ -4496,11 +4454,6 @@
         return;
       }
       if (screenStack[screenStack.length - 1] === "onway") {
-        if (transferWatchActive) {
-          pendingLeaveAction = "home";
-          openLeaveDialog();
-          return;
-        }
         goHome();
         return;
       }
@@ -4725,8 +4678,7 @@
       target_missed: "No route meets your arrive-by time. This one should get you there earliest.",
       no_target: "Chosen for you: the quickest option we found."
     };
-    var LEG2_SCHEDULE_NOTE = "Live tracking starts when you reach the transfer stop.";
-    var LEG2_SCHEDULE_HEADWAY = "Schedule: about every {minutes} min.";
+    var SCHEDULE_HEADWAY = "Schedule: about every {minutes} min.";
     var FLAG_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var PIN_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z\" fill=\"currentColor\"></path><circle cx=\"12\" cy=\"11\" r=\"2.5\" class=\"step-node__hole\"></circle></svg>";
 
@@ -4972,11 +4924,10 @@
           lines.push(stepLine(/min/.test(when) ? "Arriving in " + when : when, "journey-step__arriving"));
         }
         if (index > 0) {
-          var note = LEG2_SCHEDULE_NOTE;
           if (typeof leg.published_headway_minutes === "number") {
-            note += " " + LEG2_SCHEDULE_HEADWAY.replace("{minutes}", leg.published_headway_minutes);
+            lines.push(stepLine(SCHEDULE_HEADWAY.replace("{minutes}", leg.published_headway_minutes)));
           }
-          lines.push(stepLine(note));
+          lines.push(stepLine(FIRST_BUS_ONLY_NOTE));
         }
         list.appendChild(stepItem("bus", "Bus service", lines, null));
         if (index === 0 && legs.length > 1) {
@@ -5488,7 +5439,6 @@
       if (!card) {
         return;
       }
-      document.body.classList.toggle("is-leg2", onLeg2());
       var body = lastSuccess;
       var buses = body && Array.isArray(body.buses) ? body.buses : [];
       var hero = buses.length ? featuredBus(buses) : null;
@@ -5642,13 +5592,13 @@
         range.textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
       }
       var walkPace = catchWalkPace();
-      document.getElementById("catch-caption").textContent = onLeg2() ? LEG2_CAPTION : walkPace.caption;
+      document.getElementById("catch-caption").textContent = walkPace.caption;
       // The pace line shows what the server used for this poll, whatever the source, including the normal pace.
-      document.getElementById("catch-pace-line").textContent = usable && !onLeg2() ? walkPace.line : "";
+      document.getElementById("catch-pace-line").textContent = usable ? walkPace.line : "";
       document.getElementById("catch-title").textContent = catchHeading(false);
       setCatchSub("catch", hero);
       // The pace chip shows only while the Python action is leave_now: "Walk slower" beside "wait" would contradict it.
-      renderPaceSlot(usable && !onLeg2() && trackedAction(lastSuccess) === "leave_now" ? paceChip(paceCategoryFor(chance.pace)) : null);
+      renderPaceSlot(usable && trackedAction(lastSuccess) === "leave_now" ? paceChip(paceCategoryFor(chance.pace)) : null);
       updatePageCCurrent(hero, usable, state);
       renderUnlikelyBanner(hero);
     }
@@ -5671,16 +5621,7 @@
       // switch_route and do_not_rely: the tile is not shown (Page C or the banner takes over).
       leaveTile.hidden = action === "switch_route" || action === "do_not_rely";
       document.getElementById("tile-leave-by").textContent = leave;
-      var leg2 = onLeg2();
-      document.getElementById("tile-leave-label").textContent = leg2 ? LEG2_REACH_LABEL : "Leave by";
-      var reachMeta = document.getElementById("tile-leave-meta");
-      reachMeta.hidden = true;
-      if (leg2) {
-        var reach = lastSuccess && !displayFrozen ? lastSuccess.reach_stop : null;
-        document.getElementById("tile-leave-by").textContent = reach ? formatClock(reach.point, true) : "—";
-        reachMeta.textContent = reach ? "(" + formatRange(reach.low, reach.high) + ")" : "";
-        reachMeta.hidden = !reach;
-      }
+      document.getElementById("tile-leave-label").textContent = "Leave by";
       var estimate = displayFrozen ? null : lastTileEstimate;
       document.getElementById("tile-arrival").textContent = estimate ? formatClock(estimate.estimated_arrival, true) : "—";
       var range = document.getElementById("tile-arrival-range");
@@ -6134,7 +6075,6 @@
     var RING_ETA_SOON_TEXT = " arriving in under 1 minute";
     var RING_ETA_NOW_TEXT = " arriving now";
     var RING_AT_TEXT = " at {stop}";
-    var CATCH_HEADING_LEG2_TEXT = "Chance to catch Bus {service} at {stop}";
     var LEAVE_NOW_TEXT = "Leave now";
     var WAIT_ALERT_TEXT = "Wait for Leave By Alert";
     var NO_BETTER_POST_REROUTE = "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the post-reroute 20% improvement threshold.";
@@ -6160,11 +6100,8 @@
       return selectedBoardingStop ? (selectedBoardingStop.description || selectedBoardingStop.stop_code || "") : "";
     }
 
-    // pageC is true on the Page C current-bus card: "your Bus" there. Leg 2 names the transfer stop in the heading.
+    // pageC is true on the Page C current-bus card: "your Bus" there.
     function catchHeading(pageCCard) {
-      if (onLeg2()) {
-        return fillText(CATCH_HEADING_LEG2_TEXT, { service: selectedService || "", stop: boardingStopName() });
-      }
       return fillText(pageCCard ? CATCH_HEADING_PAGE_C_TEXT : CATCH_HEADING_TEXT, { service: selectedService || "" });
     }
 
@@ -6185,10 +6122,10 @@
     }
 
     // The muted line under the heading: arrival minutes and the stop name (one line, ellipsis, full name in the title).
-    // Leg 2 shows the minutes only; with no ETA only the stop name shows.
+    // With no ETA only the stop name shows.
     function setCatchSub(prefix, hero) {
       var eta = etaParts(hero);
-      var stop = onLeg2() ? "" : boardingStopName();
+      var stop = boardingStopName();
       var etaEl = document.getElementById(prefix + "-sub-eta");
       var sepEl = document.getElementById(prefix + "-sub-sep");
       var stopEl = document.getElementById(prefix + "-sub-stop");
@@ -6504,7 +6441,7 @@
     }
 
     // Priority, top to bottom: stale or unavailable warning, Leave now banner, reroute block, caution banner,
-    // Leg 2 prompt, notification-permission card. One of those shows at a time. The stale status card rides with
+    // notification-permission card. One of those shows at a time. The stale status card rides with
     // the stale banner, and the location-uncertain card stacks under it instead of competing for the slot.
     function syncAlertSlot() {
       var byId = function (id) {
@@ -6763,7 +6700,13 @@
     // "Start journey" and the stop conditions below, in the foreground. The page sends the speed number with its
     // requests and shows what the server returns, never its own value.
     var paceEstimator = window.WalkSpeed && window.WalkSpeed.createEstimator
-      ? window.WalkSpeed.createEstimator({ onFix: onEstimatorFix, onStatus: renderMotionNote })
+      ? window.WalkSpeed.createEstimator({
+        onFix: onEstimatorFix,
+        onStatus: renderMotionNote,
+        debugContext: function () {
+          return { demo: demoModeOn() };
+        }
+      })
       : null;
     var paceJourneyActive = false;
     var serverWalkSpeed = 1.25;
@@ -6847,12 +6790,12 @@
     }
 
     // The estimator runs while a journey that was started with "Start journey" is polled on the live pages. It does not
-    // run on the Leg 2 page, the "on your way" overview, the overviews, after an answer or an end card, or in Demo Mode.
+    // run on the "on your way" overview, the overviews, after an answer or an end card, or in Demo Mode.
     function paceShouldRun() {
       if (!paceEstimator || !paceJourneyActive || !monitoringActive || endedKind || missedMode) {
         return false;
       }
-      if (onLeg2() || demoModeOn() || paceEstimator.isLatched()) {
+      if (demoModeOn() || paceEstimator.isLatched()) {
         return false;
       }
       var top = screenStack[screenStack.length - 1];
@@ -6885,7 +6828,7 @@
 
     // Two polls in a row inside the 30 m rule (the server's near_stop) stop the estimator for the rest of the leg.
     function notePaceNearStop(body) {
-      if (!paceEstimator || !paceJourneyActive || onLeg2()) {
+      if (!paceEstimator || !paceJourneyActive) {
         return;
       }
       paceEstimator.noteNearStop(!!(body && body.near_stop === true));
@@ -6904,7 +6847,6 @@
         displayTimer = null;
       }
       monitoringActive = false;
-      stopTransferWatch();
       clearLeaveNowTimer();
       hideLeaveNowBanner();
       clearRerouteProposal();
@@ -6968,23 +6910,19 @@
     // Yes: tracking for this leg is over and the journey overview shows "on your way".
     function answerCaught() {
       var hasTarget = !!(arriveByInput && arriveByInput.value);
-      var transfer = !!(activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.leg_index === 1 && activeRoutePlan.legs && activeRoutePlan.legs.length > 1);
+      var transfer = !!(activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.legs && activeRoutePlan.legs.length > 1);
       onWayState = {
         service: selectedService,
         stop: selectedBoardingStop,
         estimate: lastTileEstimate ? estimateSentence(lastTileEstimate, hasTarget) : "",
         transfer: transfer,
         leg: activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan.legs[0] : null,
-        leg2: activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.legs && activeRoutePlan.legs.length > 1 ? activeRoutePlan.legs[1] : null,
-        both: !!(activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.leg_index === 2)
+        leg2: transfer ? activeRoutePlan.legs[1] : null
       };
       stopTracking();
       renderOnWay();
       pushScreen("onway");
       window.scrollTo(0, 0);
-      if (transfer) {
-        startTransferWatch();
-      }
     }
 
     function renderOnWay() {
@@ -6994,21 +6932,21 @@
         return;
       }
       list.replaceChildren();
-      var boarding = state.both && state.leg2 ? state.leg2 : state.leg;
-      var boardName = state.both && state.leg2
-        ? (state.leg2.boarding_stop_name || state.leg2.boarding_stop_code) + " (" + state.leg2.boarding_stop_code + ")"
-        : state.stop ? (state.stop.description || state.stop.stop_code) + " (" + state.stop.stop_code + ")" : "";
-      if (state.transfer || state.both) {
+      if (state.transfer) {
         var first = state.leg;
         list.appendChild(stepItem("done", "Boarding stop", [stepLine((first.boarding_stop_name || first.boarding_stop_code) + " (" + first.boarding_stop_code + ")")], null));
         list.appendChild(stepItem("done", "Bus service", [stepLine("Bus " + first.service_no, "journey-step__service"), stepLine(ON_BOARD_TEXT)], null));
         var transferName = (first.alighting_stop_name || first.alighting_stop_code) + " (" + first.alighting_stop_code + ")";
-        list.appendChild(stepItem(state.both ? "done" : "stop", "Transfer stop", [stepLine(transferName)], null));
+        list.appendChild(stepItem("stop", "Transfer stop", [stepLine(transferName)], null));
         var second = state.leg2;
         var secondLines = [stepLine("Bus " + second.service_no, "journey-step__service")];
-        secondLines.push(stepLine(state.both ? ON_BOARD_TEXT : TRANSFER_NOTE.replace("{transfer stop}", transferName)));
-        list.appendChild(stepItem(state.both ? "done" : "bus", "Bus service", secondLines, null));
+        if (typeof second.published_headway_minutes === "number") {
+          secondLines.push(stepLine(SCHEDULE_HEADWAY.replace("{minutes}", second.published_headway_minutes)));
+        }
+        secondLines.push(stepLine(FIRST_BUS_ONLY_NOTE));
+        list.appendChild(stepItem("bus", "Bus service", secondLines, null));
       } else {
+        var boardName = state.stop ? (state.stop.description || state.stop.stop_code) + " (" + state.stop.stop_code + ")" : "";
         list.appendChild(stepItem("done", "Boarding stop", [stepLine(boardName)], null));
         list.appendChild(stepItem("done", "Bus service", [stepLine("Bus " + state.service, "journey-step__service"), stepLine(ON_BOARD_TEXT)], null));
       }
@@ -7021,8 +6959,6 @@
       var estimate = document.getElementById("on-way-arrive-estimate");
       estimate.textContent = state.estimate;
       estimate.hidden = !state.estimate;
-      document.getElementById("on-way-note").hidden = !state.transfer || transferWatchActive || transferAlertShown;
-      syncOnWayNote();
     }
 
     // No: polling stops and the options search runs now, ignoring the unlikely-trigger and the improvement rule.
@@ -7071,171 +7007,7 @@
     document.getElementById("end-plan-new").addEventListener("click", planNewJourney);
     document.getElementById("on-way-plan-new").addEventListener("click", planNewJourney);
 
-    // Transfer alert: one foreground location watch after "Yes" on a transfer route. Nothing is stored or logged.
-    var TRANSFER_NEAR_METERS = 300;
-    var TRANSFER_WATCH_MAX_MINUTES = 90;
-    var TRANSFER_PROMPT_TEXT = "You are reaching the second bus stop";
-    var TRANSFER_NOTIFICATION_TITLE = "Get ready to change bus";
-    var TRANSFER_NOTIFICATION_BODY = "You are reaching {stop name}. Tap to check your chance of catching Bus {service}.";
-    var TRANSFER_NOTIFICATION_TAG = "transfer-alert";
-    var TRANSFER_NO_GPS = "Turn on location to get a transfer alert.";
-    var LEG2_CAPTION = "based on how far you are from the stop";
-    var LEG2_REACH_LABEL = "Reach the stop";
-    var COUNTED_FIX_MAX_AGE_S = UNCERTAIN_AGE_S;
-    var transferWatchActive = false;
-    var transferAlertShown = false;
-    var transferWatchId = null;
-    var transferCapTimer = null;
-    var transferNearCount = 0;
-    var transferNoGps = false;
     var swRegistration = null;
-
-    function onLeg2() {
-      return !!(activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.leg_index === 2);
-    }
-
-    function transferStopInfo() {
-      var leg = onWayState && onWayState.leg;
-      var points = leg ? legLatLngs(leg) : [];
-      var last = points[points.length - 1];
-      if (!last) {
-        return null;
-      }
-      return {
-        lat: last[0],
-        lon: last[1],
-        name: leg.alighting_stop_name || leg.alighting_stop_code,
-        code: leg.alighting_stop_code,
-        service: onWayState.leg2 ? onWayState.leg2.service_no : ""
-      };
-    }
-
-    function startTransferWatch() {
-      stopTransferWatch();
-      transferAlertShown = false;
-      transferNearCount = 0;
-      transferNoGps = false;
-      if (!navigator.geolocation || typeof navigator.geolocation.watchPosition !== "function") {
-        transferNoGps = true;
-        syncOnWayNote();
-        return;
-      }
-      transferWatchActive = true;
-      transferWatchId = navigator.geolocation.watchPosition(onTransferFix, onTransferError, { enableHighAccuracy: true, maximumAge: 5000 });
-      transferCapTimer = setTimeout(function () {
-        stopTransferWatch();
-        syncOnWayNote();
-      }, TRANSFER_WATCH_MAX_MINUTES * 60000);
-      syncOnWayNote();
-    }
-
-    function stopTransferWatch() {
-      if (transferWatchId !== null && navigator.geolocation && navigator.geolocation.clearWatch) {
-        navigator.geolocation.clearWatch(transferWatchId);
-      }
-      transferWatchId = null;
-      if (transferCapTimer !== null) {
-        clearTimeout(transferCapTimer);
-        transferCapTimer = null;
-      }
-      transferWatchActive = false;
-      transferNearCount = 0;
-    }
-
-    function onTransferError(error) {
-      if (error && error.code === 1) {
-        transferNoGps = true;
-        stopTransferWatch();
-        syncOnWayNote();
-      }
-    }
-
-    // A fix counts only under the existing uncertain-location rule: accuracy at most 100 m and age at most 60 s.
-    function onTransferFix(position) {
-      if (!transferWatchActive || transferAlertShown) {
-        return;
-      }
-      var coords = position && position.coords;
-      if (!coords || !isFinite(coords.latitude) || !isFinite(coords.longitude) || !(coords.accuracy <= UNCERTAIN_ACCURACY_M)) {
-        return;
-      }
-      // The age is set from the callback time, as for the poll fixes, so standing still near the stop is not stale.
-      var fixAt = Date.now();
-      if ((Date.now() - fixAt) / 1000 > COUNTED_FIX_MAX_AGE_S) {
-        return;
-      }
-      var stop = transferStopInfo();
-      if (!stop) {
-        return;
-      }
-      var metres = haversineMetres(coords.latitude, coords.longitude, stop.lat, stop.lon);
-      transferNearCount = metres <= TRANSFER_NEAR_METERS ? transferNearCount + 1 : 0;
-      if (transferNearCount >= 2) {
-        fireTransferAlert(stop);
-      }
-    }
-
-    function fireTransferAlert(stop) {
-      transferAlertShown = true;
-      showTransferPrompt(stop);
-      var body = TRANSFER_NOTIFICATION_BODY.replace("{stop name}", stop.name).replace("{service}", stop.service);
-      try {
-        showLocalNotification(TRANSFER_NOTIFICATION_TITLE, { body: body, tag: TRANSFER_NOTIFICATION_TAG });
-      } catch (err) {
-        return;
-      }
-    }
-
-    function showTransferPrompt(stop) {
-      var prompt = document.getElementById("transfer-top");
-      if (!prompt || !stop) {
-        return;
-      }
-      document.getElementById("transfer-top-name").textContent = stop.name + " (" + stop.code + ")";
-      prompt.hidden = false;
-    }
-
-    function hideTransferPrompt() {
-      var prompt = document.getElementById("transfer-top");
-      if (prompt) {
-        prompt.hidden = true;
-      }
-    }
-
-    function syncOnWayNote() {
-      var note = document.getElementById("on-way-note");
-      if (!note) {
-        return;
-      }
-      var show = !!(onWayState && onWayState.transfer && transferNoGps && !transferWatchActive && !transferAlertShown);
-      note.textContent = show ? TRANSFER_NO_GPS : "";
-      note.hidden = !show;
-    }
-
-    // "Next" acknowledges the alert, ends the watch and opens the Leg 2 live page.
-    function acknowledgeTransferAlert() {
-      hideTransferPrompt();
-      stopTransferWatch();
-      if (!onWayState || !activeRoutePlan || activeRoutePlan.route_type !== "one_transfer" || activeRoutePlan.leg_index !== 1) {
-        return;
-      }
-      var popped = 0;
-      while (screenStack[screenStack.length - 1] === "onway" || screenStack[screenStack.length - 1] === "arrivals") {
-        screenStack.pop();
-        popped += 1;
-      }
-      if (popped) {
-        applyScreen(screenStack[screenStack.length - 1] || "live");
-        syncBackRow();
-        try {
-          history.go(-popped);
-        } catch (error) {
-          screenStack = screenStack.slice();
-        }
-      }
-      onWayState = null;
-      openLeg2();
-    }
 
     // Local notifications go through the service worker registration when there is one, so phones can show them.
     function showLocalNotification(title, options) {
@@ -7269,17 +7041,9 @@
       });
     }
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", function (event) {
-        if (event.data && event.data.type === "transfer-alert" && transferWatchActive) {
-          showTransferPrompt(transferStopInfo());
-        }
-      });
-    }
     if (typeof Notification === "function" && Notification.permission === "granted") {
       registerNotificationWorker();
     }
-    document.getElementById("transfer-next").addEventListener("click", acknowledgeTransferAlert);
 
     function startDemoControls() {
       document.getElementById("demo-scenario").addEventListener("change", clearDemoIntercept);

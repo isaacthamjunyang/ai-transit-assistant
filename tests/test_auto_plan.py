@@ -237,7 +237,7 @@ def test_reason_strings_are_approved_and_never_promise_arrival():
         for banned in ("definitely", "guarantee", "certain to"):
             assert banned not in text.lower()
     # Item 19 of the screens 7-8 pass approved the reason lines and the transfer note.
-    for name in ("reasonTargetMet", "reasonTargetMissed", "reasonNoTarget", "leg2Note", "leg2Headway"):
+    for name in ("reasonTargetMet", "reasonTargetMissed", "reasonNoTarget"):
         before = copy.split(name + ":", 1)[0].splitlines()[-1]
         assert "proposed" not in before, name
     assert "No direct or 1-transfer bus connection available for this trip." in _between(html, 'id="overview-no-route"', "</div>")

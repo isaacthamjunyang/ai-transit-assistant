@@ -67,9 +67,6 @@ def test_one_fresh_fix_is_requested_per_poll_tick_and_failures_leave_the_age_gro
     assert html.count("setInterval(") == 2  # the poll and the display tick: no new timer
     request = _between(html, "function requestArrivals(generation)", "function applySuccess")
     assert "getCurrentPosition" not in request
-    # The transfer watch stamps its fixes at the callback too.
-    transfer = _between(html, "function onTransferFix(position)", "function fireTransferAlert")
-    assert "var fixAt = Date.now();" in transfer and "position.timestamp" not in transfer
 
 
 def test_the_card_names_the_real_reason():
@@ -196,23 +193,18 @@ def test_yes_and_no_still_end_tracking_and_open_the_right_view():
     html = _page()
     yes = _between(html, "function answerCaught()", "function renderOnWay()")
     assert yes.index("stopTracking()") < yes.index('pushScreen("onway")')
-    assert yes.count("startTransferWatch()") == 1 and "if (transfer) {" in yes
+    assert "Watch" not in yes
     no = _between(html, "function answerMissed()", "function showMissedOptions")
     assert no.index("stopTracking()") < no.index('openPageC("missed", missedEpoch)')
     assert "/api/reroute-options?" in _between(html, "function optionsUrl(entry, missedEpoch)", "function canSearchOptions")
     assert "onDemand: true" in _between(html, "function loadPageCOptions()", "function pageCRefreshCooling()")
 
 
-def test_leg_2_uses_the_same_two_page_structure():
+def test_the_then_bus_line_shows_only_on_the_first_leg_of_a_transfer_route():
     html = _page()
-    nxt = _between(html, "function acknowledgeTransferAlert()", "// Local notifications go through")
-    assert 'screenStack[screenStack.length - 1] === "arrivals"' in nxt  # leaves the on-your-way and Page B entries
-    assert nxt.index("history.go(-popped)") < nxt.index("openLeg2()")
-    leg = _between(html, "function openLeg2()", "function syncPlannedLegAfterReroute")
-    assert "beginPlannedLeg()" in leg  # starts the existing poll; the stack top is Page A
     assert "Then Bus {service} at {stop}" in html
     then = _between(html, 'var then = document.getElementById("live-then");', "var stopPoint")
-    assert "leg_index === 1" in then  # the line is for the first leg of a transfer route
+    assert "leg_index === 1" in then
 
 
 def test_question_bar_needs_a_known_arrival_time():
