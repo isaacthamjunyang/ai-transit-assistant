@@ -64,8 +64,13 @@ def _free_port() -> int:
 
 
 @contextmanager
-def running_app(tmp_path: Path, eta_minutes: float = 10.3, log_level: str = "warning", lta_status: int = 200):
-    """The real FastAPI app on a local port, with the fake cache and a fake LTA."""
+def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str = "warning", lta_status: int = 200,
+                reroute_stub: bool = False):
+    """The real FastAPI app on a local port, with the fake cache and a fake LTA.
+
+    eta_minutes is one number (one bus) or a list (NextBus, NextBus2, NextBus3). With reroute_stub the reroute
+    decision of every poll is a fired one for another bus, so the real poll pipeline (scoring, action, explanation
+    pack) runs with a reroute that fires; the reroute search itself is the only stubbed part."""
     from main import app
 
     patches = pytest.MonkeyPatch()
@@ -78,14 +83,37 @@ def running_app(tmp_path: Path, eta_minutes: float = 10.3, log_level: str = "war
     patches.setattr("main.load_static_data", lambda: cache)
     patches.setattr(arrivals, "read_account_key", lambda: "test-account-key")
     real_get = httpx.Client.get
+    etas = list(eta_minutes) if isinstance(eta_minutes, (list, tuple)) else [eta_minutes]
+    if reroute_stub:
+        def fired_decision(**kwargs):
+            now = kwargs["now"]
+            better = (now + timedelta(minutes=22)).replace(microsecond=0)
+            return {
+                "switched": True, "no_better_option": None,
+                "reroute": {
+                    "service_no": "99", "stop": {"stop_code": DEST, "description": "Destination", "distance_m": 150,
+                                                 "walk_minutes": 2, "services": ["99"]},
+                    "arrival_time": better.isoformat(), "eta_epoch": better.timestamp(),
+                    "destination_stop_code": DEST, "reroute_reason": "Bus 99 is a better option.",
+                    "notification_title": "Better option", "notification_body": "Open the app to switch.",
+                },
+                "winner_score": {"point": 63, "range_low": 55, "range_high": 70, "data_quality": "live",
+                                 "walk_minutes": 2},
+                "alternatives": [], "options": {"rows": [], "recommended": None},
+            }
+
+        patches.setattr("main.plan_reroute", fired_decision)
 
     def fake_get(self, url, *args, **kwargs):
         if "/v3/BusArrival" in str(url):
             if lta_status != 200:
                 return httpx.Response(lta_status, json={})
-            eta = (datetime.now(SGT) + timedelta(minutes=eta_minutes)).replace(microsecond=0).isoformat()
-            bus = {"EstimatedArrival": eta, "Monitored": 1, "Latitude": "", "Longitude": "", "OriginCode": "", "DestinationCode": ""}
-            return httpx.Response(200, json={"Services": [{"ServiceNo": "18", "NextBus": bus}]})
+            service = {"ServiceNo": "18"}
+            for name, minutes in zip(("NextBus", "NextBus2", "NextBus3"), etas):
+                eta = (datetime.now(SGT) + timedelta(minutes=minutes)).replace(microsecond=0).isoformat()
+                service[name] = {"EstimatedArrival": eta, "Monitored": 1, "Latitude": "", "Longitude": "",
+                                 "OriginCode": "", "DestinationCode": ""}
+            return httpx.Response(200, json={"Services": [service]})
         return real_get(self, url, *args, **kwargs)
 
     patches.setattr(httpx.Client, "get", fake_get)

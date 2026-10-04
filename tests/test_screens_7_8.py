@@ -104,7 +104,8 @@ def test_ai_flag_defaults_on_and_the_card_is_never_empty(tmp_path, monkeypatch):
     assert "var AI_EXPLANATION_ENABLED = true;" in html
     begin = _between(html, "function beginExplanation(pack)", "function syncExplanation")
     assert "headline" not in begin and "reasoning" not in begin  # the schema has one field, the clause
-    assert 'JSON.stringify({ fact_sheet: pack.fact_sheet, context: pack.context })' in begin
+    assert 'JSON.stringify({ fact_sheet: pack.fact_sheet, snapshot: pack.snapshot })' in begin
+    assert "body.snapshot !== lastExplanationPack.snapshot" in begin  # a reply for an older poll is dropped
     sync = _between(html, "function syncExplanation(body)", "function notifyReroute")
     assert "renderExplanation({ text: pack.text" in sync  # the text is shown on every poll, so the card is never empty
     assert "Probabilities come from the app's own calculation. AI only explains them." in html

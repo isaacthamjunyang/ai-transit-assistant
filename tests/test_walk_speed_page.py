@@ -201,7 +201,72 @@ def test_the_debug_bar_sits_on_top_of_the_page_stays_one_line_and_survives_navig
         assert bar["onTop"] and bar["top"] <= 1 and bar["height"] <= 40 and bar["width"] <= bar["vw"], (step, bar)
         assert bar["search"] == "?pace=debug", (step, bar)
         assert bar["text"].startswith("mode "), (step, bar)
-    assert report["beforeStart"]["text"].endswith("journey not started")
+    assert report["beforeStart"]["text"].endswith("journey not started · srv age -")
     assert report["open"]["hidden"] is False and report["open"]["onTop"] and report["open"]["buttons"] == 3
     assert report["open"]["bottom"] <= report["open"]["vh"]
     assert report["boxes"] == 1
+
+
+@pytest.fixture(scope="module")
+def fresh_fix_reports(app):
+    names = ["old", "hang", "fail", "recent"]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {n: pool.submit(run_scenario, "freshfix", app, {"which": n}) for n in names}
+        return {n: f.result()["result"] for n, f in futures.items()}
+
+
+def test_the_first_poll_after_a_long_planner_session_carries_a_fresh_timestamp(fresh_fix_reports):
+    report = fresh_fix_reports["old"]
+    assert report["newCalls"] == [{"maximumAge": 0, "timeout": 4000}], report["newCalls"]
+    assert report["hasLocation"] and report["sentTimestamp"] is not None
+    assert report["pageNow"] - report["sentTimestamp"] < 5000, (report["pageNow"], report["sentTimestamp"])
+    assert report["elapsedMs"] < 3500
+
+
+@pytest.mark.parametrize("which", ["hang", "fail"])
+def test_a_failed_or_timed_out_fix_still_lets_the_first_poll_go_ahead(fresh_fix_reports, which):
+    report = fresh_fix_reports[which]
+    assert report["newCalls"] == [{"maximumAge": 0, "timeout": 4000}]
+    assert report["url"], "the poll never went out"
+    assert report["pageNow"] - report["sentTimestamp"] > 100000  # the old fix is still what was sent
+    if which == "hang":
+        assert 3500 <= report["elapsedMs"] < 9000, report["elapsedMs"]  # after the 4 s timer, not before
+    else:
+        assert report["elapsedMs"] < 3500  # the error answers at once
+
+
+def test_a_recent_fix_does_not_wait_or_ask_for_another(fresh_fix_reports):
+    report = fresh_fix_reports["recent"]
+    assert report["newCalls"] == [] and report["elapsedMs"] < 3500
+    assert report["pollMs"] == 20000
+
+
+def test_a_late_model_reply_for_an_older_poll_is_ignored_and_the_text_follows_the_tile(app):
+    report = run_scenario("explainsnap", app)["result"]
+    assert report["firstPack"]["keys"] == ["chosen_action", "reason_code"]
+    assert report["s1"] != report["s2"], "two polls must have two snapshot keys"
+    assert report["firstRequest"]["snapshot"] == report["s1"]
+    assert set(report["firstRequest"]["fact_sheet"]) == {"reason_code", "chosen_action"}
+    assert report["pendingAfterPoll"] is True
+    late = report["afterLate"]
+    assert late["advice"] is None and "alert before leaving" not in late["text"], late
+    assert late["text"].startswith("The bus is")
+    assert late["secondBody"]["snapshot"] == report["s2"]  # the newer poll asks for its own clause
+    match = report["afterMatch"]
+    assert match["advice"].startswith("wait for your leave-by alert and keep") and match["text"].endswith(match["advice"] + ".")
+    assert "The bus is 7 minutes away." in report["tile"]["text"]
+    assert report["tile"]["sub"] == "Arriving in 7 min"
+    assert report["cleared"] == ""
+
+
+def test_the_location_card_states_the_reason_the_server_gave_and_no_card_when_there_is_none(app):
+    report = run_scenario("locationcard", app)["result"]
+    cards = report["cards"]
+    # The phone thinks its fix is fresh and accurate (the old fall-through printed "GPS accuracy is 22 m" here).
+    assert report["phone"]["accuracy"] < 100 and report["phone"]["ageMs"] < 60000
+    assert cards["age"]["hidden"] is False and "hasn't updated for 95 s" in cards["age"]["body"]
+    assert "GPS accuracy" not in cards["age"]["body"]
+    assert cards["accuracy"]["hidden"] is False and "Your GPS accuracy is 140 m" in cards["accuracy"]["body"]
+    assert cards["both"]["hidden"] is False and "Your GPS accuracy is 140 m" in cards["both"]["body"]
+    assert cards["neither-uncertain"]["hidden"] is True and cards["neither-live"]["hidden"] is True
+    assert cards["age"]["title"] == "Location uncertain"

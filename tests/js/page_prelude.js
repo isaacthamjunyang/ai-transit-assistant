@@ -8,7 +8,7 @@
   } catch (e) { /* storage blocked */ }
   var watchers = {};
   var nextId = 1;
-  var geoState = { current: CONFIG.position || null, getCalls: 0, watchCalls: 0, clearCalls: 0 };
+  var geoState = { current: CONFIG.position || null, getCalls: 0, watchCalls: 0, clearCalls: 0, mode: "ok", options: [] };
 
   function position(o) {
     return {
@@ -21,11 +21,17 @@
   }
 
   var geo = {
-    getCurrentPosition: function (ok, err) {
+    getCurrentPosition: function (ok, err, options) {
       geoState.getCalls += 1;
+      geoState.options.push({ maximumAge: options && options.maximumAge, timeout: options && options.timeout });
       var o = geoState.current;
+      if (geoState.mode === "hang") {
+        return;  // never answers: the page has to go ahead on its own timer
+      }
       setTimeout(function () {
-        if (o && !CONFIG.noGeo) {
+        if (geoState.mode === "fail") {
+          if (err) { err({ code: 3 }); }
+        } else if (o && !CONFIG.noGeo) {
           ok(position(o));
         } else if (err) {
           err({ code: 1 });
@@ -48,6 +54,7 @@
   window.__geo = {
     state: geoState,
     set: function (o) { geoState.current = o; },
+    setMode: function (mode) { geoState.mode = mode; },
     push: function (o) {
       geoState.current = o;
       Object.keys(watchers).forEach(function (id) { watchers[id](position(o)); });

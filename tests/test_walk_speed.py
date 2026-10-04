@@ -313,7 +313,7 @@ def test_one_poll_uses_one_speed_for_every_number(client, speed):
     assert abs((datetime.fromisoformat(body["leave_by"]) - expected_leave).total_seconds()) <= 1
     assert datetime.fromisoformat(body["leave_by"]) - datetime.fromisoformat(body["notification_time"]) == timedelta(seconds=60)
     # the AI sentence's walking minutes, from the same speed
-    assert body["explanation"]["fact_sheet"]["walk_minutes"] == overview_walk_minutes(distance, speed)
+    assert body["explanation"]["walk_minutes"] == overview_walk_minutes(distance, speed)
     # the Step 9 estimate, built from the same speed
     cache = client.app.state.lta_static
     dest_lat, dest_lon = _north(2000)
@@ -437,8 +437,8 @@ def test_the_speed_is_not_in_sqlite(client, tmp_path):
 def test_the_speed_is_not_in_the_openai_fact_sheet(client):
     body = _poll(client, speed=0.77, extra={"explanation_rendered": 1})
     sheet = body["explanation"]["fact_sheet"]
-    assert tuple(sheet) == FACT_SHEET_KEYS
-    assert "0.77" not in json.dumps(sheet) and "walk_speed" not in json.dumps(body["explanation"]["context"])
+    assert tuple(sheet) == FACT_SHEET_KEYS == ("reason_code", "chosen_action")
+    assert "0.77" not in json.dumps(sheet) and "walk_speed" not in json.dumps(body["explanation"])
 
 
 def test_the_access_log_filter_strips_the_position_and_the_speed(caplog):

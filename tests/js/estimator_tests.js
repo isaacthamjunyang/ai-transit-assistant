@@ -1129,7 +1129,7 @@
     var S = dbg();
     var root = document.getElementById("pace-debug");
     var bar = root.querySelector(".pace-debug__bar");
-    check(bar && bar.tagName === "BUTTON" && /^mode none .* used - m\/s .* journey not started$/.test(bar.textContent), bar && bar.textContent);
+    check(bar && bar.tagName === "BUTTON" && /^mode none .* used - m\/s .* journey not started · srv age -$/.test(bar.textContent), bar && bar.textContent);
     check(root.className === "pace-debug" && root.querySelector(".pace-debug__panel").hidden, "the panel was open");
     bar.click();
     check(root.className === "pace-debug is-open" && !root.querySelector(".pace-debug__panel").hidden, "the tap did not open it");

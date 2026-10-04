@@ -122,7 +122,7 @@ The 1.25 in slack_low is the fixed error-model constant ERROR_MODEL_SPEED_MPS, n
 Adjustments:
 
 - `Monitored == 0`: add half the published headway onto the bad side of slack, and cap the high end at 60%. Label **schedule only**.
-- GPS `accuracy` worse than 100 m, or a location fix older than 60 s: same widening, label **location uncertain**. Do not issue "leave now" from that fix. The page refreshes the fix once per poll tick, so a user who stands still is not treated as uncertain; a failed request leaves its age growing.
+- GPS `accuracy` worse than 100 m, or a location fix older than 60 s: same widening, label **location uncertain**. Do not issue "leave now" from that fix. The page refreshes the fix once per poll tick, so a user who stands still is not treated as uncertain; a failed request leaves its age growing. The server says why, with three additive fields on the probability: `location_reason` (`accuracy`, `age` or none; accuracy wins when both apply), `location_age_s` (the age of the fix as the server computed it) and `location_accuracy_m`. The Location uncertain card is built from those fields only, the accuracy text when the reason is `accuracy` and `Your location hasn't updated for {seconds} s.` when it is `age`, and there is no card when there is no reason. The 100 m and 60 s limits are unchanged. The age compares the phone's fix time with the server's clock, so a phone clock that is wrong by more than a few seconds shifts it.
 - ETA already more than 30 s in the past: that bus is missed; score the next bus.
 - Stale or API down: return **no probability**. See safety section.
 - Historical factor: until 20 logged arrivals exist for that service + stop + hour-of-week, the factor is neutral and the UI says **no historical reliability yet**. Later, subtract median lateness from slack. Do not invent a reliability number before that.
@@ -151,7 +151,7 @@ The server takes one walking speed per request and uses it everywhere a walking 
 - GPS-only: when the motion permission is denied, there is no motion sensor, or no motion event arrives within 3 s, the GPS-alone rule above (coefficient of variation under `GPS_ONLY_CV_MAX`, 0.30, with its tolerances) is the only way to detect walking. In this mode nothing is learned and the source is never `cadence`. With a working motion sensor the same rule applies as a second way to detect walking, and the mode is then `gps`.
 - Storage and privacy: motion sensor data stays on the phone. From the sensor work the server receives only the speed number and its source, and the position is sent with each request as before. The speed, its source and the position are never logged (the access log strips `walk_speed`, `walk_speed_source`, the position and the fix time), never written to SQLite, and never given to OpenAI, which still sees only whole minutes. The observations log does not store the user's position or GPS accuracy either (see the logging paragraph in section 3). The local storage keys used for walking data are `bus-catch-step-length` (length, count, date) and `bus-catch-pace` (pace, date). No raw sensor data, position or position time is stored. If storage is unavailable everything still works for the session. A hosting proxy can still record request URLs; the app cannot control that. A request that fails validation returns the usual 422 with each error's `type`, `loc` and `msg` but without the value the client sent (no `input` and no `ctx`), so a bad coordinate or speed is never echoed back. No validator or validation rule changes. The request-logging filter also covers uvicorn's trace-level request records (the `uvicorn.asgi` logger, which prints each request's query string), so the position and the speed are removed there too.
 - Lifecycle: the sensors and one `watchPosition` start only after a "Start journey" tap, while polling runs on the live pages, in the foreground. They stop on Yes, No, the end card, Back or Leave, a hidden page (they resume when it is visible again), leaving the live pages, and after two polls in a row with `near_stop` (then the estimator stays off for that leg and the last smoothed speed keeps being sent). They never run on the "on your way" overview or in Demo Mode. The iOS motion permission is requested once, inside the tap, and the journey never waits for it. A new "Start journey" tap or a new leg clears the last smoothed speed, the 30 s hold and the slew state, so an old speed is never sent; a remembered pace, if one is loaded, is then what is sent (source `remembered`). Coming back after a pause (the overview, a hidden page) keeps the current speed. This is not background tracking and adds no polling timer.
-- The existing per-poll `getCurrentPosition` is unchanged. A newer fix from the watch may be used by the next request.
+- The existing per-poll `getCurrentPosition` is unchanged. A newer fix from the watch may be used by the next request. When "Start journey" is tapped and the last fix is older than 10 s, the page first asks for one fresh fix (`getCurrentPosition`, `maximumAge` 0, timeout 4 s) and then sends the first poll whatever the result, never later than 4 s after the tap. The poll interval and the location limits are unchanged.
 - Debug tools (only with `?pace=debug`, removed before submission): a one-line bar fixed to the top of the screen shows the mode, the speed that a poll would send (or `-`) and one reason; a tap opens the full panel. "Record trace" records 90 s, one row per second (numbers and short tokens only, no position and no time of a position, with the values of the main constants on a first line) and, at the same time, the raw motion magnitude at 25 Hz. "Copy trace" and "Copy raw motion" copy them (a text area is the fallback). They are kept in memory only and are never stored or sent.
 - The overview shows a muted line above "Start journey": `Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before.` or, when the permission is denied or there is no motion sensor, `Motion sensor is off, so your steps are not used.` The line is muted and silent (aria-live off), and it is empty in Demo Mode. No menu row is added.
 
@@ -779,22 +779,24 @@ Do not call OpenAI when `data_quality` is `stale` or `unavailable`. When data is
 
 ### 6. Fact sheet
 
-Send only this already-computed numerical and state fact sheet:
+The model receives only this fact sheet, and nothing else:
 
 ```json
 {
-  "point": 74,
-  "range_low": 65,
-  "range_high": 82,
-  "slack_seconds": 180,
-  "walk_minutes": 4,
-  "monitored": true,
-  "data_quality": "live",
+  "reason_code": "TIME_TO_SPARE",
   "chosen_action": "wait"
 }
 ```
 
-The numbers above are an example of values Python has already computed. The request contains these fields only: `point`, `range_low`, `range_high`, `slack_seconds`, `walk_minutes`, `monitored`, `data_quality`, and `chosen_action`. OpenAI receives no spatial-selection information: no coordinates, no bus-stop identity, and no request to select, resolve, or rank a place or a stop.
+`reason_code` is one of `LOCATION_UNCERTAIN`, `UNLIKELY`, `MAY_NOT_REACH`, `TIME_TO_SPARE` (the variant of sentence two that Python chose). `chosen_action` is one of the four actions. The request contains no number at all: no minutes, no probability, no range, no slack, no seconds. OpenAI receives no spatial-selection information: no coordinates, no bus-stop identity, and no request to select, resolve, or rank a place or a stop. The eight-field fact sheet that this section used to list is replaced by this one.
+
+### 6a. The Page A text, the tracked bus and the snapshot key
+
+The AI Explanation card on Page A has exactly three sentences. Python writes sentences one and two, in the same poll response and from the same numbers as the arrival tile and the catch card: `The bus is {e} minutes away.` (`The bus is 1 minute away.` when e is 1; `The bus is arriving now.` when it is under a minute) and one of four wordings for the walk (`Your location is uncertain, so the walking time may be off.`; `Given the walking time is {w} minutes, catching this bus is unlikely.`; `Given the walking time is {w} minutes, you may not reach the stop before the bus.`; `Given the walking time is only {w} minutes, you have {t} minutes to get to the bus stop.`). Sentence three is `It is advisable to {advice}.`, where the model supplies only the advice words and Python assembles the sentence, falling back to a fixed clause for the action.
+
+The card always describes the tracked bus, the one the arrival tile shows. When a reroute fires, only the action changes to `switch_route` and the wording follows (`... catching this bus is unlikely.` and `It is advisable to switch to another bus.`); the minutes of the better bus never appear in the card. After an arrival is marked Missed, the tracked bus is the next arrival, as on the tile.
+
+Between two polls the page redraws sentences one and two every second from the tile's own minutes (the same value and the same rounding as the tile), so the card and the tile cannot disagree. Each explanation pack and each model request and reply carries a snapshot key (bus id plus poll time). A reply whose key is not the one of the poll on screen is dropped, so a late reply can never overwrite newer text. A poll with no tracked bus clears the card. Page C's explanation (`/api/explain-option`) is separate and unchanged. The page keeps a copy of the sentence templates and the variant rules; any change to the Python templates must change the page copy and the parity tests (a seeded random test and a boundary grid).
 
 ### 7. Deterministic Python action mapping
 

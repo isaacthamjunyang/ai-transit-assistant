@@ -171,6 +171,16 @@ def is_location_uncertain(accuracy_m: float, age_seconds: float | None) -> bool:
     return accuracy_m > UNCERTAIN_ACCURACY_M or age_uncertain
 
 
+def location_uncertainty_reason(accuracy_m: float, age_seconds: float | None) -> str | None:
+    """"accuracy" when the accuracy is over the limit (it wins when both apply), "age" when the fix is older than
+    the limit, otherwise None. is_location_uncertain is true exactly when this is not None."""
+    if accuracy_m > UNCERTAIN_ACCURACY_M:
+        return "accuracy"
+    if age_seconds is not None and age_seconds > UNCERTAIN_AGE_S:
+        return "age"
+    return None
+
+
 def effective_accuracy_m(accuracy_m: float, age_seconds: float | None) -> float:
     """Low-end accuracy. A fix older than 60 s widens it; a fresher fix does not."""
     accuracy = float(accuracy_m)
@@ -260,7 +270,8 @@ def score_buses(
             point = min(point, SCHEDULE_CEILING)
             low = min(low, SCHEDULE_CEILING)
             high = min(high, SCHEDULE_CEILING)
-        if is_location_uncertain(accuracy, age_seconds):
+        location_reason = location_uncertainty_reason(accuracy, age_seconds)
+        if location_reason is not None:
             quality = "location uncertain"
         elif not monitored:
             quality = "schedule"
@@ -274,6 +285,11 @@ def score_buses(
             "data_quality": quality,
             "reliability_label": RELIABILITY_LABEL,
             "is_missed": False,
+            # Additive: why the location is uncertain (or None), the age of the fix as this server computed it,
+            # and the accuracy it was scored with. The page builds the Location uncertain card from these.
+            "location_reason": location_reason,
+            "location_age_s": None if age_seconds is None else int(round(age_seconds)),
+            "location_accuracy_m": accuracy,
         }
         item["probability"]["band"] = ring_band(item["probability"]["point"])
         item["probability"]["pace"] = pace_guidance(

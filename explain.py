@@ -1,10 +1,11 @@
 """The AI Explanation card.
 
-The text has exactly three sentences. Python computes every number and writes sentences
-one and two from a fixed template. The model's only job is the clause that completes
-"It is advisable to ...", and Python falls back to a fixed clause for the action whenever
-the model is missing, slow, or rejected. OpenAI receives whole-minute fields and the
-action only: no probability, no range, no seconds, no coordinates, no stops.
+The text has exactly three sentences. Python computes every number and writes sentences one and two from a fixed
+template, in the same poll response and from the same numbers as the arrival tile and the catch card, for the bus
+the tile shows. The model's only job is the clause that completes "It is advisable to ...", and Python falls back
+to a fixed clause for the action whenever the model is missing, slow, or rejected. OpenAI receives the action and
+a reason code from a closed set and nothing else: no minutes, no probability, no range, no seconds, no
+coordinates, no stops.
 """
 
 import json
@@ -23,8 +24,9 @@ DEFAULT_MODEL = "gpt-4o-mini"
 TEMPERATURE = 0.2
 TIMEOUT_SECONDS = 3
 
-# What the model may see: whole minutes and the action.
-FACT_SHEET_KEYS = ("bus_minutes", "walk_minutes", "minutes_before_leaving", "chosen_action")
+# What the model may see: a reason code and the action. No number at all.
+FACT_SHEET_KEYS = ("reason_code", "chosen_action")
+REASON_CODES = ("LOCATION_UNCERTAIN", "UNLIKELY", "MAY_NOT_REACH", "TIME_TO_SPARE")
 ACTIONS = ("wait", "leave_now", "switch_route", "do_not_rely")
 ALLOWED_QUALITY = ("live", "schedule", "location uncertain")
 RESPONSE_FIELDS = ("advice",)
@@ -87,7 +89,8 @@ _SECONDS_WORDS = re.compile(r"\b(sec|secs|second|seconds)\b", re.IGNORECASE)
 
 SYSTEM_PROMPT = (
     "You finish one sentence for a bus app: \"It is advisable to ...\". "
-    "You receive whole minutes (bus_minutes, walk_minutes, minutes_before_leaving) and chosen_action. "
+    "You receive reason_code and chosen_action. reason_code is one of LOCATION_UNCERTAIN, UNLIKELY, "
+    "MAY_NOT_REACH, TIME_TO_SPARE; you never see a number. "
     "Return JSON with one field, advice: the words that complete the sentence, in lower case, at most 15 words, "
     "with no digits, no full stop, and no word about seconds. "
     "The advice must agree with chosen_action: wait means wait for the leave-by alert, leave_now means leave now "
@@ -231,20 +234,33 @@ def minutes_text(count: int) -> str:
     return "1 minute" if count == 1 else f"{count} minutes"
 
 
-def build_fact_sheet(*, bus_minutes: int, walk_minutes: int, chosen_action: str) -> dict:
-    """What the model sees. t is the bus minutes minus the walk minutes, from the same displayed values."""
-    sheet = {
+# Every field of the poll's explanation pack that the page reads. The page keeps a MIRROR of tile_minutes,
+# sentence_one and sentence_two (static/index.html: explanationMinutes, explanationLead) so it can redraw sentences
+# one and two every second from the tile's own minutes. Any change to the templates or the variant rules here must
+# change that mirror too. Tests that pin the two: tests/test_explanation_consistency.py
+# (test_the_page_mirror_equals_python_on_the_boundary_grid, ..._on_3000_seeded_random_cases,
+# ..._on_every_minute_and_walk_pair_in_range, test_the_page_reads_exactly_the_pack_fields_the_server_lists) and tests/test_walk_speed_page.py
+# (test_real_poll_payloads_render_the_same_sentences_as_the_pack).
+PAGE_PACK_FIELDS = (
+    "snapshot", "fact_sheet", "text", "clause", "action", "arrival_time", "walk_minutes", "band", "uncertain",
+    "call", "pending",
+)
+
+
+def build_numbers(*, bus_minutes: int, walk_minutes: int, chosen_action: str) -> dict:
+    """The numbers of sentences one and two. They stay on the server and are never sent to the model."""
+    numbers = {
         "bus_minutes": bus_minutes,
         "walk_minutes": walk_minutes,
         "minutes_before_leaving": bus_minutes - walk_minutes,
         "chosen_action": chosen_action,
     }
-    for key in FACT_SHEET_KEYS[:3]:
-        if type(sheet[key]) is not int:
-            raise ValueError("Fact sheet numbers must be integers.")
-    if sheet["chosen_action"] not in ACTIONS:
-        raise ValueError("Fact sheet action is invalid.")
-    return sheet
+    for key in ("bus_minutes", "walk_minutes", "minutes_before_leaving"):
+        if type(numbers[key]) is not int:
+            raise ValueError("Explanation numbers must be integers.")
+    if numbers["chosen_action"] not in ACTIONS:
+        raise ValueError("Explanation action is invalid.")
+    return numbers
 
 
 def sentence_one(bus_minutes: int) -> str:
@@ -253,29 +269,44 @@ def sentence_one(bus_minutes: int) -> str:
     return f"The bus is {minutes_text(bus_minutes)} away."
 
 
-def sentence_two(sheet: dict, *, band: str | None, uncertain: bool) -> str:
+def sentence_two(numbers: dict, *, band: str | None, uncertain: bool) -> str:
     """First match wins: location uncertain, low band or switch or do-not-rely, may not reach, then the default."""
-    e = sheet["bus_minutes"]
-    w = sheet["walk_minutes"]
-    t = sheet["minutes_before_leaving"]
+    e = numbers["bus_minutes"]
+    w = numbers["walk_minutes"]
+    t = numbers["minutes_before_leaving"]
     lead = f"Given the walking time is {minutes_text(w)}"
     if uncertain:
         return "Your location is uncertain, so the walking time may be off."
-    if band == "low" or sheet["chosen_action"] in ("switch_route", "do_not_rely"):
+    if band == "low" or numbers["chosen_action"] in ("switch_route", "do_not_rely"):
         return f"{lead}, catching this bus is unlikely."
     if w >= e:
         return f"{lead}, you may not reach the stop before the bus."
     return f"Given the walking time is only {minutes_text(w)}, you have {minutes_text(t)} to get to the bus stop."
 
 
-def compose_text(sheet: dict, advice: str, *, band: str | None, uncertain: bool) -> str:
-    return " ".join(
-        (
-            sentence_one(sheet["bus_minutes"]),
-            sentence_two(sheet, band=band, uncertain=uncertain),
-            f"It is advisable to {advice}.",
-        )
-    )
+def reason_code_for(numbers: dict, *, band: str | None, uncertain: bool) -> str:
+    """The sentence-two variant as a code: the only thing about the numbers the model is told."""
+    if uncertain:
+        return "LOCATION_UNCERTAIN"
+    if band == "low" or numbers["chosen_action"] in ("switch_route", "do_not_rely"):
+        return "UNLIKELY"
+    if numbers["walk_minutes"] >= numbers["bus_minutes"]:
+        return "MAY_NOT_REACH"
+    return "TIME_TO_SPARE"
+
+
+def lead_text(numbers: dict, *, band: str | None, uncertain: bool) -> str:
+    """Sentences one and two."""
+    return sentence_one(numbers["bus_minutes"]) + " " + sentence_two(numbers, band=band, uncertain=uncertain)
+
+
+def clause_text(advice: str) -> str:
+    """Sentence three."""
+    return f"It is advisable to {advice}."
+
+
+def compose_text(numbers: dict, advice: str, *, band: str | None, uncertain: bool) -> str:
+    return lead_text(numbers, band=band, uncertain=uncertain) + " " + clause_text(advice)
 
 
 # ---- the model's clause ----
@@ -317,23 +348,16 @@ def deterministic_advice(action: str) -> str:
 def parse_fact_sheet(body: dict) -> dict | None:
     if not isinstance(body, dict) or set(body) != set(FACT_SHEET_KEYS):
         return None
-    for key in FACT_SHEET_KEYS[:3]:
-        if type(body[key]) is not int:
-            return None
-    if body["chosen_action"] not in ACTIONS:
-        return None
-    if body["minutes_before_leaving"] != body["bus_minutes"] - body["walk_minutes"]:
+    if body["reason_code"] not in REASON_CODES or body["chosen_action"] not in ACTIONS:
         return None
     return {key: body[key] for key in FACT_SHEET_KEYS}
 
 
-def parse_context(context: object) -> dict:
-    """Server-side facts that choose a sentence-two variant. The model never sees them."""
-    band = context.get("band") if isinstance(context, dict) else None
-    return {
-        "band": band if band in ("ok", "mid", "low") else None,
-        "uncertain": bool(context.get("uncertain")) if isinstance(context, dict) else False,
-    }
+def parse_snapshot(value: object) -> str | None:
+    """The key of the poll an explanation belongs to: bus id plus poll time. Echoed back, never interpreted."""
+    if isinstance(value, str) and 0 < len(value) <= 200 and re.fullmatch(r"[\w|:.+\-]+", value):
+        return value
+    return None
 
 
 def explanation_messages(fact_sheet: dict) -> list[dict]:
@@ -364,26 +388,26 @@ def _openai_demo_active() -> bool:
     return demo.explanation_is_simulated()
 
 
-def advice_view(fact_sheet: dict, context: dict, advice: str, source: str) -> dict:
+def advice_view(fact_sheet: dict, advice: str, source: str) -> dict:
     return {
         "source": source,
         "advice": advice,
+        "clause": clause_text(advice),
         "action": fact_sheet["chosen_action"],
-        "text": compose_text(fact_sheet, advice, **context),
+        "reason_code": fact_sheet["reason_code"],
         "queued": False,
     }
 
 
-def fallback_view(fact_sheet: dict, context: dict | None = None) -> dict:
-    return advice_view(fact_sheet, parse_context(context), deterministic_advice(fact_sheet["chosen_action"]), "fallback")
+def fallback_view(fact_sheet: dict) -> dict:
+    return advice_view(fact_sheet, deterministic_advice(fact_sheet["chosen_action"]), "fallback")
 
 
-def produce_explanation(fact_sheet: dict, context: dict | None = None, *, complete=None, api_key: str | None = None) -> dict:
-    ctx = parse_context(context)
+def produce_explanation(fact_sheet: dict, *, complete=None, api_key: str | None = None) -> dict:
     key = read_openai_api_key() if api_key is None else api_key
     demo_supplies_result = complete is None and _openai_demo_active()
     if not key and not demo_supplies_result:
-        return fallback_view(fact_sheet, ctx)
+        return fallback_view(fact_sheet)
     request = explanation_request(fact_sheet)
     try:
         if complete is None:
@@ -391,55 +415,57 @@ def produce_explanation(fact_sheet: dict, context: dict | None = None, *, comple
         else:
             raw = complete(fact_sheet, request)
     except TimeoutError:
-        return fallback_view(fact_sheet, ctx)
+        return fallback_view(fact_sheet)
     except AssertionError:
         raise
     except Exception:
-        return fallback_view(fact_sheet, ctx)
-    return interpret_explanation(raw, fact_sheet, ctx)
+        return fallback_view(fact_sheet)
+    return interpret_explanation(raw, fact_sheet)
 
 
-def complete_explanation_request(gate: ExplanationGate, fact_sheet: dict, context: dict | None = None, **kwargs) -> tuple[dict, dict | None]:
+def complete_explanation_request(gate: ExplanationGate, fact_sheet: dict, **kwargs) -> tuple[dict, dict | None]:
     try:
-        result = produce_explanation(fact_sheet, context, **kwargs)
+        result = produce_explanation(fact_sheet, **kwargs)
     except TimeoutError:
-        result = fallback_view(fact_sheet, context)
+        result = fallback_view(fact_sheet)
     except AssertionError:
         raise
     except Exception:
-        result = fallback_view(fact_sheet, context)
+        result = fallback_view(fact_sheet)
     pending = gate.finish()
     return result, pending
 
 
 def handle_explain_request(body: dict) -> tuple[int, dict]:
+    """The request is {fact_sheet: {reason_code, chosen_action}, snapshot}. The snapshot is echoed so the page can
+    drop a reply that belongs to an older poll."""
     if not isinstance(body, dict):
         return 422, {"detail": "Fact sheet is invalid."}
     sheet = parse_fact_sheet(body.get("fact_sheet"))
-    if sheet is None:
+    snapshot = parse_snapshot(body.get("snapshot"))
+    if sheet is None or snapshot is None:
         return 422, {"detail": "Fact sheet is invalid."}
-    context = parse_context(body.get("context"))
     kind = EXPLANATION_GATE.begin(sheet)
     if kind == "queued":
-        return 200, {"status": "ok", "queued": True, "source": "queued"}
-    result, pending = complete_explanation_request(EXPLANATION_GATE, sheet, context)
+        return 200, {"status": "ok", "queued": True, "source": "queued", "snapshot": snapshot}
+    result, pending = complete_explanation_request(EXPLANATION_GATE, sheet)
     payload = dict(result)
     payload["status"] = "ok"
+    payload["snapshot"] = snapshot
     payload["pending_fact_sheet"] = pending
     return 200, payload
 
 
-def interpret_explanation(raw: dict, fact_sheet: dict, context: dict | None = None) -> dict:
-    ctx = parse_context(context)
+def interpret_explanation(raw: dict, fact_sheet: dict) -> dict:
     if not isinstance(raw, dict) or raw.get("status", 200) != 200:
-        return fallback_view(fact_sheet, ctx)
+        return fallback_view(fact_sheet)
     parsed = _parse_body(raw.get("body"))
     if not isinstance(parsed, dict) or set(parsed) != set(RESPONSE_FIELDS):
-        return fallback_view(fact_sheet, ctx)
+        return fallback_view(fact_sheet)
     advice = parsed["advice"]
     if not advice_is_valid(advice, fact_sheet["chosen_action"]):
-        return fallback_view(fact_sheet, ctx)
-    return advice_view(fact_sheet, ctx, advice, "model")
+        return fallback_view(fact_sheet)
+    return advice_view(fact_sheet, advice, "model")
 
 
 def _parse_body(body: object) -> dict | None:
@@ -483,7 +509,13 @@ def _openai_complete(fact_sheet: dict, api_key: str, request: dict) -> dict:
     return {"status": 200, "body": content}
 
 
-# ---- the poll: the text is rebuilt from the current numbers every time ----
+# ---- the poll: sentences one and two are rebuilt from the tracked bus's numbers every time ----
+
+def snapshot_key(stop_code: str, service_no: str, arrival_iso: str | None, poll_time: datetime) -> str:
+    """Bus id plus poll time: identifies the one poll an explanation belongs to."""
+    arrival = (arrival_iso or "none").replace(" ", "")
+    return f"{service_no}|{stop_code}|{arrival}|{poll_time.isoformat()}"
+
 
 def build_poll_explanation(
     payload: dict,
@@ -501,42 +533,22 @@ def build_poll_explanation(
 ) -> dict | None:
     """The card's text for this poll, plus whether a model clause is needed for the action.
 
-    Sentences one and two always use this poll's numbers. Only the clause is cached, keyed by
-    the action: it is reused while the action is unchanged and replaced by the fixed clause
-    until the model's clause for a new action arrives.
+    The card always describes the tracked bus, the one the arrival tile and the catch card show. A reroute that
+    fires only changes the action to switch_route (and with it the wording); it never brings in the minutes
+    of the better bus. Sentences one and two use this poll's numbers. Only the clause is cached, keyed by the
+    action: it is reused while the action is unchanged and replaced by the fixed clause until the model's clause
+    for a new action arrives. The pack carries what the page needs to redraw sentences one and two from the
+    tile's own minutes every second (arrival time, walk minutes, band, uncertain flag), and the snapshot key.
     """
-    if reroute_fired:
-        decision = payload.get("reroute") if isinstance(payload.get("reroute"), dict) else {}
-        score = decision.get("winner_score")
-        reroute = decision.get("reroute") if isinstance(decision.get("reroute"), dict) else None
-        if not isinstance(score, dict) or reroute is None:
-            return None
-        quality = score.get("data_quality")
-        high = score.get("range_high")
-        point = score.get("point")
-        arrival = reroute.get("arrival_time")
-        stop = reroute.get("stop") if isinstance(reroute.get("stop"), dict) else {}
-        distance = stop.get("distance_m")
-        walk = (
-            overview_walk_minutes(float(distance), walk_speed_m_s)
-            if isinstance(distance, (int, float)) and not isinstance(distance, bool)
-            else None
-        )
-        band = None
-        if isinstance(point, int) and not isinstance(point, bool):
-            from catch_heuristic import ring_band
-
-            band = ring_band(point)
-    else:
-        bus = _scored_journey_bus(payload.get("buses") or [])
-        chance = bus.get("probability") if isinstance(bus, dict) else None
-        if not isinstance(chance, dict):
-            return None
-        quality = chance.get("data_quality")
-        high = chance.get("range_high")
-        band = chance.get("band")
-        arrival = bus.get("arrival_time")
-        walk = boarding_walk_minutes(cache, stop_code, user_lat, user_lon, walk_speed_m_s)
+    bus = _scored_journey_bus(payload.get("buses") or [])
+    chance = bus.get("probability") if isinstance(bus, dict) else None
+    if not isinstance(chance, dict):
+        return None
+    quality = chance.get("data_quality")
+    high = chance.get("range_high")
+    band = chance.get("band")
+    arrival = bus.get("arrival_time")
+    walk = boarding_walk_minutes(cache, stop_code, user_lat, user_lon, walk_speed_m_s)
     bus_minutes = tile_minutes(arrival, now)
     if (
         bus_minutes is None
@@ -551,16 +563,25 @@ def build_poll_explanation(
         range_high=high,
         leave_by_seconds=seconds_until_leave_by(payload.get("leave_by"), now),
     )
-    sheet = build_fact_sheet(bus_minutes=bus_minutes, walk_minutes=walk, chosen_action=action)
-    context = {"band": band if band in ("ok", "mid", "low") else None, "uncertain": quality == "location uncertain"}
+    numbers = build_numbers(bus_minutes=bus_minutes, walk_minutes=walk, chosen_action=action)
+    band = band if band in ("ok", "mid", "low") else None
+    uncertain = quality == "location uncertain"
+    reason = reason_code_for(numbers, band=band, uncertain=uncertain)
+    sheet = {"reason_code": reason, "chosen_action": action}
     cached = explained_advice if explained_action == action and advice_is_valid(explained_advice, action) else None
     advice = cached if cached is not None else deterministic_advice(action)
     needs_model = quality in ALLOWED_QUALITY and cached is None
     return {
+        "snapshot": snapshot_key(stop_code, str(payload.get("service_no") or ""), arrival, now),
         "fact_sheet": sheet,
-        "context": context,
-        "text": compose_text(sheet, advice, **context),
+        "text": compose_text(numbers, advice, band=band, uncertain=uncertain),
+        "clause": clause_text(advice),
         "action": action,
+        "reason_code": reason,
+        "arrival_time": arrival,
+        "walk_minutes": walk,
+        "band": band,
+        "uncertain": uncertain,
         "call": needs_model and not in_flight,
         "pending": needs_model and in_flight,
     }

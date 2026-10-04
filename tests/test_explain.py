@@ -21,7 +21,13 @@ from explain import (
     TIMEOUT_SECONDS,
     UNSAFE_PHRASES,
     advice_is_valid,
-    build_fact_sheet,
+    REASON_CODES,
+    build_numbers,
+    clause_text,
+    lead_text,
+    parse_fact_sheet,
+    reason_code_for,
+    snapshot_key,
     build_poll_explanation,
     chosen_action,
     compose_text,
@@ -60,7 +66,13 @@ def _block_live_openai(monkeypatch):
 
 
 def sheet(bus=10, walk=3, action="wait"):
-    return build_fact_sheet(bus_minutes=bus, walk_minutes=walk, chosen_action=action)
+    """The numbers of sentences one and two. They stay on the server."""
+    return build_numbers(bus_minutes=bus, walk_minutes=walk, chosen_action=action)
+
+
+def msheet(action="wait", reason="TIME_TO_SPARE"):
+    """What the model may see: a reason code and the action."""
+    return {"reason_code": reason, "chosen_action": action}
 
 
 def accepted(advice="wait for your leave-by alert"):
@@ -241,16 +253,17 @@ def test_guaranteed_arrival_phrases_are_rejected(phrase):
     assert advice_is_valid(f"wait because {phrase}", "wait") is False
 
 
-def test_a_bad_model_clause_falls_back_and_the_numbers_cannot_change():
-    fact = sheet(10, 3, "wait")
+def test_a_bad_model_clause_falls_back_and_never_carries_numbers():
+    fact = msheet("wait")
     for bad in ("wait for the bus in 7 minutes", "leave now and run", "Wait for your leave-by alert."):
-        view = interpret_explanation({"status": 200, "body": {"advice": bad}}, fact, CTX)
+        view = interpret_explanation({"status": 200, "body": {"advice": bad}}, fact)
         assert view["source"] == "fallback"
         assert view["advice"] == ACTION_ADVICE["wait"]
-        assert view["text"].startswith("The bus is 10 minutes away. Given the walking time is only 3 minutes, you have 7 minutes")
-    good = interpret_explanation({"status": 200, "body": json.dumps({"advice": "wait for your alert before leaving"})}, fact, CTX)
-    assert good["source"] == "model" and good["text"].endswith("It is advisable to wait for your alert before leaving.")
-    assert good["text"].split(" It is advisable")[0] == compose_text(fact, ACTION_ADVICE["wait"], **CTX).split(" It is advisable")[0]
+        assert view["clause"] == "It is advisable to wait for your leave-by alert."
+        assert "text" not in view  # the model path knows no minutes, so it cannot produce sentences one and two
+    good = interpret_explanation({"status": 200, "body": json.dumps({"advice": "wait for your alert before leaving"})}, fact)
+    assert good["source"] == "model" and good["clause"] == "It is advisable to wait for your alert before leaving."
+    assert not re.search(r"\d", good["clause"])
 
 
 @pytest.mark.parametrize("raw", [
@@ -261,7 +274,7 @@ def test_a_bad_model_clause_falls_back_and_the_numbers_cannot_change():
     {"status": 200, "body": {"headline": "x", "reasoning": "y", "leave_advice": "wait", "cited_low": 1, "cited_high": 2}},
 ])
 def test_failures_and_extra_fields_use_the_fixed_clause(raw):
-    view = interpret_explanation(raw, sheet(), CTX)
+    view = interpret_explanation(raw, msheet())
     assert view["source"] == "fallback" and view["advice"] == ACTION_ADVICE["wait"]
 
 
@@ -269,27 +282,43 @@ def test_timeout_and_missing_key_use_the_fixed_clause():
     def slow(fact, request):
         raise TimeoutError
 
-    assert produce_explanation(sheet(), CTX, complete=slow, api_key="sk-x")["source"] == "fallback"
-    assert produce_explanation(sheet(), CTX, complete=lambda f, r: {"status": 200, "body": accepted()}, api_key="")["source"] == "fallback"
+    assert produce_explanation(msheet(), complete=slow, api_key="sk-x")["source"] == "fallback"
+    assert produce_explanation(msheet(), complete=lambda f, r: {"status": 200, "body": accepted()}, api_key="")["source"] == "fallback"
 
 
 # ---- the fact sheet and the request
 
-def test_the_fact_sheet_is_whole_minutes_and_the_action_only():
-    fact = sheet(10, 3, "wait")
-    assert tuple(fact) == FACT_SHEET_KEYS
-    assert set(fact) == {"bus_minutes", "walk_minutes", "minutes_before_leaving", "chosen_action"}
-    assert fact["minutes_before_leaving"] == fact["bus_minutes"] - fact["walk_minutes"]
-    for forbidden in ("slack", "second", "point", "range", "probability", "quality", "monitored", "spare", "arrive", "target"):
-        assert not any(forbidden in key for key in fact)
+def test_the_fact_sheet_is_a_reason_code_and_the_action_and_no_number_at_all():
+    fact = msheet("wait", "TIME_TO_SPARE")
+    assert tuple(fact) == FACT_SHEET_KEYS == ("reason_code", "chosen_action")
+    assert REASON_CODES == ("LOCATION_UNCERTAIN", "UNLIKELY", "MAY_NOT_REACH", "TIME_TO_SPARE")
+    assert parse_fact_sheet(fact) == fact
     request = explanation_request(fact)
     user = json.loads(request["messages"][1]["content"])
-    assert set(user) == set(FACT_SHEET_KEYS)
+    assert user == fact
+    assert not re.search(r"\d", request["messages"][1]["content"]), "a digit reached the model as data"
+    assert re.findall(r"\d+", request["messages"][0]["content"]) == ["15"]  # only the word limit in the instructions
     blob = json.dumps(request).lower()
-    for marker in ("slack", "range_low", "range_high", "\"point\"", "latitude", "longitude", "stop_code", "service_no"):
+    for marker in ("minutes", "slack", "range_low", "range_high", "\"point\"", "latitude", "longitude", "stop_code", "service_no"):
         assert marker not in blob
     assert EXPLANATION_SCHEMA["required"] == ["advice"] and list(EXPLANATION_SCHEMA["properties"]) == ["advice"]
     assert EXPLANATION_SCHEMA["additionalProperties"] is False
+
+
+def test_every_poll_pack_sends_the_model_nothing_but_the_reason_code_and_the_action():
+    pack = _poll(_payload(643))
+    assert set(pack["fact_sheet"]) == {"reason_code", "chosen_action"}
+    assert pack["fact_sheet"]["reason_code"] in REASON_CODES
+    assert not re.search(r"\d", json.dumps(pack["fact_sheet"]))
+
+
+def test_the_reason_code_is_the_sentence_two_variant():
+    assert reason_code_for(sheet(10, 3), band="ok", uncertain=True) == "LOCATION_UNCERTAIN"
+    assert reason_code_for(sheet(10, 3), band="low", uncertain=False) == "UNLIKELY"
+    assert reason_code_for(sheet(10, 3, "switch_route"), band="ok", uncertain=False) == "UNLIKELY"
+    assert reason_code_for(sheet(10, 3, "do_not_rely"), band="ok", uncertain=False) == "UNLIKELY"
+    assert reason_code_for(sheet(3, 3), band="ok", uncertain=False) == "MAY_NOT_REACH"
+    assert reason_code_for(sheet(10, 3), band="mid", uncertain=False) == "TIME_TO_SPARE"
 
 
 def test_python_action_precedence():
@@ -303,7 +332,7 @@ def test_python_action_precedence():
 def test_model_configuration():
     assert model_name() == "gpt-4o-mini"
     assert TEMPERATURE == 0.2 and TIMEOUT_SECONDS == 3
-    request = explanation_request(sheet())
+    request = explanation_request(msheet())
     assert request["model"] == "gpt-4o-mini" and request["store"] is False
     assert request["response_format"]["json_schema"]["strict"] is True
     assert request["response_format"]["json_schema"]["schema"] == EXPLANATION_SCHEMA
@@ -313,7 +342,7 @@ def test_model_configuration():
 
 def test_model_name_can_be_swapped_from_configuration(monkeypatch):
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini-2024-07-18")
-    assert explanation_request(sheet())["model"] == "gpt-4o-mini-2024-07-18"
+    assert explanation_request(msheet())["model"] == "gpt-4o-mini-2024-07-18"
 
 
 # ---- the poll: text rebuilt every time, the clause cached by action
@@ -364,53 +393,109 @@ def test_context_chooses_the_sentence_two_variant_and_the_model_never_sees_it():
     assert "catching this bus is unlikely" in low["text"] and low["action"] == "do_not_rely"
     unc = _poll(_payload(600, quality="location uncertain"))
     assert "Your location is uncertain" in unc["text"]
-    assert set(unc["fact_sheet"]) == set(FACT_SHEET_KEYS) and "band" not in unc["fact_sheet"]
+    assert unc["fact_sheet"] == {"reason_code": "LOCATION_UNCERTAIN", "chosen_action": unc["action"]}
     stale = _poll(_payload(600, quality="stale"))
     assert stale["call"] is False  # no model call for stale or unavailable data
 
 
-def test_a_reroute_uses_the_winners_numbers():
-    payload = {"leave_by": None, "buses": [], "reroute": {
-        "winner_score": {"point": 63, "range_low": 55, "range_high": 70, "data_quality": "live"},
-        "reroute": {"arrival_time": _iso(300), "stop": {"distance_m": 150}}}}
-    pack = _poll(payload, reroute_fired=True)
+def _three_buses(reroute=True):
+    """Arrivals at 2, 22 and 40 minutes. The tile shows the 2-minute bus. A reroute to the 22-minute bus fires."""
+    buses = []
+    for index, minutes in enumerate((2, 22, 40)):
+        buses.append({"position": ("NextBus", "NextBus2", "NextBus3")[index], "arrival_time": _iso(minutes * 60),
+                      "is_primary": index == 0, "is_missed": False,
+                      "probability": {"point": 60, "range_low": 50, "range_high": 80, "data_quality": "live", "band": "ok"}})
+    payload = {"service_no": "36", "leave_by": (NOW + timedelta(seconds=600)).isoformat(), "buses": buses}
+    if reroute:
+        payload["reroute"] = {
+            "winner_score": {"point": 63, "range_low": 55, "range_high": 70, "data_quality": "live"},
+            "reroute": {"arrival_time": _iso(22 * 60), "stop": {"distance_m": 150}}}
+    return payload
+
+
+def test_a_reroute_describes_the_tracked_bus_with_the_switch_wording_never_the_winner():
+    pack = _poll(_three_buses(), reroute_fired=True)
     assert pack["action"] == "switch_route"
-    assert pack["text"].startswith("The bus is 5 minutes away. Given the walking time is 2 minutes, catching this bus is unlikely.")
+    assert pack["text"].startswith("The bus is 2 minutes away. Given the walking time is 3 minutes, catching this bus is unlikely.")
+    assert "22 minutes" not in pack["text"] and "40 minutes" not in pack["text"]
     assert pack["text"].endswith("It is advisable to switch to another bus.")
+    assert pack["arrival_time"] == _iso(120)
+    # With no reroute the same 2-minute bus is described (the bug: the winner's 22 minutes leaked in).
+    plain = _poll(_three_buses(reroute=False))
+    assert plain["text"].startswith("The bus is 2 minutes away.") and plain["action"] == "wait"
+
+
+def test_after_a_missed_arrival_the_text_follows_the_new_tracked_bus():
+    payload = _three_buses(reroute=False)
+    payload["buses"][0].update({"arrival_time": _iso(-45), "is_missed": True, "is_primary": False, "probability": None})
+    payload["buses"][1]["is_primary"] = True
+    pack = _poll(payload)
+    assert pack["text"].startswith("The bus is 22 minutes away.") and pack["arrival_time"] == _iso(22 * 60)
+    for bus in payload["buses"]:
+        bus["is_missed"], bus["is_primary"] = True, False
+    assert _poll(payload) is None  # nothing tracked: no explanation (the page clears the card)
+
+
+def test_the_page_minutes_equal_the_tile_minutes_for_every_variant():
+    # The sentence-one number is the tile's number (tile_minutes) in every case of the variant table.
+    for e, w, action, band, unc in ALL_CASES:
+        numbers = sheet(e, w, action)
+        lead = lead_text(numbers, band=band, uncertain=unc)
+        expected_one = "The bus is arriving now." if e < 1 else f"The bus is {e} minute{'s' if e != 1 else ''} away."
+        assert lead.startswith(expected_one), lead
+    for seconds in (-40, 0, 30, 31, 59, 60, 89, 90, 600, 629, 630, 1320):
+        e = tile_minutes(_iso(seconds), NOW)
+        pack = _poll(_payload(seconds))
+        if pack is not None:
+            assert pack["text"].startswith(lead_text(sheet(e, pack["walk_minutes"], pack["action"]),
+                                                     band=pack["band"], uncertain=pack["uncertain"])), seconds
+
+
+def test_the_pack_carries_the_snapshot_key_of_its_bus_and_poll():
+    pack = _poll(_payload(600), stop_code="1")
+    assert pack["snapshot"] == snapshot_key("1", "", _iso(600), NOW)
+    later = build_poll_explanation(_payload(600), now=NOW + timedelta(seconds=20), cache=_Cache(), user_lat=1.3 + 225 / 111_195,
+                                   user_lon=103.8, stop_code="1", explained_action=None, explained_advice=None,
+                                   in_flight=False, reroute_fired=False)
+    assert later["snapshot"] != pack["snapshot"]
 
 
 # ---- endpoint, key, scope
 
-def test_explain_endpoint_returns_the_assembled_text_and_hides_the_key(monkeypatch):
+def test_explain_endpoint_returns_the_clause_and_the_snapshot_and_hides_the_key(monkeypatch):
     secret = "sk-endpoint-secret"
     calls = []
+    key = "36|01011|2026-09-29T14:02:00+08:00|2026-09-29T14:00:00+08:00"
 
     def fake_complete(fact_sheet, api_key, request):
         calls.append(api_key)
-        status_code, queued = handle_explain_request({"fact_sheet": sheet(8, 2, "wait"), "context": CTX})
-        assert status_code == 200 and queued["queued"] is True
+        status_code, queued = handle_explain_request({"fact_sheet": msheet("wait", "MAY_NOT_REACH"), "snapshot": "later"})
+        assert status_code == 200 and queued["queued"] is True and queued["snapshot"] == "later"
         return {"status": 200, "body": json.dumps(accepted())}
 
     monkeypatch.setattr(explain, "_openai_complete", fake_complete)
     monkeypatch.setattr(explain, "read_openai_api_key", lambda: secret)
-    status, payload = handle_explain_request({"fact_sheet": sheet(10, 3, "wait"), "context": CTX})
+    status, payload = handle_explain_request({"fact_sheet": msheet("wait"), "snapshot": key})
     assert status == 200 and payload["source"] == "model" and payload["action"] == "wait"
-    assert payload["text"].startswith("The bus is 10 minutes away.") and payload["text"].endswith("wait for your leave-by alert.")
-    assert payload["pending_fact_sheet"]["bus_minutes"] == 8
+    assert payload["snapshot"] == key  # every reply carries the key of the request it answers
+    assert payload["clause"] == "It is advisable to wait for your leave-by alert." and "text" not in payload
+    assert payload["pending_fact_sheet"]["reason_code"] == "MAY_NOT_REACH"
     assert secret not in json.dumps(payload) and calls == [secret]
     reset_explanation_gate()
     with TestClient(app) as client:
-        response = client.post("/api/explain", json={"fact_sheet": sheet(), "context": CTX})
-    assert response.status_code == 200 and secret not in response.text
+        response = client.post("/api/explain", json={"fact_sheet": msheet(), "snapshot": key})
+    assert response.status_code == 200 and secret not in response.text and response.json()["snapshot"] == key
 
 
-def test_explain_endpoint_rejects_bad_or_spatial_sheets():
-    body = sheet()
+def test_explain_endpoint_rejects_bad_spatial_or_numeric_sheets_and_a_missing_snapshot():
+    body = msheet()
     body["latitude"] = 1.3
-    assert handle_explain_request({"fact_sheet": body})[0] == 422
-    inconsistent = sheet()
-    inconsistent["minutes_before_leaving"] += 1
-    assert handle_explain_request({"fact_sheet": inconsistent})[0] == 422
+    assert handle_explain_request({"fact_sheet": body, "snapshot": "k"})[0] == 422
+    numeric = dict(msheet(), bus_minutes=10)
+    assert handle_explain_request({"fact_sheet": numeric, "snapshot": "k"})[0] == 422
+    assert handle_explain_request({"fact_sheet": msheet("wait", "NOT_A_CODE"), "snapshot": "k"})[0] == 422
+    assert handle_explain_request({"fact_sheet": msheet()})[0] == 422  # no snapshot key
+    assert handle_explain_request({"fact_sheet": msheet(), "snapshot": "bad key with spaces"})[0] == 422
     assert handle_explain_request({"point": 1})[0] == 422
 
 
@@ -431,7 +516,7 @@ def test_api_key_never_reaches_the_browser_logs_or_disk(tmp_path, capsys, caplog
         return {"status": 200, "body": accepted()}
 
     with caplog.at_level(0):
-        result = produce_explanation(sheet(), CTX, complete=transport, api_key=secret)
+        result = produce_explanation(msheet(), complete=transport, api_key=secret)
     assert secret not in caplog.text + json.dumps(seen) + json.dumps(result)
     source = (ROOT / "explain.py").read_text(encoding="utf-8")
     for banned in ("sqlite3", "record_observation", "write_text", "logging"):
@@ -442,11 +527,11 @@ def test_api_key_never_reaches_the_browser_logs_or_disk(tmp_path, capsys, caplog
 
     monkeypatch.setattr(sqlite3, "connect", boom)
     monkeypatch.setattr(Path, "write_text", boom)
-    produce_explanation(sheet(), CTX, complete=transport, api_key=secret)
+    produce_explanation(msheet(), complete=transport, api_key=secret)
 
 
 def test_the_model_is_not_asked_to_choose_or_rank_stops():
-    request = explanation_request(sheet())
+    request = explanation_request(msheet())
     raw_user = request["messages"][1]["content"].lower()
     for marker in ("latitude", "longitude", "stop_code", "busstop", "coordinate", "service_no"):
         assert marker not in raw_user

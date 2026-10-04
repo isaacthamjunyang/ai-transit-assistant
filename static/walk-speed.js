@@ -1318,8 +1318,9 @@
       }
       var s = api.snapshot();
       var send = peekSend(clock());
+      var context = typeof opts.debugContext === "function" ? opts.debugContext() || {} : {};
       debugEl.bar.textContent = "mode " + s.mode + " · used " + num(send ? send.speed : null, 2) +
-        " m/s · " + whyReason();
+        " m/s · " + whyReason() + " · srv age " + (isNumber(context.serverAge) ? context.serverAge + " s" : "-");
       debugEl.text.textContent = [
         "mode " + s.mode + (s.walking ? " (walking by " + s.walkingSource + ")" : " (" + s.walkingReason + ")"),
         "cadence " + num(s.cadence, 2) + " score " + num(s.cadenceScore, 2) + " rms " + num(s.motionRms, 2) +
@@ -1327,6 +1328,8 @@
         "gps " + num(s.gpsSpeed, 2) + " m/s " + s.gpsKind + " acc " + num(s.gpsAccuracy, 0) + " m age " +
           num(s.speedFixAge, 1) + " s",
         "fix age " + num(s.fixAge, 1) + " s, stale ignored " + s.ignoredStale,
+        "location age: server " + (isNumber(context.serverAge) ? context.serverAge + " s" : "-") + ", phone " +
+          (isNumber(context.phoneAge) ? context.phoneAge + " s" : "-"),
         "gps-only n " + s.gpsOnly.n + " in " + s.gpsOnly.inRange + " out " + s.gpsOnly.outRange + " outliers " +
           s.gpsOnly.outliers + " cv " +
           num(s.gpsOnly.cv, 2) + " " + s.gpsOnly.reason,

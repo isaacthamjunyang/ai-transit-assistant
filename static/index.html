@@ -1140,7 +1140,46 @@
       startMonitoring(serviceNo);
     }
 
-    function startMonitoring(serviceNo) {
+    var FRESH_FIX_MAX_AGE_MS = 10000;
+    var FRESH_FIX_TIMEOUT_MS = 4000;
+
+    // Start journey: when the last fix is older than 10 s, ask for a fresh one first (maximumAge 0, 4 s), then run the
+    // first poll whatever the result. Nothing waits longer than 4 s. The poll interval and the location limits are
+    // unchanged; with a recent fix the first poll goes out at once, as before.
+    function ensureFreshFix(generation, done) {
+      var stale = userLat !== null && (userLocationTimestamp === null || Date.now() - userLocationTimestamp > FRESH_FIX_MAX_AGE_MS);
+      if (!stale || !navigator.geolocation || typeof navigator.geolocation.getCurrentPosition !== "function") {
+        done();
+        return;
+      }
+      var finished = false;
+      var timer = null;
+      var finish = function () {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        clearTimeout(timer);
+        done();
+      };
+      timer = setTimeout(finish, FRESH_FIX_TIMEOUT_MS);
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          var coords = position && position.coords;
+          if (!finished && generation === monitorGeneration && coords && isFinite(coords.latitude) && isFinite(coords.longitude)) {
+            userLat = coords.latitude;
+            userLon = coords.longitude;
+            userAccuracy = typeof coords.accuracy === "number" && isFinite(coords.accuracy) ? coords.accuracy : null;
+            userLocationTimestamp = typeof position.timestamp === "number" && isFinite(position.timestamp) ? position.timestamp : Date.now();
+          }
+          finish();
+        },
+        finish,
+        { enableHighAccuracy: true, maximumAge: 0, timeout: FRESH_FIX_TIMEOUT_MS }
+      );
+    }
+
+    function startMonitoring(serviceNo, freshFirst) {
       resetPaceGuidance();
       invalidateSession();
       var generation = monitorGeneration;
@@ -1160,7 +1199,13 @@
       arrivalUpdated.textContent = "";
       liveFit = { done: false, withBus: false };
       renderLiveTracking();
-      requestArrivals(generation);
+      if (freshFirst) {
+        ensureFreshFix(generation, function () {
+          requestArrivals(generation);
+        });
+      } else {
+        requestArrivals(generation);
+      }
       armPollTimer(generation);
       displayTimer = setInterval(function () {
         refreshDisplay(generation);
@@ -1201,18 +1246,6 @@
         },
         { enableHighAccuracy: true, maximumAge: FIX_MAX_AGE_MS, timeout: FIX_TIMEOUT_MS }
       );
-    }
-
-    // The reason the card names: accuracy above the limit wins, then a fix older than the limit.
-    function locationReason() {
-      var accuracyBad = typeof userAccuracy === "number" && isFinite(userAccuracy) && userAccuracy > UNCERTAIN_ACCURACY_M;
-      var age = typeof userLocationTimestamp === "number" && isFinite(userLocationTimestamp)
-        ? (Date.now() - userLocationTimestamp) / 1000
-        : NaN;
-      if (!accuracyBad && isFinite(age) && age > UNCERTAIN_AGE_S) {
-        return { kind: "age", seconds: Math.round(age) };
-      }
-      return { kind: "accuracy", seconds: 0 };
     }
 
     // The pill, the Last update counter and the layouts all use this: the last fetched-at time against the 60 s limit.
@@ -1510,12 +1543,70 @@
       rerouteNone.textContent = decision && decision.no_better_option ? decision.no_better_option : "";
     }
 
-    // The text comes from Python on every poll. Only the clause (sentence three) is fetched from the model, once per action.
+    // The text comes from Python on every poll, built from the numbers of the bus the arrival tile shows. Between two
+    // polls sentences one and two are redrawn every second from the tile's own minutes (explanationLead mirrors the
+    // Python templates; tests pin the two together). Only the clause (sentence three) is fetched from the model, once
+    // per action, and a reply counts only when its snapshot key is the one of the poll on screen.
+    //
+    // MIRROR: explanationMinutes, explanationLead and the EXPL_ strings copy explain.py (tile_minutes, sentence_one,
+    // sentence_two). Change one side and you must change the other. The pack fields read here are listed in
+    // explain.PAGE_PACK_FIELDS. Tests that pin them: tests/test_explanation_consistency.py
+    // (test_the_page_mirror_equals_python_on_the_boundary_grid, ..._on_3000_seeded_random_cases,
+    // ..._on_every_minute_and_walk_pair_in_range, test_the_page_reads_exactly_the_pack_fields_the_server_lists) and tests/test_walk_speed_page.py
+    // (test_real_poll_payloads_render_the_same_sentences_as_the_pack).
+    var EXPL_ARRIVING_NOW = "The bus is arriving now.";
+    var EXPL_UNCERTAIN = "Your location is uncertain, so the walking time may be off.";
+
     function renderExplanation(view) {
       lastExplanationView = view;
       aiExplanationText.textContent = view.text || "";
       setExplanationSimulated(view.simulated === true);
       document.getElementById("ai-explanation").classList.toggle("has-content", !!view.text);
+    }
+
+    function explanationMinutesWord(count) {
+      return count === 1 ? "1 minute" : count + " minutes";
+    }
+
+    // The whole minutes the arrival tile shows (etaParts): under a minute reads 0, which is "arriving now".
+    function explanationMinutes(arrivalIso) {
+      var at = new Date(arrivalIso).getTime();
+      if (!isFinite(at)) {
+        return null;
+      }
+      var seconds = Math.round((at - Date.now()) / 1000);
+      return seconds < 60 ? 0 : Math.round(seconds / 60);
+    }
+
+    // Sentences one and two (the Python sentence_one and sentence_two) for e minutes to the bus.
+    function explanationLead(pack, e) {
+      var w = pack.walk_minutes;
+      var one = e < 1 ? EXPL_ARRIVING_NOW : "The bus is " + explanationMinutesWord(e) + " away.";
+      var lead = "Given the walking time is " + explanationMinutesWord(w);
+      var two;
+      if (pack.uncertain) {
+        two = EXPL_UNCERTAIN;
+      } else if (pack.band === "low" || pack.action === "switch_route" || pack.action === "do_not_rely") {
+        two = lead + ", catching this bus is unlikely.";
+      } else if (w >= e) {
+        two = lead + ", you may not reach the stop before the bus.";
+      } else {
+        two = "Given the walking time is only " + explanationMinutesWord(w) + ", you have " + explanationMinutesWord(e - w) + " to get to the bus stop.";
+      }
+      return one + " " + two;
+    }
+
+    // Redraws the card from the poll on screen and the clock: the tile's bus, the tile's minutes.
+    function renderExplanationNow() {
+      var pack = lastExplanationPack;
+      if (!pack) {
+        return;
+      }
+      var hero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+      var arrival = hero && hero.arrival_time ? hero.arrival_time : pack.arrival_time;
+      var e = explanationMinutes(arrival);
+      var text = e === null ? pack.text : explanationLead(pack, e) + " " + explanationClause;
+      renderExplanation({ text: text, simulated: !!(lastSuccess && lastSuccess.simulated === true) });
     }
 
     function resetExplanationState() {
@@ -1524,6 +1615,7 @@
       explanationInFlight = false;
       pendingExplanation = null;
       lastExplanationPack = null;
+      explanationClause = "";
       explanationSerial += 1;
       aiExplanationText.textContent = "";
       aiExplanationStatus.textContent = "";
@@ -1551,7 +1643,7 @@
       fetch("/api/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fact_sheet: pack.fact_sheet, context: pack.context }),
+        body: JSON.stringify({ fact_sheet: pack.fact_sheet, snapshot: pack.snapshot }),
         signal: controller.signal
       })
         .then(function (response) {
@@ -1561,12 +1653,15 @@
           if (serial !== explanationSerial || !body || body.queued) {
             return;
           }
-          if (typeof body.advice === "string" && typeof body.action === "string") {
+          // A reply for an older poll is dropped: it must not overwrite the text of the poll on screen.
+          if (!lastExplanationPack || body.snapshot !== lastExplanationPack.snapshot) {
+            return;
+          }
+          if (typeof body.advice === "string" && typeof body.action === "string" && typeof body.clause === "string") {
             explainedAction = body.action;
             explainedAdvice = body.advice;
-          }
-          if (typeof body.text === "string" && lastExplanationPack && lastExplanationPack.action === body.action) {
-            renderExplanation({ text: body.text, simulated: body.simulated === true });
+            explanationClause = body.clause;
+            renderExplanationNow();
           }
         })
         .catch(function () {
@@ -1589,10 +1684,17 @@
 
     function syncExplanation(body) {
       var pack = body && body.explanation;
-      if (!pack || !pack.fact_sheet || typeof pack.text !== "string") {
+      if (!pack || !pack.fact_sheet || typeof pack.text !== "string" || typeof pack.snapshot !== "string") {
+        // No explanation for this poll (no tracked bus with a score): nothing from an older poll stays on screen.
+        if (lastExplanationPack !== null) {
+          lastExplanationPack = null;
+          explanationClause = "";
+          renderExplanation({ text: "", simulated: false });
+        }
         return;
       }
       lastExplanationPack = pack;
+      explanationClause = pack.clause;
       renderExplanation({ text: pack.text, simulated: body.simulated === true });
       if (explanationInFlight && (pack.call || pack.pending)) {
         pendingExplanation = pack;
@@ -1736,6 +1838,7 @@
         return;
       }
       renderBusCards(lastSuccess);
+      renderExplanationNow();
       syncLeaveNow(lastSuccess);
       maybeFiveMinuteReminder(lastSuccess);
       updateLeaveCountdown();
@@ -1817,7 +1920,8 @@
     function locationCardApplies() {
       var hero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
       var chance = hero && hero.probability;
-      return !!(chance && chance.data_quality === "location uncertain");
+      return !!(chance && chance.data_quality === "location uncertain"
+        && (chance.location_reason === "accuracy" || chance.location_reason === "age"));
     }
 
     function syncQuality() {
@@ -1867,11 +1971,14 @@
       var uncertain = state !== "unavailable" && monitoringActive && locationCardApplies();
       location.hidden = !uncertain;
       if (uncertain) {
-        var metres = typeof userAccuracy === "number" && isFinite(userAccuracy) ? formatDistance(userAccuracy) : "—";
-        var reason = locationReason();
+        // The server decided, so the card says what the server saw in this poll: the age of the fix it was given, or the
+        // accuracy it was given.
+        var chance = featuredBus(lastSuccess.buses).probability;
+        var metres = typeof chance.location_accuracy_m === "number" && isFinite(chance.location_accuracy_m)
+          ? formatDistance(chance.location_accuracy_m) : "—";
         document.getElementById("location-card-title").textContent = LOCATION_HEADING;
-        document.getElementById("location-card-body").textContent = reason.kind === "age"
-          ? LOCATION_AGE_BODY.replace("{seconds}", reason.seconds)
+        document.getElementById("location-card-body").textContent = chance.location_reason === "age"
+          ? LOCATION_AGE_BODY.replace("{seconds}", chance.location_age_s)
           : LOCATION_BODY.replace("{accuracy}", metres);
       }
       if (state !== lastQualityState) {
@@ -2036,6 +2143,7 @@
     var explanationInFlight = false;
     var pendingExplanation = null;
     var lastExplanationPack = null;
+    var explanationClause = "";
     var explanationSerial = 0;
     var destinationSearchInFlight = false;
     var destinationStopsByCode = {};
@@ -2877,7 +2985,7 @@
         && selectedBoardingStop
         && selectedBoardingStop.stop_code === leg.boarding_stop_code;
       if (!already) {
-        startMonitoring(leg.service_no);
+        startMonitoring(leg.service_no, true);
       }
     }
 
@@ -6696,6 +6804,18 @@
       syncCatchBar();
     }
 
+    // Debug bar only (?pace=debug): the age of the fix as the server computed it for the poll on screen, and as the phone
+    // sees it now. A big gap between the two points at a clock difference between the phone and the server.
+    function debugServerAge() {
+      var hero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+      var chance = hero && hero.probability;
+      return chance && typeof chance.location_age_s === "number" ? chance.location_age_s : null;
+    }
+
+    function debugPhoneAge() {
+      return userLocationTimestamp === null ? null : Math.round((Date.now() - userLocationTimestamp) / 1000);
+    }
+
     // Walking speed (static/walk-speed.js). The estimator reads the motion sensor and one location watch only between
     // "Start journey" and the stop conditions below, in the foreground. The page sends the speed number with its
     // requests and shows what the server returns, never its own value.
@@ -6704,7 +6824,7 @@
         onFix: onEstimatorFix,
         onStatus: renderMotionNote,
         debugContext: function () {
-          return { demo: demoModeOn() };
+          return { demo: demoModeOn(), serverAge: debugServerAge(), phoneAge: debugPhoneAge() };
         }
       })
       : null;

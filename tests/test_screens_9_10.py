@@ -201,12 +201,14 @@ def test_location_card_stacks_with_stale_and_uses_the_formatter():
     html = _page()
     sync = _between(html, "function syncQuality()", "function activePlannedLeg")
     assert 'state !== "unavailable" && monitoringActive && locationCardApplies()' in sync
-    assert "formatDistance(userAccuracy)" in sync
+    assert "formatDistance(chance.location_accuracy_m)" in sync  # the accuracy the server saw
     assert 'LOCATION_BODY.replace("{accuracy}", metres)' in sync
+    assert 'LOCATION_AGE_BODY.replace("{seconds}", chance.location_age_s)' in sync
     card = html.split('id="location-card"', 1)[1].split(">", 1)[0]
     assert "card--caution" in card
     rule = _between(html, "function locationCardApplies()", "function syncQuality")
     assert 'chance.data_quality === "location uncertain"' in rule
+    assert 'chance.location_reason === "accuracy" || chance.location_reason === "age"' in rule  # neither: no card
     assert html.count("var UNCERTAIN_ACCURACY_M = 100;") == 1
 
 

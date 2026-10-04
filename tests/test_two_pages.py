@@ -56,7 +56,7 @@ def test_one_fresh_fix_is_requested_per_poll_tick_and_failures_leave_the_age_gro
     html = _page()
     tick = _between(html, "function armPollTimer(generation)", "// One request per poll tick")
     assert tick.count("refreshLocationFix(generation)") == 1 and tick.count("setInterval(") == 1
-    refresh = _between(html, "function refreshLocationFix(generation)", "// The reason the card names")
+    refresh = _between(html, "function refreshLocationFix(generation)", "// The pill, the Last update counter")
     assert refresh.count("getCurrentPosition(") == 1 and "watchPosition" not in refresh
     assert "enableHighAccuracy: true, maximumAge: FIX_MAX_AGE_MS, timeout: FIX_TIMEOUT_MS" in refresh
     assert "var FIX_MAX_AGE_MS = 15000;" in html and "var FIX_TIMEOUT_MS = 10000;" in html
@@ -69,14 +69,15 @@ def test_one_fresh_fix_is_requested_per_poll_tick_and_failures_leave_the_age_gro
     assert "getCurrentPosition" not in request
 
 
-def test_the_card_names_the_real_reason():
+def test_the_card_names_the_reason_the_server_gave():
     html = _page()
-    reason = html.split("function locationReason()", 1)[1].split("function requestArrivals", 1)[0]
-    assert "userAccuracy > UNCERTAIN_ACCURACY_M" in reason
-    assert 'if (!accuracyBad && isFinite(age) && age > UNCERTAIN_AGE_S)' in reason  # both apply: the accuracy text wins
-    card = _between(html, 'var reason = locationReason();', "if (state !== lastQualityState)")
-    assert "LOCATION_AGE_BODY.replace(\"{seconds}\", reason.seconds)" in card and "LOCATION_BODY.replace(\"{accuracy}\", metres)" in card
+    assert "function locationReason()" not in html  # no fall-through to the accuracy wording any more
+    card = _between(html, 'var chance = featuredBus(lastSuccess.buses).probability;', "if (state !== lastQualityState)")
+    assert 'chance.location_reason === "age"' in card
+    assert "LOCATION_AGE_BODY.replace(\"{seconds}\", chance.location_age_s)" in card and "LOCATION_BODY.replace(\"{accuracy}\", metres)" in card
     assert "LOCATION_HEADING" in card
+    rule = _between(html, "function locationCardApplies()", "function syncQuality")
+    assert 'chance.location_reason === "accuracy" || chance.location_reason === "age"' in rule
     copy = (STATIC / "copy.js").read_text(encoding="utf-8")
     age = "Your location hasn't updated for {seconds} s. We'll show a wider range for the catch probability and won't suggest"
     assert age in html and age in copy
@@ -217,3 +218,49 @@ def test_question_bar_needs_a_known_arrival_time():
     note = _between(html, "function noteTrackedBus(body)", "function syncCatchBar")
     assert "trackedEtaMs(body)" in note and "lastEtaMs = at" in note  # set from live data, kept while stale or unavailable
     assert "lastEtaMs = NaN" not in note
+
+
+# ---- the server names the reason (location_reason, location_age_s, location_accuracy_m: additive fields)
+
+def test_the_probability_carries_the_reason_the_age_and_the_accuracy_it_was_scored_with():
+    accuracy = _score(age=150, accuracy=22.0)
+    assert accuracy["data_quality"] == "location uncertain"
+    assert accuracy["location_reason"] == "age" and accuracy["location_age_s"] == 150 and accuracy["location_accuracy_m"] == 22.0
+    poor = _score(age=3, accuracy=140.0)
+    assert poor["location_reason"] == "accuracy" and poor["location_age_s"] == 3 and poor["location_accuracy_m"] == 140.0
+    both = _score(age=150, accuracy=140.0)
+    assert both["location_reason"] == "accuracy"  # both apply: the accuracy wording wins, as before
+
+
+def test_when_neither_applies_there_is_no_reason_and_so_no_card():
+    fine = _score(age=5, accuracy=22.0)
+    assert fine["data_quality"] == "live" and fine["location_reason"] is None
+    assert fine["location_age_s"] == 5 and fine["location_accuracy_m"] == 22.0
+    edge = _score(age=60, accuracy=100.0)  # exactly at the limits: not uncertain
+    assert edge["data_quality"] == "live" and edge["location_reason"] is None
+    without_time = score_buses(
+        [{"position": "NextBus", "arrival_time": (NOW + timedelta(minutes=10)).isoformat(), "monitored": True,
+          "origin_code": None, "destination_code": None}],
+        user_lat=1.3 + 100 / 111_195, user_lon=103.8, accuracy_m=22.0, stop_lat=1.3, stop_lon=103.8,
+        services=[], routes=[], service_no="36", stop_code="1", now=NOW,
+    )[0]["probability"]
+    assert without_time["location_reason"] is None and without_time["location_age_s"] is None
+
+
+def test_the_reason_is_set_exactly_when_the_location_is_uncertain_and_no_old_field_changed():
+    for age, accuracy in ((5, 22), (150, 22), (5, 140), (150, 140), (60, 100), (61, 100), (60, 101)):
+        chance = _score(age=age, accuracy=float(accuracy))
+        assert (chance["location_reason"] is not None) == (chance["data_quality"] == "location uncertain")
+        assert (chance["location_reason"] is not None) == is_location_uncertain(accuracy, age)
+    old_keys = {"point", "range_low", "range_high", "slack_seconds", "data_quality", "reliability_label", "is_missed", "band", "pace"}
+    assert old_keys <= set(_score(age=5))
+
+
+def test_the_page_sends_a_fresh_fix_before_the_first_poll_only_when_the_last_fix_is_old():
+    html = _page()
+    fn = _between(html, "function ensureFreshFix(generation, done)", "function startMonitoring(serviceNo, freshFirst)")
+    assert "Date.now() - userLocationTimestamp > FRESH_FIX_MAX_AGE_MS" in fn
+    assert "enableHighAccuracy: true, maximumAge: 0, timeout: FRESH_FIX_TIMEOUT_MS" in fn
+    assert "var FRESH_FIX_MAX_AGE_MS = 10000;" in html and "var FRESH_FIX_TIMEOUT_MS = 4000;" in html
+    assert "setTimeout(finish, FRESH_FIX_TIMEOUT_MS)" in fn  # the poll goes ahead after 4 s whatever the result
+    assert "var POLL_MS = 20000;" in html and "var UNCERTAIN_ACCURACY_M = 100;" in html and "var UNCERTAIN_AGE_S = 60;" in html

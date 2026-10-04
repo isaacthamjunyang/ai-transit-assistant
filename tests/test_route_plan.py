@@ -523,7 +523,7 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
     assert "&leg_index=" in html
     assert "openLeg2" not in html and "activeRoutePlan.leg_index = 2" not in html
     begin = html.split("function beginPlannedLeg()", 1)[1].split("function syncPlannedLegAfterReroute", 1)[0]
-    assert begin.index("leg.boarding_stop_code") < begin.index("startMonitoring(leg.service_no)")
+    assert begin.index("leg.boarding_stop_code") < begin.index("startMonitoring(leg.service_no, true)")  # fresh fix first
     assert "Fastest Route" not in html  # labels stay server-side; the app picks one option
     plan = html.split("function planJourney()", 1)[1].split("function peekOverviewArrivals", 1)[0]
     assert "beginPlannedLeg()" not in plan
@@ -683,4 +683,7 @@ def test_two_leg_plan_then_first_leg_poll_uses_the_boarding_stop(monkeypatch):
     assert "reroute" in first_body
     assert reroute_seen == [None]
     assert first_body["leave_now"]["bus_id"].startswith("36|01011|")
-    assert set(first_body["explanation"]["context"]) == {"band", "uncertain"}
+    pack = first_body["explanation"]
+    assert {"snapshot", "band", "uncertain", "walk_minutes", "arrival_time", "text", "clause", "action",
+            "reason_code"} <= set(pack)
+    assert set(pack["fact_sheet"]) == {"reason_code", "chosen_action"}

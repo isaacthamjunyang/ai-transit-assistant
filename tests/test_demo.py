@@ -115,9 +115,7 @@ def _cache(services: list[dict] | None = None, alternate: bool = False) -> StopA
 
 def _sheet(**overrides) -> dict:
     fact = {
-        "bus_minutes": 10,
-        "walk_minutes": 4,
-        "minutes_before_leaving": 6,
+        "reason_code": "TIME_TO_SPARE",
         "chosen_action": "wait",
     }
     fact.update(overrides)
@@ -125,7 +123,7 @@ def _sheet(**overrides) -> dict:
 
 
 def _body(fact: dict) -> dict:
-    return {"fact_sheet": fact, "context": {"band": "ok", "uncertain": False, "leg2": False}}
+    return {"fact_sheet": fact, "snapshot": "36|01011|2026-09-29T14:02:00+08:00|2026-09-29T14:00:00+08:00"}
 
 
 def _client(monkeypatch, cache: StopAndRouteCache):
@@ -540,9 +538,9 @@ def test_openai_unsafe_contradictory_and_timeout_use_the_guardrails(monkeypatch)
             constructed.append("openai")
             raise AssertionError("live OpenAI")
 
-    def spy(raw, fact_sheet, context=None):
+    def spy(raw, fact_sheet):
         seen.append(raw)
-        return real_interpret(raw, fact_sheet, context)
+        return real_interpret(raw, fact_sheet)
 
     monkeypatch.setattr("openai.OpenAI", Marker)
     monkeypatch.setattr(explain, "interpret_explanation", spy)
@@ -566,8 +564,9 @@ def test_openai_unsafe_contradictory_and_timeout_use_the_guardrails(monkeypatch)
     for view in (unsafe, contrary, timed):
         assert view["source"] == "fallback"
         assert view["advice"] == clause  # the deterministic clause
-        assert view["text"].endswith(f"It is advisable to {clause}.")
-        assert "run" not in view["text"].lower().split() and "jaywalk" not in view["text"]
+        assert view["clause"] == f"It is advisable to {clause}."
+        assert "run" not in view["clause"].lower().split() and "jaywalk" not in view["clause"]
+        assert view["snapshot"].startswith("36|01011|")  # every reply carries the key of its poll
     assert elapsed < 1
     assert constructed == []
     assert SECRET not in json.dumps([unsafe, contrary, timed])

@@ -65,7 +65,7 @@ def test_no_new_timers_or_background_apis_in_the_page_wiring():
     assert "serviceWorker" not in BLOCK and "fetch(" not in BLOCK
     assert INDEX.count("watchPosition(") == 0  # the estimator owns the one watch
     assert INDEX.count("setInterval(") == 2  # the existing display tick and poll timer, as before
-    assert INDEX.count("getCurrentPosition(") == 2  # the load fix and the per-poll fix, unchanged
+    assert INDEX.count("getCurrentPosition(") == 3  # the load fix, the per-poll fix and the fresh fix at Start journey
 
 
 def test_the_dead_journey_watch_is_gone():
@@ -98,7 +98,7 @@ def test_the_page_only_ever_shows_the_servers_value():
 def test_the_watch_fix_may_replace_an_older_per_poll_fix_only():
     take = _between(BLOCK, "function onEstimatorFix(fix) {", "// The estimator runs while")
     assert "fix.t <= userLocationTimestamp" in take and "monitoringActive" in take
-    refresh = _between(INDEX, "function refreshLocationFix(generation)", "// The reason the card names")
+    refresh = _between(INDEX, "function refreshLocationFix(generation)", "// The pill, the Last update counter")
     assert refresh.count("getCurrentPosition(") == 1 and "watchPosition" not in refresh
 
 
