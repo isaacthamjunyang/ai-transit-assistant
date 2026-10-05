@@ -8,15 +8,15 @@
   } catch (e) { /* storage blocked */ }
   var watchers = {};
   var nextId = 1;
-  var geoState = { current: CONFIG.position || null, getCalls: 0, watchCalls: 0, clearCalls: 0, mode: "ok", options: [] };
+  var geoState = { current: CONFIG.position || null, getCalls: 0, watchCalls: 0, clearCalls: 0, mode: "ok", options: [], watchOptions: [] };
 
   function position(o) {
     return {
       coords: {
         latitude: o.lat, longitude: o.lon, accuracy: o.acc,
-        speed: o.speed === undefined ? null : o.speed, heading: null, altitude: null, altitudeAccuracy: null
+        speed: o.speed === undefined ? null : o.speed, heading: o.heading === undefined ? null : o.heading, altitude: null, altitudeAccuracy: null
       },
-      timestamp: Date.now()
+      timestamp: o.t === undefined ? Date.now() : o.t
     };
   }
 
@@ -38,8 +38,9 @@
         }
       }, 0);
     },
-    watchPosition: function (ok) {
+    watchPosition: function (ok, err, options) {
       geoState.watchCalls += 1;
+      geoState.watchOptions.push(options || null);
       var id = nextId++;
       watchers[id] = ok;
       return id;

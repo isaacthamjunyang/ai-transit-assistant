@@ -3595,7 +3595,7 @@ body:not(.is-screen-live) .live-only {
 }
 
 .leave-tile__value {
-  font-size: 1.375rem;
+  font-size: clamp(0.9rem, 4.4vw, 1.375rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
@@ -3606,12 +3606,13 @@ body:not(.is-screen-live) .live-only {
   font-size: var(--type-caption);
 }
 
-/* At 380 px and narrower the clock time and "Leave now" must stay on one line inside the half-width tile. */
-@media (max-width: 380px) {
-  .leave-tile__value {
-    font-size: 1.125rem;
-    white-space: nowrap;
-  }
+/* The clock time and "Leave now" stay on one line in the half-width tile at every phone width. */
+.leave-tile__nowrap {
+  white-space: nowrap;
+}
+
+.leave-tile > div {
+  min-width: 0;
 }
 
 .leave-tile__warn {
@@ -4450,4 +4451,391 @@ body.is-entry-loading #alert-slot {
   margin: 0;
   padding-top: 0;
   border-radius: var(--radius-control);
+}
+
+/* Page A: the button row that opens Page W ("Walk to your stop"). */
+
+.walk-open-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-min);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-card);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.walk-open-row__icon,
+.walk-open-row__chevron {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+}
+
+.walk-open-row__icon .icon,
+.walk-open-row__chevron .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.walk-open-row__copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.walk-open-row__title {
+  font-weight: 600;
+}
+
+.walk-open-row__sub {
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+}
+
+.walk-open-row__sub:empty {
+  display: none;
+}
+
+/* Page W: the map, the status card, the probability card and the sensor details. */
+
+.walk-page {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+body.is-page-w .walk-page {
+  display: flex;
+}
+
+body.is-page-w #arrival-card,
+body.is-page-w #pace-slot,
+body.is-page-w #leave-tiles,
+body.is-page-w #if-you-miss,
+body.is-page-w #stale-status,
+body.is-page-w #ai-explanation.ai-card.is-enabled.has-content,
+body.is-page-w #ai-explanation {
+  display: none;
+}
+
+.walk-title {
+  margin: 0;
+  font-size: var(--type-title);
+}
+
+.live-map.walk-map {
+  height: 50vh;
+  min-height: 240px;
+  max-height: 560px;
+}
+
+.walk-map .map-recentre {
+  position: absolute;
+  right: var(--space-3);
+  bottom: calc(var(--space-3) + var(--space-5));
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  padding: 0;
+  background: var(--color-card);
+  color: var(--color-primary);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+
+.walk-map .map-recentre .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
+  display: none;
+}
+
+.walk-map .leaflet-marker-icon.walk-you {
+  overflow: visible;
+  transition: transform 1s linear;
+}
+
+.walk-map #map.is-fitting .leaflet-marker-icon.walk-you {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walk-map .leaflet-marker-icon.walk-you {
+    transition: none;
+  }
+}
+
+.walk-wedge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 88px;
+  height: 88px;
+  margin: -44px 0 0 -44px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.walk-wedge.is-hidden {
+  display: none;
+}
+
+.walk-wedge__shape {
+  fill: var(--color-primary);
+  fill-opacity: 0.35;
+}
+
+.walk-map .walk-line {
+  stroke: var(--map-walk-line);
+  stroke-dasharray: 8 6;
+  stroke-linecap: butt;
+}
+
+.walk-map .walk-accuracy {
+  stroke: var(--color-primary);
+  fill: var(--color-primary);
+}
+
+.walk-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.walk-status p {
+  margin: 0;
+}
+
+.walk-status__distance {
+  font-size: var(--type-distance);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.walk-status__minutes {
+  font-size: var(--type-body);
+}
+
+.walk-status__note {
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+}
+
+.walk-progress {
+  width: 100%;
+  height: 0.5rem;
+  margin-top: var(--space-2);
+  appearance: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-line);
+  overflow: hidden;
+}
+
+.walk-progress::-webkit-progress-bar {
+  background: var(--color-line);
+}
+
+.walk-progress::-webkit-progress-value {
+  background: var(--color-primary);
+}
+
+.walk-progress::-moz-progress-bar {
+  background: var(--color-primary);
+}
+
+.walk-status__state {
+  margin-top: var(--space-1);
+  font-weight: 600;
+}
+
+.walk-chance__trend {
+  margin: var(--space-1) 0 0;
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+}
+
+.walk-sensors {
+  padding: 0;
+}
+
+.walk-sensors__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-ink);
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.walk-sensors__toggle .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-muted);
+}
+
+.walk-sensors.is-open .walk-sensors__toggle .icon {
+  transform: rotate(180deg);
+}
+
+.walk-sensors__panel {
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.walk-sensors__panel[hidden] {
+  display: none;
+}
+
+.walk-sensors__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.walk-sensors__list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.walk-sensors__list dt {
+  color: var(--color-muted);
+}
+
+.walk-sensors__list dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.walk-sensors__why {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  color: var(--color-ink);
+  font-size: var(--type-body);
+}
+
+.walk-sensors__why[hidden] {
+  display: none;
+}
+
+.walk-sensors__why .icon {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.1rem;
+  color: var(--color-primary);
+}
+
+/* Style guide frames for the Page W samples (the real page draws the map with Leaflet). */
+
+.walk-page-sample {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.live-map.walk-map.sample-walk-map {
+  height: 240px;
+  min-height: 0;
+  background: var(--illus-sky);
+}
+
+.sample-walk-map__chip {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  padding: var(--space-1) calc(var(--space-2) + var(--space-1));
+  background: var(--color-card);
+  color: var(--map-range-text);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-caption);
+  font-weight: 600;
+}
+
+.sample-walk-map__line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sample-walk-map__line line {
+  stroke: var(--map-walk-line);
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+  vector-effect: non-scaling-stroke;
+}
+
+.sample-walk-map__acc {
+  position: absolute;
+  top: 28%;
+  left: 30%;
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 50%;
+  opacity: 0.14;
+  transform: translate(-50%, -50%);
+}
+
+.sample-walk-map__acc--small {
+  width: 56px;
+  height: 56px;
+}
+
+.sample-walk-map__acc--large {
+  width: 150px;
+  height: 150px;
+}
+
+.sample-walk-map__you {
+  position: absolute;
+  top: 28%;
+  left: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  border: 2px solid var(--color-card);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-caption);
+  font-weight: 700;
+}
+
+.sample-walk-map .map-stop--live.sample-walk-map__stop {
+  position: absolute;
+  top: 66%;
+  left: 50%;
+  display: block;
 }

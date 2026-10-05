@@ -227,7 +227,10 @@ def test_page_schedules_from_notification_time_and_blocks_unsafe_data():
     assert "lastNotifiedBusId = null" in sync_fn
     assert "lastNotifiedBusId = busId" in html
     assert "pushManager" not in html and "PushManager" not in html and "sync.register" not in html
-    assert "document.hidden" not in html
+    page_w = html.split("// ---- Page W:", 1)[1].split("// Screen 8:", 1)[0]
+    # the leave-now alert keeps working in a hidden tab; only Page W's own watch and rescore stop when the tab is hidden
+    assert "document.hidden" not in html.replace(page_w, "")
+    assert page_w.count("document.hidden") == 3 and "leaveNow" not in page_w and "notification" not in page_w.lower()
     panel_start = html.find("function clearJourneyPanel")
     panel_end = html.find("function renderJourneyLeaveBy")
     assert "clearLeaveNowState()" in html[panel_start:panel_end]

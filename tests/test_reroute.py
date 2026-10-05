@@ -707,7 +707,7 @@ def test_page_shows_the_server_copy_and_does_not_request_permission(tmp_path):
     assert "rerouteMessage.textContent = reroute.message" in html
     assert "rerouteProbability.textContent = reroute.probability_line" in html
     assert "decision.no_better_option" in html
-    assert html.count("setInterval(") == 2
+    assert html.count("setInterval(") == 3
     assert "var POLL_MS = 20000;" in html
     assert "not_before" not in html
     assert "arrivalNotBefore" not in html

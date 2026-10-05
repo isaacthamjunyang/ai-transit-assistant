@@ -63,8 +63,8 @@ def test_the_estimator_follows_the_lifecycle_rules():
 def test_no_new_timers_or_background_apis_in_the_page_wiring():
     assert "setInterval(" not in BLOCK and "setTimeout(" not in BLOCK and "watchPosition" not in BLOCK
     assert "serviceWorker" not in BLOCK and "fetch(" not in BLOCK
-    assert INDEX.count("watchPosition(") == 0  # the estimator owns the one watch
-    assert INDEX.count("setInterval(") == 2  # the existing display tick and poll timer, as before
+    assert INDEX.count("watchPosition(") == 1  # the estimator owns the one watch; the one more is Page W's fallback
+    assert INDEX.count("setInterval(") == 3  # the existing display tick and poll timer, as before
     assert INDEX.count("getCurrentPosition(") == 3  # the load fix, the per-poll fix and the fresh fix at Start journey
 
 
@@ -182,8 +182,10 @@ def test_the_new_strings_are_in_copy_js_and_in_the_page_character_for_character(
 
 def test_the_pace_line_is_muted_silent_and_inside_the_probability_card():
     card = _between(INDEX, 'id="arrival-card"', "</section>")
-    assert '<p id="catch-pace-line" class="note" aria-live="off"></p>' in card
-    assert card.index('id="catch-caption"') < card.index('id="catch-pace-line"')
+    # the pace line moved out from under the caption: it is the muted, silent subtitle of the button row that opens Page W
+    assert '<span id="catch-pace-line" class="walk-open-row__sub" aria-live="off"></span>' in card
+    assert '<p id="catch-pace-line"' not in card
+    assert card.index('id="catch-caption"') < card.index('id="walk-open"') < card.index('id="catch-pace-line"')
     for note in ('id="overview-motion-note"', 'id="new-journey-motion-note"'):  # the overview lines: muted, silent
         assert f'<p {note} class="note" aria-live="off"></p>' in INDEX
     start = INDEX.index('<p id="overview-motion-note" class="note" aria-live="off"></p>')

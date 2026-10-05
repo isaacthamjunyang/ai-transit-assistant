@@ -488,7 +488,11 @@
         </div>
       </div>
       <p id="catch-caption" class="catch-card__caption">if you leave now and walk at a normal pace</p>
-      <p id="catch-pace-line" class="note" aria-live="off"></p>
+      <button type="button" id="walk-open" class="walk-open-row">
+        <span class="walk-open-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="13" cy="4.5" r="2" fill="currentColor"></circle><path d="M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <span class="walk-open-row__copy"><span class="walk-open-row__title">See current location and walking pace</span><span id="catch-pace-line" class="walk-open-row__sub" aria-live="off"></span></span>
+        <span class="walk-open-row__chevron" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+      </button>
       <p id="arrival-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
       <p id="arrival-status" class="note"></p>
       <p id="arrival-warning" class="arrival-warning" hidden></p>
@@ -531,6 +535,52 @@
       <span id="ai-explanation-status" class="ai-card__status"></span>
       <p id="ai-explanation-text" class="ai-card__text"></p>
       <p class="ai-card__note">Probabilities come from the app's own calculation. AI only explains them.</p>
+    </section>
+    <section id="walk-page" class="walk-page" aria-labelledby="walk-title" hidden>
+      <h2 id="walk-title" class="walk-title">Walk to your stop</h2>
+      <p id="walk-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
+      <div id="walk-map-slot" class="live-map walk-map">
+        <button type="button" id="walk-recentre" class="map-recentre" aria-label="Recentre map"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="currentColor"></circle><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      </div>
+      <section class="card walk-status" aria-live="polite">
+        <p id="walk-distance" class="walk-status__distance">—</p>
+        <p id="walk-minutes" class="walk-status__minutes" hidden></p>
+        <p class="walk-status__note">straight-line distance</p>
+        <progress id="walk-progress" class="walk-progress" max="100" value="0" aria-hidden="true"></progress>
+        <p id="walk-state" class="walk-status__state">Waiting for your location…</p>
+      </section>
+      <section class="card catch-card walk-chance" aria-live="polite" aria-labelledby="walk-chance-title">
+        <div class="catch-card__head">
+          <div class="catch-card__heading">
+            <p id="walk-chance-title" class="catch-card__title">Chance to catch Bus</p>
+          </div>
+          <span id="walk-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="walk-pill-text">live</span></span>
+        </div>
+        <div class="catch-card__row">
+          <div id="walk-ring" class="prob-ring" role="img" aria-label="Catch probability unavailable">
+            <svg class="prob-ring__svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="prob-ring__track" cx="50" cy="50" r="43" pathLength="100"></circle><circle id="walk-ring-value" class="prob-ring__value" cx="50" cy="50" r="43" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 50 50)"></circle></svg>
+            <span id="walk-ring-text" class="prob-ring__text"></span>
+          </div>
+          <div class="catch-card__copy">
+            <p id="walk-range" class="catch-card__range"></p>
+            <p id="walk-trend" class="walk-chance__trend" hidden></p>
+          </div>
+        </div>
+      </section>
+      <section id="walk-sensors" class="card walk-sensors">
+        <button type="button" id="walk-sensors-toggle" class="walk-sensors__toggle" aria-expanded="false" aria-controls="walk-sensors-panel"><span>Sensor details</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        <div id="walk-sensors-panel" class="walk-sensors__panel" hidden>
+          <p id="walk-sensor-why" class="walk-sensors__why" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v5M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span id="walk-sensor-why-text"></span></p>
+          <dl class="walk-sensors__list">
+            <div><dt>Walking pace</dt><dd id="walk-sensor-pace">—</dd></div>
+            <div><dt>GPS speed</dt><dd id="walk-sensor-gpsSpeed">—</dd></div>
+            <div><dt>GPS accuracy</dt><dd id="walk-sensor-gpsAccuracy">—</dd></div>
+            <div><dt>Steps per minute</dt><dd id="walk-sensor-cadence">—</dd></div>
+            <div><dt>Step length</dt><dd id="walk-sensor-stepLength">—</dd></div>
+            <div><dt>Learned samples</dt><dd id="walk-sensor-samples">—</dd></div>
+          </dl>
+        </div>
+      </section>
     </section>
     <section class="card live-card" id="live-tracking" hidden aria-labelledby="live-bus-title">
       <div class="bus-card">
@@ -730,7 +780,7 @@
     var routePreviewLayers = [];
     var routeRoleMarkers = [];
 
-    var map = L.map("map", { scrollWheelZoom: true }).setView(
+    var map = L.map("map", { scrollWheelZoom: true, maxZoom: 19 }).setView(
       [FALLBACK_LAT, FALLBACK_LON],
       FALLBACK_ZOOM
     );
@@ -1399,6 +1449,7 @@
       }
       lastSuccess = body;
       noteTrackedBus(body);
+      walkNotePoll(body);
       if (
         typeof body.leg2_schedule_headway_minutes === "number"
         && activeRoutePlan
@@ -1559,21 +1610,21 @@
     var EXPL_ARRIVING_NOW = "The bus is arriving now.";
     var EXPL_UNLIKELY = "You are {distance} from the stop, but catching this bus is unlikely.";
     var EXPL_LEAVE_BY = {
-      measured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave by {time}.",
-      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave by {time}.",
-      "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave by {time}."
+      measured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave by {time}.",
+      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave by {time}.",
+      "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave by {time}."
     };
     var EXPL_LEAVE_NOW = {
-      measured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave now.",
-      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave now.",
-      "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave now."
+      measured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave now.",
+      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave now.",
+      "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave now."
     };
     var EXPL_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe.";
     var EXPL_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off.";
-    var LEAVE_TILE_IN_MIN = "in {n} min · {w} min walk";
-    var LEAVE_TILE_IN_UNDER = "in under 1 min · {w} min walk";
-    var LEAVE_TILE_BUS_AWAY = "The bus is {e} min away and the walk takes about {w} min.";
-    var LEAVE_TILE_BUS_ARRIVING = "The bus is arriving now and the walk takes about {w} min.";
+    var LEAVE_TILE_IN_MIN = "in {n}\u00a0min · {w}\u00a0min walk";
+    var LEAVE_TILE_IN_UNDER = "in under 1\u00a0min · {w}\u00a0min walk";
+    var LEAVE_TILE_BUS_AWAY = "The bus is {e}\u00a0min away and the walk takes about {w}\u00a0min.";
+    var LEAVE_TILE_BUS_ARRIVING = "The bus is arriving now and the walk takes about {w}\u00a0min.";
     var LEAVE_TILE_UNCERTAIN = "Location uncertain: leave a bit earlier to be safe.";
 
     function renderExplanation(view) {
@@ -1600,7 +1651,7 @@
     // The clock time of the Leave by tile and of sentence two: 12-hour Singapore time, "(tomorrow)" when it is not today.
     function leaveClockText(iso, nowMs) {
       var parts = singaporeParts(new Date(iso));
-      var text = parts.hm + " " + parts.suffix;
+      var text = parts.hm + "\u00a0" + parts.suffix;
       if (parts.key !== singaporeParts(new Date(nowMs)).key) {
         text += " (tomorrow)";
       }
@@ -1932,6 +1983,7 @@
       }
       renderBusCards(lastSuccess);
       renderExplanationNow();
+      renderWalkPage();
       syncLeaveNow(lastSuccess);
       maybeFiveMinuteReminder(lastSuccess);
       updateLeaveCountdown();
@@ -3299,7 +3351,7 @@
 
     function formatClock(iso, withTomorrow) {
       var parts = singaporeParts(new Date(iso));
-      var text = parts.hm + " " + parts.suffix;
+      var text = parts.hm + "\u00a0" + parts.suffix;
       if (withTomorrow && parts.key !== singaporeParts(new Date()).key) {
         text += " (tomorrow)";
       }
@@ -3310,9 +3362,9 @@
       var low = singaporeParts(new Date(lowIso));
       var high = singaporeParts(new Date(highIso));
       if (low.suffix === high.suffix) {
-        return low.hm + "–" + high.hm + " " + low.suffix;
+        return low.hm + "–" + high.hm + "\u00a0" + low.suffix;
       }
-      return low.hm + " " + low.suffix + "–" + high.hm + " " + high.suffix;
+      return low.hm + "\u00a0" + low.suffix + "–" + high.hm + "\u00a0" + high.suffix;
     }
 
     // Only the late wording survives, inside "If you miss it". There is no spare or on-target line.
@@ -3562,7 +3614,7 @@
       if (hour12 === 0) {
         hour12 = 12;
       }
-      var clock = hour12 + ":" + minute + " " + suffix;
+      var clock = hour12 + ":" + minute + "\u00a0" + suffix;
       var today = singaporeStamp(new Date()).split("T")[0];
       var day = String(value).split("T")[0];
       if (day && day !== today) {
@@ -4422,10 +4474,10 @@
 
     var boardingRefitPending = false;
 
-    function placeMap(inDestination, inLive) {
+    function placeMap(inDestination, inLive, inWalk) {
       var target = inDestination
         ? document.getElementById("dest-map-slot")
-        : inLive ? document.getElementById("live-map-slot") : mapHome;
+        : inLive ? document.getElementById("live-map-slot") : inWalk ? document.getElementById("walk-map-slot") : mapHome;
       if (target && mapElement.parentNode !== target) {
         target.appendChild(mapElement);
         if (inDestination) {
@@ -4440,9 +4492,13 @@
           renderLiveTracking();
           return;
         }
+        if (inWalk) {
+          map.invalidateSize();
+          return;
+        }
         boardingRefitPending = true;
       }
-      if (inDestination || inLive || !boardingRefitPending || mapElement.clientWidth === 0) {
+      if (inDestination || inLive || inWalk || !boardingRefitPending || mapElement.clientWidth === 0) {
         return;
       }
       boardingRefitPending = false;
@@ -4505,8 +4561,11 @@
       document.body.classList.toggle("is-screen-stops", inStops);
       document.body.classList.toggle("is-screen-confirm", inConfirm);
       document.body.classList.toggle("is-screen-journey", name === "journey");
-      document.body.classList.toggle("is-screen-live", name === "live" || name === "arrivals");
-      if (name !== "live" && name !== "arrivals" && name !== "newjourney") {
+      var wasWalk = document.body.classList.contains("is-page-w");
+      document.body.classList.toggle("is-screen-live", name === "live" || name === "arrivals" || name === "walk");
+      document.body.classList.toggle("is-page-w", name === "walk");
+      document.getElementById("walk-page").hidden = name !== "walk";
+      if (name !== "live" && name !== "arrivals" && name !== "newjourney" && name !== "walk") {
         pageC = null;
       }
       document.body.classList.toggle("is-page-a", name === "live" && !pageC);
@@ -4517,7 +4576,7 @@
       document.getElementById("on-way").hidden = name !== "onway";
       document.body.classList.toggle("is-screen-onway", name === "onway");
       document.getElementById("live-tracking").hidden = name !== "arrivals";
-      document.getElementById("search-card").hidden = inStops || inConfirm || name === "journey" || name === "live" || name === "arrivals" || name === "newjourney" || name === "onway";
+      document.getElementById("search-card").hidden = inStops || inConfirm || name === "journey" || name === "live" || name === "arrivals" || name === "newjourney" || name === "onway" || name === "walk";
       document.getElementById("destination-confirm").hidden = !inConfirm;
       if (!inStops) {
         closeStopsNote();
@@ -4538,7 +4597,7 @@
         stage.hidden = name !== "boarding";
       }
       if (journeyPanel) {
-        journeyPanel.hidden = (name !== "live" && name !== "arrivals" && name !== "newjourney") || !confirmedDestinationStop;
+        journeyPanel.hidden = (name !== "live" && name !== "arrivals" && name !== "newjourney" && name !== "walk") || !confirmedDestinationStop;
       }
       if (name === "journey") {
         planJourney();
@@ -4546,7 +4605,12 @@
       if (name === "arrivals") {
         liveUserMoved = false;
       }
-      placeMap(inStops, name === "arrivals");
+      placeMap(inStops, name === "arrivals", name === "walk");
+      if (name === "walk" && !wasWalk) {
+        enterWalkPage();
+      } else if (name !== "walk" && wasWalk) {
+        leaveWalkPage();
+      }
       syncLocateButton();
       syncPageCClasses();
       syncCatchBar();
@@ -4646,7 +4710,7 @@
     // Page B and the new-journey overview sit on top of Page A, so Back from them keeps the journey running.
     function returnsWithoutConfirm() {
       var top = screenStack[screenStack.length - 1];
-      return top === "newjourney" || top === "arrivals";
+      return top === "newjourney" || top === "arrivals" || top === "walk";
     }
 
     function requestBack() {
@@ -5209,6 +5273,7 @@
       mapElement.addEventListener(type, function () {
         if (!liveProgrammatic && document.body.classList.contains("is-screen-live")) {
           liveUserMoved = true;
+          walkUserMoved = true;
         }
       }, { passive: true });
     });
@@ -5593,6 +5658,11 @@
     }
 
     function fitLiveView(busPoint, stopPoint) {
+      // Page W shares this map and fits it for its own two markers; Page B's fit (a different maxZoom and padding, and the
+      // live bus that may be far away) must not run on the display tick while Page W is showing.
+      if (document.body.classList.contains("is-page-w")) {
+        return;
+      }
       if (liveFull || liveUserMoved || liveFit.withBus || (liveFit.done && !busPoint)) {
         return;
       }
@@ -5804,6 +5874,19 @@
       renderUnlikelyBanner(hero);
     }
 
+    // The clock time or "Leave now" stays on one line; a trailing " (tomorrow)" may wrap by itself.
+    function setLeaveValue(el, text) {
+      el.textContent = "";
+      var split = text.indexOf(" (");
+      var span = document.createElement("span");
+      span.className = "leave-tile__nowrap";
+      span.textContent = split === -1 ? text : text.slice(0, split);
+      el.appendChild(span);
+      if (split !== -1) {
+        el.appendChild(document.createTextNode(text.slice(split)));
+      }
+    }
+
     function renderLeaveTiles() {
       var tiles = document.getElementById("leave-tiles");
       if (!tiles) {
@@ -5823,7 +5906,7 @@
       }
       // switch_route and do_not_rely: the tile is not shown (Page C or the banner takes over).
       leaveTile.hidden = action === "switch_route" || action === "do_not_rely";
-      document.getElementById("tile-leave-by").textContent = leave;
+      setLeaveValue(document.getElementById("tile-leave-by"), leave);
       var leaveMeta = document.getElementById("tile-leave-detail");
       leaveMeta.textContent = tileView ? tileView.meta : "";
       leaveMeta.hidden = !(tileView && tileView.meta);
@@ -5860,6 +5943,638 @@
       document.getElementById("tile-row").hidden = (!label || aiShown) && !noteText;
     }
 
+    // ---- Page W: "Walk to your stop". The distance is a client calculation (haversine from the newest fix to the stop);
+    // the probability always comes from the server (the poll, and a rescore about every 5 s while this page is open).
+    // MIRROR: walkMinutesOf mirrors the server's display rounding (walk_speed.walk_minutes, mode "display"); the
+    // server's near_stop flag decides "Arrived". Tests: tests/test_walk_page.py.
+    var WALK_STATE_TEXT = {
+      waiting: "Waiting for your location…",
+      checking: "Checking your movement…",
+      onway: "On your way",
+      away: "Moving away from the stop",
+      still: "Not moving",
+      arrived: "Arrived at the stop"
+    };
+    var WALK_DISTANCE_TEXT = "{distance} to the stop";
+    var WALK_MINUTES_TEXT = "about {n}\u00a0min walk";
+    var WALK_TREND_TEXT = {
+      risingCloser: "Rising as you get closer",
+      rising: "Rising",
+      fallingAway: "Falling as you move away",
+      falling: "Falling as time passes",
+      steady: "Steady"
+    };
+    var WALK_SOURCE_TEXT = { gps: "from GPS", cadence: "from your steps", remembered: "your usual pace", "default": "average pace" };
+    var WALK_WHY_TEXT = { notWalking: "Not walking yet", noPermission: "No motion permission", nearStop: "Near the stop" };
+    var WALK_ONWAY_METRES = 5;
+    var WALK_ONWAY_WINDOW_MS = 10000;
+    var WALK_TREND_STEP = 2;
+    var WALK_RESCORE_MS = 5000;
+    var WALK_HEADING_MIN_SPEED = 0.5;
+    var WALK_FIT_PADDING_TOP_LEFT = [56, 52];
+    var WALK_FIT_PADDING_BOTTOM_RIGHT = [150, 96];
+    var WALK_FIT_MAX_ZOOM = 18;
+    var WALK_FIT_NEAR_M = 300;
+    var WALK_FIT_NEAR_MIN_ZOOM = 15;
+    var WALK_FIT_ACCURACY_MAX_M = 100;
+    var WALK_FIT_MIN_APART_PX = 40;
+    var WALK_FIT_CLOSE_ZOOM = 19;
+    var walkLabelKey = "";
+    var walkLayer = L.layerGroup();
+    var walkYou = null;
+    var walkAccuracy = null;
+    var walkLine = null;
+    var walkStopMarker = null;
+    var walkOpenedDistance = null;
+    var walkSamples = [];
+    var walkLastFixT = null;
+    var walkHeading = null;
+    var walkFixSpeed = null;
+    var walkFitState = { done: false, distance: null };
+    var walkUserMoved = false;
+    var walkWatchId = null;
+    var walkRescoreTimer = null;
+    var walkRescoreBusy = false;
+    var walkLastRescoreAt = 0;
+    var walkChanceSource = { chance: null, nearStop: false };
+    var walkTrend = { anchor: null, text: null, calm: 0 };
+    var walkDrawn = { lat: null, lon: null, radius: null };
+
+    // Pure helpers (also run in node by the tests).
+    function walkMinutesOf(metres, speed) {
+      return Math.max(1, Math.round(metres / speed / 60));
+    }
+
+    // samples: [{ t, d }] oldest first. Over the last 10 s: the distance fell by at least 5 m = "onway", grew by at least
+    // 5 m = "away", otherwise "still". With less than 10 s of history the answer is "checking".
+    function walkStateOf(hasFix, nearStop, samples, nowMs) {
+      if (!hasFix) {
+        return "waiting";
+      }
+      if (nearStop === true) {
+        return "arrived";
+      }
+      var newest = samples.length ? samples[samples.length - 1] : null;
+      if (!newest) {
+        return "checking";
+      }
+      var reference = null;
+      for (var i = samples.length - 1; i >= 0; i--) {
+        if (newest.t - samples[i].t >= WALK_ONWAY_WINDOW_MS) {
+          reference = samples[i];
+          break;
+        }
+      }
+      if (!reference) {
+        return "checking";
+      }
+      var change = newest.d - reference.d;
+      return change <= -WALK_ONWAY_METRES ? "onway" : change >= WALK_ONWAY_METRES ? "away" : "still";
+    }
+
+    // The trend between consecutive server values. A change of 2 points or more sets rising or falling and moves the
+    // anchor; two calm values after that return it to steady. Before any change the line stays hidden (text null).
+    function walkTrendNext(state, point) {
+      if (state.anchor === null) {
+        return { anchor: point, text: null, calm: 0 };
+      }
+      var delta = point - state.anchor;
+      if (Math.abs(delta) >= WALK_TREND_STEP) {
+        return { anchor: point, text: delta > 0 ? "rising" : "falling", calm: 0 };
+      }
+      var calm = state.calm + 1;
+      return { anchor: state.anchor, text: state.text !== null && calm >= 2 ? "steady" : state.text, calm: calm };
+    }
+
+    // The trend line is chosen from (trend, movement state): "as you get closer" only while the user is getting closer,
+    // "as you move away" only while moving away; otherwise the plain "Rising" or "Falling as time passes".
+    function walkTrendKey(trend, state) {
+      if (trend === "rising") {
+        return state === "onway" ? "risingCloser" : "rising";
+      }
+      if (trend === "falling") {
+        return state === "away" ? "fallingAway" : "falling";
+      }
+      return trend === "steady" ? "steady" : "";
+    }
+
+    // The reason there is no live measurement. Near the stop wins even when a held speed is still being sent: the
+    // estimator has stopped there, so nothing is being measured now.
+    function walkWhyOf(measured, nearStop, status) {
+      if (nearStop || (status && status.latched)) {
+        return "nearStop";
+      }
+      if (measured) {
+        return "";
+      }
+      if (!status || status.permission === "denied" || status.permission === "unavailable") {
+        return "noPermission";
+      }
+      return "notWalking";
+    }
+
+    function walkProgressOf(distance, opened, arrived) {
+      if (arrived) {
+        return 100;
+      }
+      if (distance === null || opened === null || opened <= 0) {
+        return 0;
+      }
+      return Math.max(0, Math.min(100, Math.round((1 - distance / opened) * 100)));
+    }
+
+    function walkOnTop() {
+      return screenStack[screenStack.length - 1] === "walk";
+    }
+
+    function walkDistanceNow() {
+      var stop = boardingPoint();
+      if (!stop || userLat === null || userLon === null) {
+        return null;
+      }
+      return haversineMetres(userLat, userLon, stop[0], stop[1]);
+    }
+
+    // A newer fix: from the estimator's watch (the existing fix stream) or from this page's own watch.
+    function walkOnFix(fix) {
+      if (!fix || typeof fix.t !== "number" || !isFinite(fix.lat) || !isFinite(fix.lon)) {
+        return;
+      }
+      walkHeading = typeof fix.heading === "number" && isFinite(fix.heading) ? fix.heading : null;
+      walkFixSpeed = typeof fix.speed === "number" && isFinite(fix.speed) ? fix.speed : null;
+      if (walkOnTop() && monitoringActive && (userLocationTimestamp === null || fix.t > userLocationTimestamp)) {
+        userLat = fix.lat;
+        userLon = fix.lon;
+        userAccuracy = fix.accuracy;
+        userLocationTimestamp = fix.t;
+      }
+      if (walkOnTop()) {
+        renderWalkPage();
+        walkRescoreTick();
+      }
+    }
+
+    function walkWatching() {
+      return walkWatchId != null;
+    }
+
+    // The estimator's watch feeds fixes while it runs, or while it is wanted and about to run (a page that just became
+    // visible re-attaches it a moment later), so the page never opens a second watch next to it.
+    function walkEstimatorFeeding() {
+      var status = paceEstimator ? paceEstimator.status() : null;
+      return !!(status && (status.running || (status.wanted && !status.latched)));
+    }
+
+    // The page's own watch runs only while Page W is open and visible during tracking, and only when the estimator's
+    // watch is not already feeding fixes. It stops on leaving the page, a hidden page, Back and the end of tracking.
+    function syncWalkWatch() {
+      var want = walkOnTop() && !document.hidden && monitoringActive && !endedKind && !missedMode
+        && !walkEstimatorFeeding() && !!(navigator.geolocation && navigator.geolocation.watchPosition);
+      if (want && walkWatchId == null) {
+        try {
+          walkWatchId = navigator.geolocation.watchPosition(function (position) {
+            var coords = position && position.coords;
+            if (!coords) {
+              return;
+            }
+            walkOnFix({
+              t: typeof position.timestamp === "number" ? position.timestamp : Date.now(),
+              lat: coords.latitude, lon: coords.longitude, accuracy: coords.accuracy, heading: coords.heading, speed: coords.speed
+            });
+          }, function () {
+            return;
+          }, { enableHighAccuracy: true, maximumAge: 0 });
+        } catch (error) {
+          walkWatchId = null;
+        }
+      } else if (!want && walkWatchId != null) {
+        try {
+          navigator.geolocation.clearWatch(walkWatchId);
+        } catch (error) {
+          walkWatchId = null;
+        }
+        walkWatchId = null;
+      }
+    }
+
+    function syncWalkTimers() {
+      var want = walkOnTop() && !document.hidden && monitoringActive && !endedKind && !missedMode && !demoModeOn();
+      if (want && walkRescoreTimer == null) {
+        walkRescoreTimer = setInterval(walkRescoreTick, WALK_RESCORE_MS);
+      } else if (!want && walkRescoreTimer != null) {
+        clearInterval(walkRescoreTimer);
+        walkRescoreTimer = null;
+      }
+    }
+
+    function syncWalkPage() {
+      syncWalkWatch();
+      syncWalkTimers();
+    }
+
+    document.addEventListener("visibilitychange", syncWalkPage);
+
+    // The poll's own numbers for the tracked bus: the freshest server value wins.
+    function walkNotePoll(body) {
+      var hero = body && Array.isArray(body.buses) ? featuredBus(body.buses) : null;
+      var chance = hero && hero.probability && !hero.is_missed ? hero.probability : null;
+      walkChanceSource = { chance: chance, nearStop: !!(body && body.near_stop === true) };
+      if (chance && typeof chance.point === "number") {
+        walkTrend = walkTrendNext(walkTrend, chance.point);
+      }
+      if (walkOnTop()) {
+        renderWalkPage();
+      }
+    }
+
+    // About every 5 s while Page W is open and visible: the same scoring as the poll, from the server's short-lived
+    // copy of the latest arrivals (no LTA call). "use_poll" means the poll's numbers stay.
+    function walkRescoreTick() {
+      if (!walkOnTop() || document.hidden || walkRescoreBusy || !monitoringActive || demoModeOn() || displayFrozen) {
+        return;
+      }
+      if (Date.now() - walkLastRescoreAt < WALK_RESCORE_MS - 250 || !selectedBoardingStop || !selectedService) {
+        return;
+      }
+      if (userLat === null || userLon === null || userAccuracy === null) {
+        return;
+      }
+      var hero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+      if (!hero || !hero.arrival_time) {
+        return;
+      }
+      walkLastRescoreAt = Date.now();
+      walkRescoreBusy = true;
+      var generation = monitorGeneration;
+      var url = "/api/rescore?stop_code=" + encodeURIComponent(selectedBoardingStop.stop_code)
+        + "&service_no=" + encodeURIComponent(selectedService)
+        + "&lat=" + encodeURIComponent(userLat) + "&lon=" + encodeURIComponent(userLon)
+        + "&accuracy=" + encodeURIComponent(userAccuracy)
+        + (userLocationTimestamp !== null ? "&location_timestamp=" + encodeURIComponent(userLocationTimestamp) : "")
+        + walkSpeedQuery();
+      var controller = new AbortController();
+      var timer = setTimeout(function () {
+        controller.abort();
+      }, 4000);
+      fetch(url, { signal: controller.signal })
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (body) {
+          if (generation !== monitorGeneration || !body) {
+            return;
+          }
+          // near_stop is in every answer, "use_poll" too: the server's 30 m rule, the poll's own function
+          if (typeof body.near_stop === "boolean" && body.near_stop !== walkChanceSource.nearStop) {
+            walkChanceSource = { chance: walkChanceSource.chance, nearStop: body.near_stop };
+            renderWalkPage();
+          }
+          if (body.status !== "ok" || !Array.isArray(body.buses)) {
+            return;
+          }
+          var current = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+          var match = null;
+          body.buses.forEach(function (bus) {
+            if (current && bus.arrival_time === current.arrival_time && bus.probability) {
+              match = bus;
+            }
+          });
+          if (!match) {
+            return;
+          }
+          noteServerWalkSpeed(body);
+          walkChanceSource = { chance: match.probability, nearStop: body.near_stop === true };
+          if (typeof match.probability.point === "number") {
+            walkTrend = walkTrendNext(walkTrend, match.probability.point);
+          }
+          renderWalkPage();
+        })
+        .catch(function () {
+          return;
+        })
+        .then(function () {
+          clearTimeout(timer);
+          walkRescoreBusy = false;
+        });
+    }
+
+    function walkYouIcon() {
+      return L.divIcon({
+        className: "user-marker marker--user walk-you",
+        html: "<svg class=\"walk-wedge is-hidden\" viewBox=\"0 0 100 100\" aria-hidden=\"true\" focusable=\"false\"><g><path class=\"walk-wedge__shape\" d=\"M50 50 L30 6 A52 52 0 0 1 70 6 Z\"></path></g></svg><span class=\"marker__label\">You</span>",
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+    }
+
+    function walkStopIcon() {
+      var name = selectedBoardingStop.description || selectedBoardingStop.stop_code;
+      var html = "<span class=\"map-stop__dot\">" + BUS_TILE_SVG + "</span>"
+        + "<span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">"
+        + escapeHtml(name) + "<br>(" + escapeHtml(selectedBoardingStop.stop_code) + ")</span>";
+      return L.divIcon({ className: "map-stop map-stop--live", html: html, iconSize: [32, 32], iconAnchor: [16, 16] });
+    }
+
+    function walkEnterMap() {
+      map.removeLayer(liveLayer);
+      routePreviewLayers.forEach(function (layer) {
+        map.removeLayer(layer);
+      });
+      walkLayer.addTo(map);
+      walkFitState = { done: false, distance: null };
+      walkUserMoved = false;
+      walkDrawn = { lat: null, lon: null, radius: null };
+    }
+
+    function walkLeaveMap() {
+      walkLayer.clearLayers();
+      walkYou = null;
+      walkAccuracy = null;
+      walkLine = null;
+      walkStopMarker = null;
+      if (map.hasLayer(walkLayer)) {
+        map.removeLayer(walkLayer);
+      }
+      if (!map.hasLayer(liveLayer)) {
+        liveLayer.addTo(map);
+      }
+      routePreviewLayers.forEach(function (layer) {
+        if (!map.hasLayer(layer)) {
+          layer.addTo(map);
+        }
+      });
+    }
+
+    // The accuracy circle never fills the map: its radius is capped at 30 percent of the smaller map side.
+    function walkAccuracyRadius(accuracy) {
+      var size = map.getSize();
+      var metresPerPixel = 156543.03392 * Math.cos(userLat * Math.PI / 180) / Math.pow(2, map.getZoom());
+      var cap = Math.min(size.x, size.y) * 0.3 * metresPerPixel;
+      return Math.max(1, Math.min(accuracy, cap));
+    }
+
+    function walkFitMap(force) {
+      var stop = boardingPoint();
+      if (!stop || !walkYou) {
+        return;
+      }
+      var distance = walkDistanceNow();
+      var due = force || !walkFitState.done
+        || (!walkUserMoved && distance !== null && walkFitState.distance !== null && Math.abs(distance - walkFitState.distance) > walkFitState.distance / 2);
+      if (!due || (walkUserMoved && !force)) {
+        return;
+      }
+      map.invalidateSize();
+      // the two markers and the accuracy circle (up to 100 m); the padding clears the Range chip, the Recentre button, the
+      // attribution and the stop chip
+      var here = [userLat, userLon];
+      var bounds = L.latLngBounds([here, stop]);
+      if (typeof userAccuracy === "number" && isFinite(userAccuracy)) {
+        var reach = Math.min(userAccuracy, WALK_FIT_ACCURACY_MAX_M);
+        var dLat = reach / 111195;
+        var dLon = reach / (111195 * Math.max(0.01, Math.cos(userLat * Math.PI / 180)));
+        bounds.extend([[userLat - dLat, userLon - dLon], [userLat + dLat, userLon + dLon]]);
+      }
+      // a re-fit moves the whole map at once: the marker does not glide across the screen for it
+      mapElement.classList.add("is-fitting");
+      liveProgrammatic = true;
+      var apart = map.project(here, WALK_FIT_MAX_ZOOM).distanceTo(map.project(stop, WALK_FIT_MAX_ZOOM));
+      if (apart < WALK_FIT_MIN_APART_PX) {
+        // under about 24 m the two markers would be closer than 40 px at zoom 18: zoom 19, centred between them
+        map.setView([(here[0] + stop[0]) / 2, (here[1] + stop[1]) / 2], WALK_FIT_CLOSE_ZOOM, { animate: false });
+      } else {
+        map.fitBounds(bounds, { paddingTopLeft: WALK_FIT_PADDING_TOP_LEFT, paddingBottomRight: WALK_FIT_PADDING_BOTTOM_RIGHT, maxZoom: WALK_FIT_MAX_ZOOM, animate: false });
+        if (distance !== null && distance <= WALK_FIT_NEAR_M && map.getZoom() < WALK_FIT_NEAR_MIN_ZOOM) {
+          map.setZoom(WALK_FIT_NEAR_MIN_ZOOM, { animate: false });
+        }
+      }
+      liveProgrammatic = false;
+      walkLabelKey = "";
+      setTimeout(function () {
+        mapElement.classList.remove("is-fitting");
+      }, 80);
+      walkFitState = { done: true, distance: distance };
+      walkDrawn.radius = null;
+    }
+
+    function walkRectsOverlap(a, b) {
+      return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    }
+
+    // The stop chip goes on the side away from the You marker, and never over You, the Range chip, the Recentre button,
+    // the attribution or the map's edge. The same side test as the Page B label flip, with Page W's own reserved areas.
+    function walkLayoutStopLabel() {
+      var element = walkStopMarker ? walkStopMarker.getElement() : null;
+      var label = element ? element.querySelector(".map-stop__label") : null;
+      var youElement = walkYou ? walkYou.getElement() : null;
+      if (!label || !youElement || !mapElement.clientWidth) {
+        return;
+      }
+      var stopPoint = map.latLngToContainerPoint(walkStopMarker.getLatLng());
+      var youPoint = map.latLngToContainerPoint(walkYou.getLatLng());
+      var key = [Math.round(stopPoint.x), Math.round(stopPoint.y), Math.round(youPoint.x), Math.round(youPoint.y), map.getZoom()].join(",");
+      if (key === walkLabelKey) {
+        return;
+      }
+      walkLabelKey = key;
+      var dx = stopPoint.x - youPoint.x;
+      var dy = stopPoint.y - youPoint.y;
+      var horizontal = dx >= 0 ? ["is-right", "is-left"] : ["is-left", "is-right"];
+      var vertical = dy >= 0 ? ["is-bottom", "is-top"] : ["is-top", "is-bottom"];
+      var order = Math.abs(dx) >= Math.abs(dy) ? horizontal.concat(vertical) : horizontal.concat(vertical);
+      var area = mapElement.getBoundingClientRect();
+      var avoid = [youElement.getBoundingClientRect()];
+      [mapScale.getContainer(), document.getElementById("walk-recentre"), mapElement.querySelector(".leaflet-control-attribution")].forEach(function (el) {
+        if (el) {
+          avoid.push(el.getBoundingClientRect());
+        }
+      });
+      var chosen = null;
+      order.some(function (side) {
+        DEST_LABEL_SIDES.forEach(function (name) {
+          label.classList.toggle(name, name === side);
+        });
+        var rect = label.getBoundingClientRect();
+        var inside = rect.left >= area.left && rect.right <= area.right && rect.top >= area.top && rect.bottom <= area.bottom;
+        if (inside && !avoid.some(function (other) { return walkRectsOverlap(rect, other); })) {
+          chosen = side;
+          return true;
+        }
+        return false;
+      });
+      DEST_LABEL_SIDES.forEach(function (name) {
+        label.classList.toggle(name, name === (chosen || order[0]));
+      });
+    }
+
+    function renderWalkMap() {
+      var stop = boardingPoint();
+      if (!stop || !selectedBoardingStop || !mapElement.clientWidth) {
+        return;
+      }
+      if (!walkStopMarker) {
+        walkStopMarker = L.marker(stop, { icon: walkStopIcon(), keyboard: false, interactive: false, zIndexOffset: 700 }).addTo(walkLayer);
+      }
+      if (userLat === null || userLon === null) {
+        if (!walkFitState.done) {
+          map.setView(stop, 17, { animate: false });
+        }
+        return;
+      }
+      var here = [userLat, userLon];
+      if (!walkYou) {
+        walkYou = L.marker(here, { icon: walkYouIcon(), keyboard: false, interactive: false, zIndexOffset: 1100 }).addTo(walkLayer);
+        walkLine = L.polyline([here, stop], { className: "walk-line", color: cssToken("--color-primary"), weight: 3, interactive: false }).addTo(walkLayer);
+        walkAccuracy = L.circle(here, { className: "walk-accuracy", radius: 1, color: cssToken("--color-primary"), weight: 1, fillColor: cssToken("--color-primary"), fillOpacity: 0.12, interactive: false }).addTo(walkLayer);
+      } else if (walkDrawn.lat !== userLat || walkDrawn.lon !== userLon) {
+        walkYou.setLatLng(here);
+        walkLine.setLatLngs([here, stop]);
+        walkAccuracy.setLatLng(here);
+      }
+      walkFitMap(false);
+      walkLayoutStopLabel();
+      var radius = typeof userAccuracy === "number" && isFinite(userAccuracy) ? walkAccuracyRadius(userAccuracy) : 1;
+      if (walkDrawn.radius !== radius) {
+        walkAccuracy.setRadius(radius);
+      }
+      walkDrawn = { lat: userLat, lon: userLon, radius: radius };
+      var element = walkYou.getElement();
+      var wedge = element ? element.querySelector(".walk-wedge") : null;
+      if (wedge) {
+        var show = walkHeading !== null && walkFixSpeed !== null && walkFixSpeed > WALK_HEADING_MIN_SPEED;
+        wedge.classList.toggle("is-hidden", !show);
+        if (show) {
+          wedge.querySelector("g").setAttribute("transform", "rotate(" + Math.round(walkHeading) + " 50 50)");
+        }
+      }
+    }
+
+    function walkSensorRows() {
+      var snapshot = paceEstimator ? paceEstimator.snapshot() : null;
+      var status = paceEstimator ? paceEstimator.status() : null;
+      var source = WALK_SOURCES.indexOf(serverWalkSource) !== -1 ? serverWalkSource : "default";
+      var dash = "—";
+      var rows = {
+        pace: (serverWalkSpeed * 3.6).toFixed(1) + "\u00a0km/h · " + WALK_SOURCE_TEXT[source],
+        gpsSpeed: snapshot && typeof snapshot.gpsSpeed === "number" ? (snapshot.gpsSpeed * 3.6).toFixed(1) + "\u00a0km/h" : dash,
+        gpsAccuracy: snapshot && typeof snapshot.gpsAccuracy === "number" ? formatDistance(snapshot.gpsAccuracy)
+          : typeof userAccuracy === "number" && isFinite(userAccuracy) ? formatDistance(userAccuracy) : dash,
+        cadence: snapshot && typeof snapshot.cadence === "number" ? String(Math.round(snapshot.cadence * 60)) : dash,
+        stepLength: snapshot && typeof snapshot.stepLength === "number" ? snapshot.stepLength.toFixed(2) + "\u00a0m" : dash,
+        samples: snapshot && typeof snapshot.stepCount === "number" ? String(snapshot.stepCount) : dash
+      };
+      var measured = source === "gps" || source === "cadence";
+      var why = walkWhyOf(measured, walkChanceSource.nearStop, status);
+      return { rows: rows, why: why ? WALK_WHY_TEXT[why] : "" };
+    }
+
+    function renderWalkSensors() {
+      var panel = document.getElementById("walk-sensors-panel");
+      if (!panel || panel.hidden) {
+        return;
+      }
+      var view = walkSensorRows();
+      Object.keys(view.rows).forEach(function (key) {
+        var cell = document.getElementById("walk-sensor-" + key);
+        if (cell) {
+          cell.textContent = view.rows[key];
+        }
+      });
+      var why = document.getElementById("walk-sensor-why");
+      document.getElementById("walk-sensor-why-text").textContent = view.why;
+      why.hidden = !view.why;
+    }
+
+    function renderWalkPage() {
+      if (!walkOnTop()) {
+        return;
+      }
+      var now = Date.now();
+      var distance = walkDistanceNow();
+      if (distance !== null && walkOpenedDistance === null) {
+        walkOpenedDistance = distance;
+      }
+      if (distance !== null && userLocationTimestamp !== null && userLocationTimestamp !== walkLastFixT) {
+        walkLastFixT = userLocationTimestamp;
+        walkSamples.push({ t: userLocationTimestamp, d: distance });
+        while (walkSamples.length > 2 && now - walkSamples[0].t > 30000 && walkSamples[0].t < userLocationTimestamp - 20000) {
+          walkSamples.shift();
+        }
+      }
+      var hasFix = distance !== null;
+      var state = walkStateOf(hasFix, walkChanceSource.nearStop, walkSamples, now);
+      document.getElementById("walk-state").textContent = WALK_STATE_TEXT[state];
+      document.getElementById("walk-distance").textContent = hasFix ? WALK_DISTANCE_TEXT.replace("{distance}", formatDistance(distance)) : "—";
+      var minutes = document.getElementById("walk-minutes");
+      minutes.textContent = hasFix ? WALK_MINUTES_TEXT.replace("{n}", String(walkMinutesOf(distance, serverWalkSpeed))) : "";
+      minutes.hidden = !hasFix;
+      var progress = document.getElementById("walk-progress");
+      progress.value = walkProgressOf(distance, walkOpenedDistance, state === "arrived");
+      markSimulated("walk-simulated", demoModeOn() || (lastSuccess && lastSuccess.simulated === true));
+      var hero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+      var chance = walkChanceSource.chance;
+      var usable = !!(hero && !hero.is_missed && !displayFrozen && chance && typeof chance.point === "number"
+        && typeof chance.range_low === "number" && typeof chance.range_high === "number");
+      var pillState = !hero ? "unavailable" : dataIsStale() ? "stale" : hero.monitored ? "live" : "schedule";
+      setPillState(document.getElementById("walk-pill"), document.getElementById("walk-pill-text"), pillState);
+      setRing("walk-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
+      document.getElementById("walk-range").textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
+      document.getElementById("walk-chance-title").textContent = catchHeading(false);
+      var trend = document.getElementById("walk-trend");
+      trend.textContent = usable && walkTrend.text ? WALK_TREND_TEXT[walkTrendKey(walkTrend.text, state)] : "";
+      trend.hidden = !(usable && walkTrend.text);
+      renderWalkSensors();
+      renderWalkMap();
+    }
+
+    function openWalkPage() {
+      pushScreen("walk");
+      window.scrollTo(0, 0);
+    }
+
+    function enterWalkPage() {
+      walkEnterMap();
+      walkOpenedDistance = null;
+      walkSamples = [];
+      walkLastFixT = null;
+      walkTrend = { anchor: null, text: null, calm: 0 };
+      var hero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+      walkChanceSource = { chance: hero && hero.probability && !hero.is_missed ? hero.probability : null, nearStop: !!(lastSuccess && lastSuccess.near_stop === true) };
+      map.invalidateSize();
+      syncWalkPage();
+      renderWalkPage();
+      walkLastRescoreAt = 0;
+      walkRescoreTick();
+      // once the layout has settled (fonts, scroll, the new height) the size is read again and the map fitted again
+      requestAnimationFrame(function () {
+        if (walkOnTop()) {
+          map.invalidateSize();
+          if (!walkUserMoved) {
+            walkFitState = { done: false, distance: null };
+            renderWalkPage();
+          }
+        }
+      });
+    }
+
+    function leaveWalkPage() {
+      walkLeaveMap();
+      syncWalkPage();
+    }
+
+    document.getElementById("walk-open").addEventListener("click", openWalkPage);
+    document.getElementById("walk-recentre").addEventListener("click", function () {
+      walkUserMoved = false;
+      walkFitMap(true);
+    });
+    document.getElementById("walk-sensors-toggle").addEventListener("click", function () {
+      var panel = document.getElementById("walk-sensors-panel");
+      var open = panel.hidden;
+      panel.hidden = !open;
+      this.setAttribute("aria-expanded", open ? "true" : "false");
+      document.getElementById("walk-sensors").classList.toggle("is-open", open);
+      renderWalkSensors();
+    });
     // Screen 8: a fired reroute is a pending proposal until the user taps Switch.
     var rerouteProposal = null;
     var rerouteProposalKey = "";
@@ -6879,7 +7594,7 @@
       var arrivals = document.getElementById("see-arrivals-bar");
       var running = monitoringActive && !endedKind && !missedMode;
       var showQuestion = running && document.body.classList.contains("is-page-b") && qualityState() !== "no-service" && isFinite(lastEtaMs);
-      var showArrivals = running && document.body.classList.contains("is-page-a");
+      var showArrivals = running && (document.body.classList.contains("is-page-a") || document.body.classList.contains("is-page-w"));
       question.hidden = !showQuestion;
       arrivals.hidden = !showArrivals;
       document.body.classList.toggle("has-catch-bar", showQuestion || showArrivals);
@@ -6927,6 +7642,9 @@
       })
       : null;
     var paceJourneyActive = false;
+    if (paceEstimator && paceEstimator.onFix) {
+      paceEstimator.onFix(walkOnFix);
+    }
     var serverWalkSpeed = 1.25;
     var serverWalkSource = "default";
     var WALK_SOURCES = ["gps", "cadence", "remembered", "default"];
@@ -7017,7 +7735,7 @@
         return false;
       }
       var top = screenStack[screenStack.length - 1];
-      return top === "live" || top === "arrivals";
+      return top === "live" || top === "arrivals" || top === "walk";
     }
 
     function syncPaceEstimator() {
@@ -7031,6 +7749,7 @@
       } else if (paceEstimator.isWanted()) {
         paceEstimator.stop(paceJourneyActive ? "paused" : "journey over");
       }
+      syncWalkWatch();
     }
 
     // Inside the tap on "Start journey": the iOS motion permission needs the gesture. It never blocks the journey.
@@ -7072,6 +7791,7 @@
       fiveMinuteNotifiedKey = null;
       paceJourneyActive = false;
       syncPaceEstimator();
+      syncWalkPage();
       syncCatchBar();
     }
 

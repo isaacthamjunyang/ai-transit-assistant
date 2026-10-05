@@ -223,12 +223,15 @@ def test_missing_cache_is_unavailable_and_has_no_fake_stops(api_client):
 def test_page_keeps_a_one_time_fix_and_allows_a_foreground_journey_watch(api_client):
     """Step 4 still takes one getCurrentPosition fix for the nearby list.
 
-    The page has no watchPosition of its own: the walking-speed estimator owns the one watch. Foreground only.
+    The estimator owns the one watch. The page has a watchPosition of its own only inside Page W, as a fallback that runs
+    while Page W is open and visible and the estimator's watch is not feeding fixes. Foreground only.
     """
     html = api_client.get("/").text
     assert "navigator.geolocation.getCurrentPosition" in html
-    assert "watchPosition" not in html
-    assert html.count("setInterval(") == 2
+    page_w = html.split("// ---- Page W:", 1)[1].split("// Screen 8:", 1)[0]
+    assert html.count("watchPosition(") == 1 and "watchPosition(function" in page_w
+    assert "enableHighAccuracy: true" in page_w and "!walkEstimatorFeeding()" in page_w
+    assert html.count("setInterval(") == 3
     assert "/api/arrivals" in html
     assert "datamall" not in html
     assert "selectedBoardingStop" in html

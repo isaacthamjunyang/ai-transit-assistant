@@ -453,6 +453,7 @@ def test_home_page_still_loads_from_cache(tmp_path: Path, monkeypatch):
         "/api/arrivals/peek",
         "/api/route-plan",
         "/api/reroute-options",
+        "/api/rescore",
         "/api/explain",
         "/api/demo",
         "/api/demo/run",

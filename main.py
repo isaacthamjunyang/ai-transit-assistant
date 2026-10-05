@@ -14,7 +14,7 @@ import re
 import httpx
 
 import access_log_filter
-from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals
+from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals, rescore_latest
 import demo
 from config import PAGE_CONSTANTS, WALK_SPEED_DEFAULT_MPS
 from explain import (
@@ -416,6 +416,66 @@ def arrivals(
         leg1_direction=leg1_direction,
         walk_speed_m_s=speed,
     )
+    return payload
+
+
+RESCORE_BUS_FIELDS = ("arrival_time", "monitored", "is_primary", "is_missed", "probability")
+
+
+@app.get("/api/rescore", response_model=None)
+def rescore(
+    stop_code: Annotated[str, Query(min_length=1)],
+    service_no: Annotated[str, Query(min_length=1)],
+    lat: Annotated[float, Query()],
+    lon: Annotated[float, Query()],
+    accuracy: Annotated[float, Query()],
+    location_timestamp: Annotated[float | None, Query()] = None,
+    walk_speed: Annotated[str | None, Query()] = None,
+    walk_speed_source: Annotated[str | None, Query()] = None,
+) -> dict | JSONResponse:
+    """Page W: the same catch probability as the poll, from the latest remembered arrivals and a newer fix.
+
+    No LTA call, nothing stored, nothing logged. Says "use_poll" when there is no copy younger than 60 s (or in
+    Demo Mode), and the page then keeps showing the poll's numbers. The query uses the poll's own parameter names,
+    so the access-log filter that strips them covers this endpoint too."""
+    if demo.demo_enabled():
+        return {"status": "use_poll", "reason": "demo"}
+    if not all(math.isfinite(value) for value in (lat, lon, accuracy)) or accuracy < 0:
+        return JSONResponse(status_code=422, content={"detail": "lat, lon and accuracy must be finite, accuracy not negative."})
+    if location_timestamp is not None:
+        try:
+            normalize_location_timestamp(location_timestamp)
+        except ValueError:
+            return JSONResponse(status_code=422, content={"detail": "location_timestamp must be a finite non-negative number."})
+    speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
+    cache = getattr(app.state, "lta_static", None)
+    moment = datetime.now(SGT)
+    near_stop = _near_stop(cache, stop_code.strip(), lat, lon)  # pace.is_near_stop, the poll's own function and 30 m rule
+    result = rescore_latest(
+        stop_code.strip(),
+        service_no.strip(),
+        user_lat=lat,
+        user_lon=lon,
+        accuracy=accuracy,
+        location_timestamp=location_timestamp,
+        cache=cache,
+        now=moment,
+        walk_speed_m_s=speed,
+    )
+    if result is None:
+        return {"status": "use_poll", "reason": "no_recent_arrivals", "near_stop": near_stop}
+    payload = {
+        "status": "ok",
+        "rescored": True,
+        "stop_code": stop_code.strip(),
+        "service_no": service_no.strip(),
+        "fetched_at": result.get("fetched_at"),
+        "buses": [{key: bus.get(key) for key in RESCORE_BUS_FIELDS} for bus in result["buses"]],
+        "leave_by": result.get("leave_by"),
+        "near_stop": near_stop,
+        "leave_now_threshold_s": LEAVE_NOW_MARGIN_S,
+    }
+    payload.update(response_fields(speed, speed_source))
     return payload
 
 

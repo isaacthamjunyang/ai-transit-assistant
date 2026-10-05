@@ -65,8 +65,10 @@ def test_legs_panel_and_its_controls_are_gone():
                  "renderRouteStrip", "function startNextLeg", "function activateLeg2", "function checkMissedStop",
                  "function findReanchorStop", "function noteTransferFix", "function onJourneyFix", "function startJourneyWatch",
                  "missed-stop", "You passed your stop", "TRANSFER_WAIT_MS", "track-leg-2", "transfer-prompt", "leg2-prompt",
-                 "Arrived at ", "Activate Leg 2 Live Tracking"):
+                 "Activate Leg 2 Live Tracking"):
         assert gone not in html, gone
+    # "Arrived at " belonged to the removed missed-stop UI; Page W's state line "Arrived at the stop" is the only use now
+    assert html.count("Arrived at ") == 1 and 'arrived: "Arrived at the stop"' in html
     for gone in ("live-card__board", "route-motif", "leg2-banner", "journey-timeline", "service-plate", "#track-leg-2"):
         assert gone not in css, gone
     assert "live-card__board" not in guide and "onBoard" not in copy

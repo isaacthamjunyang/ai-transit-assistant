@@ -129,10 +129,10 @@ def test_the_example_from_the_prompt():
     # 643 s shows 11 on the tile, so the text says 11 (the tile's rounding wins).
     fact = sheet(bus=tile_minutes(_iso(643), NOW), walk=3)
     text = compose_text(fact, ACTION_ADVICE["wait"], **CTX)
-    assert text == ("The bus is 11 minutes away. You are 300 m from the stop and walking at about 4.5 km/h, "
-                    "so you should leave by 2:10 PM. It is advisable to wait for your leave-by alert.")
+    assert text == ("The bus is 11 minutes away. You are 300\u00a0m from the stop and walking at about 4.5\u00a0km/h, "
+                    "so you should leave by 2:10\u00a0PM. It is advisable to wait for your leave-by alert.")
     ten = compose_text(sheet(bus=10, walk=3), ACTION_ADVICE["wait"], **CTX)
-    assert ten.startswith("The bus is 10 minutes away. You are 300 m from the stop")
+    assert ten.startswith("The bus is 10 minutes away. You are 300\u00a0m from the stop")
 
 
 # ---- sentences one and two, every variant
@@ -144,30 +144,30 @@ def test_sentence_one_variants():
 
 
 @pytest.mark.parametrize("source, speed, middle", [
-    ("gps", 1.25, "and walking at about 4.5 km/h, so you should leave by 2:10 PM."),
-    ("cadence", 1.0, "and walking at about 3.6 km/h, so you should leave by 2:10 PM."),
-    ("remembered", 1.1, "and walking at your usual speed of 4.0 km/h, so you should leave by 2:10 PM."),
-    ("default", 1.25, "and, at an average walking speed of 4.5 km/h, you should leave by 2:10 PM."),
+    ("gps", 1.25, "and walking at about 4.5\u00a0km/h, so you should leave by 2:10\u00a0PM."),
+    ("cadence", 1.0, "and walking at about 3.6\u00a0km/h, so you should leave by 2:10\u00a0PM."),
+    ("remembered", 1.1, "and walking at your usual speed of 4.0\u00a0km/h, so you should leave by 2:10\u00a0PM."),
+    ("default", 1.25, "and, at an average walking speed of 4.5\u00a0km/h, you should leave by 2:10\u00a0PM."),
 ])
 def test_sentence_two_leave_by_for_every_speed_source(source, speed, middle):
     text = sentence_two(sheet(10, 3, source=source, speed=speed), band="ok", uncertain=False)
-    assert text == f"You are 300 m from the stop {middle}"
+    assert text == f"You are 300\u00a0m from the stop {middle}"
 
 
 @pytest.mark.parametrize("source, speed, middle", [
-    ("gps", 1.25, "and walking at about 4.5 km/h, so you should leave now."),
-    ("cadence", 1.4, "and walking at about 5.0 km/h, so you should leave now."),
-    ("remembered", 1.1, "and walking at your usual speed of 4.0 km/h, so you should leave now."),
-    ("default", 1.25, "and, at an average walking speed of 4.5 km/h, you should leave now."),
+    ("gps", 1.25, "and walking at about 4.5\u00a0km/h, so you should leave now."),
+    ("cadence", 1.4, "and walking at about 5.0\u00a0km/h, so you should leave now."),
+    ("remembered", 1.1, "and walking at your usual speed of 4.0\u00a0km/h, so you should leave now."),
+    ("default", 1.25, "and, at an average walking speed of 4.5\u00a0km/h, you should leave now."),
 ])
 def test_sentence_two_leave_now_for_every_speed_source(source, speed, middle):
     for seconds in (60, 30, 0, -1, -600):
         text = sentence_two(sheet(10, 3, source=source, speed=speed, leave_in=seconds), band="ok", uncertain=False)
-        assert text == f"You are 300 m from the stop {middle}", seconds
+        assert text == f"You are 300\u00a0m from the stop {middle}", seconds
 
 
 def test_sentence_two_unlikely_for_a_low_band_or_switch_or_do_not_rely():
-    expected = "You are 300 m from the stop, but catching this bus is unlikely."
+    expected = "You are 300\u00a0m from the stop, but catching this bus is unlikely."
     assert sentence_two(sheet(10, 3), band="low", uncertain=False) == expected
     assert sentence_two(sheet(10, 3, "switch_route"), band="ok", uncertain=False) == expected
     assert sentence_two(sheet(10, 3, "do_not_rely"), band="ok", uncertain=False) == expected
@@ -178,19 +178,19 @@ def test_sentence_two_unlikely_for_a_low_band_or_switch_or_do_not_rely():
 
 def test_sentence_two_adds_the_uncertain_location_sentence_after_leave_by_and_after_leave_now():
     by = sentence_two(sheet(10, 3), band="ok", uncertain=True)
-    assert by.endswith("so you should leave by 2:10 PM. Your location is uncertain, so leave a little earlier than that to be safe.")
+    assert by.endswith("so you should leave by 2:10\u00a0PM. Your location is uncertain, so leave a little earlier than that to be safe.")
     now = sentence_two(sheet(10, 3, leave_in=60), band="ok", uncertain=True)
     assert now.endswith("so you should leave now. Your location is uncertain, so the walking time may be off.")
 
 
 def test_distance_and_clock_formats():
-    assert format_distance(0) == "0 m" and format_distance(999.4) == "999 m" and format_distance(0.5) == "1 m"
-    assert format_distance(999.5) == "1 km" and format_distance(1000) == "1 km"
-    assert format_distance(1249) == "1.2 km" and format_distance(1250) == "1.3 km" and format_distance(2000) == "2 km"
-    assert format_clock(NOW + timedelta(minutes=10), NOW) == "2:10 PM"
-    assert format_clock(NOW.replace(hour=0, minute=5), NOW) == "12:05 AM"
-    assert format_clock(NOW.replace(hour=12, minute=0), NOW) == "12:00 PM"
-    assert format_clock(NOW + timedelta(hours=10), NOW) == "12:00 AM (tomorrow)"
+    assert format_distance(0) == "0\u00a0m" and format_distance(999.4) == "999\u00a0m" and format_distance(0.5) == "1\u00a0m"
+    assert format_distance(999.5) == "1\u00a0km" and format_distance(1000) == "1\u00a0km"
+    assert format_distance(1249) == "1.2\u00a0km" and format_distance(1250) == "1.3\u00a0km" and format_distance(2000) == "2\u00a0km"
+    assert format_clock(NOW + timedelta(minutes=10), NOW) == "2:10\u00a0PM"
+    assert format_clock(NOW.replace(hour=0, minute=5), NOW) == "12:05\u00a0AM"
+    assert format_clock(NOW.replace(hour=12, minute=0), NOW) == "12:00\u00a0PM"
+    assert format_clock(NOW + timedelta(hours=10), NOW) == "12:00\u00a0AM (tomorrow)"
     assert format_kmh(1.25) == "4.5" and format_kmh(1.4) == "5.0" and format_kmh(0.5) == "1.8"
 
 
@@ -208,12 +208,13 @@ def test_copy_templates_match_python():
     texts = ["The bus is arriving now.", "The bus is {e} minutes away.", "The bus is 1 minute away.",
              "It is advisable to {advice}.", explain.S2_UNLIKELY, explain.S2_UNCERTAIN_BY, explain.S2_UNCERTAIN_NOW]
     texts += list(explain.S2_LEAVE_BY.values()) + list(explain.S2_LEAVE_NOW.values())
+    escape = chr(92) + "u00a0"  # copy.js and the page spell the no-break space as an escape in their source
     for text in texts:
-        assert text in copy, text
+        assert text.replace("\u00a0", escape) in copy, text
     for text in [explain.S2_UNLIKELY, explain.S2_UNCERTAIN_BY, explain.S2_UNCERTAIN_NOW, explain.S1_ARRIVING_NOW]:
         assert text in page, text  # the page mirror carries the same wording
     for text in list(explain.S2_LEAVE_BY.values()) + list(explain.S2_LEAVE_NOW.values()):
-        assert text in page, text
+        assert text.replace("\u00a0", escape) in page, text
     for clause in ACTION_ADVICE.values():
         assert clause in copy
     for old in ("Given the walking time", "you may not reach the stop", "to get to the bus stop", "Wait for Leave By Alert"):
@@ -411,7 +412,7 @@ def _poll(payload, **overrides):
 
 def test_the_poll_text_uses_this_polls_numbers_and_the_fixed_clause_until_the_model_answers():
     first = _poll(_payload(643))
-    assert first["text"].startswith("The bus is 11 minutes away. You are 225\u00a0m from the stop and, at an average walking speed of 4.5 km/h, you should leave by 2:10 PM.")
+    assert first["text"].startswith("The bus is 11 minutes away. You are 225\u00a0m from the stop and, at an average walking speed of 4.5\u00a0km/h, you should leave by 2:10\u00a0PM.")
     assert first["text"].endswith("It is advisable to wait for your leave-by alert.")
     assert first["call"] is True and first["action"] == "wait"
     later = _poll(_payload(583))  # 20 s later: the minutes change, the text follows
@@ -625,10 +626,10 @@ def test_a_clause_of_exactly_15_words_is_still_accepted():
 
 
 def test_the_relaxed_checks_cover_the_python_sentences_and_never_the_models_clause():
-    # The Python-built text may hold a colon (a clock time such as 2:10 PM) and four sentences ...
+    # The Python-built text may hold a colon (a clock time such as 2:10\u00a0PM) and four sentences ...
     numbers = sheet(10, 3, leave_in=600)
     text = compose_text(numbers, ACTION_ADVICE["wait"], band="ok", uncertain=True)
     assert ":" in text and len(re.split(r"\. ", text)) == 4
     # ... but the same characters are refused in the model's clause, whatever the text around it allows.
-    assert advice_is_valid("wait until 2:10 PM", "wait") is False
+    assert advice_is_valid("wait until 2:10\u00a0PM", "wait") is False
     assert advice_is_valid("wait for your alert. It is advisable to wait", "wait") is False

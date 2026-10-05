@@ -94,7 +94,7 @@ def test_tiles_are_display_only_capped_at_three_with_arriving_on_the_monitored_b
 def test_refresh_has_a_cooldown_and_adds_no_second_timer():
     html = _page()
     assert "var MANUAL_REFRESH_MIN_SECONDS = 10;" in html
-    assert html.count("setInterval(") == 2
+    assert html.count("setInterval(") == 3
     arm = _between(html, "function armPollTimer(generation)", "function successAgeMs")
     assert "clearInterval(pollTimer)" in arm and "POLL_MS" in arm
     refresh = _between(html, "function manualRefresh()", "function relativeAge")

@@ -106,10 +106,10 @@ def test_the_tile_flips_with_the_same_rule_in_the_page():
         leave_now = seconds <= 60
         assert mode == ("now" if leave_now else "by") and view["mode"] == mode
         if leave_now:
-            assert view["value"] == "Leave now" and view["meta"] == "The bus is 5 min away and the walk takes about 4 min."
+            assert view["value"] == "Leave now" and view["meta"] == "The bus is 5\u00a0min away and the walk takes about 4\u00a0min."
         else:
-            assert re.fullmatch(r"\d{1,2}:\d\d (AM|PM)", view["value"]), view
-            assert re.fullmatch(r"in \d+ min · 4 min walk", view["meta"]), view
+            assert re.fullmatch(r"\d{1,2}:\d\d\u00a0(AM|PM)", view["value"]), view
+            assert re.fullmatch(r"in \d+\u00a0min · 4\u00a0min walk", view["meta"]), view
         assert not (view["value"] == "Leave now" and re.search(r"\d:\d\d", view["value"]))  # never both
 
 
@@ -135,10 +135,10 @@ def test_the_tile_lines_for_the_edge_cases():
     done = subprocess.run(["node", "-e", program], capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 0, done.stderr[-600:]
     out = json.loads(done.stdout)
-    assert out["arriving"]["meta"] == "The bus is arriving now and the walk takes about 2 min."
-    assert out["oneMin"]["meta"] == "The bus is 1 min away and the walk takes about 2 min."
+    assert out["arriving"]["meta"] == "The bus is arriving now and the walk takes about 2\u00a0min."
+    assert out["oneMin"]["meta"] == "The bus is 1\u00a0min away and the walk takes about 2\u00a0min."
     assert out["uncertainBy"]["uncertain"] is True and out["uncertainNow"]["uncertain"] is True
     assert out["uncertainBy"]["value"] != "Leave now" and out["uncertainNow"]["value"] == "Leave now"
-    assert out["noPack"]["meta"] == "" and re.fullmatch(r"\d{1,2}:\d\d (AM|PM)", out["noPack"]["value"])
+    assert out["noPack"]["meta"] == "" and re.fullmatch(r"\d{1,2}:\d\d\u00a0(AM|PM)", out["noPack"]["value"])
     assert out["noThreshold"] is None and out["noLeaveBy"] is None
-    assert out["underMinute"]["meta"] == "in under 1 min · 2 min walk"  # kept for a threshold below 60 s
+    assert out["underMinute"]["meta"] == "in under 1\u00a0min · 2\u00a0min walk"  # kept for a threshold below 60 s

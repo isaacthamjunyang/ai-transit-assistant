@@ -24,6 +24,13 @@ BUS_POSITIONS = ("NextBus", "NextBus2", "NextBus3")
 PEEK_HANDOFF_SECONDS = 20
 _peek_handoff: dict[tuple[str, str], tuple[float, dict]] = {}
 
+# A short-lived copy of the latest arrivals per stop and service, so Page W can rescore the catch probability about
+# every 5 s from the phone's newest fix without another LTA call. Arrival data only: never a position, a speed or a
+# score. It lives in memory, is capped, expires after RESCORE_TTL_SECONDS, and is not kept in Demo Mode.
+RESCORE_TTL_SECONDS = 60
+RESCORE_MAX_ENTRIES = 32
+_latest_arrivals: dict[tuple[str, str], tuple[float, dict]] = {}
+
 
 class ArrivalUnavailable(Exception):
     """A live arrival poll could not be used. Status is unavailable."""
@@ -71,6 +78,7 @@ def fetch_arrivals(
             result = _fetch(owned, key, stop_code, service_no, moment)
     else:
         result = _fetch(client, key, stop_code, service_no, moment)
+    remember_arrivals(stop_code, service_no, result)
     result["buses"] = _with_probability(
         result["buses"],
         stop_code=stop_code,
@@ -101,6 +109,71 @@ def fetch_arrivals(
         leave_by_iso=result["leave_by"],
         notification_time=result["notification_time"],
         arrival_status="ok",
+    )
+    return result
+
+
+def remember_arrivals(stop_code: str, service_no: str, result: dict) -> None:
+    """Keep the arrival data of a fresh poll (before any scoring) for Page W's rescore. Not kept in Demo Mode."""
+    if demo.demo_enabled() or demo.lta_script_active():
+        return
+    now = time.monotonic()
+    for key in [k for k, (stored_at, _) in _latest_arrivals.items() if now - stored_at >= RESCORE_TTL_SECONDS]:
+        del _latest_arrivals[key]
+    _latest_arrivals[(stop_code, service_no)] = (now, copy.deepcopy(result))
+    while len(_latest_arrivals) > RESCORE_MAX_ENTRIES:
+        oldest = min(_latest_arrivals, key=lambda k: _latest_arrivals[k][0])
+        del _latest_arrivals[oldest]
+
+
+def clear_remembered_arrivals() -> None:
+    _latest_arrivals.clear()
+
+
+def rescore_latest(
+    stop_code: str,
+    service_no: str,
+    *,
+    user_lat: float | None,
+    user_lon: float | None,
+    accuracy: float | None,
+    location_timestamp: float | None,
+    cache: StopAndRouteCache | None,
+    now: datetime,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+) -> dict | None:
+    """The latest remembered arrivals scored again for this fix, with the same scoring function the poll uses.
+
+    None when there is no copy or it is older than RESCORE_TTL_SECONDS: the caller says "use the poll". The arrival
+    times are absolute, so the scoring is adjusted to now by itself. No LTA call is made."""
+    entry = _latest_arrivals.get((stop_code, service_no))
+    if entry is None or demo.demo_enabled():
+        return None
+    stored_at, stored = entry
+    if time.monotonic() - stored_at >= RESCORE_TTL_SECONDS:
+        del _latest_arrivals[(stop_code, service_no)]
+        return None
+    result = copy.deepcopy(stored)
+    result["buses"] = _with_probability(
+        result["buses"],
+        stop_code=stop_code,
+        service_no=service_no,
+        user_lat=user_lat,
+        user_lon=user_lon,
+        accuracy=accuracy,
+        location_timestamp=location_timestamp,
+        cache=cache,
+        now=now,
+        walk_speed_m_s=walk_speed_m_s,
+    )
+    result["leave_by"] = leave_by_for_buses(
+        result["buses"],
+        stop_code=stop_code,
+        user_lat=user_lat,
+        user_lon=user_lon,
+        cache=cache,
+        now=now,
+        walk_speed_m_s=walk_speed_m_s,
     )
     return result
 

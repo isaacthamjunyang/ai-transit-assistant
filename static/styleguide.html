@@ -719,8 +719,8 @@
         guideLocation("warn", "Unavailable") +
         guideLocation("warn", copy.quality.uncertain.body.replace("{accuracy}", "120 m"), "is-uncertain") +
         guideArrive(copy.home.selectTime, false) +
-        guideArrive("6:30 PM", false) +
-        guideArrive("6:30 PM", true) +
+        guideArrive("6:30\u00a0PM", false) +
+        guideArrive("6:30\u00a0PM", true) +
         "<div class=\"search-row\"><div class=\"field\"><div class=\"field__shell\"><svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"11\" cy=\"11\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M16 16l4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg><input class=\"field__control\" type=\"text\" value=\"Marina Bay Sands\" aria-label=\"Where do you want to go?\"><button type=\"button\" class=\"field__clear\" aria-label=\"Clear\"><svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 7l10 10M17 7L7 17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button></div></div></div>" +
         "<h2 class=\"results-heading\"><span class=\"results-heading__title\">" + copy.home.resultsHeading + "</span><span class=\"results-heading__hint\">" + copy.home.resultsHint + "</span></h2>" +
         "<ul class=\"destination-results\">" +
@@ -770,7 +770,7 @@
     var confirmCopy = copy.confirmDestination;
 
     function walkLine(minutes, metres) {
-      return stopsCopy.walk.replace("{minutes}", minutes).replace("{distance}", metres + " m");
+      return stopsCopy.walk.replace("{minutes}", minutes).replace("{distance}", metres + "\u00a0m");
     }
 
     function destRow(name, minutes, metres, options) {
@@ -843,7 +843,7 @@
         + "<hr class=\"hairline\">"
         + "<div class=\"summary-section\"><div class=\"arrive-block\"><div class=\"info-row__head\"><span class=\"icon-tile\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
         + "<span class=\"info-row__title\">" + copy.home.arriveBy + "</span></div>"
-        + arriveField(copy.arriveBy.custom, "6:30 PM") + "</div></div>"
+        + arriveField(copy.arriveBy.custom, "6:30\u00a0PM") + "</div></div>"
         + "</div>"
         + "<div class=\"info-box\">" + INFO_ICON + "<p>" + confirmCopy.info + "</p></div>"
         + "<button type=\"button\" class=\"primary primary--icon\"><span>" + confirmCopy.action + "</span>" + ARROW_ICON + "</button>"
@@ -874,9 +874,9 @@
         + "<div class=\"stack\">"
         + arriveField(copy.home.selectTime, "")
         + arriveField(copy.arriveBy.noTarget, "")
-        + arriveField(copy.arriveBy.in30, "6:45 PM")
-        + arriveField(copy.arriveBy.inHour, "7:15 PM")
-        + arriveField(copy.arriveBy.custom, "6:30 PM")
+        + arriveField(copy.arriveBy.in30, "6:45\u00a0PM")
+        + arriveField(copy.arriveBy.inHour, "7:15\u00a0PM")
+        + arriveField(copy.arriveBy.custom, "6:30\u00a0PM")
         + "</div>";
     }
 
@@ -944,8 +944,8 @@
 
     function sgArriveBox() {
       return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
-        + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.custom + " · 6:30 PM</p>"
-        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateTarget.replace("{point}", "6:18 PM").replace("{range}", "6:14–6:24 PM") + "</p>"
+        + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.custom + " · 6:30\u00a0PM</p>"
+        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateTarget.replace("{point}", "6:18\u00a0PM").replace("{range}", "6:14–6:24\u00a0PM") + "</p>"
         + "<p class=\"badge badge--track arrive-box__status\">" + copy.arriveBy.onTrack + "</p></div>"
         + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
     }
@@ -953,7 +953,7 @@
     function sgArriveBoxNoTarget() {
       return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
         + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.noTarget + "</p>"
-        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateOnly.replace("{point}", "6:24 PM").replace("{range}", "6:21–6:31 PM") + "</p></div>"
+        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateOnly.replace("{point}", "6:24\u00a0PM").replace("{range}", "6:21–6:31\u00a0PM") + "</p></div>"
         + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
     }
 
@@ -1062,7 +1062,7 @@
         + "<div class=\"catch-card__copy\"><p class=\"catch-card__range\">"
         + (usable ? lc.range.replace("{range_low}", low).replace("{range_high}", high) : "") + "</p></div></div>"
         + "<p class=\"catch-card__caption\">" + caption + "</p>"
-        + (walk && walk.line ? "<p class=\"note\" aria-live=\"off\">" + walk.line + "</p>" : "") + "</section>";
+        + sgWalkRow(walk && walk.line ? walk.line : lc.walkPaceNormal.replace("{kmh}", "4.5")) + "</section>";
     }
 
     // The four walking-speed sources: the caption and the muted pace line (1.25 m/s is 4.5 km/h).
@@ -1080,16 +1080,61 @@
       return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p><p class=\"field__hint\">" + copy.pace[key].detail + "</p></div></div>";
     }
 
-    // state: { value, meta, warn }. A tile shows a clock time or "Leave now", never both.
+    // ---- consistent sample values: "now" is 9:55:00\u00a0PM and every leave-by value is computed with the app's rule
+    // leave_by = bus ETA - walk time - 135 s, and "Leave now" when leave-by is 60 s or less away.
+    var SG_NB = "\u00a0";
+    var SG_NOW_S = 21 * 3600 + 55 * 60;
+
+    function sgClockParts(secondsFromNow) {
+      var minutes = Math.floor((SG_NOW_S + secondsFromNow) / 60);
+      var h24 = Math.floor(minutes / 60) % 24;
+      return { hm: (h24 % 12 || 12) + ":" + (minutes % 60 < 10 ? "0" : "") + (minutes % 60), suffix: h24 < 12 ? "AM" : "PM" };
+    }
+
+    function sgClock(secondsFromNow) {
+      var parts = sgClockParts(secondsFromNow);
+      return parts.hm + SG_NB + parts.suffix;
+    }
+
+    function sgLeave(e, distance, speed) {
+      var walkS = distance / speed;
+      var secs = e * 60 - walkS - 135;
+      return { secs: secs, mode: secs <= 60 ? "now" : "by", n: Math.round(secs / 60), w: Math.max(1, Math.round(walkS / 60)), time: sgClock(secs) };
+    }
+
+    // The Leave by tile state for a bus e minutes away and a walk of distance metres at speed m/s.
+    function sgTileState(e, distance, speed, uncertain) {
+      var lv = sgLeave(e, distance, speed);
+      var state = { e: e, warn: !!uncertain };
+      if (lv.mode === "by") {
+        state.value = lv.time;
+        state.meta = lc.leaveByIn.replace("{n}", lv.n).replace("{w}", lv.w);
+      } else {
+        state.value = lc.leaveNow;
+        state.meta = lc.leaveNowBusAway.replace("{e}", e).replace("{w}", lv.w);
+      }
+      return state;
+    }
+
+    function sgArriving(e) {
+      return lc.arrivingIn.replace("{n}", String(e));
+    }
+
+    // state: { value, meta, warn, e }. A tile shows a clock time or "Leave now", never both. The estimated arrival is
+    // the bus ETA plus a 15 minute ride, with the range 3 minutes earlier and 7 minutes later.
     var SG_WARN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 4 3 20h18L12 4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M12 10v4M12 17h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
 
     function sgLeaveTiles(withTarget, state) {
-      state = state || { value: "10:03 PM", meta: lc.leaveByIn.replace("{n}", "8").replace("{w}", "4") };
-      return "<section class=\"leave-tiles\"><div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.leaveBy + "</p><p class=\"leave-tile__value\">" + state.value + "</p>"
+      state = state || sgTileState(15, 300, 1.25);
+      var e = state.e === undefined ? 15 : state.e;
+      var low = sgClockParts((e + 12) * 60);
+      var high = sgClockParts((e + 22) * 60);
+      var range = low.suffix === high.suffix ? low.hm + "–" + high.hm + SG_NB + low.suffix : low.hm + SG_NB + low.suffix + "–" + high.hm + SG_NB + high.suffix;
+      return "<section class=\"leave-tiles\"><div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.leaveBy + "</p><p class=\"leave-tile__value\"><span class=\"leave-tile__nowrap\">" + state.value + "</span></p>"
         + (state.meta ? "<p class=\"leave-tile__meta\">" + state.meta + "</p>" : "")
         + (state.warn ? "<p class=\"leave-tile__meta leave-tile__warn\">" + SG_WARN_ICON + "<span>" + lc.leaveUncertain + "</span></p>" : "")
         + "</div></div>"
-        + "<div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + TILE_FLAG_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.estimatedArrival + "</p><p class=\"leave-tile__value\">6:24 PM</p><p class=\"leave-tile__meta\">(6:21–6:31 PM)</p></div></div>"
+        + "<div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + TILE_FLAG_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.estimatedArrival + "</p><p class=\"leave-tile__value\"><span class=\"leave-tile__nowrap\">" + sgClock((e + 15) * 60) + "</span></p><p class=\"leave-tile__meta\">(" + range + ")</p></div></div>"
         + (withTarget ? "<p class=\"leave-tiles__row\"><span class=\"badge badge--track tile-status\">" + copy.arriveBy.onTrack + "</span></p>" : "")
         + "</section>";
     }
@@ -1104,21 +1149,27 @@
       var e = opts.e;
       var one = e < 1 ? x.busArrivingNow : e === 1 ? x.busOneMinute : x.busMinutes.replace("{e}", e);
       var metres = opts.distance === undefined ? 300 : opts.distance;
-      var distance = (metres < 1000 ? Math.round(metres) + " m" : (Math.round(metres / 100) / 10) + " km");
-      var kmh = ((opts.speed === undefined ? 1.25 : opts.speed) * 3.6).toFixed(1);
+      var speed = opts.speed === undefined ? 1.25 : opts.speed;
+      var lv = sgLeave(e, metres, speed);
+      var distance = (metres < 1000 ? Math.round(metres) + "\u00a0m" : (Math.round(metres / 100) / 10) + "\u00a0km");
+      var kmh = (speed * 3.6).toFixed(1);
       var source = opts.source || "gps";
       var kind = source === "gps" || source === "cadence" ? "Measured" : source === "remembered" ? "Remembered" : "Default";
-      var now = opts.mode ? opts.mode === "now" : opts.action === "leaveNow";
+      var now = lv.mode === "now";
+      var action = opts.action;
+      if (action === "wait" || action === "leaveNow") {
+        action = now ? "leaveNow" : "wait";
+      }
       var two;
-      if (opts.band === "low" || opts.action === "switchRoute" || opts.action === "doNotRely") {
+      if (opts.band === "low" || action === "switchRoute" || action === "doNotRely") {
         two = x.unlikely.replace("{distance}", distance);
       } else {
-        two = x[(now ? "leaveNow" : "leaveBy") + kind].replace("{distance}", distance).replace("{kmh}", kmh).replace("{time}", opts.time || "10:03 PM");
+        two = x[(now ? "leaveNow" : "leaveBy") + kind].replace("{distance}", distance).replace("{kmh}", kmh).replace("{time}", lv.time);
         if (opts.uncertain) {
           two += " " + (now ? x.uncertainNow : x.uncertainBy);
         }
       }
-      return one + " " + two + " " + x.adviceSentence.replace("{advice}", x.advice[opts.action]);
+      return one + " " + two + " " + x.adviceSentence.replace("{advice}", x.advice[action]);
     }
 
     function sgAiCard(mode, opts) {
@@ -1151,12 +1202,12 @@
       return '<div class="reroute-option"><div class="card option-merged"><p class="option-chip"><span class="option-chip__icon" aria-hidden="true">' + SHIELD_ICON + '</span><span>' + chip + '</span></p>'
         + sgPills(pills)
         + '<div class="option-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
-        + '<div class="option-card__copy"><p class="option-card__title">Bus ' + service + '</p><p class="option-card__arrives"><span class="option-card__live">' + rp.arrivesIn.replace("{minutes}", "2 min") + ' <span class="option-card__arrow" aria-hidden="true">' + ARROW_ICON + '</span></span></p>'
-        + '<p class="option-card__meta">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</p><p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15 PM") + '</p></div>'
-        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '<p class="option-card__arrive">' + rp.arrive.replace("{time}", "6:18 PM") + '</p><p class="option-card__range">' + rp.rangeNote.replace("{range_low}", "55").replace("{range_high}", "70") + '</p></div></div></div>'
+        + '<div class="option-card__copy"><p class="option-card__title">Bus ' + service + '</p><p class="option-card__arrives"><span class="option-card__live">' + rp.arrivesIn.replace("{minutes}", "6 min") + ' <span class="option-card__arrow" aria-hidden="true">' + ARROW_ICON + '</span></span></p>'
+        + '<p class="option-card__meta">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</p><p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15\u00a0PM") + '</p></div>'
+        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '<p class="option-card__arrive">' + rp.arrive.replace("{time}", "6:36\u00a0PM") + '</p><p class="option-card__range">' + rp.rangeNote.replace("{range_low}", "55").replace("{range_high}", "70") + '</p></div></div></div>'
         + '<section class="ai-card option-explain" aria-live="polite"><p class="ai-card__head"><span class="ai-card__icon" aria-hidden="true">' + SPARKLE_ICON + '</span><span>' + lc.aiTitle + '</span></p>'
         + '<p class="ai-card__text">' + sgReasonSentence(reasonKey, service) + ' ' + rp.advisable.replace("{advice}", "switch to another bus") + '</p></section>'
-        + '<button type="button" class="primary primary--icon"><span>' + rp.switchTo.replace("{service}", service).replace("{minutes}", "2 min") + '</span>' + ARROW_ICON + '</button></div>';
+        + '<button type="button" class="primary primary--icon"><span>' + rp.switchTo.replace("{service}", service).replace("{minutes}", "6 min") + '</span>' + ARROW_ICON + '</button></div>';
     }
 
     function sgAutoBanner() {
@@ -1167,7 +1218,7 @@
       return '<div class="reroute-block"><div class="reroute-proposal">' + sgAutoBanner()
         + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance"], "7")
         + '<p class="reroute-alternatives__heading">' + rp.alternatives + '</p><ul class="reroute-alternatives">'
-        + sgOptionRow("16", 41, 33, 50, "9 min", "6:24 PM", "Walk to Bras Basah Complex (183 m)", {})
+        + sgOptionRow("16", 41, 33, 50, "9 min", "6:40\u00a0PM", "Walk to Bras Basah Complex (183\u00a0m)", {})
         + '</ul></div></div>';
     }
 
@@ -1185,15 +1236,15 @@
     }
 
     function sgRefreshHeader(heading) {
-      return '<div class="reroute-alternatives__head"><p class="reroute-alternatives__heading">' + heading + '</p><p class="reroute-updated">' + rp.updated.replace("{time}", "6:22 PM") + '</p>'
+      return '<div class="reroute-alternatives__head"><p class="reroute-alternatives__heading">' + heading + '</p><p class="reroute-updated">' + rp.updated.replace("{time}", "6:12\u00a0PM") + '</p>'
         + '<button type="button" class="refresh-button" aria-label="' + rp.refreshLabel + '" aria-disabled="false">' + REFRESH_ICON + '</button></div>';
     }
 
     function sgPageCUnlikely() {
       return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal">' + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance", "fastest"], "7")
         + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
-        + sgOptionRow("16", 60, 50, 70, "20 min", "6:54 PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183 m"), {})
-        + sgOptionRow("11", 35, 25, 39, "31 min", "7:05 PM", rp.atYourStop, { unlikely: true })
+        + sgOptionRow("16", 60, 50, 70, "20 min", "6:54\u00a0PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183\u00a0m"), {})
+        + sgOptionRow("11", 35, 25, 39, "31 min", "7:05\u00a0PM", rp.atYourStop, { unlikely: true })
         + '</ul></div></div>';
     }
 
@@ -1201,19 +1252,93 @@
       return '<div class="page-c"><div class="reroute-proposal"><p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "11") + '</p>'
         + sgMergedCard(rp.recommended, "reasonHighestChanceOnTime", ["highest_chance"], "7")
         + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
-        + sgOptionRow("16", 60, 50, 70, "20 min", "6:54 PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183 m"), {})
+        + sgOptionRow("16", 60, 50, 70, "20 min", "6:54\u00a0PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183\u00a0m"), {})
         + '</ul></div></div>';
     }
 
     function sgPageCNone() {
       return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal"><p class="banner banner--quiet reroute-none">' + copy.noBetter.standard.replace("{point}", "5") + '</p>'
         + sgRefreshHeader(rp.otherBuses) + '<ul class="reroute-alternatives">'
-        + sgOptionRow("11", 35, 25, 39, "31 min", "7:05 PM", rp.atYourStop, { unlikely: true }) + '</ul></div></div>';
+        + sgOptionRow("11", 35, 25, 39, "31 min", "7:05\u00a0PM", rp.atYourStop, { unlikely: true }) + '</ul></div></div>';
     }
 
     function sgUnlikelyBanner() {
       return '<div class="banner banner--caution unlikely-banner"><div class="reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "11").replace("{minutes}", "4 min") + '</p><p>' + sgProbLine(12, 6, 20) + '</p></div></div>'
         + '<button type="button" class="secondary">' + rp.seeOtherBuses + '</button></div>';
+    }
+
+    // ---- Page A button row and Page W samples (the real page draws the map with Leaflet; here it is static markup)
+    var SG_WALK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"13\" cy=\"4.5\" r=\"2\" fill=\"currentColor\"></circle><path d=\"M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var SG_CHEVRON_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var SG_RECENTRE_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"></circle><circle cx=\"12\" cy=\"12\" r=\"7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+    var SG_CHEVRON_DOWN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 9l6 6 6-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    function sgWalkRow(sub) {
+      return "<button type=\"button\" class=\"walk-open-row\"><span class=\"walk-open-row__icon\" aria-hidden=\"true\">" + SG_WALK_ICON + "</span>"
+        + "<span class=\"walk-open-row__copy\"><span class=\"walk-open-row__title\">" + copy.walkPage.openRow + "</span><span class=\"walk-open-row__sub\">" + sub + "</span></span>"
+        + "<span class=\"walk-open-row__chevron\" aria-hidden=\"true\">" + SG_CHEVRON_ICON + "</span></button>";
+    }
+
+    function sgWalkMap(accuracy, arrived) {
+      return "<div class=\"live-map walk-map sample-walk-map\"><span class=\"sample-walk-map__chip\">" + formatSgRange() + "</span>"
+        + "<svg class=\"sample-walk-map__line\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\" focusable=\"false\"><line x1=\"30\" y1=\"28\" x2=\"50\" y2=\"66\"></line></svg>"
+        + (accuracy ? "<span class=\"sample-walk-map__acc sample-walk-map__acc--" + accuracy + "\"></span>" : "")
+        + "<span class=\"sample-walk-map__you\">You</span>"
+        + "<span class=\"map-stop map-stop--live sample-walk-map__stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Origin<br>(01011)</span></span>"
+        + "<button type=\"button\" class=\"map-recentre\" aria-label=\"" + copy.walkPage.recentre + "\">" + SG_RECENTRE_ICON + "</button></div>";
+    }
+
+    function formatSgRange() {
+      return "Range: 200\u00a0m";
+    }
+
+    function sgSensors(open) {
+      var w = copy.walkPage;
+      var rows = [[w.rowPace, "4.7\u00a0km/h · " + w.sourceGps], [w.rowGpsSpeed, "4.7\u00a0km/h"], [w.rowGpsAccuracy, "8\u00a0m"], [w.rowCadence, "114"], [w.rowStepLength, "0.72\u00a0m"], [w.rowSamples, "4"]];
+      return "<section class=\"card walk-sensors" + (open ? " is-open" : "") + "\"><button type=\"button\" class=\"walk-sensors__toggle\" aria-expanded=\"" + (open ? "true" : "false") + "\"><span>" + w.sensorDetails + "</span>" + SG_CHEVRON_DOWN_ICON + "</button>"
+        + (open ? "<div class=\"walk-sensors__panel\"><dl class=\"walk-sensors__list\">" + rows.map(function (r) { return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>"; }).join("") + "</dl></div>" : "")
+        + "</section>";
+    }
+
+    var SG_INFO_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 11v5M12 7.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+
+    // The why line sits directly under the panel title in normal body text with an info icon. The rows are what the real
+    // estimator can show: with 0 learned samples the step length is the starting value, 0.70 m; near the stop the last
+    // smoothed speed is still sent, so the walking pace keeps its measured value and source (the real estimator's state after the latch).
+    function sgSensorsWhy(why, kind) {
+      var w = copy.walkPage;
+      var rowsByKind = {
+        notWalking: [[w.rowPace, "4.5\u00a0km/h \u00b7 " + w.sourceAverage], [w.rowGpsSpeed, "\u2014"], [w.rowGpsAccuracy, "8\u00a0m"], [w.rowCadence, "\u2014"], [w.rowStepLength, "0.70\u00a0m"], [w.rowSamples, "0"]],
+        noPermission: [[w.rowPace, "4.5\u00a0km/h \u00b7 " + w.sourceAverage], [w.rowGpsSpeed, "3.6\u00a0km/h"], [w.rowGpsAccuracy, "8\u00a0m"], [w.rowCadence, "\u2014"], [w.rowStepLength, "0.70\u00a0m"], [w.rowSamples, "0"]],
+        nearStop: [[w.rowPace, "4.3\u00a0km/h \u00b7 " + w.sourceGps], [w.rowGpsSpeed, "4.3\u00a0km/h"], [w.rowGpsAccuracy, "8\u00a0m"], [w.rowCadence, "\u2014"], [w.rowStepLength, "0.70\u00a0m"], [w.rowSamples, "0"]]
+      };
+      var rows = rowsByKind[kind || "notWalking"];
+      return "<section class=\"card walk-sensors is-open\"><button type=\"button\" class=\"walk-sensors__toggle\" aria-expanded=\"true\"><span>" + w.sensorDetails + "</span>" + SG_CHEVRON_DOWN_ICON + "</button>"
+        + "<div class=\"walk-sensors__panel\"><p class=\"walk-sensors__why\">" + SG_INFO_ICON + "<span>" + why + "</span></p><dl class=\"walk-sensors__list\">" + rows.map(function (r) { return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>"; }).join("") + "</dl></div></section>";
+    }
+
+    // o: { state: waiting | onway | still | arrived, distance, minutes, trend, ring: [point, low, high, band], accuracy, alerts, sensors }
+    function sgWalkPage(o) {
+      var w = copy.walkPage;
+      var stateText = { waiting: w.waiting, checking: w.checking, onway: w.onWay, away: w.away, still: w.still, arrived: w.arrived }[o.state];
+      var hasFix = o.state !== "waiting";
+      var trendText = o.trend ? { rising: o.state === "onway" ? w.trendRisingCloser : w.trendRising, falling: o.state === "away" ? w.trendFallingAway : w.trendFalling, steady: w.trendSteady }[o.trend] : "";
+      var ring = o.ring;
+      var progress = { waiting: 0, checking: 0, onway: 10, away: 0, still: 27, arrived: 100 }[o.state];
+      return "<div class=\"walk-page-sample\">" + (o.alerts || "")
+        + "<h2 class=\"walk-title\">" + w.title + "</h2>"
+        + sgWalkMap(o.accuracy || "small")
+        + "<section class=\"card walk-status\"><p class=\"walk-status__distance\">" + (hasFix ? w.distance.replace("{distance}", o.distance) : "—") + "</p>"
+        + (hasFix ? "<p class=\"walk-status__minutes\">" + w.minutes.replace("{n}", o.minutes) + "</p>" : "")
+        + "<p class=\"walk-status__note\">" + w.straightLine + "</p>"
+        + "<progress class=\"walk-progress\" max=\"100\" value=\"" + progress + "\" aria-hidden=\"true\"></progress>"
+        + "<p class=\"walk-status__state\">" + stateText + "</p></section>"
+        + "<section class=\"card catch-card walk-chance\" aria-live=\"polite\">" + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), "", "live")
+        + "<div class=\"catch-card__row\">" + sgRing(ring[0], ring[1], ring[2], false, "", ring[3])
+        + "<div class=\"catch-card__copy\"><p class=\"catch-card__range\">" + lc.range.replace("{range_low}", ring[1]).replace("{range_high}", ring[2]) + "</p>"
+        + (trendText ? "<p class=\"walk-chance__trend\">" + trendText + "</p>" : "") + "</div></div></section>"
+        + sgSensors(false) + "</div>"
+        + sgSeeArrivalsBar();
     }
 
     function catchSample() {
@@ -1231,29 +1356,27 @@
         + "<h4>Page A heading with a long stop name (ellipsis, full name in the title)</h4>" + sgCatchCard("live", 64, 51, 78, SG_LONG_STOP)
         + "<h4>Page A heading with no ETA (stop name only)</h4>" + sgCatchCard("schedule", 41, 30, 52, "Tanjong Rhu Stn Exit 2", "")
         + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
-        + "<h4>Page A, action wait: Leave by tile shows the clock time with the minutes and the walk, no pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgLeaveTiles(true)
-        + "<h4>Page A, action leave_now: Leave by tile reads Leave now with the bus and walk minutes, with the pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgPaceChip("slower") + sgLeaveTiles(true, { value: lc.leaveNow, meta: lc.leaveNowBusAway.replace("{e}", "6").replace("{w}", "4") })
-        + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, { value: "10:03 PM", meta: lc.leaveByIn.replace("{n}", "8").replace("{w}", "4"), warn: true })
-        + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, { value: lc.leaveNow, meta: lc.leaveNowBusAway.replace("{e}", "6").replace("{w}", "4"), warn: true })
-        + "<h4>Leave by tile, Leave now with the bus arriving now</h4>" + sgLeaveTiles(false, { value: lc.leaveNow, meta: lc.leaveNowBusArriving.replace("{w}", "4") })
-        + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: "10:03 PM" })
+        + "<h4>Page A, action wait: Leave by tile shows the clock time with the minutes and the walk, no pace chip</h4>" + sgCatchCard("live", 92, 92, 92, undefined, sgArriving(15)) + sgLeaveTiles(true, sgTileState(15, 300, 1.25))
+        + "<h4>Page A, action leave_now: Leave by tile reads Leave now with the bus and walk minutes, with the pace chip</h4>" + sgCatchCard("live", 70, 44, 76, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.3))
+        + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, sgTileState(15, 300, 1.25, true))
+        + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, sgTileState(6, 250, 1.3, true))
+        + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: sgLeave(15, 300, 1.25).time, e: 15 })
         + "<h4>Leave by and Estimated arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
         + "<h4>Tiles with No target (no check)</h4>" + sgLeaveTiles(false)
         + "<h4>AI Explanation: loading</h4>" + sgAiCard("loading")
         + "<h4>AI Explanation: badge row, band ok (no prefix)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", badge: copy.arriveBy.onTrack })
         + "<h4>AI Explanation: badge row, band mid (prefix)</h4>" + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", badge: copy.arriveBy.risk, badgeClass: "badge--risk", prefix: true })
         + "<h4>AI Explanation: no target (no badge row)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait" })
-        + "<h4>Sentence 1: arriving now and one minute</h4>" + sgAiCard("normal", { e: 0, band: "ok", action: "leaveNow" }) + sgAiCard("normal", { e: 1, band: "ok", action: "leaveNow" })
-        + "<h4>Sentence 2, leave by: measured speed (GPS or steps)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300 })
-        + "<h4>Sentence 2, leave by: your usual speed</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820 })
-        + "<h4>Sentence 2, leave by: average walking speed (speed uncertain)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200 })
-        + "<h4>Sentence 2, leave now: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250 }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250 }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250 })
-        + "<h4>Sentence 2, leave by, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300, uncertain: true }) + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820, uncertain: true }) + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200, uncertain: true })
-        + "<h4>Sentence 2, leave now, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250, uncertain: true })
+        + "<h4>Sentence 1: arriving now and one minute (the chance is low, so sentence two is the unlikely one)</h4>" + sgAiCard("normal", { e: 0, band: "low", action: "doNotRely" }) + sgAiCard("normal", { e: 1, band: "low", action: "doNotRely" })
+        + "<h4>Sentence 2, leave by: measured speed (GPS or steps)</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300 })
+        + "<h4>Sentence 2, leave by: your usual speed</h4>" + sgAiCard("normal", { e: 18, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820 })
+        + "<h4>Sentence 2, leave by: average walking speed (speed uncertain)</h4>" + sgAiCard("normal", { e: 20, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200 })
+        + "<h4>Sentence 2, leave now: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250 }) + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250 }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250 })
+        + "<h4>Sentence 2, leave by, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300, uncertain: true }) + sgAiCard("normal", { e: 18, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820, uncertain: true }) + sgAiCard("normal", { e: 20, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200, uncertain: true })
+        + "<h4>Sentence 2, leave now, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250, uncertain: true })
         + "<h4>Sentence 2: unlikely, with and without an uncertain location (no uncertain sentence is added)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640, uncertain: true })
         + "<h4>Sentence 2: catching this bus is unlikely (low band, switch, do not rely)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute", distance: 640 })
-        + "<h4>Sentence 2: location uncertain, after leave by and after leave now</h4>" + sgAiCard("normal", { e: 8, band: "ok", action: "wait", uncertain: true }) + sgAiCard("normal", { e: 4, band: "ok", action: "leaveNow", uncertain: true })
-        + "<h4>Sentence 3: every advice clause</h4>" + sgAiCard("normal", { e: 9, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 4, band: "ok", action: "leaveNow" }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute" }) + sgAiCard("normal", { e: 5, band: "ok", action: "doNotRely" })
+        + "<h4>Sentence 3: every advice clause</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 7, band: "ok", action: "leaveNow" }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute" }) + sgAiCard("normal", { e: 5, band: "ok", action: "doNotRely" })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
         + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
         + "<h4>No better option</h4><p class=\"banner banner--quiet reroute-none\">" + copy.noBetter.standard.replace("{point}", "28") + "</p>";
@@ -1339,7 +1462,7 @@
     function sgMap(full) {
       return '<div class="live-map sample-live"><span class="live-bus-tag"><span class="live-bus-tag__icon">' + BUS_SVG + '</span><span class="live-bus-tag__text"><span class="live-bus-tag__service">' + jo.bus.replace("{service}", "36") + '</span><span class="live-bus-tag__eta">4 min</span></span></span>'
         + '<span class="leaflet-marker-icon map-dest-live sample-pin">' + PIN_SVG_SG + '<span class="map-dest-live__label">Marina Bay Sands</span></span>'
-        + '<div class="map-range-chip"><span class="map-range-chip__text">' + (full ? "Range: 3 km" : "Range: 200 m") + '</span></div>'
+        + '<div class="map-range-chip"><span class="map-range-chip__text">' + (full ? "Range: 3\u00a0km" : "Range: 200\u00a0m") + '</span></div>'
         + '<button type="button" class="map-toggle" aria-pressed="' + (full ? "true" : "false") + '">' + ROUTE_ICON + '<span>' + (full ? copy.liveMap.nearMe : copy.liveMap.fullRoute) + '</span></button></div>';
     }
 
@@ -1386,7 +1509,7 @@
 
     function sgNewJourney() {
       var items = [
-        sgStep("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title"), sgDetail(jo.toBoarding.replace("{distance}", "320 m"))], ""),
+        sgStep("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title"), sgDetail(jo.toBoarding.replace("{distance}", "320\u00a0m"))], ""),
         sgStep("stop", jo.boardingStop, [sgDetail("Bras Basah Complex (01015)"), sgDetail(jo.walk.replace("{minutes}", "5"))], ""),
         sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "16") + "</span>" + sgPill("live") + "</p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.arrivingIn.replace("{minutes}", "9 min"), "journey-step__arriving")], ""),
         sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands"), sgDetail(jo.walkToDestination.replace("{minutes}", "3"))], ""),
@@ -1398,10 +1521,10 @@
 
     function flowSample() {
       var rows = [
-        sgOptionRow("7", 63, 55, 70, "2 min", "6:18 PM", rp.atYourStop, { pills: ["highest_chance", "fastest"] }),
-        sgOptionRow("16", 41, 33, 50, "9 min", "6:24 PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183 m"), { pills: ["fastest"] }),
-        sgOptionRow("77", 35, 25, 39, "12 min", "6:28 PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183 m"), { unlikely: true }),
-        sgOptionRow("36", 30, 22, 38, "19 min", "6:50 PM", rp.atYourStop, { unlikely: true, after: true })
+        sgOptionRow("7", 63, 55, 70, "6 min", "6:36\u00a0PM", rp.atYourStop, { pills: ["highest_chance", "fastest"] }),
+        sgOptionRow("16", 41, 33, 50, "9 min", "6:40\u00a0PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183\u00a0m"), { pills: ["fastest"] }),
+        sgOptionRow("77", 35, 25, 39, "12 min", "6:44\u00a0PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183\u00a0m"), { unlikely: true }),
+        sgOptionRow("36", 30, 22, 38, "19 min", "6:50\u00a0PM", rp.atYourStop, { unlikely: true, after: true })
       ];
       return ""
         + "<h4>No buses in service (no-service layout)</h4>" + sgStatusCard(copy.status.unavailable, copy.quality.noService) + '<div class="card live-card">' + sgBusCard("unavailable", "", false) + '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>' + sgStatus("unavailable") + '</div>'
@@ -1458,9 +1581,9 @@
 
     function sgPageA(kind) {
       var cards = kind === "live"
-        ? sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady") + sgLeaveTiles(true)
-          + '<div class="miss-row"><span>' + CLOCK_ICON + '</span><div><p class="miss-row__label">' + copy.arriveBy.missLabel + '</p><p>' + copy.arriveBy.missWithLate.replace("{service}", "36").replace("{minutes}", "8").replace("{point}", "6:36 PM").replace("{late}", "about 6 min late") + '</p></div></div>'
-          + sgAiCard("normal", { e: 5, action: "leaveNow", band: "ok" })
+        ? sgCatchCard("live", 65, 48, 78, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.25))
+          + '<div class="miss-row"><span>' + CLOCK_ICON + '</span><div><p class="miss-row__label">' + copy.arriveBy.missLabel + '</p><p>' + copy.arriveBy.missWithLate.replace("{service}", "36").replace("{minutes}", "8").replace("{point}", "6:36\u00a0PM").replace("{late}", "about 6 min late") + '</p></div></div>'
+          + sgAiCard("normal", { e: 6, action: "leaveNow", band: "ok", distance: 250, speed: 1.25, source: "default" })
         : "";
       return sgPageAlerts(kind === "live" ? "" : kind) + cards + sgSeeArrivalsBar();
     }
@@ -1489,7 +1612,21 @@
         + "<h4>Page A: stale state</h4>" + sgPageA("stale")
         + "<h4>Page A: location uncertain, accuracy reason and age reason</h4>" + sgPageA("uncertain")
         + "<h4>Page B, Bus arrival, with its sticky question bar</h4>" + sgPageB("live")
-        + "<h4>Page B: no-service line in place of the next buses (no question bar)</h4>" + sgPageB("no-service");
+        + "<h4>Page B: no-service line in place of the next buses (no question bar)</h4>" + sgPageB("no-service")
+        + "<h4>Page A: the button row that opens Page W (the pace line is its muted subtitle)</h4>" + sgCatchCard("live", 70, 44, 76, undefined, sgArriving(6), sgWalk("gps", "4.7"))
+        + "<h4>Page W, waiting for your location (no fix)</h4>" + sgWalkPage({ state: "waiting", ring: [92, 92, 92, "ok"], accuracy: "" })
+        + "<h4>Page W, on your way (the distance is falling), trend rising</h4>" + sgWalkPage({ state: "onway", distance: "270\u00a0m", minutes: 4, trend: "rising", ring: [70, 44, 76, "ok"] })
+        + "<h4>Page W, not moving, trend steady</h4>" + sgWalkPage({ state: "still", distance: "219\u00a0m", minutes: 3, trend: "steady", ring: [70, 44, 76, "ok"] })
+        + "<h4>Page W, not moving, trend rising (any other state reads just Rising)</h4>" + sgWalkPage({ state: "still", distance: "219\u00a0m", minutes: 3, trend: "rising", ring: [70, 44, 76, "ok"] })
+        + "<h4>Page W, not moving, trend falling (the chance is dropping): Falling as time passes</h4>" + sgWalkPage({ state: "still", distance: "340\u00a0m", minutes: 5, trend: "falling", ring: [45, 30, 58, "mid"] })
+        + "<h4>Page W, checking your movement (under 10 s of history)</h4>" + sgWalkPage({ state: "checking", distance: "300\u00a0m", minutes: 4, ring: [70, 44, 76, "ok"] })
+        + "<h4>Page W, moving away from the stop (the distance grew by 5 m or more), trend falling</h4>" + sgWalkPage({ state: "away", distance: "340\u00a0m", minutes: 5, trend: "falling", ring: [45, 30, 58, "mid"] })
+        + "<h4>Page W, arrived at the stop (within 30 m)</h4>" + sgWalkPage({ state: "arrived", distance: "12\u00a0m", minutes: 1, trend: "steady", ring: [65, 48, 78, "ok"] })
+        + "<h4>Page W, poor accuracy: a large accuracy circle and the existing uncertain-location card</h4>" + sgWalkPage({ state: "still", distance: "330\u00a0m", minutes: 5, ring: [41, 28, 52, "mid"], accuracy: "large", alerts: sgLocationCard() })
+        + "<h4>Page W, no location: the waiting state with the existing banner</h4>" + sgWalkPage({ state: "waiting", ring: [92, 92, 92, "ok"], accuracy: "", alerts: sgLocationCard() })
+        + "<h4>Page W, Sensor details open (measured speed from GPS and steps)</h4>" + sgSensors(true)
+        + "<h4>Page W, Sensor details closed</h4>" + sgSensors(false)
+        + "<h4>Page W, Sensor details open with a why line (no measured speed)</h4>" + sgSensorsWhy(copy.walkPage.whyNotWalking, "notWalking") + sgSensorsWhy(copy.walkPage.whyNoPermission, "noPermission") + sgSensorsWhy(copy.walkPage.whyNearStop, "nearStop");
     }
 
     document.getElementById("pages-sample-light").innerHTML = pagesSample();

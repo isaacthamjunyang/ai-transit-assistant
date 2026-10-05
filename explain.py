@@ -258,17 +258,17 @@ PACK_KEYS = PAGE_PACK_FIELDS + ("reason_code",)
 # Sentence two. {distance}, {kmh} and {time} are the only placeholders; the page mirror copies these strings.
 S2_UNLIKELY = "You are {distance} from the stop, but catching this bus is unlikely."
 S2_LEAVE_BY = {
-    "measured": "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave by {time}.",
-    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, "
+    "measured": "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave by {time}.",
+    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, "
                   "so you should leave by {time}.",
-    "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, "
+    "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, "
                "you should leave by {time}.",
 }
 S2_LEAVE_NOW = {
-    "measured": "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave now.",
-    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, "
+    "measured": "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave now.",
+    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, "
                   "so you should leave now.",
-    "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, "
+    "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, "
                "you should leave now.",
 }
 S2_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe."
@@ -280,11 +280,11 @@ def format_distance(metres: float) -> str:
     """static/format-distance.js formatDistance: whole metres under 1000, else km to one decimal. Non-breaking space."""
     rounded = round_half_up(float(metres))
     if abs(rounded) < 1000:
-        return f"{rounded} m"
+        return f"{rounded}\u00a0m"
     text = f"{round_half_up(rounded / 100) / 10:.1f}"
     if text.endswith(".0"):
         text = text[:-2]
-    return f"{text} km"
+    return f"{text}\u00a0km"
 
 
 def format_kmh(speed_m_s: float) -> str:
@@ -296,7 +296,7 @@ def format_clock(moment: datetime, now: datetime) -> str:
     """The page's formatClock(iso, true): 12-hour Singapore clock, "(tomorrow)" when it is not today."""
     local = moment.astimezone(SGT)
     hour = local.hour % 12 or 12
-    text = f"{hour}:{local.minute:02d} {'AM' if local.hour < 12 else 'PM'}"
+    text = f"{hour}:{local.minute:02d}\u00a0{'AM' if local.hour < 12 else 'PM'}"
     if local.date() != now.astimezone(SGT).date():
         text += " (tomorrow)"
     return text

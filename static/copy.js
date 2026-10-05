@@ -38,12 +38,12 @@ var copy = {
     busOneMinute: "The bus is 1 minute away.",
     /* approved: sentence two, first match wins; {distance}, {kmh} and {time} are the placeholders */
     unlikely: "You are {distance} from the stop, but catching this bus is unlikely.",
-    leaveByMeasured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave by {time}.",
-    leaveByRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave by {time}.",
-    leaveByDefault: "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave by {time}.",
-    leaveNowMeasured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave now.",
-    leaveNowRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave now.",
-    leaveNowDefault: "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave now.",
+    leaveByMeasured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave by {time}.",
+    leaveByRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave by {time}.",
+    leaveByDefault: "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave by {time}.",
+    leaveNowMeasured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave now.",
+    leaveNowRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave now.",
+    leaveNowDefault: "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave now.",
     uncertainBy: "Your location is uncertain, so leave a little earlier than that to be safe.",
     uncertainNow: "Your location is uncertain, so the walking time may be off.",
     adviceSentence: "It is advisable to {advice}.",
@@ -53,6 +53,44 @@ var copy = {
       switchRoute: "switch to another bus",
       doNotRely: "not rely only on this estimate"
     }
+  },
+  walkPage: {
+    /* proposed, needs approval: the button row on Page A and the page title */
+    openRow: "See current location and walking pace",
+    title: "Walk to your stop",
+    /* proposed, needs approval: the status card; {n} and {distance} are filled by the page */
+    distance: "{distance} to the stop",
+    minutes: "about {n}\u00a0min walk",
+    straightLine: "straight-line distance",
+    onWay: "On your way",
+    still: "Not moving",
+    /* proposed, needs approval: the fourth and fifth state lines */
+    away: "Moving away from the stop",
+    checking: "Checking your movement…",
+    arrived: "Arrived at the stop",
+    waiting: "Waiting for your location…",
+    recentre: "Recentre map",
+    sensorDetails: "Sensor details",
+    /* proposed, needs approval: the trend under the ring, from consecutive server values */
+    trendRisingCloser: "Rising as you get closer",
+    trendRising: "Rising",
+    trendFallingAway: "Falling as you move away",
+    trendFalling: "Falling as time passes",
+    trendSteady: "Steady",
+    /* proposed, needs approval: the Sensor details panel */
+    sourceGps: "from GPS",
+    sourceSteps: "from your steps",
+    sourceUsual: "your usual pace",
+    sourceAverage: "average pace",
+    rowPace: "Walking pace",
+    rowGpsSpeed: "GPS speed",
+    rowGpsAccuracy: "GPS accuracy",
+    rowCadence: "Steps per minute",
+    rowStepLength: "Step length",
+    rowSamples: "Learned samples",
+    whyNotWalking: "Not walking yet",
+    whyNoPermission: "No motion permission",
+    whyNearStop: "Near the stop"
   },
   scenarios: [
     "LTA API Timeout / Proxy Error",
@@ -253,10 +291,10 @@ var copy = {
     leaveBy: "Leave by",
     leaveNow: "Leave now",
     /* approved: the Leave by tile shows a clock time or "Leave now", never both; {n} and {w} are whole minutes */
-    leaveByIn: "in {n} min · {w} min walk",
-    leaveByInUnder: "in under 1 min · {w} min walk",
-    leaveNowBusAway: "The bus is {e} min away and the walk takes about {w} min.",
-    leaveNowBusArriving: "The bus is arriving now and the walk takes about {w} min.",
+    leaveByIn: "in {n}\u00a0min · {w}\u00a0min walk",
+    leaveByInUnder: "in under 1\u00a0min · {w}\u00a0min walk",
+    leaveNowBusAway: "The bus is {e}\u00a0min away and the walk takes about {w}\u00a0min.",
+    leaveNowBusArriving: "The bus is arriving now and the walk takes about {w}\u00a0min.",
     leaveUncertain: "Location uncertain: leave a bit earlier to be safe.",
     estimatedArrival: "Estimated arrival",
     aiTitle: "AI Explanation",

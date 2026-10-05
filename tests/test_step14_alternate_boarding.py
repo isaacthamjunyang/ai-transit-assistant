@@ -106,8 +106,8 @@ def test_page_selection_and_map_and_explicit_stop_choice():
     assert "0 0 0 2px var(--color-selected-outline)" in selected
     assert html.count('L.map("map"') == 1
     # The boarding-stop screen is gone: the map moves into the live screen and is resized there.
-    place = html.split("function placeMap(inDestination, inLive)", 1)[1].split("function placeArriveBy", 1)[0]
+    place = html.split("function placeMap(inDestination, inLive, inWalk)", 1)[1].split("function placeArriveBy", 1)[0]
     assert "map.invalidateSize()" in place
     assert "Use This Stop" not in html
     assert 'id="boarding-stage"' not in html
-    assert html.count("setInterval(") == 2
+    assert html.count("setInterval(") == 3

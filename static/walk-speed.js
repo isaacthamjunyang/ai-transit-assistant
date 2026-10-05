@@ -876,7 +876,8 @@
         lat: fix.lat,
         lon: fix.lon,
         accuracy: fix.accuracy,
-        speed: isNumber(fix.speed) ? fix.speed : null
+        speed: isNumber(fix.speed) ? fix.speed : null,
+        heading: isNumber(fix.heading) ? fix.heading : null
       };
       if (!isNumber(item.lat) || !isNumber(item.lon) || !isNumber(item.accuracy)) {
         return false;
@@ -1087,7 +1088,8 @@
         lat: coords.latitude,
         lon: coords.longitude,
         accuracy: coords.accuracy,
-        speed: coords.speed
+        speed: coords.speed,
+        heading: coords.heading
       });
     }
 

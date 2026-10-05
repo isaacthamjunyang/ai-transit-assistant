@@ -3,14 +3,17 @@ import { writeFileSync } from "node:fs";
 // Opens static/styleguide.html (config.guide, a file:// URL) at config.width and screenshots the Leave by tile states and
 // every sentence variant, light and dark, into config.shots. Also reports overflow, clipped text and low contrast.
 const GROUPS = [
-  ["tiles", "Page A, action wait", "AI Explanation: loading"],
-  ["sentences", "Sentence 1:", "Sentence 3:"],
-  ["sentence3", "Sentence 3:", null]
+  ["tiles", "Page A, action wait", "AI Explanation: loading", "catch"],
+  ["sentences", "Sentence 1:", "Sentence 3:", "catch"],
+  ["sentence3", "Sentence 3:", null, "catch"],
+  ["walk-row", "Page A: the button row", "Page W, waiting", "pages"],
+  ["walk-states", "Page W, waiting", "Page W, Sensor details open (measured", "pages"],
+  ["walk-sensors", "Page W, Sensor details open (measured", null, "pages"]
 ];
 
-const PAGE_CODE = `(function (themeId, groups) {
-  var root = document.getElementById(themeId);
-  var heads = Array.prototype.slice.call(root.querySelectorAll("h4"));
+const PAGE_CODE = `(function (theme, groups) {
+  var root = null;
+  var heads = [];
   function headStarting(text) {
     for (var i = 0; i < heads.length; i++) { if (heads[i].textContent.indexOf(text) === 0) { return heads[i]; } }
     return null;
@@ -40,6 +43,8 @@ const PAGE_CODE = `(function (themeId, groups) {
   }
   var out = { clips: {}, overflow: [], clipped: [], contrast: {} };
   groups.forEach(function (g) {
+    root = document.getElementById(g[3] + "-sample-" + theme);
+    heads = Array.prototype.slice.call(root.querySelectorAll("h4"));
     var start = headStarting(g[1]);
     var stop = g[2] ? headStarting(g[2]) : null;
     if (!start) { out.clips[g[0]] = null; return; }
@@ -59,7 +64,7 @@ const PAGE_CODE = `(function (themeId, groups) {
         if ((style.overflow === "hidden" || style.overflowY === "hidden") && el.scrollHeight > el.clientHeight + 1 && el.clientHeight > 0) { out.clipped.push(["text clipped", label]); }
         if (style.textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1) { out.clipped.push(["ellipsis cut", label]); }
       });
-      ["leave-tile__value", "leave-tile__meta", "leave-tile__warn", "leave-tile__label", "ai-card__text"].forEach(function (cls) {
+      ["leave-tile__value", "leave-tile__meta", "leave-tile__warn", "leave-tile__label", "ai-card__text", "walk-status__note", "walk-chance__trend", "walk-sensors__why", "walk-open-row__sub", "walk-status__state", "walk-status__distance", "sample-walk-map__chip"].forEach(function (cls) {
         Array.prototype.slice.call(node.getElementsByClassName(cls)).forEach(function (el) {
           var fg = parse(getComputedStyle(el).color);
           if (!fg) { return; }
@@ -80,7 +85,7 @@ export default async function (h) {
   await h.open(h.config.guide, { width, height: 900, dark: false, settle: 900 });
   await h.eval("document.body.scrollWidth");
   for (const theme of ["light", "dark"]) {
-    const report = await h.eval(`${PAGE_CODE}("catch-sample-${theme}", ${JSON.stringify(GROUPS)})`);
+    const report = await h.eval(`${PAGE_CODE}("${theme}", ${JSON.stringify(GROUPS)})`);
     const clips = report.clips;
     for (const [name] of GROUPS) {
       const clip = clips[name];

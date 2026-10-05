@@ -93,7 +93,8 @@ def test_the_page_and_copy_strings_of_the_card_are_safe_too():
         assert not contains_guarantee(text) and not contains_unsafe(text), text
         for phrase in EXTRA_BANNED:
             assert phrase not in text.lower(), (text, phrase)
-        assert not re.search(r"\d", text.replace("{e}", "").replace("{n}", "").replace("{w}", "").replace("1 min", "")), text
+        plain = text.replace(chr(92) + "u00a0", " ")  # the escape for a no-break space holds a zero
+        assert not re.search(r"\d", plain.replace("{e}", "").replace("{n}", "").replace("{w}", "").replace("1 min", "")), text
 
 
 def test_a_rendered_card_is_safe_for_every_variant():

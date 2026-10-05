@@ -409,7 +409,7 @@ def test_back_keeps_the_confirm_while_polling_and_skips_it_after_no():
     # Page C is a view of the live screen: Back from it uses the live-screen history entry, so it returns to the overview.
     assert 'pushScreen("reroute")' not in HTML
     # Page B opened from Page C returns to Page C without a confirm.
-    assert 'return top === "newjourney" || top === "arrivals";' in HTML
+    assert 'return top === "newjourney" || top === "arrivals" || top === "walk";' in HTML
 
 
 def test_polls_while_page_c_is_open_ask_the_server_to_skip_the_reroute_evaluation():
