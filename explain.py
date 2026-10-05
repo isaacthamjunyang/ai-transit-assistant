@@ -2,7 +2,7 @@
 
 The text has exactly three sentences. Python computes every number and writes sentences one and two from a fixed
 template, in the same poll response and from the same numbers as the arrival tile and the catch card, for the bus
-the tile shows. The model's only job is the clause that completes "It is advisable to ...", and Python falls back
+the tile shows. Sentence two is about the walk and the time to leave (the leave-by clock). The model's only job is the clause that completes "It is advisable to ...", and Python falls back
 to a fixed clause for the action whenever the model is missing, slow, or rejected. OpenAI receives the action and
 a reason code from a closed set and nothing else: no minutes, no probability, no range, no seconds, no
 coordinates, no stops.
@@ -12,13 +12,16 @@ import json
 import math
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from journey import parse_journey_time
+from leave_now import LEAVE_NOW_MARGIN_S
 from lta_static import ENV_PATH, _read_env_value
 from config import WALK_SPEED_DEFAULT_MPS
 from nearby import haversine_m
-from walk_speed import walk_minutes
+from walk_speed import SOURCES, walk_minutes
+
+SGT = timezone(timedelta(hours=8))
 
 DEFAULT_MODEL = "gpt-4o-mini"
 TEMPERATURE = 0.2
@@ -26,7 +29,8 @@ TIMEOUT_SECONDS = 3
 
 # What the model may see: a reason code and the action. No number at all.
 FACT_SHEET_KEYS = ("reason_code", "chosen_action")
-REASON_CODES = ("LOCATION_UNCERTAIN", "UNLIKELY", "MAY_NOT_REACH", "TIME_TO_SPARE")
+# The sentence-two variant as a code, chosen in this first-match order (reason_code_for).
+REASON_CODES = ("UNLIKELY", "LOCATION_UNCERTAIN", "LEAVE_NOW", "LEAVE_BY")
 ACTIONS = ("wait", "leave_now", "switch_route", "do_not_rely")
 ALLOWED_QUALITY = ("live", "schedule", "location uncertain")
 RESPONSE_FIELDS = ("advice",)
@@ -89,8 +93,8 @@ _SECONDS_WORDS = re.compile(r"\b(sec|secs|second|seconds)\b", re.IGNORECASE)
 
 SYSTEM_PROMPT = (
     "You finish one sentence for a bus app: \"It is advisable to ...\". "
-    "You receive reason_code and chosen_action. reason_code is one of LOCATION_UNCERTAIN, UNLIKELY, "
-    "MAY_NOT_REACH, TIME_TO_SPARE; you never see a number. "
+    "You receive reason_code and chosen_action. reason_code is one of UNLIKELY, LOCATION_UNCERTAIN, "
+    "LEAVE_NOW, LEAVE_BY; you never see a number. "
     "Return JSON with one field, advice: the words that complete the sentence, in lower case, at most 15 words, "
     "with no digits, no full stop, and no word about seconds. "
     "The advice must agree with chosen_action: wait means wait for the leave-by alert, leave_now means leave now "
@@ -169,7 +173,7 @@ def chosen_action(
         action = "switch_route"
     elif data_quality in ("stale", "unavailable") or range_high < 40:
         action = "do_not_rely"
-    elif leave_by_seconds <= 60:
+    elif leave_by_seconds <= LEAVE_NOW_MARGIN_S:
         action = "leave_now"
     else:
         action = "wait"
@@ -177,13 +181,13 @@ def chosen_action(
 
 
 def seconds_until_leave_by(leave_by_iso: str | None, now: datetime) -> float:
-    """A missing leave-by stays above 60 so the action else-branch is wait."""
+    """A missing leave-by stays above the leave-now margin so the action else-branch is wait."""
     if not isinstance(leave_by_iso, str) or not leave_by_iso.strip():
-        return 61
+        return LEAVE_NOW_MARGIN_S + 1
     try:
         leave_by = parse_journey_time(leave_by_iso)
     except ValueError:
-        return 61
+        return LEAVE_NOW_MARGIN_S + 1
     return (leave_by - now).total_seconds()
 
 
@@ -213,9 +217,8 @@ def overview_walk_minutes(distance_m: float, walk_speed_m_s: float = WALK_SPEED_
     return walk_minutes(distance_m, walk_speed_m_s, "display")
 
 
-def boarding_walk_minutes(
-    cache, stop_code: str, user_lat: float | None, user_lon: float | None, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS
-) -> int | None:
+def boarding_distance_m(cache, stop_code: str, user_lat: float | None, user_lon: float | None) -> float | None:
+    """Straight-line metres from the user to the boarding stop, the distance the probability uses."""
     if cache is None or user_lat is None or user_lon is None:
         return None
     stop = cache.stop_by_code(stop_code)
@@ -225,9 +228,14 @@ def boarding_walk_minutes(
     lon = stop.get("Longitude")
     if type(lat) not in (int, float) or type(lon) not in (int, float):
         return None
-    return overview_walk_minutes(
-        haversine_m(float(user_lat), float(user_lon), float(lat), float(lon)), walk_speed_m_s
-    )
+    return haversine_m(float(user_lat), float(user_lon), float(lat), float(lon))
+
+
+def boarding_walk_minutes(
+    cache, stop_code: str, user_lat: float | None, user_lon: float | None, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS
+) -> int | None:
+    distance = boarding_distance_m(cache, stop_code, user_lat, user_lon)
+    return None if distance is None else overview_walk_minutes(distance, walk_speed_m_s)
 
 
 def minutes_text(count: int) -> str:
@@ -235,64 +243,144 @@ def minutes_text(count: int) -> str:
 
 
 # Every field of the poll's explanation pack that the page reads. The page keeps a MIRROR of tile_minutes,
-# sentence_one and sentence_two (static/index.html: explanationMinutes, explanationLead) so it can redraw sentences
-# one and two every second from the tile's own minutes. Any change to the templates or the variant rules here must
-# change that mirror too. Tests that pin the two: tests/test_explanation_consistency.py
-# (test_the_page_mirror_equals_python_on_the_boundary_grid, ..._on_3000_seeded_random_cases,
-# ..._on_every_minute_and_walk_pair_in_range, test_the_page_reads_exactly_the_pack_fields_the_server_lists) and tests/test_walk_speed_page.py
-# (test_real_poll_payloads_render_the_same_sentences_as_the_pack).
+# sentence_one, sentence_two and format_clock/format_distance (static/index.html: explanationMinutes, explanationLead,
+# leaveClockText, ...) so it can redraw the card and the Leave by tile every second. Any change to the templates or
+# the variant rules here must change that mirror too. Tests that pin them: tests/test_explanation_consistency.py
+# (boundary grid, seeded random test, drift tests) and tests/test_walk_speed_page.py.
 PAGE_PACK_FIELDS = (
-    "snapshot", "fact_sheet", "text", "clause", "action", "arrival_time", "walk_minutes", "band", "uncertain",
+    "snapshot", "fact_sheet", "text", "clause", "clauses", "action", "arrival_time", "leave_by", "distance_m",
+    "walk_minutes", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "band", "uncertain",
     "call", "pending",
 )
+# Every key of the pack: the page's fields plus reason_code (the model's code, kept for the tests).
+PACK_KEYS = PAGE_PACK_FIELDS + ("reason_code",)
+
+# Sentence two. {distance}, {kmh} and {time} are the only placeholders; the page mirror copies these strings.
+S2_UNLIKELY = "You are {distance} from the stop, but catching this bus is unlikely."
+S2_LEAVE_BY = {
+    "measured": "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave by {time}.",
+    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, "
+                  "so you should leave by {time}.",
+    "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, "
+               "you should leave by {time}.",
+}
+S2_LEAVE_NOW = {
+    "measured": "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave now.",
+    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, "
+                  "so you should leave now.",
+    "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, "
+               "you should leave now.",
+}
+S2_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe."
+S2_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off."
+S1_ARRIVING_NOW = "The bus is arriving now."
 
 
-def build_numbers(*, bus_minutes: int, walk_minutes: int, chosen_action: str) -> dict:
+def format_distance(metres: float) -> str:
+    """static/format-distance.js formatDistance: whole metres under 1000, else km to one decimal. Non-breaking space."""
+    rounded = round_half_up(float(metres))
+    if abs(rounded) < 1000:
+        return f"{rounded} m"
+    text = f"{round_half_up(rounded / 100) / 10:.1f}"
+    if text.endswith(".0"):
+        text = text[:-2]
+    return f"{text} km"
+
+
+def format_kmh(speed_m_s: float) -> str:
+    """The speed used in km/h to one decimal, like the Walking pace line."""
+    return f"{speed_m_s * 3.6:.1f}"
+
+
+def format_clock(moment: datetime, now: datetime) -> str:
+    """The page's formatClock(iso, true): 12-hour Singapore clock, "(tomorrow)" when it is not today."""
+    local = moment.astimezone(SGT)
+    hour = local.hour % 12 or 12
+    text = f"{hour}:{local.minute:02d} {'AM' if local.hour < 12 else 'PM'}"
+    if local.date() != now.astimezone(SGT).date():
+        text += " (tomorrow)"
+    return text
+
+
+def speed_kind(source: str) -> str:
+    """gps and cadence are measured; remembered and everything else (default) are the other two wordings."""
+    if source in ("gps", "cadence"):
+        return "measured"
+    return "remembered" if source == "remembered" else "default"
+
+
+def leave_mode(leave_seconds: float, threshold: float = LEAVE_NOW_MARGIN_S) -> str:
+    """"now" when leave-by is the threshold or less away (or passed), otherwise "by". The one rule for the tile,
+    sentence two, sentence three and the pace chip."""
+    return "now" if leave_seconds <= threshold else "by"
+
+
+def build_numbers(
+    *,
+    bus_minutes: int,
+    walk_minutes: int,
+    chosen_action: str,
+    distance_m: float,
+    walk_speed_used: float,
+    walk_speed_source: str,
+    leave_by: str,
+    now: datetime,
+) -> dict:
     """The numbers of sentences one and two. They stay on the server and are never sent to the model."""
-    numbers = {
+    for value in (bus_minutes, walk_minutes):
+        if type(value) is not int:
+            raise ValueError("Explanation numbers must be integers.")
+    if chosen_action not in ACTIONS:
+        raise ValueError("Explanation action is invalid.")
+    for value in (distance_m, walk_speed_used):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise ValueError("Explanation numbers must be finite.")
+    if distance_m < 0 or walk_speed_used <= 0:
+        raise ValueError("Explanation numbers must be positive.")
+    leave_at = parse_journey_time(leave_by)
+    return {
         "bus_minutes": bus_minutes,
         "walk_minutes": walk_minutes,
-        "minutes_before_leaving": bus_minutes - walk_minutes,
         "chosen_action": chosen_action,
+        "distance_m": float(distance_m),
+        "walk_speed_used": float(walk_speed_used),
+        "walk_speed_source": walk_speed_source if walk_speed_source in SOURCES else "default",
+        "leave_seconds": (leave_at - now).total_seconds(),
+        "time_text": format_clock(leave_at, now),
     }
-    for key in ("bus_minutes", "walk_minutes", "minutes_before_leaving"):
-        if type(numbers[key]) is not int:
-            raise ValueError("Explanation numbers must be integers.")
-    if numbers["chosen_action"] not in ACTIONS:
-        raise ValueError("Explanation action is invalid.")
-    return numbers
 
 
 def sentence_one(bus_minutes: int) -> str:
     if bus_minutes < 1:
-        return "The bus is arriving now."
+        return S1_ARRIVING_NOW
     return f"The bus is {minutes_text(bus_minutes)} away."
 
 
 def sentence_two(numbers: dict, *, band: str | None, uncertain: bool) -> str:
-    """First match wins: location uncertain, low band or switch or do-not-rely, may not reach, then the default."""
-    e = numbers["bus_minutes"]
-    w = numbers["walk_minutes"]
-    t = numbers["minutes_before_leaving"]
-    lead = f"Given the walking time is {minutes_text(w)}"
-    if uncertain:
-        return "Your location is uncertain, so the walking time may be off."
+    """First match wins: unlikely (low band, switch or do-not-rely), then the leave-by or leave-now sentence for the
+    speed source, with the uncertain-location sentence added after it."""
     if band == "low" or numbers["chosen_action"] in ("switch_route", "do_not_rely"):
-        return f"{lead}, catching this bus is unlikely."
-    if w >= e:
-        return f"{lead}, you may not reach the stop before the bus."
-    return f"Given the walking time is only {minutes_text(w)}, you have {minutes_text(t)} to get to the bus stop."
+        return S2_UNLIKELY.replace("{distance}", format_distance(numbers["distance_m"]))
+    now = leave_mode(numbers["leave_seconds"]) == "now"
+    kind = speed_kind(numbers["walk_speed_source"])
+    text = (S2_LEAVE_NOW if now else S2_LEAVE_BY)[kind]
+    text = (
+        text.replace("{distance}", format_distance(numbers["distance_m"]))
+        .replace("{kmh}", format_kmh(numbers["walk_speed_used"]))
+        .replace("{time}", numbers["time_text"])
+    )
+    if uncertain:
+        text += " " + (S2_UNCERTAIN_NOW if now else S2_UNCERTAIN_BY)
+    return text
 
 
 def reason_code_for(numbers: dict, *, band: str | None, uncertain: bool) -> str:
     """The sentence-two variant as a code: the only thing about the numbers the model is told."""
-    if uncertain:
-        return "LOCATION_UNCERTAIN"
     if band == "low" or numbers["chosen_action"] in ("switch_route", "do_not_rely"):
         return "UNLIKELY"
-    if numbers["walk_minutes"] >= numbers["bus_minutes"]:
-        return "MAY_NOT_REACH"
-    return "TIME_TO_SPARE"
+    if uncertain:
+        return "LOCATION_UNCERTAIN"
+    return "LEAVE_NOW" if leave_mode(numbers["leave_seconds"]) == "now" else "LEAVE_BY"
 
 
 def lead_text(numbers: dict, *, band: str | None, uncertain: bool) -> str:
@@ -319,6 +407,8 @@ def advice_is_valid(advice: object, action: str) -> bool:
     if not text or text != advice:
         return False
     if re.search(r"\d", text) or text.endswith(".") or text != text.lower():
+        return False
+    if re.search(r"[:\r\n\t]", text):  # no colon (so no clock time) and no line break or tab
         return False
     if len(text.split()) > MAX_ADVICE_WORDS or _SECONDS_WORDS.search(text):
         return False
@@ -530,6 +620,7 @@ def build_poll_explanation(
     in_flight: bool,
     reroute_fired: bool,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    walk_speed_source: str = "default",
 ) -> dict | None:
     """The card's text for this poll, plus whether a model clause is needed for the action.
 
@@ -538,7 +629,9 @@ def build_poll_explanation(
     of the better bus. Sentences one and two use this poll's numbers. Only the clause is cached, keyed by the
     action: it is reused while the action is unchanged and replaced by the fixed clause until the model's clause
     for a new action arrives. The pack carries what the page needs to redraw sentences one and two from the
-    tile's own minutes every second (arrival time, walk minutes, band, uncertain flag), and the snapshot key.
+    tile's own minutes every second (arrival time, walk minutes, band, uncertain flag), and the snapshot key. It
+    also carries what the page needs to flip leave-by to leave-now between polls: the leave-by time, the distance,
+    the speed used and its source, the leave-now threshold and both fixed clauses. None of it goes to the model.
     """
     bus = _scored_journey_bus(payload.get("buses") or [])
     chance = bus.get("probability") if isinstance(bus, dict) else None
@@ -548,22 +641,40 @@ def build_poll_explanation(
     high = chance.get("range_high")
     band = chance.get("band")
     arrival = bus.get("arrival_time")
-    walk = boarding_walk_minutes(cache, stop_code, user_lat, user_lon, walk_speed_m_s)
+    distance = boarding_distance_m(cache, stop_code, user_lat, user_lon)
+    walk = None if distance is None else overview_walk_minutes(distance, walk_speed_m_s)
     bus_minutes = tile_minutes(arrival, now)
+    leave_by = payload.get("leave_by")
     if (
         bus_minutes is None
         or type(walk) is not int
         or type(high) is not int
         or not isinstance(quality, str)
+        or not isinstance(leave_by, str)
+        or not leave_by.strip()
     ):
         return None
+    try:
+        parse_journey_time(leave_by)
+    except ValueError:
+        return None
+    distance = round(distance, 1)
     action = chosen_action(
         reroute_fired_this_poll=reroute_fired,
         data_quality=quality,
         range_high=high,
         leave_by_seconds=seconds_until_leave_by(payload.get("leave_by"), now),
     )
-    numbers = build_numbers(bus_minutes=bus_minutes, walk_minutes=walk, chosen_action=action)
+    numbers = build_numbers(
+        bus_minutes=bus_minutes,
+        walk_minutes=walk,
+        chosen_action=action,
+        distance_m=distance,
+        walk_speed_used=walk_speed_m_s,
+        walk_speed_source=walk_speed_source,
+        leave_by=leave_by,
+        now=now,
+    )
     band = band if band in ("ok", "mid", "low") else None
     uncertain = quality == "location uncertain"
     reason = reason_code_for(numbers, band=band, uncertain=uncertain)
@@ -576,10 +687,16 @@ def build_poll_explanation(
         "fact_sheet": sheet,
         "text": compose_text(numbers, advice, band=band, uncertain=uncertain),
         "clause": clause_text(advice),
+        "clauses": {key: clause_text(ACTION_ADVICE[key]) for key in ("wait", "leave_now")},
         "action": action,
         "reason_code": reason,
         "arrival_time": arrival,
+        "leave_by": leave_by,
+        "distance_m": distance,
         "walk_minutes": walk,
+        "walk_speed_used": numbers["walk_speed_used"],
+        "walk_speed_source": numbers["walk_speed_source"],
+        "leave_now_threshold_s": LEAVE_NOW_MARGIN_S,
         "band": band,
         "uncertain": uncertain,
         "call": needs_model and not in_flight,

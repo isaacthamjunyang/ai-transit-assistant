@@ -195,24 +195,29 @@ def test_tile_clause_and_notification_agree_with_the_python_action(action, case)
 
 def test_the_tile_reads_the_action_and_hides_for_switch_and_do_not_rely():
     tiles = _function("renderLeaveTiles")
-    assert 'action === "leave_now"' in tiles and "LEAVE_NOW_TEXT" in tiles
-    assert 'action === "wait"' in tiles and "WAIT_ALERT_TEXT" in tiles
+    assert 'action === "leave_now"' in tiles and 'action === "wait"' in tiles and "leaveTileView(" in tiles
     assert 'leaveTile.hidden = action === "switch_route" || action === "do_not_rely"' in tiles
     assert "formatClock(lastSuccess.leave_by" not in tiles
-    assert 'var LEAVE_NOW_TEXT = "Leave now";' in HTML and 'var WAIT_ALERT_TEXT = "Wait for Leave By Alert";' in HTML
-    assert '"Wait for Leave By Alert"' in COPY and '"Leave now"' in COPY
+    assert 'var LEAVE_NOW_TEXT = "Leave now";' in HTML and "WAIT_ALERT_TEXT" not in HTML
+    assert "Wait for Leave By Alert" not in HTML + COPY and '"Leave now"' in COPY
     assert 'id="tile-leave-label" class="leave-tile__label">Leave by<' in HTML  # the label stays
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 def test_the_page_applies_the_same_sixty_second_rule_between_polls():
-    script = _function("trackedAction") + "\n" + (
+    script = _function("leaveMode") + "\n" + _function("localAction") + "\n" + _function("trackedAction") + "\n" + (
         "var now = Date.now(); var iso = function (s) { return new Date(now + s * 1000).toISOString(); };"
-        "console.log(JSON.stringify({wait: trackedAction({chosen_action: 'wait', leave_by: iso(300)}),"
-        " edge: trackedAction({chosen_action: 'wait', leave_by: iso(55)}), leave: trackedAction({chosen_action: 'leave_now'}),"
-        " switchRoute: trackedAction({chosen_action: 'switch_route', leave_by: iso(5)}), none: trackedAction({})}));"
+        "var T = 60; var out = {};"
+        "[300, 61, 60, 59, 55, 0, -1].forEach(function (s) { out['s' + s] = trackedAction({chosen_action: 'wait', leave_by: iso(s), leave_now_threshold_s: T}); });"
+        "out.leave = trackedAction({chosen_action: 'leave_now'});"
+        "out.switchRoute = trackedAction({chosen_action: 'switch_route', leave_by: iso(5), leave_now_threshold_s: T});"
+        "out.none = trackedAction({});"
+        "out.noThreshold = trackedAction({chosen_action: 'wait', leave_by: iso(5)});"
+        "console.log(JSON.stringify(out));"
     )
-    assert _run_node(script) == {"wait": "wait", "edge": "leave_now", "leave": "leave_now", "switchRoute": "switch_route", "none": None}
+    got = _run_node(script)
+    assert got == {"s300": "wait", "s61": "wait", "s60": "leave_now", "s59": "leave_now", "s55": "leave_now", "s0": "leave_now",
+                   "s-1": "leave_now", "leave": "leave_now", "switchRoute": "switch_route", "none": None, "noThreshold": "wait"}
 
 
 def test_the_pace_chip_shows_only_for_leave_now():

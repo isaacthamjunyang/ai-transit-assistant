@@ -10,7 +10,8 @@ import arrivals
 import demo
 from arrivals import _with_probability
 from demo import SCENARIOS
-from journey import BOARDING_BUFFER_S, SLOW_WALK_M_S, leave_by_for_buses, leave_by_time
+from config import LEAVE_MARGIN_SECONDS, WALK_SPEED_DEFAULT_MPS
+from journey import leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
 from explain import ACTION_ADVICE
 from lta_static import StopAndRouteCache
@@ -492,10 +493,9 @@ def test_leave_by_stays_on_the_active_stop_distance():
     eta = NOW + timedelta(minutes=8)
     leg_1 = leave_by_time(eta, 80)
     leg_2 = leave_by_time(eta, 40)
-    assert leg_1 == eta - timedelta(seconds=80 / SLOW_WALK_M_S + BOARDING_BUFFER_S)
-    assert leg_2 == eta - timedelta(seconds=40 / SLOW_WALK_M_S + BOARDING_BUFFER_S)
-    assert SLOW_WALK_M_S == 1.1
-    assert BOARDING_BUFFER_S == 45
+    assert leg_1 == eta - timedelta(seconds=80 / WALK_SPEED_DEFAULT_MPS + LEAVE_MARGIN_SECONDS)
+    assert leg_2 == eta - timedelta(seconds=40 / WALK_SPEED_DEFAULT_MPS + LEAVE_MARGIN_SECONDS)
+    assert LEAVE_MARGIN_SECONDS == 135
     assert leg_1 != leg_2
 
 

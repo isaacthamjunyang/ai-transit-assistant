@@ -12,6 +12,9 @@ RUSH_MARGIN_MINUTES = 10
 PROB_TIE_POINTS = 5
 MIN_REAL_CHANCE_RANGE_HIGH = 40
 
+# leave_by = bus ETA - walk time - this margin. 135 is the 45 s boarding buffer plus the 90 s sigmoid midpoint.
+LEAVE_MARGIN_SECONDS = 135   # chosen by me: at leave_by the app's own catch chance is about 50 percent.
+
 UNANSWERED_END_MINUTES = 10
 MAX_MONITOR_MINUTES = 60
 

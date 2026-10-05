@@ -115,7 +115,7 @@ def _cache(services: list[dict] | None = None, alternate: bool = False) -> StopA
 
 def _sheet(**overrides) -> dict:
     fact = {
-        "reason_code": "TIME_TO_SPARE",
+        "reason_code": "LEAVE_BY",
         "chosen_action": "wait",
     }
     fact.update(overrides)

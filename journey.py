@@ -7,13 +7,8 @@ clock. This module does not notify, reroute, or call LTA, OneMap, or OpenAI.
 import math
 from datetime import datetime, timedelta, timezone
 
-from catch_heuristic import (
-    BOARDING_BUFFER_S,
-    MISSED_AFTER_S,
-    SLOW_WALK_M_S,
-    headway_seconds,
-)
-from config import WALK_SPEED_DEFAULT_MPS
+from catch_heuristic import MISSED_AFTER_S, headway_seconds
+from config import LEAVE_MARGIN_SECONDS, WALK_SPEED_DEFAULT_MPS
 from destination_stops import _service_record, list_destination_stops
 from lta_static import StopAndRouteCache
 from nearby import haversine_m
@@ -155,13 +150,14 @@ def resolve_leave_by(
     arrival = _as_sgt(eta)
     if (arrival - moment).total_seconds() < -MISSED_AFTER_S:
         return None
-    return leave_by_time(arrival, distance_m, range_speeds(walk_speed_m_s)[1])
+    return leave_by_time(arrival, distance_m, walk_speed_m_s)
 
 
-def leave_by_time(eta: datetime, distance_m: float, slow_speed_m_s: float = SLOW_WALK_M_S) -> datetime:
-    """leave_by = ETA - slow_walk - 45s, with slow_walk = distance / the slow end (1.1 m/s at the default)."""
-    slow_walk_s = distance_m / slow_speed_m_s
-    return eta - timedelta(seconds=slow_walk_s + BOARDING_BUFFER_S)
+def leave_by_time(eta: datetime, distance_m: float, speed_m_s: float = WALK_SPEED_DEFAULT_MPS) -> datetime:
+    """leave_by = ETA - walk time - LEAVE_MARGIN_SECONDS. The walk time is raw seconds at the speed used (the
+    probability's point walk). The one function for the live poll, the pinned bus, /api/journey and reroute rows."""
+    walk_s = distance_m / speed_m_s
+    return eta - timedelta(seconds=walk_s + LEAVE_MARGIN_SECONDS)
 
 
 def leave_by_for_buses(

@@ -28,6 +28,7 @@ from explain import (
 )
 from catch_heuristic import normalize_location_timestamp
 from destination_stops import list_destination_stops
+from leave_now import LEAVE_NOW_MARGIN_S
 from journey import build_journey, bus_arrival_window, miss_line, parse_journey_time, planning_warning
 from journey_plan import plan_journey
 from lta_static import load_static_data
@@ -298,6 +299,7 @@ def arrivals(
         return JSONResponse(status_code=503, content=content)
     payload.update(response_fields(speed, speed_source))
     payload["near_stop"] = _near_stop(cache, stop_code, lat, lon)
+    payload["leave_now_threshold_s"] = LEAVE_NOW_MARGIN_S
     if demo.apply_stale(payload, moment):
         return payload
     if demo.arrival_is_simulated():
@@ -381,6 +383,7 @@ def arrivals(
             in_flight=explanation_in_flight == 1,
             reroute_fired=fired,
             walk_speed_m_s=speed,
+            walk_speed_source=speed_source,
         )
         if pack is not None:
             payload["explanation"] = pack

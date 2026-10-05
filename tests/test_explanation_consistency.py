@@ -1,8 +1,10 @@
 """The AI card cannot disagree with the arrival tile: one tracked bus, one rounding, one snapshot per poll.
 
-Python writes sentences one and two in the poll response. The page redraws them every second from the tile's own
-minutes with a small mirror of the Python templates. These tests pin the mirror to Python, pin the minutes to the
-tile's minutes (etaParts), and pin the late-reply rule in the real page (Edge).
+Python writes sentences one and two in the poll response. The page redraws them every second with a small mirror of
+the Python templates (explanationLead, leaveMode, leaveClockText, formatDistance). These tests pin the mirror to
+Python on a boundary grid, on every minute from 0 to 90, and on seeded random cases (distance, speed source, km/h,
+leave-by time, leave now, uncertain location), pin the minutes to the tile's minutes (etaParts), and pin the late-reply
+rule in the real page (Edge). A Python-only branch or a reworded string makes one of them fail.
 """
 
 import json
@@ -17,13 +19,15 @@ from explain import build_numbers, lead_text, tile_minutes
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+FORMAT_DISTANCE = (ROOT / "static" / "format-distance.js").read_text(encoding="utf-8")
 SGT = timezone(timedelta(hours=8))
 NOW = datetime(2026, 10, 5, 9, 0, 0, tzinfo=SGT)
 NODE = shutil.which("node")
 ACTIONS = ("wait", "leave_now", "switch_route", "do_not_rely")
-CASES = [(e, w, a, band, unc) for e in (0, 1, 2, 10, 22, 40) for w in (1, 3, 12) for a in ACTIONS
-         for band in ("ok", "mid", "low", None) for unc in (False, True)]
+BANDS = ("ok", "mid", "low", None)
+SOURCES = ("gps", "cadence", "remembered", "default", "unexpected")
 OFFSETS = [-40, -1, 0, 29, 30, 31, 45, 59, 60, 89, 90, 91, 119, 120, 149, 150, 599, 600, 629, 630, 1319, 1320, 2400]
+THRESHOLD = 60
 
 
 def _between(text: str, start: str, end: str) -> str:
@@ -37,7 +41,8 @@ def _mirror_source() -> str:
     page = _between(INDEX, "var EXPL_ARRIVING_NOW", "// Redraws the card from the poll on screen")
     tile = _between(INDEX, "var ARRIVING_IN_TEXT", "// The muted line under the heading")
     fill = _between(INDEX, "function fillText(template, values) {", "// \"5 min\", or \"under 1 min\"")
-    return fill + "\n" + tile + "\n" + page
+    parts = _between(INDEX, "function singaporeParts(date) {", "function pad2(value)")
+    return FORMAT_DISTANCE + "\n" + parts + "\n" + fill + "\n" + tile + "\n" + page + '\nvar LEAVE_NOW_TEXT = "Leave now";\n'
 
 
 needs_node = pytest.mark.skipif(NODE is None, reason="node is not installed, so the mirror parity tests did not run")
@@ -49,25 +54,47 @@ def _run_node(program: str):
     with tempfile.TemporaryDirectory() as folder:  # large case lists do not fit on a command line
         script = Path(folder) / "program.js"
         script.write_text(program, encoding="utf-8")
-        done = subprocess.run([NODE, str(script)], capture_output=True, text=True, check=False)
+        done = subprocess.run([NODE, str(script)], capture_output=True, text=True, encoding="utf-8", check=False)
     assert done.returncode == 0, done.stderr[-800:]
     return json.loads(done.stdout)
 
 
-@needs_node
-def test_the_page_mirror_of_sentences_one_and_two_equals_python_for_every_variant():
+# ---- cases: one dict per sentence-one-and-two variant
+
+def _case(e=10, w=3, action="wait", band="ok", unc=False, leave_in=600, source="gps", speed=1.25, distance=300.0,
+          now=NOW):
+    return {"e": e, "w": w, "action": action, "band": band, "unc": unc, "leave_in": leave_in, "source": source,
+            "speed": speed, "distance": distance, "now": now.isoformat()}
+
+
+def _python_lead(c) -> str:
+    now = datetime.fromisoformat(c["now"])
+    leave_by = (now + timedelta(seconds=c["leave_in"])).isoformat()
+    numbers = build_numbers(bus_minutes=c["e"], walk_minutes=c["w"], chosen_action=c["action"], distance_m=c["distance"],
+                            walk_speed_used=c["speed"], walk_speed_source=c["source"], leave_by=leave_by, now=now)
+    return lead_text(numbers, band=c["band"], uncertain=c["unc"])
+
+
+def _python_leads(cases):
+    return [_python_lead(c) for c in cases]
+
+
+def _mirror_cases(cases):
     program = (
         _mirror_source() + "\nvar out = [];\n"
-        f"var cases = {json.dumps(CASES)};\n"
+        f"var cases = {json.dumps(cases)};\n"
         "cases.forEach(function (c) {\n"
-        "  out.push(explanationLead({walk_minutes: c[1], band: c[3], uncertain: c[4], action: c[2]}, c[0]));\n"
+        "  var nowMs = Date.parse(c.now);\n"
+        "  var pack = {walk_minutes: c.w, band: c.band, uncertain: c.unc, action: c.action,\n"
+        "    leave_by: new Date(nowMs + c.leave_in * 1000).toISOString(), leave_now_threshold_s: " + str(THRESHOLD) + ",\n"
+        "    distance_m: c.distance, walk_speed_used: c.speed, walk_speed_source: c.source};\n"
+        "  out.push(explanationLead(pack, c.e, nowMs));\n"
         "});\nconsole.log(JSON.stringify(out));"
     )
-    got = _run_node(program)
-    expected = [lead_text(build_numbers(bus_minutes=e, walk_minutes=w, chosen_action=a), band=band, uncertain=unc)
-                for e, w, a, band, unc in CASES]
-    assert got == expected
+    return _run_node(program)
 
+
+# ---- the minutes are the tile's minutes
 
 @needs_node
 def test_the_page_minutes_are_the_servers_tile_minutes_and_the_tiles_minutes():
@@ -110,11 +137,12 @@ def test_the_text_between_polls_follows_the_tile_not_the_poll_time():
 
 
 def test_the_mirror_exists_in_the_page_and_the_card_redraws_every_second():
-    assert "function explanationLead(pack, e)" in INDEX and "function renderExplanationNow()" in INDEX
+    assert "function explanationLead(pack, e, nowMs)" in INDEX and "function renderExplanationNow()" in INDEX
     tick = _between(INDEX, "function refreshDisplay(generation)", "function clearPrimaryBus")
     assert "renderExplanationNow();" in tick
     now = _between(INDEX, "function renderExplanationNow()", "function resetExplanationState()")
     assert "featuredBus(lastSuccess.buses)" in now  # the tile's own bus
+    assert "leaveMode(pack.leave_by, pack.leave_now_threshold_s, nowMs)" in now  # the one leave rule, the tile's clock
 
 
 def test_page_c_explanation_is_unaffected():
@@ -130,62 +158,95 @@ def test_page_c_explanation_is_unaffected():
     assert "snapshot" not in _between(INDEX, "function buildOptionExplanation(row)", "function requestOptionExplanation")
 
 
-# ---- the mirror against Python on a boundary grid and on seeded random cases
+# ---- the mirror against Python on a boundary grid, on every minute, and on seeded random cases
 
-def _mirror_cases(cases):
-    program = (
-        _mirror_source() + "\nvar out = [];\n"
-        f"var cases = {json.dumps(cases)};\n"
-        "cases.forEach(function (c) {\n"
-        "  out.push(explanationLead({walk_minutes: c[1], band: c[3], uncertain: c[4], action: c[2]}, c[0]));\n"
-        "});\nconsole.log(JSON.stringify(out));"
-    )
-    return _run_node(program)
-
-
-def _python_leads(cases):
-    return [lead_text(build_numbers(bus_minutes=e, walk_minutes=w, chosen_action=a), band=band, uncertain=unc)
-            for e, w, a, band, unc in cases]
+LEAVE_IN = [-600, -1, 0, 1, 59, 60, 61, 62, 119, 120, 600, 36000]  # 61 / 60 / 59 / 0 / -1 around the threshold
 
 
 def _boundary_cases():
-    minutes = sorted({0, 1, 2, 3, 14, 15, 16, 29, 30, 31, 59, 60} | {10, 22, 40})
-    walks_base = {0, 1, 2, 3, 14, 15, 16} | {12}
     cases = []
-    for e in minutes:
-        for w in sorted(walks_base | {e, max(0, e - 1), e + 1}):
-            for action in ACTIONS:
-                for band in ("ok", "mid", "low", None):
-                    for unc in (False, True):
-                        cases.append((e, w, action, band, unc))
+    for e in (0, 1, 2, 10):
+        for leave_in in LEAVE_IN:
+            for source in SOURCES:
+                for action in ACTIONS:
+                    for band in BANDS:
+                        for unc in (False, True):
+                            cases.append(_case(e=e, action=action, band=band, unc=unc, leave_in=leave_in, source=source))
+    distances = [0, 0.4, 0.5, 1, 49.5, 99.9, 300, 999.4, 999.5, 1000, 1049, 1050, 1249, 1250, 1949.5, 9999.9, 25000]
+    for distance in distances:
+        for leave_in in (61, 60):
+            for source in ("gps", "remembered", "default"):
+                for unc in (False, True):
+                    for band in ("ok", "low"):
+                        cases.append(_case(distance=distance, leave_in=leave_in, source=source, unc=unc, band=band))
+    for hundredths in range(50, 141):  # every speed from 0.50 to 1.40 m/s: the km/h text
+        for source in SOURCES:
+            for leave_in in (600, 0):
+                cases.append(_case(speed=hundredths / 100, source=source, leave_in=leave_in))
+    midnight = datetime(2026, 10, 5, 23, 59, 30, tzinfo=SGT)
+    after = datetime(2026, 10, 6, 0, 0, 30, tzinfo=SGT)
+    noon = datetime(2026, 10, 5, 12, 0, 0, tzinfo=SGT)
+    for now in (NOW, midnight, after, noon):  # AM, PM, 12 AM, 12 PM, "(tomorrow)"
+        for leave_in in (61, 90, 900, 3600, 15000, 43200, 50000, 90000):
+            for unc in (False, True):
+                cases.append(_case(now=now, leave_in=leave_in, unc=unc))
     return cases
 
 
 @needs_node
 def test_the_page_mirror_equals_python_on_the_boundary_grid():
     cases = _boundary_cases()
-    assert len(cases) > 4000
-    assert {c[0] for c in cases} >= {0, 1, 2, 3, 14, 15, 16, 29, 30, 31, 59, 60}
-    assert {c[1] for c in cases} >= {0, 1, 2, 3, 14, 15, 16}
-    for e in (0, 1, 2, 3, 14, 15, 16, 29, 30, 31, 59, 60):  # w equal to e, e-1 and e+1 for each e
-        assert {(e, max(0, e - 1)), (e, e), (e, e + 1)} <= {(c[0], c[1]) for c in cases}
-    assert _mirror_cases(cases) == _python_leads(cases)
+    assert len(cases) > 7000
+    assert {c["leave_in"] for c in cases} >= {61, 60, 59, 0, -1}
+    assert {c["source"] for c in cases} == set(SOURCES) and {c["e"] for c in cases} >= {0, 1, 2, 10}
+    got, expected = _mirror_cases(cases), _python_leads(cases)
+    bad = [(c, g, x) for c, g, x in zip(cases, got, expected) if g != x]
+    assert not bad, f"{len(bad)} differ, first: {bad[0]}"
 
 
 SEED = 20261005
 
 
-@needs_node
-def test_the_page_mirror_equals_python_on_3000_seeded_random_cases():
+def _random_cases(count):
     import random
 
-    print(f"seed={SEED}")  # fixed, so a failure reproduces
     rng = random.Random(SEED)
-    cases = [(rng.randint(0, 90), rng.randint(0, 45), rng.choice(ACTIONS), rng.choice(("ok", "mid", "low", None)),
-              rng.random() < 0.5) for _ in range(3000)]
+    cases = []
+    for _ in range(count):
+        now = NOW + timedelta(seconds=rng.randint(0, 86399))
+        cases.append(_case(
+            e=rng.randint(0, 90), w=rng.randint(0, 45), action=rng.choice(ACTIONS), band=rng.choice(BANDS),
+            unc=rng.random() < 0.5, leave_in=rng.choice([rng.randint(-900, 900), rng.randint(-90000, 90000), 60, 61, 59, 0]),
+            source=rng.choice(SOURCES), speed=rng.randint(50, 140) / 100, distance=round(rng.choice([rng.uniform(0, 3000), rng.uniform(0, 30)]), 1),
+            now=now))
+    return cases
+
+
+@needs_node
+def test_the_page_mirror_equals_python_on_3000_seeded_random_cases():
+    print(f"seed={SEED}")  # fixed, so a failure reproduces
+    cases = _random_cases(3000)
     got, expected = _mirror_cases(cases), _python_leads(cases)
     bad = [(c, g, x) for c, g, x in zip(cases, got, expected) if g != x]
     assert not bad, f"seed={SEED}: {len(bad)} differ, first: {bad[0]}"
+
+
+@needs_node
+def test_the_page_mirror_equals_python_on_every_minute_and_walk_pair_in_range():
+    # Every bus minute 0..90 and walk minute 0..45 (a pair-only Python branch, such as "30 or more minutes",
+    # "exactly 15" or "a zero walk", fails here), each with leave by and leave now, two sources, both uncertain
+    # flags and a normal and a low band.
+    cases = [_case(e=e, w=w, leave_in=leave_in, source=source, unc=unc, band=band)
+             for e in range(91) for w in range(46) for leave_in in (600, 0) for source in ("gps", "default")
+             for unc in (False, True) for band in ("ok", "low")]
+    assert len(cases) == 91 * 46 * 16
+    assert _mirror_cases(cases) == _python_leads(cases)
+
+
+@needs_node
+def test_a_zero_walk_and_every_distance_in_a_range_match():
+    cases = [_case(distance=float(d), leave_in=leave_in) for d in range(0, 1300, 1) for leave_in in (600, 0)]
+    assert _mirror_cases(cases) == _python_leads(cases)
 
 
 # ---- the pack fields the page reads
@@ -207,7 +268,7 @@ def test_the_page_reads_exactly_the_pack_fields_the_server_lists():
 def test_the_server_pack_carries_every_field_the_page_reads():
     from datetime import timedelta as _td
 
-    from explain import PAGE_PACK_FIELDS, build_poll_explanation
+    from explain import PACK_KEYS, PAGE_PACK_FIELDS, build_poll_explanation
 
     class Cache:
         def stop_by_code(self, code):
@@ -221,13 +282,4 @@ def test_the_server_pack_carries_every_field_the_page_reads():
                                   reroute_fired=False)
     missing = [name for name in PAGE_PACK_FIELDS if name not in pack]
     assert not missing, missing
-
-
-@needs_node
-def test_the_page_mirror_equals_python_on_every_minute_and_walk_pair_in_range():
-    # Every (e, w) with e in 0..90 and w in 0..45, each with all four actions, bands and both uncertain flags, so a
-    # Python-only branch on any single pair in that range fails here (the random test alone could miss a lone pair).
-    cases = [(e, w, a, band, unc) for e in range(91) for w in range(46) for a in ACTIONS
-             for band in ("ok", "mid", "low", None) for unc in (False, True)]
-    assert len(cases) == 91 * 46 * 32
-    assert _mirror_cases(cases) == _python_leads(cases)
+    assert tuple(pack) == tuple(PACK_KEYS) or set(pack) == set(PACK_KEYS)  # the pinned key list

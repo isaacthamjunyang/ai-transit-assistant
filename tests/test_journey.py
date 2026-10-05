@@ -202,13 +202,14 @@ def test_null_ride_duration_uses_the_exact_unavailable_labels():
     assert body["leave_by"] is not None
 
 
-def test_leave_by_is_eta_minus_slow_walk_minus_45_seconds_only():
+def test_leave_by_is_eta_minus_walk_time_minus_135_seconds_only():
     eta = NOW + timedelta(minutes=8)
     distance_m = 110
     leave_by = leave_by_time(eta, distance_m)
-    slow_walk_s = distance_m / 1.1
-    assert leave_by == eta - timedelta(seconds=slow_walk_s + 45)
-    assert leave_by != eta - timedelta(seconds=slow_walk_s + 45 + 60)
+    walk_s = distance_m / 1.25
+    assert leave_by == eta - timedelta(seconds=walk_s + 135)
+    assert leave_by != eta - timedelta(seconds=walk_s + 135 + 60)
+    assert leave_by != eta - timedelta(seconds=distance_m / 1.1 + 45)
     resolved = resolve_leave_by(
         eta=eta,
         distance_m=distance_m,
@@ -225,7 +226,7 @@ def test_leave_by_does_not_depend_on_ride_duration():
     assert usable["ride_minutes"] is not None
     assert missing["ride_minutes"] is None
     assert usable["leave_by"] == missing["leave_by"]
-    assert usable["leave_by"] == (eta - timedelta(seconds=45)).replace(microsecond=0).isoformat()
+    assert usable["leave_by"] == (eta - timedelta(seconds=135)).replace(microsecond=0).isoformat()
 
 
 def test_a_later_eta_moves_leave_by_by_the_same_amount():
@@ -312,8 +313,8 @@ def test_live_poll_recalculates_leave_by_from_the_latest_eta():
             accuracy=18,
             cache=cache,
         )
-    assert first["leave_by"] == "2026-09-29T14:57:15+08:00"
-    assert second["leave_by"] == "2026-09-29T15:09:15+08:00"
+    assert first["leave_by"] == "2026-09-29T14:55:45+08:00"
+    assert second["leave_by"] == "2026-09-29T15:07:45+08:00"
     assert "probability" in first["buses"][0]
 
 

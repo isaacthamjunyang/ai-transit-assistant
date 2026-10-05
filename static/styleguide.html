@@ -1080,8 +1080,15 @@
       return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p><p class=\"field__hint\">" + copy.pace[key].detail + "</p></div></div>";
     }
 
-    function sgLeaveTiles(withTarget, phrase) {
-      return "<section class=\"leave-tiles\"><div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.leaveBy + "</p><p class=\"leave-tile__value\">" + (phrase || lc.waitForAlert) + "</p></div></div>"
+    // state: { value, meta, warn }. A tile shows a clock time or "Leave now", never both.
+    var SG_WARN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 4 3 20h18L12 4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M12 10v4M12 17h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+
+    function sgLeaveTiles(withTarget, state) {
+      state = state || { value: "10:03 PM", meta: lc.leaveByIn.replace("{n}", "8").replace("{w}", "4") };
+      return "<section class=\"leave-tiles\"><div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.leaveBy + "</p><p class=\"leave-tile__value\">" + state.value + "</p>"
+        + (state.meta ? "<p class=\"leave-tile__meta\">" + state.meta + "</p>" : "")
+        + (state.warn ? "<p class=\"leave-tile__meta leave-tile__warn\">" + SG_WARN_ICON + "<span>" + lc.leaveUncertain + "</span></p>" : "")
+        + "</div></div>"
         + "<div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + TILE_FLAG_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.estimatedArrival + "</p><p class=\"leave-tile__value\">6:24 PM</p><p class=\"leave-tile__meta\">(6:21–6:31 PM)</p></div></div>"
         + (withTarget ? "<p class=\"leave-tiles__row\"><span class=\"badge badge--track tile-status\">" + copy.arriveBy.onTrack + "</span></p>" : "")
         + "</section>";
@@ -1095,19 +1102,21 @@
     function sgExplainText(opts) {
       var x = copy.explanation;
       var e = opts.e;
-      var w = opts.w;
-      var t = e - w;
       var one = e < 1 ? x.busArrivingNow : e === 1 ? x.busOneMinute : x.busMinutes.replace("{e}", e);
+      var metres = opts.distance === undefined ? 300 : opts.distance;
+      var distance = (metres < 1000 ? Math.round(metres) + " m" : (Math.round(metres / 100) / 10) + " km");
+      var kmh = ((opts.speed === undefined ? 1.25 : opts.speed) * 3.6).toFixed(1);
+      var source = opts.source || "gps";
+      var kind = source === "gps" || source === "cadence" ? "Measured" : source === "remembered" ? "Remembered" : "Default";
+      var now = opts.mode ? opts.mode === "now" : opts.action === "leaveNow";
       var two;
-      var lead = "Given the walking time is " + sgMinutes(w);
-      if (opts.uncertain) {
-        two = x.locationUncertain;
-      } else if (opts.band === "low" || opts.action === "switchRoute" || opts.action === "doNotRely") {
-        two = lead + ", catching this bus is unlikely.";
-      } else if (w >= e) {
-        two = lead + ", you may not reach the stop before the bus.";
+      if (opts.band === "low" || opts.action === "switchRoute" || opts.action === "doNotRely") {
+        two = x.unlikely.replace("{distance}", distance);
       } else {
-        two = "Given the walking time is only " + sgMinutes(w) + ", you have " + sgMinutes(t) + " to get to the bus stop.";
+        two = x[(now ? "leaveNow" : "leaveBy") + kind].replace("{distance}", distance).replace("{kmh}", kmh).replace("{time}", opts.time || "10:03 PM");
+        if (opts.uncertain) {
+          two += " " + (now ? x.uncertainNow : x.uncertainBy);
+        }
       }
       return one + " " + two + " " + x.adviceSentence.replace("{advice}", x.advice[opts.action]);
     }
@@ -1217,35 +1226,34 @@
         + "<h4>Walking pace: normal pace (1.25 m/s)</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("default", "4.5"))
         + "<h4>Developer readout (only with ?pace=debug; delete before submission)</h4>"
         + "<div class=\"pace-debug pace-debug--sample is-open\"><button type=\"button\" class=\"pace-debug__bar\">mode gps &middot; used 1.30 m/s &middot; ok &middot; srv age 3 s</button>"
-        + "<div class=\"pace-debug__panel\"><pre class=\"pace-debug__text\">mode gps (walking by gps)
-cadence 1.82 score 0.91 rms 1.20 null 0 cv 0.04
-gps 1.30 m/s reported acc 8 m age 0.4 s
-fix age 0.4 s, stale ignored 0
-location age: server 3 s, phone 2 s
-gps-only n 9 in 8 out 0 outliers 1 cv 0.05 ok
-pick stride_doubled in 0.00/0.00 all 1.01/0.82 low 1.01/0.82
-step 0.72 m n=4 learn: ok
-used 1.30 m/s gps smooth 1.29 sent 1.28
-motion on events 1420
-trace: trace ready: 90 rows, raw 2250 values</pre>"
+        + "<div class=\"pace-debug__panel\"><pre class=\"pace-debug__text\">mode gps (walking by gps)\ncadence 1.82 score 0.91 rms 1.20 null 0 cv 0.04\ngps 1.30 m/s reported acc 8 m age 0.4 s\nfix age 0.4 s, stale ignored 0\nlocation age: server 3 s, phone 2 s\ngps-only n 9 in 8 out 0 outliers 1 cv 0.05 ok\npick stride_doubled in 0.00/0.00 all 1.01/0.82 low 1.01/0.82\nstep 0.72 m n=4 learn: ok\nused 1.30 m/s gps smooth 1.29 sent 1.28\nmotion on events 1420\ntrace: trace ready: 90 rows, raw 2250 values</pre>"
         + "<div class=\"pace-debug__actions\"><button type=\"button\" class=\"pace-debug__button\">Record trace</button><button type=\"button\" class=\"pace-debug__button\">Copy trace</button><button type=\"button\" class=\"pace-debug__button\">Copy raw motion</button></div></div></div>"
         + "<h4>Page A heading with a long stop name (ellipsis, full name in the title)</h4>" + sgCatchCard("live", 64, 51, 78, SG_LONG_STOP)
         + "<h4>Page A heading with no ETA (stop name only)</h4>" + sgCatchCard("schedule", 41, 30, 52, "Tanjong Rhu Stn Exit 2", "")
         + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
-        + "<h4>Page A, action wait: Leave by tile reads Wait for Leave By Alert, no pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgLeaveTiles(true, lc.waitForAlert)
-        + "<h4>Page A, action leave_now: Leave by tile reads Leave now, with the pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgPaceChip("slower") + sgLeaveTiles(true, lc.leaveNow)
+        + "<h4>Page A, action wait: Leave by tile shows the clock time with the minutes and the walk, no pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgLeaveTiles(true)
+        + "<h4>Page A, action leave_now: Leave by tile reads Leave now with the bus and walk minutes, with the pace chip</h4>" + sgCatchCard("live", 92, 80, 95) + sgPaceChip("slower") + sgLeaveTiles(true, { value: lc.leaveNow, meta: lc.leaveNowBusAway.replace("{e}", "6").replace("{w}", "4") })
+        + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, { value: "10:03 PM", meta: lc.leaveByIn.replace("{n}", "8").replace("{w}", "4"), warn: true })
+        + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, { value: lc.leaveNow, meta: lc.leaveNowBusAway.replace("{e}", "6").replace("{w}", "4"), warn: true })
+        + "<h4>Leave by tile, Leave now with the bus arriving now</h4>" + sgLeaveTiles(false, { value: lc.leaveNow, meta: lc.leaveNowBusArriving.replace("{w}", "4") })
+        + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: "10:03 PM" })
         + "<h4>Leave by and Estimated arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
         + "<h4>Tiles with No target (no check)</h4>" + sgLeaveTiles(false)
         + "<h4>AI Explanation: loading</h4>" + sgAiCard("loading")
-        + "<h4>AI Explanation: badge row, band ok (no prefix)</h4>" + sgAiCard("normal", { e: 10, w: 3, band: "ok", action: "wait", badge: copy.arriveBy.onTrack })
-        + "<h4>AI Explanation: badge row, band mid (prefix)</h4>" + sgAiCard("normal", { e: 6, w: 3, band: "mid", action: "leaveNow", badge: copy.arriveBy.risk, badgeClass: "badge--risk", prefix: true })
-        + "<h4>AI Explanation: no target (no badge row)</h4>" + sgAiCard("normal", { e: 10, w: 3, band: "ok", action: "wait" })
-        + "<h4>Sentence 1: arriving now and one minute</h4>" + sgAiCard("normal", { e: 0, w: 2, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 1, w: 1, band: "ok", action: "wait" })
-        + "<h4>Sentence 2: singular and plural</h4>" + sgAiCard("normal", { e: 5, w: 4, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 6, w: 1, band: "ok", action: "wait" })
-        + "<h4>Sentence 2: may not reach the stop</h4>" + sgAiCard("normal", { e: 3, w: 4, band: "mid", action: "leaveNow" })
-        + "<h4>Sentence 2: catching this bus is unlikely (low band, switch)</h4>" + sgAiCard("normal", { e: 8, w: 3, band: "low", action: "doNotRely" }) + sgAiCard("normal", { e: 5, w: 2, band: "ok", action: "switchRoute" })
-        + "<h4>Sentence 2: location uncertain</h4>" + sgAiCard("normal", { e: 8, w: 3, band: "ok", action: "wait", uncertain: true })
-        + "<h4>Sentence 3: every advice clause</h4>" + sgAiCard("normal", { e: 9, w: 3, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 4, w: 2, band: "ok", action: "leaveNow" })
+        + "<h4>AI Explanation: badge row, band ok (no prefix)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", badge: copy.arriveBy.onTrack })
+        + "<h4>AI Explanation: badge row, band mid (prefix)</h4>" + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", badge: copy.arriveBy.risk, badgeClass: "badge--risk", prefix: true })
+        + "<h4>AI Explanation: no target (no badge row)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait" })
+        + "<h4>Sentence 1: arriving now and one minute</h4>" + sgAiCard("normal", { e: 0, band: "ok", action: "leaveNow" }) + sgAiCard("normal", { e: 1, band: "ok", action: "leaveNow" })
+        + "<h4>Sentence 2, leave by: measured speed (GPS or steps)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300 })
+        + "<h4>Sentence 2, leave by: your usual speed</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820 })
+        + "<h4>Sentence 2, leave by: average walking speed (speed uncertain)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200 })
+        + "<h4>Sentence 2, leave now: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250 }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250 }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250 })
+        + "<h4>Sentence 2, leave by, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300, uncertain: true }) + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820, uncertain: true }) + sgAiCard("normal", { e: 10, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200, uncertain: true })
+        + "<h4>Sentence 2, leave now, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250, uncertain: true })
+        + "<h4>Sentence 2: unlikely, with and without an uncertain location (no uncertain sentence is added)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640, uncertain: true })
+        + "<h4>Sentence 2: catching this bus is unlikely (low band, switch, do not rely)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute", distance: 640 })
+        + "<h4>Sentence 2: location uncertain, after leave by and after leave now</h4>" + sgAiCard("normal", { e: 8, band: "ok", action: "wait", uncertain: true }) + sgAiCard("normal", { e: 4, band: "ok", action: "leaveNow", uncertain: true })
+        + "<h4>Sentence 3: every advice clause</h4>" + sgAiCard("normal", { e: 9, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 4, band: "ok", action: "leaveNow" }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute" }) + sgAiCard("normal", { e: 5, band: "ok", action: "doNotRely" })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
         + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
         + "<h4>No better option</h4><p class=\"banner banner--quiet reroute-none\">" + copy.noBetter.standard.replace("{point}", "28") + "</p>";
@@ -1452,7 +1460,7 @@ trace: trace ready: 90 rows, raw 2250 values</pre>"
       var cards = kind === "live"
         ? sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady") + sgLeaveTiles(true)
           + '<div class="miss-row"><span>' + CLOCK_ICON + '</span><div><p class="miss-row__label">' + copy.arriveBy.missLabel + '</p><p>' + copy.arriveBy.missWithLate.replace("{service}", "36").replace("{minutes}", "8").replace("{point}", "6:36 PM").replace("{late}", "about 6 min late") + '</p></div></div>'
-          + sgAiCard("normal", { e: 5, w: 3, action: "leaveNow", band: "ok" })
+          + sgAiCard("normal", { e: 5, action: "leaveNow", band: "ok" })
         : "";
       return sgPageAlerts(kind === "live" ? "" : kind) + cards + sgSeeArrivalsBar();
     }

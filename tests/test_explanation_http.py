@@ -5,6 +5,7 @@ as sentence three, they stay exactly as Python wrote them, and a bad clause fall
 """
 
 import json
+import re
 import math
 import time
 from datetime import datetime, timedelta, timezone
@@ -18,7 +19,7 @@ import demo
 import explain
 import lta_static
 import observations
-from explain import ACTION_ADVICE, ACTIONS, PAGE_PACK_FIELDS, REASON_CODES, reset_explanation_gate
+from explain import ACTION_ADVICE, ACTIONS, PACK_KEYS, PAGE_PACK_FIELDS, REASON_CODES, reset_explanation_gate
 from lta_static import StopAndRouteCache
 from main import app
 from nearby import EARTH_RADIUS_M
@@ -97,8 +98,10 @@ FIXED = "It is advisable to " + ACTION_ADVICE["wait"] + "."
 
 def test_the_pack_over_http_has_the_keys_the_page_reads_and_the_right_types(client):
     pack = _poll(client)["explanation"]
-    assert set(pack) == {"snapshot", "fact_sheet", "text", "clause", "action", "reason_code", "arrival_time",
-                         "walk_minutes", "band", "uncertain", "call", "pending"}
+    assert tuple(sorted(pack)) == tuple(sorted(PACK_KEYS))  # the pinned key list
+    assert pack["leave_now_threshold_s"] == 60 and set(pack["clauses"]) == {"wait", "leave_now"}
+    assert isinstance(pack["leave_by"], str) and isinstance(pack["distance_m"], float)
+    assert isinstance(pack["walk_speed_used"], float) and pack["walk_speed_source"] in ("gps", "cadence", "remembered", "default")
     assert set(PAGE_PACK_FIELDS) <= set(pack)
     assert isinstance(pack["snapshot"], str) and pack["snapshot"].startswith("18|01011|")
     assert isinstance(pack["text"], str) and isinstance(pack["clause"], str) and pack["text"].endswith(pack["clause"])
@@ -107,7 +110,7 @@ def test_the_pack_over_http_has_the_keys_the_page_reads_and_the_right_types(clie
     assert type(pack["walk_minutes"]) is int and pack["band"] in ("ok", "mid", "low", None)
     assert pack["uncertain"] is False and isinstance(pack["call"], bool) and isinstance(pack["pending"], bool)
     assert datetime.fromisoformat(pack["arrival_time"]).tzinfo is not None
-    assert pack["text"].startswith("The bus is 10 minutes away.")
+    assert pack["text"].startswith("The bus is 10 minutes away. You are ")
 
 
 HOSTILE = [
@@ -160,3 +163,73 @@ def test_a_good_model_clause_replaces_only_sentence_three(client, monkeypatch):
     assert body["source"] == "model" and body["clause"] == f"It is advisable to {good}."
     after = _poll(client, {"explained_action": body["action"], "explained_advice": body["advice"]})["explanation"]
     assert _lead(after) == _lead(baseline) and after["clause"] == body["clause"] and after["call"] is False
+
+
+# ---- the pack goes to the browser only: pinned keys, no leak to OpenAI, nothing logged, nothing stored
+
+PINNED_PACK_KEYS = [
+    "snapshot", "fact_sheet", "text", "clause", "clauses", "action", "arrival_time", "leave_by", "distance_m",
+    "walk_minutes", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "band", "uncertain", "call",
+    "pending", "reason_code",
+]
+BROWSER_ONLY = ("leave_by", "distance_m", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "clauses",
+                "walk_minutes", "arrival_time", "text", "band", "uncertain")
+
+
+def test_the_pack_key_list_is_pinned_and_in_this_order(client):
+    pack = _poll(client)["explanation"]
+    assert sorted(pack) == sorted(PINNED_PACK_KEYS)
+    assert sorted(PACK_KEYS) == sorted(PINNED_PACK_KEYS)  # explain.PACK_KEYS is the same list
+    assert pack["clauses"] == {"wait": "It is advisable to wait for your leave-by alert.",
+                               "leave_now": "It is advisable to leave now and walk to the bus stop."}
+    assert pack["leave_now_threshold_s"] == 60
+
+
+def test_no_pack_field_or_number_reaches_the_openai_request_or_the_explain_body(client, monkeypatch):
+    pack = _poll(client)["explanation"]
+    seen = []
+
+    def spy(fact_sheet, api_key, request):
+        seen.append(request)
+        return {"status": 200, "body": json.dumps({"advice": "wait for your alert before leaving"})}
+
+    monkeypatch.setattr(explain, "read_openai_api_key", lambda: "sk-test-not-real")
+    monkeypatch.setattr(explain, "_openai_complete", spy)
+    body = {"fact_sheet": pack["fact_sheet"], "snapshot": pack["snapshot"]}
+    # extra top-level pack fields in the body are ignored, never forwarded
+    padded = dict(body, **{key: pack[key] for key in BROWSER_ONLY})
+    assert client.post("/api/explain", json=padded).status_code == 200
+    request_text = json.dumps(seen[0])
+    for key in BROWSER_ONLY:
+        value = pack[key]
+        for piece in (value if isinstance(value, (list, dict)) else [value]):
+            if isinstance(piece, (str, int, float)) and not isinstance(piece, bool) and str(piece) not in ("", "None"):
+                assert str(piece) not in json.dumps(seen[0]["messages"][1]) or str(piece) in ("wait", "leave_now"), (key, piece)
+    assert not re.search(r"\d", seen[0]["messages"][1]["content"])  # the user message holds no digit at all
+    for marker in ("leave_by", "distance", "walk_speed", "threshold", "clauses", "km/h", pack["leave_by"]):
+        assert marker not in request_text
+    # and the fact sheet itself refuses every one of those keys
+    for key in BROWSER_ONLY:
+        sheet = dict(pack["fact_sheet"], **{key: pack[key]})
+        assert client.post("/api/explain", json={"fact_sheet": sheet, "snapshot": pack["snapshot"]}).status_code == 422, key
+
+
+def test_nothing_in_the_pack_is_logged_or_stored(client, caplog, capsys, tmp_path):
+    import sqlite3
+
+    with caplog.at_level(0):
+        pack = _poll(client)["explanation"]
+        client.post("/api/explain", json={"fact_sheet": pack["fact_sheet"], "snapshot": pack["snapshot"]})
+    logged = caplog.text + capsys.readouterr().out + capsys.readouterr().err
+    for secret in (pack["leave_by"], str(pack["distance_m"]), "km/h", pack["clauses"]["leave_now"]):
+        assert secret not in logged, secret
+    database = observations.DEFAULT_DB_PATH
+    assert database.exists()
+    with sqlite3.connect(database) as connection:
+        columns = [row[1] for row in connection.execute("PRAGMA table_info(observations)")]
+        rows = connection.execute("SELECT * FROM observations").fetchall()
+    assert rows
+    for name in columns:
+        assert not any(word in name for word in ("leave", "speed", "kmh", "threshold", "clause", "text", "distance"))
+    flat = " ".join(str(cell) for row in rows for cell in row)
+    assert pack["leave_by"] not in flat and pack["clause"] not in flat and "km/h" not in flat

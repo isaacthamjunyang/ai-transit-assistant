@@ -36,10 +36,16 @@ var copy = {
     busArrivingNow: "The bus is arriving now.",
     busMinutes: "The bus is {e} minutes away.",
     busOneMinute: "The bus is 1 minute away.",
-    walkDefault: "Given the walking time is only {w} minutes, you have {t} minutes to get to the bus stop.",
-    walkMayNotReach: "Given the walking time is {w} minutes, you may not reach the stop before the bus.",
-    walkUnlikely: "Given the walking time is {w} minutes, catching this bus is unlikely.",
-    locationUncertain: "Your location is uncertain, so the walking time may be off.",
+    /* approved: sentence two, first match wins; {distance}, {kmh} and {time} are the placeholders */
+    unlikely: "You are {distance} from the stop, but catching this bus is unlikely.",
+    leaveByMeasured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave by {time}.",
+    leaveByRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave by {time}.",
+    leaveByDefault: "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave by {time}.",
+    leaveNowMeasured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave now.",
+    leaveNowRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave now.",
+    leaveNowDefault: "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave now.",
+    uncertainBy: "Your location is uncertain, so leave a little earlier than that to be safe.",
+    uncertainNow: "Your location is uncertain, so the walking time may be off.",
     adviceSentence: "It is advisable to {advice}.",
     advice: {
       wait: "wait for your leave-by alert",
@@ -246,8 +252,12 @@ var copy = {
     missed: "Missed",
     leaveBy: "Leave by",
     leaveNow: "Leave now",
-    /* deliberate deviation from mockup 7: the tile shows the action, never a clock time */
-    waitForAlert: "Wait for Leave By Alert",
+    /* approved: the Leave by tile shows a clock time or "Leave now", never both; {n} and {w} are whole minutes */
+    leaveByIn: "in {n} min · {w} min walk",
+    leaveByInUnder: "in under 1 min · {w} min walk",
+    leaveNowBusAway: "The bus is {e} min away and the walk takes about {w} min.",
+    leaveNowBusArriving: "The bus is arriving now and the walk takes about {w} min.",
+    leaveUncertain: "Location uncertain: leave a bit earlier to be safe.",
     estimatedArrival: "Estimated arrival",
     aiTitle: "AI Explanation",
     /* proposed, needs approval */

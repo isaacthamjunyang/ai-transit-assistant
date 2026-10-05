@@ -35,6 +35,7 @@ from config import (
     WALK_SPEED_MIN_MPS,
 )
 from destination_stops import list_destination_stops
+import explain
 from explain import FACT_SHEET_KEYS, overview_walk_minutes
 from journey import build_journey, leave_by_time
 from lta_static import StopAndRouteCache
@@ -280,12 +281,13 @@ def test_pace_headroom_rule_directly():
 
 # ---- leave-by
 
-def test_leave_by_uses_the_slow_end_of_the_speed_used():
+def test_leave_by_uses_the_speed_used_not_the_slow_end():
     eta = datetime(2026, 10, 1, 18, 10, tzinfo=SGT)
-    assert leave_by_time(eta, 440) == eta - timedelta(seconds=440 / 1.1 + BOARDING_BUFFER_S)
-    assert leave_by_time(eta, 440, range_speeds(1.25)[1]) == leave_by_time(eta, 440)
-    slower = leave_by_time(eta, 440, range_speeds(0.8)[1])
-    assert slower < leave_by_time(eta, 440)
+    assert leave_by_time(eta, 440) == eta - timedelta(seconds=440 / 1.25 + 135)
+    assert leave_by_time(eta, 440, 1.25) == leave_by_time(eta, 440)
+    assert leave_by_time(eta, 440, 0.8) == eta - timedelta(seconds=440 / 0.8 + 135)
+    assert leave_by_time(eta, 440, 0.8) < leave_by_time(eta, 440)
+    assert leave_by_time(eta, 440, 1.4) > leave_by_time(eta, 440)
 
 
 # ---- endpoints: one request, every number consistent
@@ -308,8 +310,8 @@ def test_one_poll_uses_one_speed_for_every_number(client, speed):
     point_s, slow_s, fast_s = range_speeds(speed)
     chance = body["buses"][0]["probability"]
     assert chance["slack_seconds"] == pytest.approx(seconds - distance / point_s - BOARDING_BUFFER_S, abs=2)
-    # leave-by and the notification time: the slow end, then 60 s earlier
-    expected_leave = eta - timedelta(seconds=distance / slow_s + BOARDING_BUFFER_S)
+    # leave-by and the notification time: the speed used, then 60 s earlier
+    expected_leave = eta - timedelta(seconds=distance / speed + 135)
     assert abs((datetime.fromisoformat(body["leave_by"]) - expected_leave).total_seconds()) <= 1
     assert datetime.fromisoformat(body["leave_by"]) - datetime.fromisoformat(body["notification_time"]) == timedelta(seconds=60)
     # the AI sentence's walking minutes, from the same speed
@@ -438,7 +440,11 @@ def test_the_speed_is_not_in_the_openai_fact_sheet(client):
     body = _poll(client, speed=0.77, extra={"explanation_rendered": 1})
     sheet = body["explanation"]["fact_sheet"]
     assert tuple(sheet) == FACT_SHEET_KEYS == ("reason_code", "chosen_action")
-    assert "0.77" not in json.dumps(sheet) and "walk_speed" not in json.dumps(body["explanation"])
+    assert "0.77" not in json.dumps(sheet) and "walk_speed" not in json.dumps(sheet)
+    # the pack goes to the browser only; the speed it carries never reaches the model request
+    request = explain.explanation_request(sheet)
+    assert "0.77" not in json.dumps(request) and "walk_speed" not in json.dumps(request)
+    assert body["explanation"]["walk_speed_used"] == 0.77
 
 
 def test_the_access_log_filter_strips_the_position_and_the_speed(caplog):

@@ -16,7 +16,6 @@ from explain import ACTION_ADVICE, compose_option_text
 from journey import bus_arrival_window, leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
 from nearby import BOARDING_RADIUS_M, haversine_m, walk_minutes
-from walk_speed import range_speeds
 from observations import record_observation
 from recommend import arrival_key, natural_key, pills, reason_text, recommend_option
 
@@ -558,8 +557,7 @@ def _leave_by_iso(eta: datetime, distance_m, walk_speed_m_s: float = WALK_SPEED_
     """The existing leave-by rule for the proposed bus (display only)."""
     if isinstance(distance_m, bool) or not isinstance(distance_m, (int, float)):
         return None
-    slow_speed = range_speeds(walk_speed_m_s)[1]
-    return leave_by_time(eta, float(distance_m), slow_speed).replace(microsecond=0).isoformat()
+    return leave_by_time(eta, float(distance_m), walk_speed_m_s).replace(microsecond=0).isoformat()
 
 
 def _alternatives(cache, candidates, winner, arrive_by_set, user_lat, user_lon, limit=3) -> list[dict]:

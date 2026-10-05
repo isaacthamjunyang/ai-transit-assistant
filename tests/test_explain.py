@@ -24,6 +24,9 @@ from explain import (
     REASON_CODES,
     build_numbers,
     clause_text,
+    format_clock,
+    format_distance,
+    format_kmh,
     lead_text,
     parse_fact_sheet,
     reason_code_for,
@@ -65,12 +68,15 @@ def _block_live_openai(monkeypatch):
     reset_explanation_gate()
 
 
-def sheet(bus=10, walk=3, action="wait"):
+def sheet(bus=10, walk=3, action="wait", *, leave_in=600, source="gps", speed=1.25, distance=300.0):
     """The numbers of sentences one and two. They stay on the server."""
-    return build_numbers(bus_minutes=bus, walk_minutes=walk, chosen_action=action)
+    return build_numbers(
+        bus_minutes=bus, walk_minutes=walk, chosen_action=action, distance_m=distance, walk_speed_used=speed,
+        walk_speed_source=source, leave_by=(NOW + timedelta(seconds=leave_in)).isoformat(), now=NOW,
+    )
 
 
-def msheet(action="wait", reason="TIME_TO_SPARE"):
+def msheet(action="wait", reason="LEAVE_BY"):
     """What the model may see: a reason code and the action."""
     return {"reason_code": reason, "chosen_action": action}
 
@@ -123,10 +129,10 @@ def test_the_example_from_the_prompt():
     # 643 s shows 11 on the tile, so the text says 11 (the tile's rounding wins).
     fact = sheet(bus=tile_minutes(_iso(643), NOW), walk=3)
     text = compose_text(fact, ACTION_ADVICE["wait"], **CTX)
-    assert text == ("The bus is 11 minutes away. Given the walking time is only 3 minutes, you have 8 minutes to get to the bus stop. "
-                    "It is advisable to wait for your leave-by alert.")
+    assert text == ("The bus is 11 minutes away. You are 300 m from the stop and walking at about 4.5 km/h, "
+                    "so you should leave by 2:10 PM. It is advisable to wait for your leave-by alert.")
     ten = compose_text(sheet(bus=10, walk=3), ACTION_ADVICE["wait"], **CTX)
-    assert ten.startswith("The bus is 10 minutes away. Given the walking time is only 3 minutes, you have 7 minutes")
+    assert ten.startswith("The bus is 10 minutes away. You are 300 m from the stop")
 
 
 # ---- sentences one and two, every variant
@@ -137,53 +143,81 @@ def test_sentence_one_variants():
     assert sentence_one(0) == "The bus is arriving now."
 
 
-def test_sentence_two_default_singular_and_plural():
-    assert sentence_two(sheet(10, 3), band="ok", uncertain=False) == \
-        "Given the walking time is only 3 minutes, you have 7 minutes to get to the bus stop."
-    assert sentence_two(sheet(5, 4), band="ok", uncertain=False) == \
-        "Given the walking time is only 4 minutes, you have 1 minute to get to the bus stop."
-    assert sentence_two(sheet(6, 1), band="ok", uncertain=False) == \
-        "Given the walking time is only 1 minute, you have 5 minutes to get to the bus stop."
+@pytest.mark.parametrize("source, speed, middle", [
+    ("gps", 1.25, "and walking at about 4.5 km/h, so you should leave by 2:10 PM."),
+    ("cadence", 1.0, "and walking at about 3.6 km/h, so you should leave by 2:10 PM."),
+    ("remembered", 1.1, "and walking at your usual speed of 4.0 km/h, so you should leave by 2:10 PM."),
+    ("default", 1.25, "and, at an average walking speed of 4.5 km/h, you should leave by 2:10 PM."),
+])
+def test_sentence_two_leave_by_for_every_speed_source(source, speed, middle):
+    text = sentence_two(sheet(10, 3, source=source, speed=speed), band="ok", uncertain=False)
+    assert text == f"You are 300 m from the stop {middle}"
 
 
-def test_sentence_two_may_not_reach_when_walking_takes_as_long_as_the_bus():
-    assert sentence_two(sheet(3, 3), band="ok", uncertain=False) == \
-        "Given the walking time is 3 minutes, you may not reach the stop before the bus."
-    assert sentence_two(sheet(2, 5), band="mid", uncertain=False) == \
-        "Given the walking time is 5 minutes, you may not reach the stop before the bus."
-    assert sentence_two(sheet(0, 1), band="ok", uncertain=False).endswith("before the bus.")
+@pytest.mark.parametrize("source, speed, middle", [
+    ("gps", 1.25, "and walking at about 4.5 km/h, so you should leave now."),
+    ("cadence", 1.4, "and walking at about 5.0 km/h, so you should leave now."),
+    ("remembered", 1.1, "and walking at your usual speed of 4.0 km/h, so you should leave now."),
+    ("default", 1.25, "and, at an average walking speed of 4.5 km/h, you should leave now."),
+])
+def test_sentence_two_leave_now_for_every_speed_source(source, speed, middle):
+    for seconds in (60, 30, 0, -1, -600):
+        text = sentence_two(sheet(10, 3, source=source, speed=speed, leave_in=seconds), band="ok", uncertain=False)
+        assert text == f"You are 300 m from the stop {middle}", seconds
 
 
 def test_sentence_two_unlikely_for_a_low_band_or_switch_or_do_not_rely():
-    expected = "Given the walking time is 3 minutes, catching this bus is unlikely."
+    expected = "You are 300 m from the stop, but catching this bus is unlikely."
     assert sentence_two(sheet(10, 3), band="low", uncertain=False) == expected
     assert sentence_two(sheet(10, 3, "switch_route"), band="ok", uncertain=False) == expected
     assert sentence_two(sheet(10, 3, "do_not_rely"), band="ok", uncertain=False) == expected
-
-
-def test_sentence_two_location_uncertain_wins():
-    expected = "Your location is uncertain, so the walking time may be off."
+    # no uncertain-location sentence after the unlikely sentence, and the time is not mentioned
     assert sentence_two(sheet(10, 3), band="low", uncertain=True) == expected
-    assert sentence_two(sheet(2, 5, "do_not_rely"), band="low", uncertain=True) == expected
+    assert sentence_two(sheet(2, 5, "do_not_rely", leave_in=0), band="low", uncertain=True) == expected
+
+
+def test_sentence_two_adds_the_uncertain_location_sentence_after_leave_by_and_after_leave_now():
+    by = sentence_two(sheet(10, 3), band="ok", uncertain=True)
+    assert by.endswith("so you should leave by 2:10 PM. Your location is uncertain, so leave a little earlier than that to be safe.")
+    now = sentence_two(sheet(10, 3, leave_in=60), band="ok", uncertain=True)
+    assert now.endswith("so you should leave now. Your location is uncertain, so the walking time may be off.")
+
+
+def test_distance_and_clock_formats():
+    assert format_distance(0) == "0 m" and format_distance(999.4) == "999 m" and format_distance(0.5) == "1 m"
+    assert format_distance(999.5) == "1 km" and format_distance(1000) == "1 km"
+    assert format_distance(1249) == "1.2 km" and format_distance(1250) == "1.3 km" and format_distance(2000) == "2 km"
+    assert format_clock(NOW + timedelta(minutes=10), NOW) == "2:10 PM"
+    assert format_clock(NOW.replace(hour=0, minute=5), NOW) == "12:05 AM"
+    assert format_clock(NOW.replace(hour=12, minute=0), NOW) == "12:00 PM"
+    assert format_clock(NOW + timedelta(hours=10), NOW) == "12:00 AM (tomorrow)"
+    assert format_kmh(1.25) == "4.5" and format_kmh(1.4) == "5.0" and format_kmh(0.5) == "1.8"
 
 
 def test_variant_priority_first_match_wins():
-    # uncertain, then low band or switch or do-not-rely, then may-not-reach, then the default.
+    # unlikely (low band, switch, do-not-rely), then leave now or leave by with the uncertain sentence after it.
     assert "unlikely" in sentence_two(sheet(2, 5, "do_not_rely"), band="ok", uncertain=False)
-    assert "may not reach" in sentence_two(sheet(2, 5), band="mid", uncertain=False)
+    assert "leave now" in sentence_two(sheet(2, 5, leave_in=0), band="mid", uncertain=False)
+    assert "leave by" in sentence_two(sheet(2, 5, leave_in=61), band="mid", uncertain=False)
+    assert "unlikely" in sentence_two(sheet(2, 5), band="low", uncertain=True)
 
 
 def test_copy_templates_match_python():
     copy = (ROOT / "static" / "copy.js").read_text(encoding="utf-8")
-    for text in ("The bus is arriving now.", "The bus is {e} minutes away.", "The bus is 1 minute away.",
-                 "Given the walking time is only {w} minutes, you have {t} minutes to get to the bus stop.",
-                 "Given the walking time is {w} minutes, you may not reach the stop before the bus.",
-                 "Given the walking time is {w} minutes, catching this bus is unlikely.",
-                 "Your location is uncertain, so the walking time may be off.",
-                 "It is advisable to {advice}."):
+    page = INDEX.read_text(encoding="utf-8")
+    texts = ["The bus is arriving now.", "The bus is {e} minutes away.", "The bus is 1 minute away.",
+             "It is advisable to {advice}.", explain.S2_UNLIKELY, explain.S2_UNCERTAIN_BY, explain.S2_UNCERTAIN_NOW]
+    texts += list(explain.S2_LEAVE_BY.values()) + list(explain.S2_LEAVE_NOW.values())
+    for text in texts:
         assert text in copy, text
+    for text in [explain.S2_UNLIKELY, explain.S2_UNCERTAIN_BY, explain.S2_UNCERTAIN_NOW, explain.S1_ARRIVING_NOW]:
+        assert text in page, text  # the page mirror carries the same wording
+    for text in list(explain.S2_LEAVE_BY.values()) + list(explain.S2_LEAVE_NOW.values()):
+        assert text in page, text
     for clause in ACTION_ADVICE.values():
         assert clause in copy
+    for old in ("Given the walking time", "you may not reach the stop", "to get to the bus stop", "Wait for Leave By Alert"):
+        assert old not in copy and old not in page, old
 
 
 # ---- no heading, no probability, no seconds, no spare
@@ -194,16 +228,21 @@ ALL_CASES = [(e, w, a, band, unc) for e in (0, 1, 2, 10) for w in (1, 3, 12) for
 
 def test_no_explanation_has_a_heading_probability_seconds_or_spare():
     for e, w, action, band, unc in ALL_CASES:
-        text = compose_text(sheet(e, w, action), ACTION_ADVICE[action], band=band, uncertain=unc)
-        assert len(re.findall(r"[.]", text)) == 3, text  # exactly three sentences
-        assert "\n" not in text and ":" not in text and "%" not in text
-        lowered = text.lower()
-        for banned in ("second", "spare", "probability", "chance", "range", "slack", "headline"):
-            assert banned not in lowered, (banned, text)
-        digits = re.findall(r"\d+", text)
-        allowed = {str(e), str(w), str(e - w), "1"}
-        assert all(d in allowed or int(d) in (e, w, e - w) for d in digits), text
-        assert text.endswith(".") and text.split(". ")[-1].startswith("It is advisable to ")
+        for leave_in in (600, 30):
+            numbers = sheet(e, w, action, leave_in=leave_in)
+            text = compose_text(numbers, ACTION_ADVICE[action], band=band, uncertain=unc)
+            sentences = re.split(r"\. ", text)
+            assert len(sentences) in (3, 4), text  # three; four only when the uncertain sentence is added
+            assert "\n" not in text and "%" not in text
+            lowered = text.lower()
+            for banned in ("second", "spare", "probability", "chance", "range", "slack", "headline"):
+                assert banned not in lowered, (banned, text)
+            first, rest = text.split(". ", 1)
+            assert re.findall(r"\d+", first) == ([str(e)] if e >= 1 else []), text
+            for piece in (format_distance(numbers["distance_m"]), format_kmh(numbers["walk_speed_used"]), numbers["time_text"]):
+                rest = rest.replace(piece, "", 1)
+            assert not re.search(r"\d", rest), (rest, text)  # every digit is a placeholder value
+            assert text.endswith(".") and text.split(". ")[-1].startswith("It is advisable to ")
 
 
 # ---- the model's clause
@@ -289,9 +328,9 @@ def test_timeout_and_missing_key_use_the_fixed_clause():
 # ---- the fact sheet and the request
 
 def test_the_fact_sheet_is_a_reason_code_and_the_action_and_no_number_at_all():
-    fact = msheet("wait", "TIME_TO_SPARE")
+    fact = msheet("wait", "LEAVE_BY")
     assert tuple(fact) == FACT_SHEET_KEYS == ("reason_code", "chosen_action")
-    assert REASON_CODES == ("LOCATION_UNCERTAIN", "UNLIKELY", "MAY_NOT_REACH", "TIME_TO_SPARE")
+    assert REASON_CODES == ("UNLIKELY", "LOCATION_UNCERTAIN", "LEAVE_NOW", "LEAVE_BY")
     assert parse_fact_sheet(fact) == fact
     request = explanation_request(fact)
     user = json.loads(request["messages"][1]["content"])
@@ -314,11 +353,14 @@ def test_every_poll_pack_sends_the_model_nothing_but_the_reason_code_and_the_act
 
 def test_the_reason_code_is_the_sentence_two_variant():
     assert reason_code_for(sheet(10, 3), band="ok", uncertain=True) == "LOCATION_UNCERTAIN"
+    assert reason_code_for(sheet(10, 3, leave_in=0), band="ok", uncertain=True) == "LOCATION_UNCERTAIN"
     assert reason_code_for(sheet(10, 3), band="low", uncertain=False) == "UNLIKELY"
+    assert reason_code_for(sheet(10, 3), band="low", uncertain=True) == "UNLIKELY"  # unlikely comes first
     assert reason_code_for(sheet(10, 3, "switch_route"), band="ok", uncertain=False) == "UNLIKELY"
     assert reason_code_for(sheet(10, 3, "do_not_rely"), band="ok", uncertain=False) == "UNLIKELY"
-    assert reason_code_for(sheet(3, 3), band="ok", uncertain=False) == "MAY_NOT_REACH"
-    assert reason_code_for(sheet(10, 3), band="mid", uncertain=False) == "TIME_TO_SPARE"
+    assert reason_code_for(sheet(3, 3, leave_in=60), band="ok", uncertain=False) == "LEAVE_NOW"
+    assert reason_code_for(sheet(10, 3, leave_in=61), band="mid", uncertain=False) == "LEAVE_BY"
+    assert reason_code_for(sheet(10, 3, leave_in=-5), band="mid", uncertain=False) == "LEAVE_NOW"
 
 
 def test_python_action_precedence():
@@ -369,7 +411,7 @@ def _poll(payload, **overrides):
 
 def test_the_poll_text_uses_this_polls_numbers_and_the_fixed_clause_until_the_model_answers():
     first = _poll(_payload(643))
-    assert first["text"].startswith("The bus is 11 minutes away. Given the walking time is only 3 minutes, you have 8 minutes")
+    assert first["text"].startswith("The bus is 11 minutes away. You are 225\u00a0m from the stop and, at an average walking speed of 4.5 km/h, you should leave by 2:10 PM.")
     assert first["text"].endswith("It is advisable to wait for your leave-by alert.")
     assert first["call"] is True and first["action"] == "wait"
     later = _poll(_payload(583))  # 20 s later: the minutes change, the text follows
@@ -416,7 +458,7 @@ def _three_buses(reroute=True):
 def test_a_reroute_describes_the_tracked_bus_with_the_switch_wording_never_the_winner():
     pack = _poll(_three_buses(), reroute_fired=True)
     assert pack["action"] == "switch_route"
-    assert pack["text"].startswith("The bus is 2 minutes away. Given the walking time is 3 minutes, catching this bus is unlikely.")
+    assert pack["text"].startswith("The bus is 2 minutes away. You are 225\u00a0m from the stop, but catching this bus is unlikely.")
     assert "22 minutes" not in pack["text"] and "40 minutes" not in pack["text"]
     assert pack["text"].endswith("It is advisable to switch to another bus.")
     assert pack["arrival_time"] == _iso(120)
@@ -447,8 +489,11 @@ def test_the_page_minutes_equal_the_tile_minutes_for_every_variant():
         e = tile_minutes(_iso(seconds), NOW)
         pack = _poll(_payload(seconds))
         if pack is not None:
-            assert pack["text"].startswith(lead_text(sheet(e, pack["walk_minutes"], pack["action"]),
-                                                     band=pack["band"], uncertain=pack["uncertain"])), seconds
+            numbers = build_numbers(
+                bus_minutes=e, walk_minutes=pack["walk_minutes"], chosen_action=pack["action"], distance_m=pack["distance_m"],
+                walk_speed_used=pack["walk_speed_used"], walk_speed_source=pack["walk_speed_source"],
+                leave_by=pack["leave_by"], now=NOW)
+            assert pack["text"].startswith(lead_text(numbers, band=pack["band"], uncertain=pack["uncertain"])), seconds
 
 
 def test_the_pack_carries_the_snapshot_key_of_its_bus_and_poll():
@@ -469,7 +514,7 @@ def test_explain_endpoint_returns_the_clause_and_the_snapshot_and_hides_the_key(
 
     def fake_complete(fact_sheet, api_key, request):
         calls.append(api_key)
-        status_code, queued = handle_explain_request({"fact_sheet": msheet("wait", "MAY_NOT_REACH"), "snapshot": "later"})
+        status_code, queued = handle_explain_request({"fact_sheet": msheet("wait", "LEAVE_NOW"), "snapshot": "later"})
         assert status_code == 200 and queued["queued"] is True and queued["snapshot"] == "later"
         return {"status": 200, "body": json.dumps(accepted())}
 
@@ -479,7 +524,7 @@ def test_explain_endpoint_returns_the_clause_and_the_snapshot_and_hides_the_key(
     assert status == 200 and payload["source"] == "model" and payload["action"] == "wait"
     assert payload["snapshot"] == key  # every reply carries the key of the request it answers
     assert payload["clause"] == "It is advisable to wait for your leave-by alert." and "text" not in payload
-    assert payload["pending_fact_sheet"]["reason_code"] == "MAY_NOT_REACH"
+    assert payload["pending_fact_sheet"]["reason_code"] == "LEAVE_NOW"
     assert secret not in json.dumps(payload) and calls == [secret]
     reset_explanation_gate()
     with TestClient(app) as client:
@@ -547,3 +592,43 @@ def test_openai_sdk_is_installed_and_pinned():
 
     assert openai.__version__ == "3.20.0"
     assert "openai==3.20.0" in (ROOT / "requirements.txt").read_text(encoding="utf-8")
+
+
+# ---- the model's clause keeps its strict checks: the relaxed checks above are for the Python-built sentences only
+
+FIFTEEN = "wait for your alert " + " ".join(["before"] * 11)  # 4 + 11 = 15 words
+SIXTEEN = FIFTEEN + " now"
+
+
+@pytest.mark.parametrize("label, advice", [
+    ("a colon", "wait: for your leave-by alert"),
+    ("a colon only", "wait for your leave-by alert:"),
+    ("a clock time", "wait until 10:03 for your alert"),
+    ("a clock time in words and digits", "wait for your alert at 10:03"),
+    ("a single digit", "wait for 1 alert"),
+    ("digits", "wait for the bus in 7 minutes"),
+    ("a newline", "wait for your\nleave-by alert"),
+    ("a newline then a sentence", "wait for your alert\nIt is advisable to leave"),
+    ("a carriage return", "wait for your\rleave-by alert"),
+    ("a tab", "wait for your\tleave-by alert"),
+    ("16 words", SIXTEEN),
+])
+def test_the_models_clause_is_rejected_for_a_colon_a_digit_a_clock_time_a_newline_or_over_15_words(label, advice):
+    assert len(SIXTEEN.split()) == 16 and len(FIFTEEN.split()) == 15
+    assert advice_is_valid(advice, "wait") is False, label
+    view = interpret_explanation({"status": 200, "body": {"advice": advice}}, msheet("wait"))
+    assert view["source"] == "fallback" and view["advice"] == ACTION_ADVICE["wait"], label
+
+
+def test_a_clause_of_exactly_15_words_is_still_accepted():
+    assert advice_is_valid(FIFTEEN, "wait") is True
+
+
+def test_the_relaxed_checks_cover_the_python_sentences_and_never_the_models_clause():
+    # The Python-built text may hold a colon (a clock time such as 2:10 PM) and four sentences ...
+    numbers = sheet(10, 3, leave_in=600)
+    text = compose_text(numbers, ACTION_ADVICE["wait"], band="ok", uncertain=True)
+    assert ":" in text and len(re.split(r"\. ", text)) == 4
+    # ... but the same characters are refused in the model's clause, whatever the text around it allows.
+    assert advice_is_valid("wait until 2:10 PM", "wait") is False
+    assert advice_is_valid("wait for your alert. It is advisable to wait", "wait") is False

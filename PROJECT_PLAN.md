@@ -137,7 +137,7 @@ The server takes one walking speed per request and uses it everywhere a walking 
 - Output: every response that returns a probability, an estimate or an option list carries `walk_speed_used` (two decimals) and `walk_speed_source`. The page shows what the server returns, never its own value. The poll also carries `near_stop`, true inside the 30 m rule that hides pace guidance.
 - One rounding rule for labels: every walking time shown to the user is rounded half up with a minimum of 1 minute, the same as the AI sentence's walking minutes. The probability and leave-by terms stay in raw seconds, and the Step 9 sums keep rounding up.
 - GPS error terms: `gps_accuracy_m / 1.25` and the widening for an old fix use the fixed `ERROR_MODEL_SPEED_MPS` of 1.25. They model GPS error, not the user's pace. For a slow walker the penalty is slightly understated, and for a fast walker slightly overstated.
-- Leave-by and `notification_time` follow the slow end of the speed used. A changing speed moves them, but the leave-now notification still fires once per bus id, so a speed change cannot fire it twice.
+- Leave-by and `notification_time` follow the speed used (the point speed, not the slow end). A changing speed moves them, but the leave-now notification still fires once per bus id, so a speed change cannot fire it twice.
 
 #### Measuring the speed on the phone
 
@@ -202,7 +202,7 @@ flowchart TD
   better -->|no| none[SayNoBetterOption]
 ```
 
-A stale or failed poll never triggers a switch. The authoritative Step 9 leave-by formula is `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / slow_speed`, and `slow_speed` is the slow end of the speed used (1.1 m/s at the default 1.25 m/s). The existing 60 s leave-now margin is not part of the Step 9 leave-by calculation. It is used only in Step 10 as `notification_time = leave_by - 60s`. Destination ride duration is not part of the leave-by formula or the notification trigger. Leave-now notification behavior is specified in **Step 10 specification**. Reroute detection and reroute notifications belong to Step 11.
+A stale or failed poll never triggers a switch. The authoritative Step 9 leave-by formula is `leave_by = ETA - walk_time - LEAVE_MARGIN_SECONDS` (135 s), where `walk_time = boarding_stop_distance / speed_used` (see Step 9). The existing 60 s leave-now margin is not part of the Step 9 leave-by calculation. It is used only in Step 10 as `notification_time = leave_by - 60s`. Destination ride duration is not part of the leave-by formula or the notification trigger. Leave-now notification behavior is specified in **Step 10 specification**. Reroute detection and reroute notifications belong to Step 11.
 
 OpenAI call timing, the fact sheet, in-flight handling, and the data-quality filter are locked in **Step 12 specification**. Do not call OpenAI on every 20-second poll. Do not call it to choose the place or the destination stop.
 
@@ -228,7 +228,7 @@ The live journey is two views of one journey, with one poll, one set of state an
 
 **Page C, the options page.** Nothing from Page A appears on it: no pace chip, no Leave by or Estimated arrival tiles, no If you miss it, no Page A AI card, no sticky button and no compact warning. Unlikely entry, top to bottom: the current-bus card (the probability ring, `Chance to catch your Bus {service}`, a muted `Arriving in {n} min · {stop name}` line, `Range: {a} – {b}%`, the LIVE or SCHEDULE ONLY pill, `if you leave now and walk at a normal pace`, a warning line `Catching this bus is unlikely. Here are your other options.` and a `See bus arrival times` button that opens Page B for the current bus); the recommended card (heading chip `Better option found`) with its AI Explanation block; the `Alternative options` list. The unlikely entry chooses from all eligible options and does not apply the improvement rule. If the current bus becomes catchable again the warning line hides and the page does not navigate. When nothing is eligible, the current-bus card, the existing no-better-option card and the list (heading `Other buses at your stop`) show, with no recommended card and no AI block. Missed entry (after `No, I missed it`): no current-bus card; `Bus {service} has left. Here are your other options.` is the top element, then the recommended card (chip `Recommended option`) and the list. Every probability names its bus. The header of the list has a refresh icon button and a muted `Updated {time}`: it re-runs the options search with the existing `MANUAL_REFRESH_MIN_SECONDS` cooldown (aria-disabled while cooling down, spinning while it runs and static under reduced motion, disabled in Demo Mode). Back from the unlikely entry asks `Leave this journey?` while polling runs; after `No` polling has stopped, so Back goes to the overview with no confirm. Worst-case LTA calls per minute: Pages A and B 3 (one poll every 20 s), or 12 while the server evaluates a reroute (up to 3 extra calls per poll); Page C 3 from polls plus 3 per refresh at the 10 s cooldown, at most 21; each entry search makes 3 calls.
 
-**Page A wording (a deliberate deviation from mockup 7).** The probability heading is `Chance to catch Bus {service}` with a muted `Arriving in {n} min · {boarding stop name}` line under it (one line, ellipsis, full name in a title attribute; the minutes are the arrival tile's, and with no ETA only the stop name shows). The ring's aria-label reads `{p} percent chance of catching Bus {service} arriving in {n} minutes at {stop name}, range {a} to {b} percent`. The heading replaces `chance to catch`. The Leave by tile shows exactly one of two phrases and no clock time: `Leave now` when the Python action is `leave_now`, `Wait for Leave By Alert` when it is `wait`; it is not shown for `switch_route` or `do_not_rely`. The tile, the AI advice clause and the notification all follow that one action; between two polls the page applies the same leave-by test (60 seconds or less) to a `wait`. The pace chip shows only while the action is `leave_now`; it is hidden for `wait`, `switch_route` and `do_not_rely`. The pace categories keep `Walk slower` and `Walk slightly slower`. The caption under the ring follows the `walk_speed_source` the server returned for the poll: `if you leave now and keep walking at your current pace` for `gps` or `cadence`, `if you leave now and walk at your usual pace` for `remembered`, and the existing `if you leave now and walk at a normal pace` for `default`. A muted line under it, with aria-live off, always shows the server's `walk_speed_used` in km/h to one decimal: `Walking pace: {kmh} km/h · from GPS`, `· from your steps`, `· your usual pace` or `· normal pace` (1.25 m/s shows as 4.5 km/h). If you miss it shows the first later arrival of the same service after the tracked arrival, with its estimate from the one Step 9 estimate (anchored only when that arrival is live), and is hidden when there is none. In the question bar, `Yes, I caught it` is solid green and `No, I missed it` solid red, each with white text at 4.5:1 or better in both themes (`--action-yes`, `--action-no`), an icon, and at least 44 px tall.
+**Page A wording (a deliberate deviation from mockup 7).** The probability heading is `Chance to catch Bus {service}` with a muted `Arriving in {n} min · {boarding stop name}` line under it (one line, ellipsis, full name in a title attribute; the minutes are the arrival tile's, and with no ETA only the stop name shows). The ring's aria-label reads `{p} percent chance of catching Bus {service} arriving in {n} minutes at {stop name}, range {a} to {b} percent`. The heading replaces `chance to catch`. The Leave by tile shows either the clock time of leave-by with `in {n} min · {w} min walk`, or `Leave now` with `The bus is {e} min away and the walk takes about {w} min.`, never both; it is not shown for `switch_route` or `do_not_rely`. The tile, sentences two and three of the AI card, the pace chip and the notification all follow one rule: the action is `leave_now` when leave-by is 60 seconds or less away, and the page applies that rule between polls using the threshold the server sends. The pace chip shows only while the action is `leave_now`; it is hidden for `wait`, `switch_route` and `do_not_rely`. The pace categories keep `Walk slower` and `Walk slightly slower`. The caption under the ring follows the `walk_speed_source` the server returned for the poll: `if you leave now and keep walking at your current pace` for `gps` or `cadence`, `if you leave now and walk at your usual pace` for `remembered`, and the existing `if you leave now and walk at a normal pace` for `default`. A muted line under it, with aria-live off, always shows the server's `walk_speed_used` in km/h to one decimal: `Walking pace: {kmh} km/h · from GPS`, `· from your steps`, `· your usual pace` or `· normal pace` (1.25 m/s shows as 4.5 km/h). If you miss it shows the first later arrival of the same service after the tracked arrival, with its estimate from the one Step 9 estimate (anchored only when that arrival is live), and is hidden when there is none. In the question bar, `Yes, I caught it` is solid green and `No, I missed it` solid red, each with white text at 4.5:1 or better in both themes (`--action-yes`, `--action-no`), an icon, and at least 44 px tall.
 
 The boarding-stop screen and the route-options screen were removed. After the destination stop is confirmed, the app picks the boarding stop and the route (Step 14, section 1) and opens the journey overview.
 
@@ -384,6 +384,8 @@ Sections that currently define user-facing strings:
 
 The live journey shows three things by default: the hero (probability and leave-by), one status badge, and the AI Explanation card. Arrive-by check, data-quality detail, and the Leg 2 schedule expectation move under expandable Details. This is a layout rule. It does not remove arrive-by math, data-quality handling, or the Leg 2 schedule.
 
+**Leave by tile.** Label `Leave by`. When leave-by is more than the leave-now threshold away the value is the clock time (12-hour, Asia/Singapore) with `in {n} min · {w} min walk`. Otherwise the value is `Leave now` with `The bus is {e} min away and the walk takes about {w} min.` A tile never shows both. With an uncertain location a second muted line with a warning icon reads `Location uncertain: leave a bit earlier to be safe.` The old phrase `Wait for Leave By Alert` is removed.
+
 Step 14, the multi-leg assistant, is a stretch goal behind a finished single-leg flow. Finish search, place, stop, one route, and the live single-leg screen first. The Step 14 specification stays locked. It does not jump ahead of that single-leg flow.
 
 ## 5. Build order
@@ -452,9 +454,9 @@ The point estimate stays that same door-to-door total: the walk to the boarding 
 
 ### Leave-by calculation
 
-The authoritative Step 9 formula is `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / slow_speed`, and `slow_speed` is the slow end of the speed used (1.1 m/s at the default 1.25 m/s).
+The authoritative Step 9 formula is `leave_by = ETA - walk_time - LEAVE_MARGIN_SECONDS`, where `walk_time = boarding_stop_distance / speed_used` in raw seconds (the same distance and speed as the point walk of the catch probability) and `LEAVE_MARGIN_SECONDS = 135` in `config.py`. 135 is the 45 s board buffer plus the 90 s sigmoid midpoint: at leave-by the point probability is about 50 percent, and 60 s earlier about 82 percent. The probability formula, its 45 s buffer, clamps and thresholds do not change. One function computes it for the live poll, the pinned bus, `/api/journey` and the reroute rows, each from the user's position to that bus's own stop.
 
-The 45 s board buffer, the 60 s leave-now margin, the 60 s location-fix age threshold, and the 60 s stale-arrival-data threshold stay separate. The 60 s leave-now margin is not part of the Step 9 leave-by calculation. The 60 s location-fix age threshold and the 60 s stale-arrival-data threshold are not terms in this formula.
+The 60 s leave-now margin, the 60 s location-fix age threshold, and the 60 s stale-arrival-data threshold stay separate and are not terms in this formula.
 
 Leave-by remains fully functional and is independent of destination ride duration.
 
@@ -476,11 +478,11 @@ Step 10 is strictly limited to leave-now browser notifications. Reroute detectio
 
 ### 1. Leave-now trigger
 
-The Step 9 leave-by formula remains `leave_by = ETA - slow_walk - 45s`, where `slow_walk = boarding_stop_distance / slow_speed`, and `slow_speed` is the slow end of the speed used (1.1 m/s at the default 1.25 m/s).
+The Step 9 leave-by formula is `leave_by = ETA - walk_time - 135s` (see Step 9).
 
 The Step 10 notification trigger is `notification_time = leave_by - 60s`, where the 60 s is the existing leave-now margin.
 
-The 60 s leave-now margin is used only to determine when the notification fires. It is not part of the Step 9 leave-by clock. Do not modify the Step 9 leave-by formula.
+The 60 s leave-now margin is used only to determine when the notification fires. It is not part of the Step 9 leave-by clock. Do not modify the Step 9 formula here.
 
 A leave-now notification is eligible when the current time reaches `notification_time`.
 
@@ -559,7 +561,7 @@ Do not create a new stale-data or GPS-quality threshold. Reuse the existing Step
 
 The Step 9 leave-by clock stays independent of notification behavior.
 
-- Step 9: `leave_by = ETA - slow_walk - 45s`
+- Step 9: `leave_by = ETA - walk_time - 135s`
 - Step 10: `notification_time = leave_by - 60s`
 
 Destination ride duration is not part of the notification trigger or the leave-by formula.
@@ -783,20 +785,20 @@ The model receives only this fact sheet, and nothing else:
 
 ```json
 {
-  "reason_code": "TIME_TO_SPARE",
+  "reason_code": "LEAVE_BY",
   "chosen_action": "wait"
 }
 ```
 
-`reason_code` is one of `LOCATION_UNCERTAIN`, `UNLIKELY`, `MAY_NOT_REACH`, `TIME_TO_SPARE` (the variant of sentence two that Python chose). `chosen_action` is one of the four actions. The request contains no number at all: no minutes, no probability, no range, no slack, no seconds. OpenAI receives no spatial-selection information: no coordinates, no bus-stop identity, and no request to select, resolve, or rank a place or a stop. The eight-field fact sheet that this section used to list is replaced by this one.
+`reason_code` is one of `UNLIKELY`, `LOCATION_UNCERTAIN`, `LEAVE_NOW`, `LEAVE_BY`, chosen by Python in that first-match order from the sentence-two variant. `chosen_action` is one of the four actions. The request contains no number at all: no minutes, no probability, no range, no slack, no seconds. OpenAI receives no spatial-selection information: no coordinates, no bus-stop identity, and no request to select, resolve, or rank a place or a stop. The eight-field fact sheet that this section used to list is replaced by this one.
 
 ### 6a. The Page A text, the tracked bus and the snapshot key
 
-The AI Explanation card on Page A has exactly three sentences. Python writes sentences one and two, in the same poll response and from the same numbers as the arrival tile and the catch card: `The bus is {e} minutes away.` (`The bus is 1 minute away.` when e is 1; `The bus is arriving now.` when it is under a minute) and one of four wordings for the walk (`Your location is uncertain, so the walking time may be off.`; `Given the walking time is {w} minutes, catching this bus is unlikely.`; `Given the walking time is {w} minutes, you may not reach the stop before the bus.`; `Given the walking time is only {w} minutes, you have {t} minutes to get to the bus stop.`). Sentence three is `It is advisable to {advice}.`, where the model supplies only the advice words and Python assembles the sentence, falling back to a fixed clause for the action.
+The AI Explanation card on Page A has exactly three sentences. Python writes sentences one and two, in the same poll response and from the same numbers as the arrival tile and the catch card: `The bus is {e} minutes away.` (`The bus is 1 minute away.` when e is 1; `The bus is arriving now.` when it is under a minute) and one sentence about the walk and the time to leave, first match wins: `You are {distance} from the stop, but catching this bus is unlikely.` (low band, `switch_route` or `do_not_rely`); with a measured speed (`gps` or `cadence`) `You are {distance} from the stop and walking at about {kmh} km/h, so you should leave by {time}.`, or `You are {distance} from the stop and walking at about {kmh} km/h, so you should leave now.` when leave-by is within the leave-now threshold or passed; with a remembered speed `You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave by {time}.` or `You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave now.`; with the default speed `You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave by {time}.` or `You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave now.` When the location is uncertain one more sentence follows: `Your location is uncertain, so leave a little earlier than that to be safe.` after a leave-by time, `Your location is uncertain, so the walking time may be off.` after leave now; never after the unlikely sentence. Sentence three is `It is advisable to {advice}.`, where the model supplies only the advice words and Python assembles the sentence, falling back to a fixed clause for the action.
 
 The card always describes the tracked bus, the one the arrival tile shows. When a reroute fires, only the action changes to `switch_route` and the wording follows (`... catching this bus is unlikely.` and `It is advisable to switch to another bus.`); the minutes of the better bus never appear in the card. After an arrival is marked Missed, the tracked bus is the next arrival, as on the tile.
 
-Between two polls the page redraws sentences one and two every second from the tile's own minutes (the same value and the same rounding as the tile), so the card and the tile cannot disagree. Each explanation pack and each model request and reply carries a snapshot key (bus id plus poll time). A reply whose key is not the one of the poll on screen is dropped, so a late reply can never overwrite newer text. A poll with no tracked bus clears the card. Page C's explanation (`/api/explain-option`) is separate and unchanged. The page keeps a copy of the sentence templates and the variant rules; any change to the Python templates must change the page copy and the parity tests (a seeded random test and a boundary grid).
+The tile, sentence two, sentence three and the pace chip flip together between polls from the pack's `leave_by` and `leave_now_threshold_s` (60 s) through one shared function. Between two polls the page also redraws sentence one every second from the tile's own minutes (the same value and rounding as the tile). The pack also carries `distance_m`, `walk_speed_used`, `walk_speed_source` and both fixed clauses. The pack goes to the browser only; none of it reaches OpenAI. Each explanation pack and each model request and reply carries a snapshot key (bus id plus poll time). A reply whose key is not the one of the poll on screen is dropped, so a late reply can never overwrite newer text. A poll with no tracked bus clears the card. Page C's explanation (`/api/explain-option`) is separate and unchanged. The page keeps a copy of the sentence templates and the variant rules, so any change to the Python templates must change the page copy and the parity tests (a boundary grid and a seeded random test), which cover every variant.
 
 ### 7. Deterministic Python action mapping
 
@@ -814,6 +816,8 @@ else:
 ```
 
 The allowed values are exactly `wait`, `leave_now`, `switch_route`, and `do_not_rely`. OpenAI must reproduce that action in `leave_advice`. OpenAI must never choose or override the action.
+
+The 60 is `LEAVE_NOW_MARGIN_S` and is sent to the page as `leave_now_threshold_s`.
 
 ### 8. Strict response schema
 
@@ -1522,7 +1526,7 @@ Failure scenarios already covered by unit tests in steps 6, 7, and 12. The judge
 - The user selects an OneMap result, then confirms one LTA stop. The app does not geocode with any other provider and does not draw a walking route.
 - Arrive-by is entered with the destination phrase so the selector can show its rough label. The live catch range still starts only after the stop is confirmed.
 - One active journey, no accounts.
-- Walk speed: the user's measured speed (0.5–1.4 m/s) or the 1.25 m/s default, with a range at 1.1/1.25 and 1.4/1.25 times it (1.1–1.4 m/s at the default), board buffer 45 s, leave-now margin 60 s, reroute when the current primary `range_high` is below 40% and an alternative's `range_low` is at least 15 percentage points higher, as specified in **Step 11 specification**. Boarding-stop search radius 400 m. Ride speed 18 km/h for the arrive-by check only. The 60 s leave-now margin is not part of the Step 9 leave-by calculation. It is used only to set Step 10 notification timing: `notification_time = leave_by - 60s`.
+- Walk speed: the user's measured speed (0.5–1.4 m/s) or the 1.25 m/s default, with a range at 1.1/1.25 and 1.4/1.25 times it (1.1–1.4 m/s at the default), board buffer 45 s, leave margin 135 s (leave-by: about 50 percent catch chance), leave-now margin 60 s, reroute when the current primary `range_high` is below 40% and an alternative's `range_low` is at least 15 percentage points higher, as specified in **Step 11 specification**. Boarding-stop search radius 400 m. Ride speed 18 km/h for the arrive-by check only. The 60 s leave-now margin is not part of the leave-by calculation. It sets the Step 10 notification time, `notification_time = leave_by - 60s`, and the leave-now action.
 - Stale means last good Bus Arrival response is older than 60 seconds.
 - `gpt-4o-mini` via the OpenAI API. Keys stay in `.env`.
 - On-time history does not affect the score until 20 observations exist in a service/stop/hour bucket.

@@ -503,6 +503,8 @@
         <div>
           <p id="tile-leave-label" class="leave-tile__label">Leave by</p>
           <p id="tile-leave-by" class="leave-tile__value">—</p>
+          <p id="tile-leave-detail" class="leave-tile__meta" hidden></p>
+          <p id="tile-leave-caution" class="leave-tile__meta leave-tile__warn" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span id="tile-leave-caution-text"></span></p>
         </div>
       </div>
       <div class="leave-tile">
@@ -1544,18 +1546,35 @@
     }
 
     // The text comes from Python on every poll, built from the numbers of the bus the arrival tile shows. Between two
-    // polls sentences one and two are redrawn every second from the tile's own minutes (explanationLead mirrors the
-    // Python templates; tests pin the two together). Only the clause (sentence three) is fetched from the model, once
-    // per action, and a reply counts only when its snapshot key is the one of the poll on screen.
+    // polls the page redraws sentence one every second from the tile's own minutes, and sentences two and three, the
+    // Leave by tile and the pace chip flip together from the pack's leave_by and leave_now_threshold_s through ONE rule
+    // (leaveMode). The page keeps a copy of the templates (tests pin the two together). Only the clause (sentence three)
+    // is fetched from the model, once per action, and a reply counts only when its snapshot key is the one on screen.
     //
-    // MIRROR: explanationMinutes, explanationLead and the EXPL_ strings copy explain.py (tile_minutes, sentence_one,
-    // sentence_two). Change one side and you must change the other. The pack fields read here are listed in
-    // explain.PAGE_PACK_FIELDS. Tests that pin them: tests/test_explanation_consistency.py
-    // (test_the_page_mirror_equals_python_on_the_boundary_grid, ..._on_3000_seeded_random_cases,
-    // ..._on_every_minute_and_walk_pair_in_range, test_the_page_reads_exactly_the_pack_fields_the_server_lists) and tests/test_walk_speed_page.py
-    // (test_real_poll_payloads_render_the_same_sentences_as_the_pack).
+    // MIRROR: explanationMinutes, leaveClockText, explanationSentenceTwo, explanationLead and the EXPL_ strings copy
+    // explain.py (tile_minutes, format_clock, sentence_one, sentence_two, S2_*). Change one side and you must change
+    // the other. The pack fields read here are listed in explain.PAGE_PACK_FIELDS. Tests that pin them:
+    // tests/test_explanation_consistency.py (boundary grid, seeded random test, drift tests, pack-field tests) and
+    // tests/test_walk_speed_page.py (real poll payloads).
     var EXPL_ARRIVING_NOW = "The bus is arriving now.";
-    var EXPL_UNCERTAIN = "Your location is uncertain, so the walking time may be off.";
+    var EXPL_UNLIKELY = "You are {distance} from the stop, but catching this bus is unlikely.";
+    var EXPL_LEAVE_BY = {
+      measured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave by {time}.",
+      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave by {time}.",
+      "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave by {time}."
+    };
+    var EXPL_LEAVE_NOW = {
+      measured: "You are {distance} from the stop and walking at about {kmh} km/h, so you should leave now.",
+      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh} km/h, so you should leave now.",
+      "default": "You are {distance} from the stop and, at an average walking speed of {kmh} km/h, you should leave now."
+    };
+    var EXPL_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe.";
+    var EXPL_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off.";
+    var LEAVE_TILE_IN_MIN = "in {n} min · {w} min walk";
+    var LEAVE_TILE_IN_UNDER = "in under 1 min · {w} min walk";
+    var LEAVE_TILE_BUS_AWAY = "The bus is {e} min away and the walk takes about {w} min.";
+    var LEAVE_TILE_BUS_ARRIVING = "The bus is arriving now and the walk takes about {w} min.";
+    var LEAVE_TILE_UNCERTAIN = "Location uncertain: leave a bit earlier to be safe.";
 
     function renderExplanation(view) {
       lastExplanationView = view;
@@ -1578,25 +1597,97 @@
       return seconds < 60 ? 0 : Math.round(seconds / 60);
     }
 
-    // Sentences one and two (the Python sentence_one and sentence_two) for e minutes to the bus.
-    function explanationLead(pack, e) {
-      var w = pack.walk_minutes;
-      var one = e < 1 ? EXPL_ARRIVING_NOW : "The bus is " + explanationMinutesWord(e) + " away.";
-      var lead = "Given the walking time is " + explanationMinutesWord(w);
-      var two;
-      if (pack.uncertain) {
-        two = EXPL_UNCERTAIN;
-      } else if (pack.band === "low" || pack.action === "switch_route" || pack.action === "do_not_rely") {
-        two = lead + ", catching this bus is unlikely.";
-      } else if (w >= e) {
-        two = lead + ", you may not reach the stop before the bus.";
-      } else {
-        two = "Given the walking time is only " + explanationMinutesWord(w) + ", you have " + explanationMinutesWord(e - w) + " to get to the bus stop.";
+    // The clock time of the Leave by tile and of sentence two: 12-hour Singapore time, "(tomorrow)" when it is not today.
+    function leaveClockText(iso, nowMs) {
+      var parts = singaporeParts(new Date(iso));
+      var text = parts.hm + " " + parts.suffix;
+      if (parts.key !== singaporeParts(new Date(nowMs)).key) {
+        text += " (tomorrow)";
       }
-      return one + " " + two;
+      return text;
     }
 
-    // Redraws the card from the poll on screen and the clock: the tile's bus, the tile's minutes.
+    // THE one leave rule, for the tile, sentence two, sentence three and the pace chip: "now" when leave-by is the
+    // threshold (the server's leave_now_threshold_s, 60) or less away or passed, otherwise "by". null with no leave-by.
+    function leaveMode(leaveByIso, threshold, nowMs) {
+      var at = new Date(leaveByIso).getTime();
+      if (!isFinite(at) || typeof threshold !== "number" || !isFinite(threshold)) {
+        return null;
+      }
+      return (at - nowMs) / 1000 <= threshold ? "now" : "by";
+    }
+
+    // The action the page acts on: the poll's, with wait turning into leave_now when the leave rule says now.
+    function localAction(action, mode) {
+      return action === "wait" && mode === "now" ? "leave_now" : action;
+    }
+
+    // MIRROR of explain.speed_kind.
+    function explanationSpeedKind(source) {
+      return source === "gps" || source === "cadence" ? "measured" : source === "remembered" ? "remembered" : "default";
+    }
+
+    // MIRROR of explain.sentence_two. mode is leaveMode(...) for the same instant.
+    function explanationSentenceTwo(pack, mode, nowMs) {
+      var distance = formatDistance(pack.distance_m);
+      if (pack.band === "low" || pack.action === "switch_route" || pack.action === "do_not_rely") {
+        return EXPL_UNLIKELY.replace("{distance}", distance);
+      }
+      var now = mode === "now";
+      var text = (now ? EXPL_LEAVE_NOW : EXPL_LEAVE_BY)[explanationSpeedKind(pack.walk_speed_source)]
+        .replace("{distance}", distance)
+        .replace("{kmh}", (pack.walk_speed_used * 3.6).toFixed(1))
+        .replace("{time}", leaveClockText(pack.leave_by, nowMs));
+      if (pack.uncertain) {
+        text += " " + (now ? EXPL_UNCERTAIN_NOW : EXPL_UNCERTAIN_BY);
+      }
+      return text;
+    }
+
+    // Sentences one and two (the Python sentence_one and sentence_two) for e minutes to the bus, at nowMs.
+    function explanationLead(pack, e, nowMs) {
+      var one = e < 1 ? EXPL_ARRIVING_NOW : "The bus is " + explanationMinutesWord(e) + " away.";
+      var mode = leaveMode(pack.leave_by, pack.leave_now_threshold_s, nowMs);
+      return one + " " + explanationSentenceTwo(pack, mode, nowMs);
+    }
+
+    // Sentence three for the action the page acts on: the poll's own clause (the model's or the fixed one) while the
+    // action is the poll's, the fixed clause of the new action after a flip, until the next poll.
+    function explanationClauseFor(pack, mode) {
+      var shown = localAction(pack.action, mode);
+      if (shown === pack.action) {
+        return explanationClause;
+      }
+      return pack.clauses && typeof pack.clauses[shown] === "string" ? pack.clauses[shown] : explanationClause;
+    }
+
+    // What the Leave by tile shows now: { mode: "by" | "now", value, meta, uncertain }. Never a time and "Leave now"
+    // together. w is the pack's walk minutes (no pack, no meta line); e is the bus minutes the arrival tile shows.
+    function leaveTileView(body, pack, arrivalIso, nowMs) {
+      var mode = leaveMode(body && body.leave_by, body && body.leave_now_threshold_s, nowMs);
+      if (mode === null) {
+        return null;
+      }
+      var w = pack && typeof pack.walk_minutes === "number" ? pack.walk_minutes : null;
+      var meta = "";
+      var value;
+      if (mode === "by") {
+        value = leaveClockText(body.leave_by, nowMs);
+        var n = Math.round((new Date(body.leave_by).getTime() - nowMs) / 60000);
+        if (w !== null) {
+          meta = (n < 1 ? LEAVE_TILE_IN_UNDER : LEAVE_TILE_IN_MIN).replace("{n}", String(n)).replace("{w}", String(w));
+        }
+      } else {
+        value = LEAVE_NOW_TEXT;
+        var e = explanationMinutes(arrivalIso);
+        if (w !== null && e !== null) {
+          meta = (e < 1 ? LEAVE_TILE_BUS_ARRIVING : LEAVE_TILE_BUS_AWAY).replace("{e}", String(e)).replace("{w}", String(w));
+        }
+      }
+      return { mode: mode, value: value, meta: meta, uncertain: !!(pack && pack.uncertain) };
+    }
+
+    // Redraws the card from the poll on screen and the clock: the tile's bus, the tile's minutes, the tile's leave mode.
     function renderExplanationNow() {
       var pack = lastExplanationPack;
       if (!pack) {
@@ -1605,7 +1696,9 @@
       var hero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
       var arrival = hero && hero.arrival_time ? hero.arrival_time : pack.arrival_time;
       var e = explanationMinutes(arrival);
-      var text = e === null ? pack.text : explanationLead(pack, e) + " " + explanationClause;
+      var nowMs = Date.now();
+      var mode = leaveMode(pack.leave_by, pack.leave_now_threshold_s, nowMs);
+      var text = e === null || mode === null ? pack.text : explanationLead(pack, e, nowMs) + " " + explanationClauseFor(pack, mode);
       renderExplanation({ text: text, simulated: !!(lastSuccess && lastSuccess.simulated === true) });
     }
 
@@ -5721,14 +5814,22 @@
       var leave = "—";
       var leaveTile = document.getElementById("tile-leave");
       var action = fresh ? trackedAction(lastSuccess) : null;
-      if (action === "leave_now") {
-        leave = LEAVE_NOW_TEXT;
-      } else if (action === "wait") {
-        leave = WAIT_ALERT_TEXT;
+      var tileHero = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+      var tileView = fresh && (action === "leave_now" || action === "wait")
+        ? leaveTileView(lastSuccess, lastExplanationPack, tileHero && tileHero.arrival_time ? tileHero.arrival_time : null, Date.now())
+        : null;
+      if (tileView) {
+        leave = tileView.value;
       }
       // switch_route and do_not_rely: the tile is not shown (Page C or the banner takes over).
       leaveTile.hidden = action === "switch_route" || action === "do_not_rely";
       document.getElementById("tile-leave-by").textContent = leave;
+      var leaveMeta = document.getElementById("tile-leave-detail");
+      leaveMeta.textContent = tileView ? tileView.meta : "";
+      leaveMeta.hidden = !(tileView && tileView.meta);
+      var leaveWarn = document.getElementById("tile-leave-caution");
+      document.getElementById("tile-leave-caution-text").textContent = tileView && tileView.uncertain ? LEAVE_TILE_UNCERTAIN : "";
+      leaveWarn.hidden = !(tileView && tileView.uncertain);
       document.getElementById("tile-leave-label").textContent = "Leave by";
       var estimate = displayFrozen ? null : lastTileEstimate;
       document.getElementById("tile-arrival").textContent = estimate ? formatClock(estimate.estimated_arrival, true) : "—";
@@ -6184,7 +6285,6 @@
     var RING_ETA_NOW_TEXT = " arriving now";
     var RING_AT_TEXT = " at {stop}";
     var LEAVE_NOW_TEXT = "Leave now";
-    var WAIT_ALERT_TEXT = "Wait for Leave By Alert";
     var NO_BETTER_POST_REROUTE = "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the post-reroute 20% improvement threshold.";
 
     function isUnlikely(hero) {
@@ -6192,14 +6292,12 @@
       return !!(chance && !hero.is_missed && typeof chance.range_high === "number" && chance.range_high < MIN_REAL_CHANCE_RANGE_HIGH);
     }
 
-    // The Python action behind the AI clause. Between two polls the same leave-by test (60 s or less) is applied locally.
+    // The Python action behind the AI clause. Between two polls the one leave rule (leaveMode, with the threshold the
+    // server sent) turns wait into leave_now. The tile, sentences two and three and the pace chip all use it.
     function trackedAction(body) {
       var action = body && typeof body.chosen_action === "string" ? body.chosen_action : null;
       if (action === "wait" && body.leave_by) {
-        var at = new Date(body.leave_by).getTime();
-        if (isFinite(at) && at - Date.now() <= 60000) {
-          return "leave_now";
-        }
+        return localAction(action, leaveMode(body.leave_by, body.leave_now_threshold_s, Date.now()));
       }
       return action;
     }

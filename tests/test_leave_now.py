@@ -75,10 +75,10 @@ def test_step_9_leave_by_does_not_include_the_60_second_margin():
     eta = datetime(2026, 9, 29, 14, 58, tzinfo=SGT)
     distance_m = 110
     leave_by = leave_by_time(eta, distance_m)
-    slow_walk_s = distance_m / 1.1
-    assert leave_by == eta - timedelta(seconds=slow_walk_s + 45)
+    walk_s = distance_m / 1.25
+    assert leave_by == eta - timedelta(seconds=walk_s + 135)
     assert notification_time_from_leave_by(leave_by) == leave_by - timedelta(seconds=60)
-    assert leave_by != eta - timedelta(seconds=slow_walk_s + 45 + 60)
+    assert leave_by != eta - timedelta(seconds=walk_s + 135 + 60)
 
 
 def test_live_poll_keeps_leave_by_and_sets_notification_time():
@@ -113,8 +113,8 @@ def test_live_poll_keeps_leave_by_and_sets_notification_time():
             accuracy=18,
             cache=cache,
         )
-    assert body["leave_by"] == "2026-09-29T14:57:15+08:00"
-    assert body["notification_time"] == "2026-09-29T14:56:15+08:00"
+    assert body["leave_by"] == "2026-09-29T14:55:45+08:00"
+    assert body["notification_time"] == "2026-09-29T14:54:45+08:00"
     chance = body["buses"][0]["probability"]
     assert chance["range_high"] >= 40
     assert body["leave_now"]["eligible"] is True

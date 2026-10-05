@@ -1379,6 +1379,7 @@ select,
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  box-sizing: border-box;
   width: min(440px, 100%);
   padding: var(--space-3);
   background: var(--color-paper);
@@ -3603,6 +3604,31 @@ body:not(.is-screen-live) .live-only {
 .leave-tile__meta {
   color: var(--color-muted);
   font-size: var(--type-caption);
+}
+
+/* At 380 px and narrower the clock time and "Leave now" must stay on one line inside the half-width tile. */
+@media (max-width: 380px) {
+  .leave-tile__value {
+    font-size: 1.125rem;
+    white-space: nowrap;
+  }
+}
+
+.leave-tile__warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  color: var(--status-uncertain);
+}
+
+.leave-tile__warn[hidden] {
+  display: none;
+}
+
+.leave-tile__warn .icon {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
 }
 
 .leave-tiles__row {
