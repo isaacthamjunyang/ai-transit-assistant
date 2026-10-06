@@ -21,6 +21,7 @@ import uvicorn
 
 import arrivals
 import demo
+import explain
 import lta_static
 import observations
 from edge_runner import find_edge
@@ -78,6 +79,12 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
     env = tmp_path / "demo.env"
     env.write_text("", encoding="utf-8")
     patches.setattr(lta_static, "ENV_PATH", env)
+    # explain imported ENV_PATH by name, so the line above does not reach it: without these two lines the page's
+    # /api/explain used the real .env key and called the real OpenAI, and a model clause could arrive in the middle of
+    # an assertion. With no key a browser test never calls OpenAI: the fixed clause is what the page shows.
+    patches.setattr(explain, "ENV_PATH", env)
+    patches.delenv("OPENAI_API_KEY", raising=False)
+
     patches.setattr(observations, "DEFAULT_DB_PATH", tmp_path / "observations.db")
     patches.delenv("DEMO_MODE", raising=False)
     patches.setattr("main.load_static_data", lambda: cache)
@@ -122,14 +129,10 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level=log_level))
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-    for _ in range(100):
-        if server.started:
-            break
-        time.sleep(0.1)
-    else:
-        raise RuntimeError("the app did not start")
+    base = f"http://127.0.0.1:{port}"
     try:
-        yield f"http://127.0.0.1:{port}"
+        _wait_until_serving(server, base)
+        yield base
     finally:
         server.should_exit = True
         thread.join(timeout=10)
@@ -137,11 +140,44 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
         demo.reset_to_live()
 
 
+def _wait_until_serving(server, base: str, limit_s: float = 30.0) -> None:
+    """Ready means the server started AND answers a request, not a fixed number of sleeps."""
+    deadline = time.monotonic() + limit_s
+    while time.monotonic() < deadline:
+        if server.started:
+            try:
+                if httpx.get(base + "/api/demo", timeout=2.0).status_code == 200:
+                    return
+            except httpx.HTTPError:
+                pass
+        time.sleep(0.05)
+    raise RuntimeError("the app did not start")
+
+
 def require_edge() -> str:
     edge = find_edge()
     if edge is None:
         pytest.skip("headless Edge is not installed, so the page browser tests did not run")
     return edge
+
+
+def _run_driver(command: list[str], timeout: float) -> subprocess.CompletedProcess:
+    """Run the node driver; on a timeout or any error kill it AND the Edge it started (the whole process tree)."""
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+    try:
+        out, err = process.communicate(timeout=timeout)
+    except BaseException:
+        _kill_tree(process.pid)
+        process.communicate()
+        raise
+    finally:
+        if process.poll() is None:
+            _kill_tree(process.pid)
+    return subprocess.CompletedProcess(command, process.returncode, out, err)
+
+
+def _kill_tree(pid: int) -> None:
+    subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, check=False)
 
 
 def run_scenario(name: str, base_url: str, extra: dict | None = None, timeout: float = 240.0) -> dict:
@@ -155,10 +191,7 @@ def run_scenario(name: str, base_url: str, extra: dict | None = None, timeout: f
         **(extra or {}),
     }
     scenario = ROOT / "tests" / "js" / "scenarios" / f"{name}.mjs"
-    completed = subprocess.run(
-        ["node", str(DRIVER), edge, str(scenario), json.dumps(config)],
-        capture_output=True, text=True, encoding="utf-8", timeout=timeout, check=False,
-    )
+    completed = _run_driver(["node", str(DRIVER), edge, str(scenario), json.dumps(config)], timeout)
     marker = "@@RESULT@@"
     line = next((row for row in completed.stdout.splitlines() if row.startswith(marker)), None)
     if line is None:

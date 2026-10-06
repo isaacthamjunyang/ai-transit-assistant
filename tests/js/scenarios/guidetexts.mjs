@@ -22,7 +22,13 @@ export default async function (h) {
       Array.prototype.slice.call(el.querySelectorAll(".walk-sensors__list > div")).forEach(function (row) { rows[row.querySelector("dt").textContent] = row.querySelector("dd").textContent; });
       var why = el.querySelector(".walk-sensors__why");
       var panel = el.querySelector(".walk-sensors__panel");
-      return { rows: rows, why: why ? why.textContent : "", whyFirst: !!why && panel.firstElementChild === why, icon: !!why && !!why.querySelector("svg") };
+      var page = el.closest(".walk-page-sample");
+      var distance = page ? page.querySelector(".walk-status__distance") : null;
+      var state = page ? page.querySelector(".walk-status__state") : null;
+      var progress = page ? page.querySelector(".walk-progress") : null;
+      var chip = page ? page.querySelector(".sample-walk-map__chip") : null;
+      return { rows: rows, why: why ? why.textContent : "", whyFirst: !!why && panel.firstElementChild === why, icon: !!why && !!why.querySelector("svg"),
+        distance: distance ? distance.textContent : "", state: state ? state.textContent : "", progress: progress ? progress.value : null, chip: chip ? chip.textContent : "" };
     });
     out.walkSamples = Array.prototype.slice.call(document.querySelectorAll(".walk-page-sample")).map(function (el) {
       var trend = el.querySelector(".walk-chance__trend");

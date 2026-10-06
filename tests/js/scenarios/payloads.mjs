@@ -74,7 +74,8 @@ export default async function (h) {
             notifications: calls.length,
             paceSlotShown: !document.getElementById('pace-slot').hidden,
             chipPossible: chip,
-            action: trackedAction(lastSuccess)
+            action: trackedAction(lastSuccess),
+            expectedClock: leaveClockText(lastSuccess.leave_by, fixed)
           };
         } finally {
           clearLeaveNowTimer();

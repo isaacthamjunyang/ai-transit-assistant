@@ -1,7 +1,7 @@
 // Drives the real page in headless Edge over the DevTools protocol (no dependencies: Node 22+ has WebSocket).
 // usage: node page_driver.mjs <edge.exe> <scenario.mjs> <json config>
 // The scenario module's default export gets a helper and returns an object that is printed as JSON.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -138,6 +138,10 @@ async function main() {
 main().catch((error) => {
   console.log("@@RESULT@@" + JSON.stringify({ ok: false, error: String(error && error.stack || error) }));
 }).finally(() => {
+  // the whole Edge process tree (helpers and renderers too), then the throwaway profile
+  if (process.platform === "win32" && edge.pid) {
+    try { spawnSync("taskkill", ["/PID", String(edge.pid), "/T", "/F"], { stdio: "ignore" }); } catch (e) { /* already gone */ }
+  }
   edge.kill();
   setTimeout(() => {
     try { rmSync(profile, { recursive: true, force: true }); } catch (e) { /* locked profile: leave it to the OS */ }

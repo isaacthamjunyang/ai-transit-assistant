@@ -4839,3 +4839,15 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
   left: 50%;
   display: block;
 }
+
+/* Zoom 19 (12 m from the stop): You and the stop sit side by side at the centre, as in the real map. */
+
+.sample-walk-map--near .sample-walk-map__you,
+.sample-walk-map--near .sample-walk-map__acc {
+  top: 40%;
+  left: 50%;
+}
+
+.sample-walk-map--near .map-stop--live.sample-walk-map__stop {
+  top: 56%;
+}

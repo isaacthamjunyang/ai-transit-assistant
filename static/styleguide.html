@@ -1279,9 +1279,10 @@
         + "<span class=\"walk-open-row__chevron\" aria-hidden=\"true\">" + SG_CHEVRON_ICON + "</span></button>";
     }
 
-    function sgWalkMap(accuracy, arrived) {
-      return "<div class=\"live-map walk-map sample-walk-map\"><span class=\"sample-walk-map__chip\">" + formatSgRange() + "</span>"
-        + "<svg class=\"sample-walk-map__line\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\" focusable=\"false\"><line x1=\"30\" y1=\"28\" x2=\"50\" y2=\"66\"></line></svg>"
+    // near: the map at zoom 19 (the 12 m fit), the Range chip reads 20 m and the markers are close together
+    function sgWalkMap(accuracy, near) {
+      return "<div class=\"live-map walk-map sample-walk-map" + (near ? " sample-walk-map--near" : "") + "\"><span class=\"sample-walk-map__chip\">" + (near ? "Range: 20 m" : formatSgRange()) + "</span>"
+        + "<svg class=\"sample-walk-map__line\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\" focusable=\"false\"><line x1=\"" + (near ? "50\" y1=\"40\" x2=\"50\" y2=\"56" : "30\" y1=\"28\" x2=\"50\" y2=\"66") + "\"></line></svg>"
         + (accuracy ? "<span class=\"sample-walk-map__acc sample-walk-map__acc--" + accuracy + "\"></span>" : "")
         + "<span class=\"sample-walk-map__you\">You</span>"
         + "<span class=\"map-stop map-stop--live sample-walk-map__stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Origin<br>(01011)</span></span>"
@@ -1327,7 +1328,7 @@
       var progress = { waiting: 0, checking: 0, onway: 10, away: 0, still: 27, arrived: 100 }[o.state];
       return "<div class=\"walk-page-sample\">" + (o.alerts || "")
         + "<h2 class=\"walk-title\">" + w.title + "</h2>"
-        + sgWalkMap(o.accuracy || "small")
+        + sgWalkMap(o.accuracy || "small", o.state === "arrived")
         + "<section class=\"card walk-status\"><p class=\"walk-status__distance\">" + (hasFix ? w.distance.replace("{distance}", o.distance) : "—") + "</p>"
         + (hasFix ? "<p class=\"walk-status__minutes\">" + w.minutes.replace("{n}", o.minutes) + "</p>" : "")
         + "<p class=\"walk-status__note\">" + w.straightLine + "</p>"
@@ -1337,7 +1338,7 @@
         + "<div class=\"catch-card__row\">" + sgRing(ring[0], ring[1], ring[2], false, "", ring[3])
         + "<div class=\"catch-card__copy\"><p class=\"catch-card__range\">" + lc.range.replace("{range_low}", ring[1]).replace("{range_high}", ring[2]) + "</p>"
         + (trendText ? "<p class=\"walk-chance__trend\">" + trendText + "</p>" : "") + "</div></div></section>"
-        + sgSensors(false) + "</div>"
+        + (o.sensors || sgSensors(false)) + "</div>"
         + sgSeeArrivalsBar();
     }
 
@@ -1626,7 +1627,8 @@
         + "<h4>Page W, no location: the waiting state with the existing banner</h4>" + sgWalkPage({ state: "waiting", ring: [92, 92, 92, "ok"], accuracy: "", alerts: sgLocationCard() })
         + "<h4>Page W, Sensor details open (measured speed from GPS and steps)</h4>" + sgSensors(true)
         + "<h4>Page W, Sensor details closed</h4>" + sgSensors(false)
-        + "<h4>Page W, Sensor details open with a why line (no measured speed)</h4>" + sgSensorsWhy(copy.walkPage.whyNotWalking, "notWalking") + sgSensorsWhy(copy.walkPage.whyNoPermission, "noPermission") + sgSensorsWhy(copy.walkPage.whyNearStop, "nearStop");
+        + "<h4>Page W, Sensor details open with a why line (no measured speed)</h4>" + sgSensorsWhy(copy.walkPage.whyNotWalking, "notWalking") + sgSensorsWhy(copy.walkPage.whyNoPermission, "noPermission")
+        + "<h4>Page W, Near the stop: 12 m, Arrived at the stop, full progress bar, map at zoom 19, the measured pace frozen</h4>" + sgWalkPage({ state: "arrived", distance: "12 m", minutes: 1, trend: "steady", ring: [65, 48, 78, "ok"], sensors: sgSensorsWhy(copy.walkPage.whyNearStop, "nearStop") });
     }
 
     document.getElementById("pages-sample-light").innerHTML = pagesSample();

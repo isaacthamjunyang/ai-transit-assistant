@@ -115,3 +115,14 @@ def test_every_style_guide_sensor_sample_matches_what_the_estimator_can_show():
     assert near and all(s["rows"]["Walking pace"] == "4.3" + NBSP + "km/h · from GPS" for s in near)  # measured value and source kept
     assert not any("average pace" in s["rows"]["Walking pace"] for s in near)
     assert {s["why"] for s in samples if s["why"]} == {"Not walking yet", "No motion permission", "Near the stop"}
+
+
+def test_every_style_guide_near_the_stop_sample_is_a_real_near_stop_state():
+    NBSP = " "
+    near = [s for s in _guide_texts()["sensorSamples"] if s["why"] == "Near the stop"]
+    assert near
+    for sample in near:
+        match = re.fullmatch(r"(\d+)" + NBSP + r"m to the stop", sample["distance"])
+        assert match and int(match.group(1)) <= 30, sample  # near the stop means within 30 m
+        assert sample["state"] == "Arrived at the stop", sample
+        assert sample["progress"] == 100 and sample["chip"] == "Range: 20" + NBSP + "m", sample  # full bar, zoom 19

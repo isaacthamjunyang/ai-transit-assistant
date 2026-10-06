@@ -39,12 +39,22 @@ export default async function (h) {
   await poll(h);
   await h.sleep(300);
   out.afterLatch = Object.assign(await h.eval(ROWS), await h.eval("({ source: serverWalkSource, used: serverWalkSpeed, pollValue: paceEstimator.pollValue(), status: paceEstimator.status(), snapshot: paceEstimator.snapshot(), query: walkSpeedQuery() })"));
+  await h.eval("__sim.stop(); true");
+  // a real near-stop state: the user is 12 m from the stop (Arrived, full progress bar, map at zoom 19), the estimator
+  // latched off, so the Sensor details show "Near the stop" with the frozen measured pace
+  await h.eval(`userLat = ${h.config.lat} + 12 / 111195; userLon = ${h.config.lon}; userAccuracy = 8; userLocationTimestamp = Date.now(); __geo.set({ lat: userLat, lon: userLon, acc: 8 }); true`);
+  await poll(h);  // the server sees the fix 12 m from the stop and answers near_stop, which is what makes the state Arrived
+  await h.sleep(2200);
+  out.nearStopPage = await h.eval(`({
+    distance: document.querySelector(".walk-status__distance").textContent, state: document.getElementById("walk-state").textContent,
+    progress: document.querySelector(".walk-progress").value, zoom: map.getZoom(), why: document.getElementById("walk-sensor-why").textContent,
+    pace: document.getElementById("walk-sensor-pace").textContent, open: !document.getElementById("walk-sensors-panel").hidden
+  })`);
   if (h.config.shots) {
-    await h.eval("document.getElementById('walk-sensors').scrollIntoView(); true");
+    await h.eval("window.scrollTo(0, 0); true");
     await h.sleep(250);
     await h.screenshot(`${h.config.shots}/pageW-sensors-nearstop-${theme}-390.png`);
   }
-  await h.eval("__sim.stop(); true");
   // the real estimator's cadence: a normal in-range rhythm, and a stride-only rhythm that is doubled
   out.cadence = await h.eval(`(function () {
     var fs = 25, normal = [], stride = [];
