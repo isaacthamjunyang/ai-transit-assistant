@@ -15,6 +15,12 @@ MIN_REAL_CHANCE_RANGE_HIGH = 40
 # leave_by = bus ETA - walk time - this margin. 135 is the 45 s boarding buffer plus the 90 s sigmoid midpoint.
 LEAVE_MARGIN_SECONDS = 135   # chosen by me: at leave_by the app's own catch chance is about 50 percent.
 
+# At the stop: under 30 m from the boarding stop (the pace.is_near_stop rule), a fix of AT_STOP_MAX_ACCURACY_M or better
+# no older than 60 s, and live data. The user is there, so there is no walk and no 45 s buffer: P is this number, the
+# range is the same number and the action is wait. It is above the 92 percent cap of the formula on purpose.
+AT_STOP_PROBABILITY = 97
+AT_STOP_MAX_ACCURACY_M = 30
+
 UNANSWERED_END_MINUTES = 10
 MAX_MONITOR_MINUTES = 60
 

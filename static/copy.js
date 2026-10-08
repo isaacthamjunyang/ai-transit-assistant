@@ -17,6 +17,13 @@ var copy = {
     title: "Leave Now — Bus {service_no}",
     body: "Walk to {stop_name} ({stop_code}) now to catch Bus {service_no}. Catch probability: {point}% ({range_low}–{range_high}%)."
   },
+  atStop: {
+    tile: "At the stop",
+    tileBus: "The bus is {e}\u00a0min away.",
+    tileArriving: "The bus is arriving now.",
+    card: "You are at the stop. You have {e} to wait.",
+    cardArriving: "You are at the stop. The bus is arriving now."
+  },
   rerouteCard: {
     title: "Route Updated",
     message: "Switched to Bus {new_service} at {new_stop_name} ({new_stop_code}).",

@@ -36,6 +36,13 @@ from nearby import EARTH_RADIUS_M, haversine_m
 NOW = datetime(2026, 9, 29, 14, 0, 0, tzinfo=SGT)
 
 
+@pytest.fixture(autouse=True)
+def _formula_only(monkeypatch):
+    """These tests check the formula with the user standing at the stop (distance 0). The at-stop rule, which gives 97
+    there, is off for them; it has its own tests in tests/test_at_stop.py."""
+    monkeypatch.setattr(catch_heuristic, "AT_STOP_MAX_ACCURACY_M", -1)
+
+
 def _service(direction: int, origin: str, destination: str, **freqs) -> dict:
     record = {
         "ServiceNo": "36",

@@ -179,10 +179,10 @@ def test_a_good_model_clause_never_enters_the_card_text(client, model_on, monkey
 PINNED_PACK_KEYS = [
     "snapshot", "fact_sheet", "text", "clause", "clauses", "action", "arrival_time", "leave_by", "distance_m",
     "walk_minutes", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "band", "uncertain", "call",
-    "pending", "reason_code", "model_enabled",
+    "pending", "reason_code", "model_enabled", "at_stop",
 ]
 BROWSER_ONLY = ("leave_by", "distance_m", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "clauses",
-                "walk_minutes", "arrival_time", "text", "band", "uncertain")
+                "walk_minutes", "arrival_time", "text", "band", "uncertain", "at_stop")
 
 
 def test_the_pack_key_list_is_pinned_and_in_this_order(client):

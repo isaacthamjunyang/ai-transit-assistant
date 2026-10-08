@@ -363,7 +363,7 @@ def test_arrivals_with_location_score_each_bus(tmp_path, monkeypatch):
             params={
                 "stop_code": "08057",
                 "service_no": "36",
-                "lat": 1.3001,
+                "lat": 1.3005,  # 55 m away: not at the stop (under 30 m)
                 "lon": 103.8001,
                 "accuracy": 18,
             },
@@ -438,7 +438,7 @@ def test_location_timestamp_is_optional_and_an_old_fix_is_uncertain(tmp_path, mo
     params = {
         "stop_code": "08057",
         "service_no": "36",
-        "lat": 1.3001,
+        "lat": 1.3005,  # 55 m away: not at the stop (under 30 m)
         "lon": 103.8001,
         "accuracy": 18,
     }

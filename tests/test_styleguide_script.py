@@ -127,3 +127,17 @@ def test_every_style_guide_near_the_stop_sample_is_a_real_near_stop_state():
         assert match and int(match.group(1)) <= 30, sample  # near the stop means within 30 m
         assert sample["state"] == "Arrived at the stop", sample
         assert sample["progress"] == 100 and sample["chip"] == "Range: 20" + NBSP + "m", sample  # full bar, zoom 19
+
+
+def test_the_style_guide_shows_the_at_stop_card_and_tile():
+    NB = " "
+    texts = _guide_texts()
+    assert "You are at the stop. You have 4 minutes to wait." in texts["cards"]
+    assert "You are at the stop. You have 1 minute to wait." in texts["cards"]
+    assert "You are at the stop. The bus is arriving now." in texts["cards"]
+    tiles = [tuple(t) for t in texts["tiles"]]
+    assert ("At the stop", f"The bus is 4{NB}min away.") in tiles
+    assert ("At the stop", "The bus is arriving now.") in tiles
+    for card in texts["cards"]:
+        if card.startswith("You are at the stop"):
+            assert "km/h" not in card and "Leave" not in card

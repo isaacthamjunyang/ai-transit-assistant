@@ -187,10 +187,10 @@ def test_confirm_opens_the_overview_which_replans_on_every_entry():
     assert 'setOverviewState("loading")' in plan and 'setOverviewState("no-location")' in plan
     assert 'setOverviewState("no-route")' in plan and 'setOverviewState("unavailable")' in plan
     assert "setInterval" not in plan and "setTimeout" not in plan
-    # the poll timer and the display tick, plus the one Page W rescore timer (about every 5 s, only while Page W is open)
+    # the poll timer and the display tick, plus the one rescore timer (every 5 s, only while Page A or Page W is open)
     assert html.count("setInterval(") == 3
     assert "pollTimer = setInterval(" in html and "displayTimer = setInterval(" in html
-    assert "walkRescoreTimer = setInterval(walkRescoreTick, WALK_RESCORE_MS)" in html and "var POLL_MS = 20000;" in html
+    assert "walkRescoreTimer = setInterval(" in html and "walkRescoreTick(true)" in html and "var POLL_MS = 20000;" in html
 
 
 def test_at_most_one_lookup_per_overview_open_and_none_in_demo_mode():

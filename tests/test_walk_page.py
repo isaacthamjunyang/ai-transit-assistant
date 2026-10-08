@@ -48,7 +48,7 @@ def _node(program):
 
 def _helpers():
     """The page's pure helpers, cut out of the page source by name."""
-    source = "var WALK_ONWAY_METRES = 5; var WALK_ONWAY_WINDOW_MS = 10000; var WALK_TREND_STEP = 2;\n"
+    source = "var WALK_ONWAY_METRES = 3; var WALK_ONWAY_WINDOW_MS = 5000; var WALK_TREND_STEP = 2;\n"
     for name in ("walkMinutesOf", "walkStateOf", "walkTrendNext", "walkWhyOf", "walkProgressOf"):
         start = PAGE_W.index("function " + name + "(")
         end = PAGE_W.index("\n    }\n", start) + len("\n    }\n")
@@ -90,10 +90,10 @@ def test_approaching_not_moving_moving_away_arrived_checking_and_waiting(report)
 
 @needs_node
 @pytest.mark.parametrize("drop, seconds, expected", [
-    (4.9, 10, "still"), (5.0, 10, "onway"), (5.0, 9.9, "checking"), (30, 10.1, "onway"), (0, 12, "still"),
-    (-4.9, 12, "still"), (-5.0, 10, "away"), (-20, 12, "away"), (-20, 9.9, "checking"), (-5.0, 9.9, "checking"),
+    (2.9, 5, "still"), (3.0, 5, "onway"), (3.0, 4.9, "checking"), (30, 5.1, "onway"), (0, 6, "still"),
+    (-2.9, 6, "still"), (-3.0, 5, "away"), (-20, 6, "away"), (-20, 4.9, "checking"), (-3.0, 4.9, "checking"),
 ])
-def test_the_movement_rule_is_5_m_over_10_s_and_checking_before_that(drop, seconds, expected):
+def test_the_movement_rule_is_3_m_over_5_s_and_checking_before_that(drop, seconds, expected):
     program = _helpers() + (
         f"var samples = [{{t: 0, d: 300}}, {{t: {seconds * 1000}, d: {300 - drop}}}];"
         "console.log(JSON.stringify(walkStateOf(true, false, samples, 99999)));"

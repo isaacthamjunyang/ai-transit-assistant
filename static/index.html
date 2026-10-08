@@ -1125,6 +1125,7 @@
         displayTimer = null;
       }
       monitoringActive = false;
+      syncWalkTimers();
       entryPending = false;
       pageC = null;
       pageCSerial += 1;
@@ -1624,6 +1625,12 @@
     var EXPL_LEAVE_NOW_ARRIVING = "Leave now to try to catch the bus arriving at {arrival}.";
     var EXPL_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe.";
     var EXPL_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off.";
+    // At the stop (the probability carries at_stop): the whole card and the Leave by tile. MIRROR of explain.S_AT_STOP*.
+    var EXPL_AT_STOP = "You are at the stop. You have {e} to wait.";
+    var EXPL_AT_STOP_ARRIVING = "You are at the stop. The bus is arriving now.";
+    var AT_STOP_TEXT = "At the stop";
+    var LEAVE_TILE_AT_STOP_AWAY = "The bus is {e}\u00a0min away.";
+    var LEAVE_TILE_AT_STOP_ARRIVING = "The bus is arriving now.";
     var LEAVE_TILE_IN_MIN = "in {n}\u00a0min · {w}\u00a0min walk";
     var LEAVE_TILE_IN_UNDER = "in under 1\u00a0min · {w}\u00a0min walk";
     var LEAVE_TILE_BUS_AWAY = "The bus is {e}\u00a0min away and the walk takes about {w}\u00a0min.";
@@ -1688,6 +1695,9 @@
 
     // MIRROR of explain.sentence_one: the bus and the walk in one sentence.
     function explanationSentenceOne(pack, e) {
+      if (pack.at_stop === true) {
+        return e < 1 ? EXPL_AT_STOP_ARRIVING : EXPL_AT_STOP.replace("{e}", explanationMinutesWord(e));
+      }
       var bus = e < 1 ? EXPL_ARRIVING_NOW : EXPL_BUS_MINUTES.replace("{e}", explanationMinutesWord(e));
       var text = bus + EXPL_YOU_ARE.replace("{distance}", formatDistance(pack.distance_m));
       if (explanationIsUnlikely(pack)) {
@@ -1703,7 +1713,7 @@
 
     // MIRROR of explain.sentence_two: the leave sentence, "" when unlikely. mode is leaveMode(...) for the same instant.
     function explanationSentenceTwo(pack, e, mode, arrivalIso, nowMs) {
-      if (explanationIsUnlikely(pack)) {
+      if (pack.at_stop === true || explanationIsUnlikely(pack)) {
         return "";
       }
       var now = mode === "now";
@@ -1735,6 +1745,14 @@
     // What the Leave by tile shows now: { mode: "by" | "now", value, meta, uncertain }. Never a time and "Leave now"
     // together. w is the pack's walk minutes (no pack, no meta line); e is the bus minutes the arrival tile shows.
     function leaveTileView(body, pack, arrivalIso, nowMs) {
+      if (pack && pack.at_stop === true) {
+        // at the stop: no time, no "Leave now", no walk minutes, no location caution (the rule needs a good fix)
+        var atE = explanationMinutes(arrivalIso);
+        return {
+          mode: "at", value: AT_STOP_TEXT, uncertain: false,
+          meta: atE === null ? "" : (atE < 1 ? LEAVE_TILE_AT_STOP_ARRIVING : LEAVE_TILE_AT_STOP_AWAY.replace("{e}", String(atE)))
+        };
+      }
       var mode = leaveMode(body && body.leave_by, body && body.leave_now_threshold_s, nowMs);
       if (mode === null) {
         return null;
@@ -1769,7 +1787,7 @@
       var e = explanationMinutes(arrival);
       var nowMs = Date.now();
       var mode = leaveMode(pack.leave_by, pack.leave_now_threshold_s, nowMs);
-      var text = e === null || mode === null ? pack.text : explanationCardText(pack, e, arrival, nowMs);
+      var text = e === null || (mode === null && pack.at_stop !== true) ? pack.text : explanationCardText(pack, e, arrival, nowMs);
       renderExplanation({ text: text, simulated: !!(lastSuccess && lastSuccess.simulated === true) });
     }
 
@@ -2036,7 +2054,7 @@
     }
 
     function renderBusCards(body) {
-      paceRenderKey = body && body.fetched_at ? body.fetched_at : "";
+      paceRenderKey = body && body.render_key ? body.render_key : body && body.fetched_at ? body.fetched_at : "";
       var hero = featuredBus(body.buses);
       renderCatchCard(hero);
       arrivalUpdated.textContent = "Last updated: " + formatTime(body.fetched_at, true);
@@ -4029,6 +4047,7 @@
       return notice.eligible === true
         && notice.bus_id === leaveNowBanner.busId
         && !!chance
+        && chance.at_stop !== true
         && chance.data_quality !== "location uncertain"
         && typeof chance.range_high === "number"
         && chance.range_high >= 40;
@@ -4057,7 +4076,7 @@
         return;
       }
       var chance = primary.probability;
-      if (!chance || chance.data_quality === "location uncertain") {
+      if (!chance || chance.data_quality === "location uncertain" || chance.at_stop === true) {
         return;
       }
       if (typeof chance.range_high !== "number" || chance.range_high < 40) {
@@ -4114,7 +4133,10 @@
       var message = "Bus " + selectedService + " at " + stopName + " is about 5 minutes away.";
       var chance = primary.probability;
       if (chance && chance.data_quality !== "location uncertain" && typeof chance.point === "number" && typeof chance.range_low === "number" && typeof chance.range_high === "number") {
-        message += " Catch probability: " + chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%).";
+        // the range is shown only when low and high differ
+        message += chance.range_low === chance.range_high
+          ? " Catch probability: about " + chance.point + "%."
+          : " Catch probability: " + chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%).";
       }
       try {
         new Notification("5 minutes left", { body: message });
@@ -4122,6 +4144,15 @@
         return;
       }
       fiveMinuteNotifiedKey = key;
+    }
+
+    // At the stop there is nothing to walk to: no Leave now banner, no timer. Only a poll can start one (Q5).
+    function suppressLeaveNowAtStop(body) {
+      var primary = body ? primaryBus(body) : null;
+      if (primary && primary.probability && primary.probability.at_stop === true) {
+        clearLeaveNowTimer();
+        hideLeaveNowBanner();
+      }
     }
 
     function syncLeaveNow(body) {
@@ -4150,7 +4181,7 @@
         lastNotifiedBusId = null;
       }
       var chance = primary.probability;
-      if (!notice.eligible || !chance || chance.data_quality === "location uncertain") {
+      if (!notice.eligible || !chance || chance.data_quality === "location uncertain" || chance.at_stop === true) {
         clearLeaveNowTimer();
         return;
       }
@@ -4633,6 +4664,7 @@
       syncPageCClasses();
       syncCatchBar();
       syncPaceEstimator();
+      syncWalkTimers();
       renderMotionNote();
     }
 
@@ -5604,6 +5636,9 @@
     }
 
     function fitFullRoute() {
+      if (document.body.classList.contains("is-page-w")) {
+        return;
+      }
       var points = routeLinePoints();
       if (userLat !== null && userLon !== null) {
         points.push([userLat, userLon]);
@@ -5888,6 +5923,8 @@
       setBusArrives("catch", hero, usable);
       var walkPace = catchWalkPace();
       document.getElementById("catch-caption").textContent = walkPace.caption;
+      // at the stop there is no walk to describe: the caption is hidden, and returns when at_stop is false
+      document.getElementById("catch-caption").hidden = !!(chance && chance.at_stop === true);
       // The pace line shows what the server used for this poll, whatever the source, including the normal pace.
       document.getElementById("catch-pace-line").textContent = usable ? walkPace.line : "";
       document.getElementById("catch-title").textContent = catchHeading(false);
@@ -5990,8 +6027,9 @@
     };
     var WALK_SOURCE_TEXT = { gps: "from GPS", cadence: "from your steps", remembered: "your usual pace", "default": "average pace" };
     var WALK_WHY_TEXT = { notWalking: "Not walking yet", noPermission: "No motion permission", nearStop: "Near the stop" };
-    var WALK_ONWAY_METRES = 5;
-    var WALK_ONWAY_WINDOW_MS = 10000;
+    // 3 m over 5 s is about 0.6 m/s, the slowest pace called "On your way" (it was 5 m over 10 s, about 0.5 m/s).
+    var WALK_ONWAY_METRES = 3;
+    var WALK_ONWAY_WINDOW_MS = 5000;
     var WALK_TREND_STEP = 2;
     var WALK_RESCORE_MS = 5000;
     var WALK_HEADING_MIN_SPEED = 0.5;
@@ -6029,8 +6067,8 @@
       return Math.max(1, Math.round(metres / speed / 60));
     }
 
-    // samples: [{ t, d }] oldest first. Over the last 10 s: the distance fell by at least 5 m = "onway", grew by at least
-    // 5 m = "away", otherwise "still". With less than 10 s of history the answer is "checking".
+    // samples: [{ t, d }] oldest first. Over the last 5 s: the distance fell by at least 3 m = "onway", grew by at least
+    // 3 m = "away", otherwise "still". With less than 5 s of history the answer is "checking".
     function walkStateOf(hasFix, nearStop, samples, nowMs) {
       if (!hasFix) {
         return "waiting";
@@ -6181,10 +6219,28 @@
       }
     }
 
+    // The rescore (Page A and Page W): only on Page A or Page W, in the foreground, after Start journey while a leg 1
+    // bus is tracked. Never on Page B or C, after Yes/No or the end card, on a hidden page, in Demo Mode or on leg 2.
+    function rescoreScreenOk() {
+      var top = screenStack[screenStack.length - 1];
+      return top === "walk" || (top === "live" && !pageC);
+    }
+
+    function rescoreLegOk() {
+      return !activeRoutePlan || !activeRoutePlan.leg_index || activeRoutePlan.leg_index === 1;
+    }
+
+    function rescoreAllowed() {
+      return rescoreScreenOk() && !document.hidden && monitoringActive && !endedKind && !missedMode
+        && !demoModeOn() && rescoreLegOk();
+    }
+
     function syncWalkTimers() {
-      var want = walkOnTop() && !document.hidden && monitoringActive && !endedKind && !missedMode && !demoModeOn();
+      var want = rescoreAllowed();
       if (want && walkRescoreTimer == null) {
-        walkRescoreTimer = setInterval(walkRescoreTick, WALK_RESCORE_MS);
+        walkRescoreTimer = setInterval(function () {
+          walkRescoreTick(true);
+        }, WALK_RESCORE_MS);
       } else if (!want && walkRescoreTimer != null) {
         clearInterval(walkRescoreTimer);
         walkRescoreTimer = null;
@@ -6211,13 +6267,19 @@
       }
     }
 
-    // About every 5 s while Page W is open and visible: the same scoring as the poll, from the server's short-lived
-    // copy of the latest arrivals (no LTA call). "use_poll" means the poll's numbers stay.
-    function walkRescoreTick() {
-      if (!walkOnTop() || document.hidden || walkRescoreBusy || !monitoringActive || demoModeOn() || displayFrozen) {
+    // About every 5 s on Page A or Page W: the same scoring as the poll, from the server's short-lived copy of the latest
+    // arrivals (no LTA call) and the newest fix we have (the poll's or the estimator's watch). "use_poll" means the poll's
+    // numbers stay. No reroute search runs here, so the answer is ignored while the poll's action is switch_route.
+    function walkRescoreTick(fromTimer) {
+      if (!rescoreAllowed()) {
+        syncWalkTimers();
         return;
       }
-      if (Date.now() - walkLastRescoreAt < WALK_RESCORE_MS - 250 || !selectedBoardingStop || !selectedService) {
+      if (walkRescoreBusy || displayFrozen) {
+        return;
+      }
+      // a fix or a screen change asks at most every 5 s; the timer's own tick is the 5 s beat and is never skipped
+      if ((!fromTimer && Date.now() - walkLastRescoreAt < WALK_RESCORE_MS - 250) || !selectedBoardingStop || !selectedService) {
         return;
       }
       if (userLat === null || userLon === null || userAccuracy === null) {
@@ -6236,6 +6298,14 @@
         + "&accuracy=" + encodeURIComponent(userAccuracy)
         + (userLocationTimestamp !== null ? "&location_timestamp=" + encodeURIComponent(userLocationTimestamp) : "")
         + walkSpeedQuery();
+      if (confirmedDestinationStop && selectedDestination) {
+        url += "&explanation_rendered=" + (lastExplanationPack ? "1" : "0");
+        if (explainedAction !== null && explainedAdvice !== null) {
+          url += "&explained_action=" + encodeURIComponent(explainedAction)
+            + "&explained_advice=" + encodeURIComponent(explainedAdvice);
+        }
+        url += "&explanation_in_flight=" + (explanationInFlight ? "1" : "0");
+      }
       var controller = new AbortController();
       var timer = setTimeout(function () {
         controller.abort();
@@ -6245,7 +6315,7 @@
           return response.ok ? response.json() : null;
         })
         .then(function (body) {
-          if (generation !== monitorGeneration || !body) {
+          if (generation !== monitorGeneration || !body || !rescoreAllowed()) {
             return;
           }
           // near_stop is in every answer, "use_poll" too: the server's 30 m rule, the poll's own function
@@ -6253,25 +6323,7 @@
             walkChanceSource = { chance: walkChanceSource.chance, nearStop: body.near_stop };
             renderWalkPage();
           }
-          if (body.status !== "ok" || !Array.isArray(body.buses)) {
-            return;
-          }
-          var current = lastSuccess && Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
-          var match = null;
-          body.buses.forEach(function (bus) {
-            if (current && bus.arrival_time === current.arrival_time && bus.probability) {
-              match = bus;
-            }
-          });
-          if (!match) {
-            return;
-          }
-          noteServerWalkSpeed(body);
-          walkChanceSource = { chance: match.probability, nearStop: body.near_stop === true };
-          if (typeof match.probability.point === "number") {
-            walkTrend = walkTrendNext(walkTrend, match.probability.point);
-          }
-          renderWalkPage();
+          applyRescore(body);
         })
         .catch(function () {
           return;
@@ -6280,6 +6332,63 @@
           clearTimeout(timer);
           walkRescoreBusy = false;
         });
+    }
+
+    // A good answer replaces the probability, leave_by, near_stop, the action and the explanation pack of the poll on
+    // screen together, then the views are drawn from that one body: the ring, the tiles, the AI card and the pace chip
+    // cannot come from two scorings. The poll's own decisions (Leave now banner, reroute, entry) are not re-run.
+    var rescoreSerial = 0;
+
+    function mergeRescore(body) {
+      if (!lastSuccess || !body || body.status !== "ok" || !Array.isArray(body.buses)) {
+        return null;
+      }
+      if (lastSuccess.chosen_action === "switch_route" || (lastSuccess.reroute && lastSuccess.reroute.switched)) {
+        return null;
+      }
+      var current = Array.isArray(lastSuccess.buses) ? featuredBus(lastSuccess.buses) : null;
+      if (!current) {
+        return null;
+      }
+      var byArrival = {};
+      body.buses.forEach(function (bus) {
+        if (bus.arrival_time && bus.probability) {
+          byArrival[bus.arrival_time] = bus;
+        }
+      });
+      if (!byArrival[current.arrival_time]) {
+        return null;
+      }
+      var merged = Object.assign({}, lastSuccess);
+      merged.buses = lastSuccess.buses.map(function (bus) {
+        var fresh = byArrival[bus.arrival_time];
+        return fresh ? Object.assign({}, bus, { probability: fresh.probability, is_missed: fresh.is_missed, is_primary: fresh.is_primary }) : bus;
+      });
+      merged.leave_by = body.leave_by;
+      merged.near_stop = body.near_stop === true;
+      merged.leave_now_threshold_s = body.leave_now_threshold_s;
+      merged.chosen_action = body.chosen_action;
+      if (body.explanation) {
+        merged.explanation = body.explanation;
+      }
+      rescoreSerial += 1;
+      merged.render_key = (lastSuccess.fetched_at || "") + "|r" + rescoreSerial;
+      return merged;
+    }
+
+    function applyRescore(body) {
+      var merged = mergeRescore(body);
+      if (!merged) {
+        return;
+      }
+      noteServerWalkSpeed(body);
+      lastSuccess = merged;
+      walkNotePoll(merged);
+      syncExplanation(merged);
+      renderBusCards(merged);
+      renderJourneyLeaveBy();
+      renderLiveTracking();
+      suppressLeaveNowAtStop(merged);
     }
 
     function walkYouIcon() {
@@ -7026,6 +7135,10 @@
     function trackedAction(body) {
       var action = body && typeof body.chosen_action === "string" ? body.chosen_action : null;
       if (action === "wait" && body.leave_by) {
+        var atHero = Array.isArray(body.buses) ? featuredBus(body.buses) : null;
+        if (atHero && atHero.probability && atHero.probability.at_stop === true) {
+          return action;  // at the stop there is nothing to leave for: wait stays wait
+        }
         return localAction(action, leaveMode(body.leave_by, body.leave_now_threshold_s, Date.now()));
       }
       return action;
@@ -7796,6 +7909,7 @@
         displayTimer = null;
       }
       monitoringActive = false;
+      syncWalkTimers();
       clearLeaveNowTimer();
       hideLeaveNowBanner();
       clearRerouteProposal();

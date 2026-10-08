@@ -172,9 +172,12 @@ def chosen_action(
     data_quality: str,
     range_high: int,
     leave_by_seconds: float,
+    at_stop: bool = False,
 ) -> str:
     if reroute_fired_this_poll:
         action = "switch_route"
+    elif at_stop:
+        action = "wait"  # the user is at the stop: there is nothing to leave for
     elif data_quality in ("stale", "unavailable") or range_high < 40:
         action = "do_not_rely"
     elif leave_by_seconds <= LEAVE_NOW_MARGIN_S:
@@ -254,7 +257,7 @@ def minutes_text(count: int) -> str:
 PAGE_PACK_FIELDS = (
     "snapshot", "fact_sheet", "text", "clause", "action", "arrival_time", "leave_by", "distance_m",
     "walk_minutes", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "band", "uncertain",
-    "call", "pending", "model_enabled",
+    "call", "pending", "model_enabled", "at_stop",
 )
 # Every key of the pack: the page's fields plus reason_code and clauses (the model's, kept and dormant).
 PACK_KEYS = PAGE_PACK_FIELDS + ("clauses", "reason_code")
@@ -275,6 +278,9 @@ S2_LEAVE_NOW = "Leave now so you have {e} to reach your stop and catch the bus a
 S2_LEAVE_NOW_ARRIVING = "Leave now to try to catch the bus arriving at {arrival}."
 S2_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe."
 S2_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off."
+# At the stop (the probability carries at_stop): the whole card, nothing after it.
+S_AT_STOP = "You are at the stop. You have {e} to wait."
+S_AT_STOP_ARRIVING = "You are at the stop. The bus is arriving now."
 
 
 def format_distance(metres: float) -> str:
@@ -337,6 +343,7 @@ def build_numbers(
     leave_by: str,
     arrival_time: str,
     now: datetime,
+    at_stop: bool = False,
 ) -> dict:
     """The numbers of the card text. They stay on the server."""
     for value in (bus_minutes, walk_minutes):
@@ -362,6 +369,7 @@ def build_numbers(
         "time_text": format_clock(leave_at, now),
         "arrival_text": format_clock(arrival_at, now),
         "x_minutes": minutes_to_reach(arrival_at, leave_at),
+        "at_stop": at_stop is True,
     }
 
 
@@ -373,6 +381,8 @@ def sentence_one(numbers: dict, *, band: str | None, uncertain: bool = False) ->
     """The bus and the walk in one sentence. Unlikely (low band, switch or do-not-rely) ends in the unlikely clause
     instead of the speed."""
     e = numbers["bus_minutes"]
+    if numbers.get("at_stop"):
+        return S_AT_STOP_ARRIVING if e < 1 else S_AT_STOP.replace("{e}", minutes_text(e))
     bus = S1_ARRIVING_NOW if e < 1 else S1_BUS_MINUTES.replace("{e}", minutes_text(e))
     text = bus + S1_YOU.replace("{distance}", format_distance(numbers["distance_m"]))
     if is_unlikely(numbers, band=band):
@@ -384,7 +394,7 @@ def sentence_one(numbers: dict, *, band: str | None, uncertain: bool = False) ->
 def sentence_two(numbers: dict, *, band: str | None, uncertain: bool) -> str:
     """The leave sentence, with the uncertain-location sentence after it. Empty when unlikely: the card is then the
     one sentence, with nothing after it."""
-    if is_unlikely(numbers, band=band):
+    if numbers.get("at_stop") or is_unlikely(numbers, band=band):
         return ""
     now = leave_mode(numbers["leave_seconds"]) == "now"
     arrival = numbers["arrival_text"]
@@ -689,11 +699,13 @@ def build_poll_explanation(
     except (ValueError, TypeError):
         return None
     distance = round(distance, 1)
+    at_stop = chance.get("at_stop") is True
     action = chosen_action(
         reroute_fired_this_poll=reroute_fired,
         data_quality=quality,
         range_high=high,
         leave_by_seconds=seconds_until_leave_by(payload.get("leave_by"), now),
+        at_stop=at_stop,
     )
     numbers = build_numbers(
         bus_minutes=bus_minutes,
@@ -705,6 +717,7 @@ def build_poll_explanation(
         leave_by=leave_by,
         arrival_time=arrival,
         now=now,
+        at_stop=at_stop,
     )
     band = band if band in ("ok", "mid", "low") else None
     uncertain = quality == "location uncertain"
@@ -713,7 +726,7 @@ def build_poll_explanation(
     cached = explained_advice if explained_action == action and advice_is_valid(explained_advice, action) else None
     advice = cached if cached is not None else deterministic_advice(action)
     model_enabled = model_path_enabled()
-    needs_model = model_enabled and quality in ALLOWED_QUALITY and cached is None
+    needs_model = model_enabled and quality in ALLOWED_QUALITY and cached is None and not at_stop
     return {
         "snapshot": snapshot_key(stop_code, str(payload.get("service_no") or ""), arrival, now),
         "fact_sheet": sheet,
@@ -734,6 +747,7 @@ def build_poll_explanation(
         "call": needs_model and not in_flight,
         "pending": needs_model and in_flight,
         "model_enabled": model_enabled,
+        "at_stop": at_stop,
     }
 
 

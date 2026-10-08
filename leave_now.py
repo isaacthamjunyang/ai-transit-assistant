@@ -59,6 +59,7 @@ def leave_now_notice(
         and range_high is not None
         and range_high >= RANGE_HIGH_MINIMUM
         and quality != "location uncertain"
+        and not (isinstance(chance, dict) and chance.get("at_stop") is True)  # nothing to walk to
         and bool(service_no)
         and bool(stop_code)
         and bool(stop_name)
@@ -67,10 +68,13 @@ def leave_now_notice(
     body = None
     if eligible and point is not None and range_low is not None and range_high is not None:
         title = f"Leave Now — Bus {service_no}"
-        body = (
-            f"Walk to {stop_name} ({stop_code}) now to catch Bus {service_no}. "
-            f"Catch probability: {point}% ({range_low}–{range_high}%)."
+        # the range is shown only when it differs from the point's own band (low and high are not the same number)
+        chance_text = (
+            f"Catch probability: about {point}%."
+            if range_low == range_high
+            else f"Catch probability: {point}% ({range_low}–{range_high}%)."
         )
+        body = f"Walk to {stop_name} ({stop_code}) now to catch Bus {service_no}. " + chance_text
     return {
         "bus_id": bus_id,
         "eligible": eligible,

@@ -77,7 +77,7 @@ def _python_text(c) -> str:
         bus_minutes=c["e"], walk_minutes=c["w"], chosen_action=c["action"], distance_m=c["distance"],
         walk_speed_used=c["speed"], walk_speed_source=c["source"],
         leave_by=(now + timedelta(seconds=c["leave_in"])).isoformat(),
-        arrival_time=(now + timedelta(seconds=c["arr_off"])).isoformat(), now=now)
+        arrival_time=(now + timedelta(seconds=c["arr_off"])).isoformat(), now=now, at_stop=c.get("at_stop", False))
     return card_text(numbers, band=c["band"], uncertain=c["unc"])
 
 
@@ -122,3 +122,48 @@ def test_less_than_a_minute_apart_reads_one_minute():
     c = _case(e=14, now=NOON_ISH, speed=1.25, source="remembered", distance=203.0, leave_in=540, arr_off=540 + 30)
     # leave by 4:04:00 and a bus at 4:04:30 cannot be a leave-by case in the app, but the text still reads "1 minute"
     assert "so you have 1 minute to reach your stop" in _python_text(dict(c, e=9))
+
+
+# ---- at the stop (tmp/plan_edits_8.md section 6): the whole card, nothing after it
+
+AT_STOP_ROWS = [
+    ("A1 e = 4", 4, "You are at the stop. You have 4 minutes to wait."),
+    ("A2 e = 2", 2, "You are at the stop. You have 2 minutes to wait."),
+    ("A3 e = 1", 1, "You are at the stop. You have 1 minute to wait."),
+    ("A4 arriving now", 0, "You are at the stop. The bus is arriving now."),
+    ("A5 e = 14", 14, "You are at the stop. You have 14 minutes to wait."),
+]
+
+
+def _at_stop_cases():
+    return [_case(e=e, now=NOON_ISH, speed=1.25, source="gps", distance=12.0, leave_in=-100, at_stop=True)
+            for _label, e, _text in AT_STOP_ROWS]
+
+
+@pytest.mark.parametrize("index", range(len(AT_STOP_ROWS)), ids=[r[0] for r in AT_STOP_ROWS])
+def test_python_writes_the_at_stop_rows_word_for_word(index):
+    assert _python_text(_at_stop_cases()[index]) == AT_STOP_ROWS[index][2]
+
+
+@needs_node
+def test_the_page_mirror_writes_the_at_stop_rows_word_for_word():
+    assert _mirror_cases(_at_stop_cases()) == [row[2] for row in AT_STOP_ROWS]
+
+
+@needs_node
+def test_python_and_the_page_mirror_agree_for_every_bus_minute_at_the_stop():
+    cases = [_case(e=e, now=NOON_ISH, speed=1.25, source=source, distance=15.0, leave_in=leave_in, unc=unc, at_stop=True)
+             for e in range(0, 31) for source in ("gps", "default") for leave_in in (-50, 30, 900) for unc in (False, True)]
+    assert _mirror_cases(cases) == [_python_text(c) for c in cases]
+
+
+def test_at_the_stop_nothing_about_speed_distance_or_leaving_follows():
+    for case in _at_stop_cases():
+        text = _python_text(case)
+        assert text.count(".") == 2 and "km/h" not in text and "Leave" not in text and "uncertain" not in text
+        assert "from the stop" not in text and "unlikely" not in text
+
+
+def test_the_low_band_and_the_uncertain_flag_do_not_change_the_at_stop_card():
+    plain = _python_text(_case(e=4, now=NOON_ISH, source="gps", distance=12.0, at_stop=True))
+    assert _python_text(_case(e=4, now=NOON_ISH, source="gps", distance=12.0, at_stop=True, band="low", unc=True)) == plain

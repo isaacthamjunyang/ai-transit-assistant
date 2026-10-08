@@ -433,8 +433,12 @@ def rescore(
     location_timestamp: Annotated[float | None, Query()] = None,
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
+    explanation_rendered: Annotated[int | None, Query()] = None,
+    explained_action: Annotated[str | None, Query()] = None,
+    explained_advice: Annotated[str | None, Query(max_length=200)] = None,
+    explanation_in_flight: Annotated[int | None, Query()] = None,
 ) -> dict | JSONResponse:
-    """Page W: the same catch probability as the poll, from the latest remembered arrivals and a newer fix.
+    """Page A and Page W: the same catch probability as the poll, from the latest remembered arrivals and a newer fix.
 
     No LTA call, nothing stored, nothing logged. Says "use_poll" when there is no copy younger than 60 s (or in
     Demo Mode), and the page then keeps showing the poll's numbers. The query uses the poll's own parameter names,
@@ -477,6 +481,28 @@ def rescore(
         "leave_now_threshold_s": LEAVE_NOW_MARGIN_S,
     }
     payload.update(response_fields(speed, speed_source))
+    # One scoring: the action and the card text come from these same buses and this same leave_by, through the
+    # poll's own functions. No reroute search runs here (it needs LTA calls), so the page ignores the answer while
+    # the poll's action is switch_route.
+    scored = {"buses": result["buses"], "leave_by": result.get("leave_by"), "service_no": service_no.strip()}
+    payload["chosen_action"] = _poll_action(scored, moment, False)
+    if explanation_rendered is not None:
+        pack = build_poll_explanation(
+            scored,
+            now=moment,
+            cache=cache,
+            user_lat=lat,
+            user_lon=lon,
+            stop_code=stop_code.strip(),
+            explained_action=explained_action,
+            explained_advice=explained_advice,
+            in_flight=explanation_in_flight == 1,
+            reroute_fired=False,
+            walk_speed_m_s=speed,
+            walk_speed_source=speed_source,
+        )
+        if pack is not None:
+            payload["explanation"] = pack
     return payload
 
 
@@ -721,6 +747,7 @@ def _poll_action(payload: dict, now: datetime, reroute_fired: bool) -> str | Non
         data_quality=quality,
         range_high=high,
         leave_by_seconds=seconds_until_leave_by(payload.get("leave_by"), now),
+        at_stop=chance.get("at_stop") is True,
     )
 
 

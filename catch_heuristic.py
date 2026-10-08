@@ -8,9 +8,17 @@ later step has enough observations.
 import math
 from datetime import datetime, timedelta, timezone
 
-from config import ERROR_MODEL_SPEED_MPS, RING_BAND_MID_FROM, RING_BAND_OK_FROM, WALK_SPEED_DEFAULT_MPS
+import demo
+from config import (
+    AT_STOP_MAX_ACCURACY_M,
+    AT_STOP_PROBABILITY,
+    ERROR_MODEL_SPEED_MPS,
+    RING_BAND_MID_FROM,
+    RING_BAND_OK_FROM,
+    WALK_SPEED_DEFAULT_MPS,
+)
 from nearby import haversine_m
-from pace import pace_guidance
+from pace import is_near_stop, pace_guidance
 from walk_speed import range_speeds
 
 SGT = timezone(timedelta(hours=8))
@@ -221,6 +229,16 @@ def score_buses(
         if located
         else None
     )
+    # At the stop: one rule for the poll, the rescore, /api/journey and the reroute rows. Not in Demo Mode (the scripted
+    # values stay). An absent fix time is not older than 60 s, as in location_uncertainty_reason.
+    at_stop_fix = (
+        located
+        and distance_m is not None
+        and is_near_stop(distance_m)
+        and float(accuracy_m) <= AT_STOP_MAX_ACCURACY_M
+        and (age_seconds is None or age_seconds <= UNCERTAIN_AGE_S)
+        and not demo.demo_enabled()
+    )
     scored = []
     primary_chosen = False
     for bus in buses:
@@ -270,6 +288,10 @@ def score_buses(
             point = min(point, SCHEDULE_CEILING)
             low = min(low, SCHEDULE_CEILING)
             high = min(high, SCHEDULE_CEILING)
+        at_stop = at_stop_fix and monitored
+        if at_stop:
+            slack = seconds_until
+            point = low = high = AT_STOP_PROBABILITY / 100
         location_reason = location_uncertainty_reason(accuracy, age_seconds)
         if location_reason is not None:
             quality = "location uncertain"
@@ -290,6 +312,8 @@ def score_buses(
             "location_reason": location_reason,
             "location_age_s": None if age_seconds is None else int(round(age_seconds)),
             "location_accuracy_m": accuracy,
+            # Additive: true when the at-stop rule set the numbers (under 30 m, a good fix, live data).
+            "at_stop": at_stop,
         }
         item["probability"]["band"] = ring_band(item["probability"]["point"])
         item["probability"]["pace"] = pace_guidance(

@@ -81,7 +81,9 @@ def test_step_9_leave_by_does_not_include_the_60_second_margin():
     assert leave_by != eta - timedelta(seconds=walk_s + 135 + 60)
 
 
-def test_live_poll_keeps_leave_by_and_sets_notification_time():
+def test_live_poll_keeps_leave_by_and_sets_notification_time(monkeypatch):
+    # the user stands at the stop in this fixture: the at-stop rule is off here, it has its own tests (test_at_stop.py)
+    monkeypatch.setattr("catch_heuristic.AT_STOP_MAX_ACCURACY_M", -1)
     cache = StopAndRouteCache([_stop()], [], [])
     payload = {
         "BusStopCode": "08057",
@@ -228,9 +230,9 @@ def test_page_schedules_from_notification_time_and_blocks_unsafe_data():
     assert "lastNotifiedBusId = busId" in html
     assert "pushManager" not in html and "PushManager" not in html and "sync.register" not in html
     page_w = html.split("// ---- Page W:", 1)[1].split("// Screen 8:", 1)[0]
-    # the leave-now alert keeps working in a hidden tab; only Page W's own watch and rescore stop when the tab is hidden
+    # the leave-now alert keeps working in a hidden tab; only Page W's own watch and the shared rescore gate stop when the tab is hidden
     assert "document.hidden" not in html.replace(page_w, "")
-    assert page_w.count("document.hidden") == 3 and "leaveNow" not in page_w and "notification" not in page_w.lower()
+    assert page_w.count("document.hidden") == 2 and "leaveNow" not in page_w and "notification" not in page_w.lower()
     panel_start = html.find("function clearJourneyPanel")
     panel_end = html.find("function renderJourneyLeaveBy")
     assert "clearLeaveNowState()" in html[panel_start:panel_end]

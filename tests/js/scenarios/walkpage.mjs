@@ -55,10 +55,10 @@ export default async function (h) {
     return states;
   };
   await h.eval("walkChanceSource.nearStop = false; true");
-  out.approaching = await seq([[12000, 300, 1.3], [6000, 285, 1.3], [0, 270, 1.3]]);
+  out.approaching = await seq([[8000, 300, 1.3], [4000, 299, 1.3], [0, 291, 1.3]]);
   out.approachingAfter = await h.eval(SNAP);
-  out.notMoving = await seq([[12000, 300, 0], [6000, 300, 0], [0, 299, 0]]);
-  out.movingAway = await seq([[12000, 300, 1.3], [0, 330, 1.3]]);
+  out.notMoving = await seq([[8000, 300, 0], [4000, 300, 0], [0, 299, 0]]);
+  out.movingAway = await seq([[10000, 300, 1.3], [0, 330, 1.3]]);
   out.noFixText = await h.eval("userLat = null; userLon = null; renderWalkPage(); document.getElementById('walk-state').textContent");
   await seq([[0, 300, 1.3]]);
 

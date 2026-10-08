@@ -1128,6 +1128,14 @@
       return state;
     }
 
+    // At the stop (the probability carries at_stop): the tile and the whole card, from the same strings as the page.
+    function sgAtStopTile(e) {
+      return {
+        e: e, warn: false, value: copy.atStop.tile,
+        meta: e < 1 ? copy.atStop.tileArriving : copy.atStop.tileBus.replace("{e}", e)
+      };
+    }
+
     function sgArriving(e) {
       return lc.arrivingIn.replace("{n}", String(e));
     }
@@ -1159,6 +1167,9 @@
     function sgExplainText(opts) {
       var x = copy.explanation;
       var e = opts.e;
+      if (opts.atStop) {
+        return e < 1 ? copy.atStop.cardArriving : copy.atStop.card.replace("{e}", sgMinutes(e));
+      }
       var metres = opts.distance === undefined ? 300 : opts.distance;
       var speed = opts.speed === undefined ? 1.25 : opts.speed;
       var lv = sgLeave(e, metres, speed);
@@ -1376,6 +1387,8 @@
         + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, sgTileState(15, 300, 1.25, true))
         + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, sgTileState(6, 250, 1.3, true))
         + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: sgLeave(15, 300, 1.25).time, e: 15 })
+        + "<h4>Leave by tile, at the stop: the bus is 4 minutes away</h4>" + sgLeaveTiles(false, sgAtStopTile(4))
+        + "<h4>Leave by tile, at the stop: the bus is arriving now</h4>" + sgLeaveTiles(false, sgAtStopTile(0))
         + "<h4>Leave by and Estimated destination arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
         + "<h4>Tiles with No target (no check)</h4>" + sgLeaveTiles(false)
         + "<h4>AI Explanation: loading</h4>" + sgAiCard("loading")
@@ -1393,6 +1406,9 @@
         + "<h4>Unlikely: low band, switch route, do not rely (the same one sentence)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute", distance: 640 })
         + "<h4>Leave now: the bus arriving now, and one minute away</h4>" + sgAiCard("normal", { e: 0, band: "ok", action: "leaveNow", source: "gps", speed: 1.25, distance: 20 }) + sgAiCard("normal", { e: 1, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 60 })
         + "<h4>Leave by: only a few minutes to reach the stop (the walk is short)</h4>" + sgAiCard("normal", { e: 4, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 120 })
+        + "<h4>At the stop: the bus is 4 minutes away</h4>" + sgAiCard("normal", { e: 4, band: "ok", action: "wait", atStop: true })
+        + "<h4>At the stop: the bus is 1 minute away, and arriving now</h4>" + sgAiCard("normal", { e: 1, band: "ok", action: "wait", atStop: true })
+        + sgAiCard("normal", { e: 0, band: "ok", action: "wait", atStop: true })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
         + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
         + "<h4>No better option</h4><p class=\"banner banner--quiet reroute-none\">" + copy.noBetter.standard.replace("{point}", "28") + "</p>";

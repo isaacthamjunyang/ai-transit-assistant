@@ -63,10 +63,11 @@ def _run_node(program: str):
 # ---- cases: one dict per sentence-one-and-two variant
 
 def _case(e=10, w=3, action="wait", band="ok", unc=False, leave_in=600, source="gps", speed=1.25, distance=300.0,
-          now=NOW, arr_off=None):
+          now=NOW, arr_off=None, at_stop=False):
     """arr_off: the bus arrival in seconds after now (the tile's minutes e by default)."""
     return {"e": e, "w": w, "action": action, "band": band, "unc": unc, "leave_in": leave_in, "source": source,
-            "speed": speed, "distance": distance, "now": now.isoformat(), "arr_off": e * 60 if arr_off is None else arr_off}
+            "speed": speed, "distance": distance, "now": now.isoformat(), "arr_off": e * 60 if arr_off is None else arr_off,
+            "at_stop": at_stop}
 
 
 def _python_lead(c) -> str:
@@ -74,7 +75,8 @@ def _python_lead(c) -> str:
     leave_by = (now + timedelta(seconds=c["leave_in"])).isoformat()
     numbers = build_numbers(bus_minutes=c["e"], walk_minutes=c["w"], chosen_action=c["action"], distance_m=c["distance"],
                             walk_speed_used=c["speed"], walk_speed_source=c["source"], leave_by=leave_by,
-                            arrival_time=(now + timedelta(seconds=c["arr_off"])).isoformat(), now=now)
+                            arrival_time=(now + timedelta(seconds=c["arr_off"])).isoformat(), now=now,
+                            at_stop=c.get("at_stop", False))
     return card_text(numbers, band=c["band"], uncertain=c["unc"])
 
 
@@ -90,7 +92,7 @@ def _mirror_cases(cases):
         "  var nowMs = Date.parse(c.now);\n"
         "  var pack = {walk_minutes: c.w, band: c.band, uncertain: c.unc, action: c.action,\n"
         "    leave_by: new Date(nowMs + c.leave_in * 1000).toISOString(), leave_now_threshold_s: " + str(THRESHOLD) + ",\n"
-        "    distance_m: c.distance, walk_speed_used: c.speed, walk_speed_source: c.source};\n"
+        "    distance_m: c.distance, walk_speed_used: c.speed, walk_speed_source: c.source, at_stop: c.at_stop === true};\n"
         "  out.push(explanationCardText(pack, c.e, new Date(nowMs + c.arr_off * 1000).toISOString(), nowMs));\n"
         "});\nconsole.log(JSON.stringify(out));"
     )
