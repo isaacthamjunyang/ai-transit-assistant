@@ -5,6 +5,12 @@
 var QUICK_PICKS = ["NUS", "Orchard Road", "Changi Airport"];
 
 var copy = {
+  menuData: {
+    holidays: "Public holidays updated to {year}",
+    bus: "Bus data updated {date}",
+    busUnknown: "Bus data date unknown",
+    unavailable: "Data status unavailable"
+  },
   notificationCard: {
     title: "Notifications Optional",
     description: "Get an audio/visual alert 60 seconds before your walk deadline.",
@@ -254,6 +260,7 @@ var copy = {
     needLocation: "Location unavailable. Destination stops need your current location.",
     tryAgain: "Try again",
     noRoute: "No direct or 1-transfer bus connection available for this trip.",
+    noService: "No buses are running to this destination at this time.",
     editDestinationAction: "Edit destination",
     editArriveByAction: "Edit arrive-by time",
     unavailable: "Nearby stops are unavailable.",

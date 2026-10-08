@@ -235,6 +235,26 @@ a {
   box-shadow: var(--shadow-card);
 }
 
+/* Two muted lines at the bottom of the menu. They sit inside the floating sheet, so they cannot move the page. The
+   space is held before the text arrives, and they are not shown on the journey, live, walk or overview screens. */
+.menu-data {
+  padding: var(--space-2) var(--space-3) 0;
+}
+
+.menu-data__line {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+}
+
+body.is-screen-journey .menu-data,
+body.is-screen-live .menu-data,
+body.is-screen-newjourney .menu-data,
+body.is-screen-onway .menu-data {
+  display: none;
+}
+
 .menu-sheet.is-preview {
   position: static;
   width: min(16rem, 100%);
@@ -933,9 +953,33 @@ select,
   font-size: var(--type-caption);
 }
 
+/* iOS Safari gives a time input its own intrinsic width and centres its value. Take both away so it fits the card:
+   no native appearance, the card's width, left-aligned like the other fields. Every flex parent up to the card can shrink. */
 .arrive-time {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: var(--tap-min);
   box-sizing: border-box;
+  text-align: left;
+}
+
+.arrive-time::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+
+.arrive-block,
+.arrive-panel,
+.arrive-chips > *,
+#arrive-by-custom,
+.arrive-custom,
+.arrive-day {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .arrive-day {

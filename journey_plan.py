@@ -22,6 +22,7 @@ from journey import build_journey, parse_journey_time, planning_warning
 from lta_static import StopAndRouteCache
 from nearby import BOARDING_RADIUS_M, nearby_boarding_stops
 from route_plan import _sort_key, plan_route
+from service_hours import NO_SERVICE
 
 SGT = timezone(timedelta(hours=8))
 TARGET_MET = "target_met"
@@ -124,6 +125,7 @@ def plan_journey(
         cache, user_lat, user_lon, BOARDING_RADIUS_M, walk_speed_m_s=walk_speed_m_s
     )
     options = []
+    closed = False
     for stop in candidates:
         planned = plan_route(
             cache,
@@ -135,7 +137,10 @@ def plan_journey(
             dest_lon,
             now=moment,
             walk_speed_m_s=walk_speed_m_s,
+            arrive_by=arrive_by,
         )
+        if planned.get("route_status") == NO_SERVICE:
+            closed = True
         if planned.get("route_status") != "ok":
             continue
         for option in planned.get("options") or []:
@@ -165,8 +170,8 @@ def plan_journey(
     if chosen is None:
         return {
             "status": "ok",
-            "route_status": "no_feasible_route",
-            "reason": NO_ROUTE,
+            "route_status": NO_SERVICE if closed else "no_feasible_route",
+            "reason": NO_SERVICE if closed else NO_ROUTE,
             "candidate_stop_count": len(candidates),
             "option": None,
             "journey": None,

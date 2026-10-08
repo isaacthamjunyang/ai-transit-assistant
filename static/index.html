@@ -62,6 +62,10 @@
       <button type="button" id="demo-run">Run Scenario</button>
       <button type="button" id="demo-reset">Reset to Live</button>
     </details>
+      <div class="menu-data" id="menu-data">
+        <p class="menu-data__line" id="menu-data-holidays"></p>
+        <p class="menu-data__line" id="menu-data-bus"></p>
+      </div>
     </div>
   </header>
   <div class="back-bar" id="back-bar" hidden>
@@ -313,6 +317,13 @@
           <div class="overview-state__actions">
             <button type="button" class="secondary" id="overview-edit-destination">Edit destination</button>
             <button type="button" class="secondary" id="overview-edit-time">Edit arrive-by time</button>
+          </div>
+        </div>
+        <div id="overview-no-service" class="overview-state" hidden>
+          <p class="banner banner--caution">No buses are running to this destination at this time.</p>
+          <div class="overview-state__actions">
+            <button type="button" class="secondary" id="overview-edit-destination-service">Edit destination</button>
+            <button type="button" class="secondary" id="overview-edit-time-service">Edit arrive-by time</button>
           </div>
         </div>
         <div id="overview-unavailable" class="overview-state" hidden>
@@ -2966,7 +2977,9 @@
         addDestinationWalkLine(stop);
         addDestinationMarker(stop);
       });
-      if (body.reachable_stops.length + body.unreachable_stops.length === 0) {
+      if (body.no_service) {
+        setDestinationStopStatus("No buses are running to this destination at this time.", "caution");
+      } else if (body.reachable_stops.length + body.unreachable_stops.length === 0) {
         setDestinationStopStatus("No destination stops were found within 600 m.", "caution");
       } else {
         setDestinationStopStatus("");
@@ -2992,6 +3005,7 @@
         + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude)
         + "&user_lat=" + encodeURIComponent(userLat)
         + "&user_lon=" + encodeURIComponent(userLon)
+        + (arriveByInput.value ? "&arrive_by=" + encodeURIComponent(arriveByInput.value) : "")
         + walkSpeedQuery();
       fetch(url)
         .then(function (response) {
@@ -4964,10 +4978,45 @@
       syncSearchReadiness();
       destinationInput.focus();
     });
+    // The two muted lines at the bottom of the menu: fetched once, the first time the menu opens.
+    var MENU_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var menuDataRequested = false;
+    function formatDataDate(iso) {
+      var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+      if (!parts) {
+        return null;
+      }
+      return Number(parts[3]) + " " + MENU_MONTHS[Number(parts[2]) - 1] + " " + parts[1];
+    }
+    function loadMenuData() {
+      if (menuDataRequested) {
+        return;
+      }
+      menuDataRequested = true;
+      fetch("/api/data-status")
+        .then(function (response) { return response.ok ? response.json() : null; })
+        .then(function (body) {
+          if (!body || typeof body.holidays_year !== "number") {
+            showMenuDataUnavailable();
+            return;
+          }
+          var shown = formatDataDate(body.bus_data_date);
+          document.getElementById("menu-data-holidays").textContent = "Public holidays updated to " + body.holidays_year;
+          document.getElementById("menu-data-bus").textContent = shown ? "Bus data updated " + shown : "Bus data date unknown";
+        })
+        .catch(showMenuDataUnavailable);
+    }
+    // A failed or non-200 answer shows one muted line instead of a blank gap, and the next menu open tries again.
+    function showMenuDataUnavailable() {
+      menuDataRequested = false;
+      document.getElementById("menu-data-holidays").textContent = "Data status unavailable";
+      document.getElementById("menu-data-bus").textContent = "";
+    }
     document.getElementById("menu-open").addEventListener("click", function () {
       var sheet = document.getElementById("menu-sheet");
       var open = sheet.hasAttribute("hidden");
       if (open) {
+        loadMenuData();
         sheet.removeAttribute("hidden");
         this.setAttribute("aria-expanded", "true");
       } else {
@@ -5128,6 +5177,7 @@
       document.getElementById("overview-loading-text").textContent = state === "loading" ? "Planning your journey…" : "";
       document.getElementById("overview-no-location").hidden = state !== "no-location";
       document.getElementById("overview-no-route").hidden = state !== "no-route";
+      document.getElementById("overview-no-service").hidden = state !== "no-service";
       document.getElementById("overview-unavailable").hidden = state !== "unavailable";
       document.getElementById("overview-timeline").hidden = state !== "ready";
       document.getElementById("start-journey").disabled = state !== "ready";
@@ -5174,6 +5224,10 @@
             return;
           }
           renderPlanningWarning(body.planning_warning);
+          if (body.route_status === "no_service") {
+            setOverviewState("no-service");
+            return;
+          }
           if (body.route_status !== "ok" || !body.option) {
             setOverviewState("no-route");
             return;
@@ -5950,7 +6004,11 @@
     });
     document.getElementById("overview-arrive-edit").addEventListener("click", openArriveSheet);
     document.getElementById("overview-edit-time").addEventListener("click", openArriveSheet);
+    document.getElementById("overview-edit-time-service").addEventListener("click", openArriveSheet);
     document.getElementById("overview-edit-destination").addEventListener("click", function () {
+      backToScreen("results");
+    });
+    document.getElementById("overview-edit-destination-service").addEventListener("click", function () {
       backToScreen("results");
     });
     document.getElementById("overview-retry").addEventListener("click", function () {

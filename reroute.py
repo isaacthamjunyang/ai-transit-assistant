@@ -16,6 +16,7 @@ from journey import bus_arrival_window, leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
 from nearby import BOARDING_RADIUS_M, haversine_m, walk_minutes
 from observations import record_observation
+from service_hours import live_is_recent, service_runs_at
 from recommend import arrival_key, natural_key, pills, reason_text, recommend_option
 
 SGT = timezone(timedelta(hours=8))
@@ -428,6 +429,7 @@ def _candidates(
             bus,
             stop_code=current_stop,
             service_no=current_service,
+            fetched_at=current.get("fetched_at"),
             user_lat=user_lat,
             user_lon=user_lon,
             destination_stop_code=destination_stop_code,
@@ -472,6 +474,7 @@ def _candidates(
                     bus,
                     stop_code=code,
                     service_no=service,
+                    fetched_at=loaded.get("fetched_at"),
                     user_lat=user_lat,
                     user_lon=user_lon,
                     destination_stop_code=destination_stop_code,
@@ -500,6 +503,7 @@ def _candidate_from_bus(
     arrive_by: datetime | None,
     now: datetime,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    fetched_at=None,
 ) -> dict | None:
     if bus.get("is_missed"):
         return None
@@ -526,6 +530,11 @@ def _candidate_from_bus(
     slack = chance.get("slack_seconds")
     quality = chance.get("data_quality")
     monitored = bus.get("monitored")
+    # A monitored bus from a recent lookup of this exact stop and service is in service. An unmonitored
+    # (schedule-based) arrival, or one from an old or undated lookup, must fit the schedule.
+    live = monitored is True and live_is_recent(fetched_at, now)
+    if not service_runs_at(cache, service_no, stop_code, eta, live=live):
+        return None
     # The same Step 9 terms and the same estimate function as the live tile and the overview.
     # A late option stays: the recommender and the row label handle "after the target".
     terms = _option_terms(cache, links, destination_stop_code, place_lat, place_lon, now, walk_speed_m_s)

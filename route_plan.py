@@ -16,6 +16,7 @@ from destination_stops import (
 )
 from lta_static import StopAndRouteCache
 from nearby import haversine_m
+from service_hours import NO_SERVICE, boarding_times, legs_run_at
 from walk_speed import walk_minutes
 
 SGT = timezone(timedelta(hours=8))
@@ -45,8 +46,12 @@ def plan_route(
     dest_lon: float,
     now: datetime | None = None,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    arrive_by: datetime | None = None,
 ) -> dict:
-    """Rank a direct or one-transfer route from the selected boarding stop."""
+    """Rank a direct or one-transfer route from the selected boarding stop.
+
+    A route whose bus does not run when the user would board it is dropped (service_hours). With an arrive-by time
+    the boarding time works back from it; without one it is now plus the walk to the stop."""
     origin = boarding_stop_code.strip()
     destination = destination_stop_code.strip()
     moment = datetime.now(SGT) if now is None else now
@@ -63,15 +68,24 @@ def plan_route(
     walk_origin = _walk_minutes(cache, origin, user_lat, user_lon, walk_speed_m_s)
     walk_place = _walk_minutes(cache, destination, dest_lat, dest_lon, walk_speed_m_s)
     rankable = []
+    closed = 0
     for candidate in candidates:
         _attach_duration(cache, candidate, walk_origin, walk_place, moment)
         minutes = candidate["generalized_time_minutes"]
         if minutes is None or minutes > JOURNEY_BUDGET_MINUTES:
             continue
+        times = boarding_times(
+            moment, walk_origin or 0.0, candidate["wait_minutes"], minutes - (walk_origin or 0.0), arrive_by
+        )
+        if not all(
+            legs_run_at(cache, candidate["legs"], board_at, candidate["transfer_penalty_minutes"]) for board_at in times
+        ):
+            closed += 1
+            continue
         rankable.append(candidate)
     distinct = _distinct(rankable)
     if not distinct:
-        return _no_feasible()
+        return _no_service() if closed else _no_feasible()
     options = _label_options(distinct)
     for option in options:
         for leg in option["legs"]:
@@ -93,11 +107,12 @@ def suggest_alternate_boarding(
     alternate_codes: list[str],
     now: datetime | None = None,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    arrive_by: datetime | None = None,
 ) -> dict:
     """If the chosen origin has no route, rank other static nearby origins."""
     chosen = plan_route(
         cache, origin, destination, user_lat, user_lon, dest_lat, dest_lon, now=now,
-        walk_speed_m_s=walk_speed_m_s,
+        walk_speed_m_s=walk_speed_m_s, arrive_by=arrive_by,
     )
     others = []
     for code in alternate_codes:
@@ -110,7 +125,7 @@ def suggest_alternate_boarding(
     for code in others:
         planned = plan_route(
             cache, code, destination, user_lat, user_lon, dest_lat, dest_lon, now=now,
-            walk_speed_m_s=walk_speed_m_s,
+            walk_speed_m_s=walk_speed_m_s, arrive_by=arrive_by,
         )
         options = planned.get("options") or []
         if planned.get("route_status") != "ok" or not options:
@@ -178,6 +193,13 @@ def _no_feasible() -> dict:
     body = _blank()
     body["route_status"] = NO_FEASIBLE_ROUTE
     body["message"] = NO_FEASIBLE_MESSAGE
+    return body
+
+
+def _no_service() -> dict:
+    """Routes exist but none of their buses run when the user would board. The page shows the copy.js message."""
+    body = _blank()
+    body["route_status"] = NO_SERVICE
     return body
 
 
@@ -470,6 +492,7 @@ def _candidate(route_type: str, legs: list[dict], transfer_stop_code: str | None
         "transfer_penalty_minutes": 0 if transfers == 0 else TRANSFER_PENALTY_MINUTES,
         "transfer_distance_m": 0.0 if transfers == 0 else _transfer_metres(legs),
         "transfer_stop_name": None,
+        "wait_minutes": 0.0,
         "legs": legs,
         "total_route_km": total,
         "generalized_time_minutes": None,
@@ -536,6 +559,7 @@ def _attach_duration(
         first["boarding_stop_code"],
         now,
     )
+    candidate["wait_minutes"] = (headway / 2) / 60
     candidate["generalized_time_minutes"] = (
         walk_origin
         + (headway / 2) / 60

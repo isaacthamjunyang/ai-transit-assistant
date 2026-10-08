@@ -61,6 +61,7 @@ def build_journey(
         service_no=service_no,
         now=moment,
         walk_speed_m_s=walk_speed_m_s,
+        arrive_by=arrive_by,
     )
     stop = _find_stop(listed, destination_stop_code)
     if transfer:

@@ -1,5 +1,7 @@
 """Named constants shared with the page. main.py writes them into the served page."""
 
+from datetime import date
+
 BUS_SPEED_KM_H = 18  # the existing ride-speed constant, defined here once
 
 # The colour band of the probability ring is decided in Python from the point.
@@ -43,3 +45,29 @@ PAGE_CONSTANTS = {
     "UNANSWERED_END_MINUTES": UNANSWERED_END_MINUTES,
     "MAX_MONITOR_MINUTES": MAX_MONITOR_MINUTES,
 }
+
+# Singapore public holidays, which use the Sunday bus hours (service_hours.py).
+# Source: Ministry of Manpower (mom.gov.sg). A date not listed here is read as the
+# weekday, Saturday or Sunday it falls on. Update this list every year.
+PUBLIC_HOLIDAYS: frozenset[date] = frozenset({
+    # 2026 (remaining)
+    date(2026, 11, 8),    # Deepavali (Sun)
+    date(2026, 11, 9),    # Mon in lieu of Sun 8 Nov 
+    date(2026, 12, 25),   # Christmas Day (Fri)
+    # 2027
+    date(2027, 1, 1),     # New Year's Day (Fri)
+    date(2027, 2, 6),     # Chinese New Year (Sat)
+    date(2027, 2, 7),     # Chinese New Year (Sun)
+    date(2027, 2, 8),     # Mon in lieu of Sun 7 Feb 
+    date(2027, 3, 10),    # Hari Raya Puasa (Wed)
+    date(2027, 3, 26),    # Good Friday (Fri)
+    date(2027, 5, 1),     # Labour Day (Sat)
+    date(2027, 5, 17),    # Hari Raya Haji (Mon)
+    date(2027, 5, 20),    # Vesak Day (Thu)
+    date(2027, 8, 9),     # National Day (Mon)
+    date(2027, 10, 28),   # Deepavali (Thu)
+    date(2027, 12, 25),   # Christmas Day (Sat)
+})
+
+# The newest year the list covers; shown in the menu so you know when to update it.
+PUBLIC_HOLIDAYS_YEAR: int = max(d.year for d in PUBLIC_HOLIDAYS)

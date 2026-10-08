@@ -11,6 +11,7 @@ from catch_heuristic import headway_seconds
 from config import WALK_SPEED_DEFAULT_MPS
 from lta_static import StopAndRouteCache
 from nearby import BOARDING_RADIUS_M, haversine_m
+from service_hours import boarding_times, service_runs_at
 from walk_speed import walk_minutes
 
 SGT = timezone(timedelta(hours=8))
@@ -29,9 +30,15 @@ def list_destination_stops(
     service_no: str | None = None,
     now: datetime | None = None,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    arrive_by: datetime | None = None,
 ) -> dict:
-    """Stops within 600 m of the place, split into reachable and unreachable."""
+    """Stops within 600 m of the place, split into reachable and unreachable.
+
+    A service that does not run when the user would board it does not connect a stop (service_hours). The boarding
+    time is now plus the walk, or works back from the arrive-by time. When the boarding stop and the service are both
+    given the hours are still checked: a pinned service that is closed is not offered."""
     moment = now if now is not None else datetime.now(SGT)
+    any_closed = False
     preferred = service_no.strip() if isinstance(service_no, str) and service_no.strip() else None
     origins = _origins(cache, user_lat, user_lon, boarding_stop_code)
     hops = _hops(cache.routes)
@@ -45,6 +52,15 @@ def list_destination_stops(
             continue
         card = _card(stop, place_m, walk_speed_m_s)
         links = _links(hops, origins, card["stop_code"])
+        if links:
+            running = [
+                link for link in links
+                if _link_runs(cache, link, place_m, moment, arrive_by, walk_speed_m_s)
+            ]
+            if not running:
+                any_closed = True
+                card["no_service"] = True
+            links = running
         if not links:
             card["is_reachable"] = False
             card["connecting_services"] = []
@@ -70,7 +86,30 @@ def list_destination_stops(
         "destination": {"lat": dest_lat, "lon": dest_lon},
         "reachable_stops": [card for _, card in reachable],
         "unreachable_stops": [card for _, card in unreachable[:3]],
+        "no_service": bool(any_closed and not reachable),
     }
+
+
+def _link_runs(
+    cache: StopAndRouteCache,
+    link: dict,
+    place_m: float,
+    moment: datetime,
+    arrive_by: datetime | None,
+    walk_speed_m_s: float,
+) -> bool:
+    """Does this link's service run at the boarding stop when the user would board?"""
+    if link["route_km"] is None:
+        times = boarding_times(moment, walk_minutes(link["user_m"], walk_speed_m_s), 0.0, None, arrive_by)
+    else:
+        terms = _arrival_terms(cache, link, place_m, moment, walk_speed_m_s)
+        times = boarding_times(
+            moment, terms["board_walk_minutes"], terms["wait_minutes"],
+            terms["total_minutes"] - terms["board_walk_minutes"], arrive_by,
+        )
+    return all(
+        service_runs_at(cache, link["service"], link["origin_code"], board_at, link["direction"]) for board_at in times
+    )
 
 
 def _origins(

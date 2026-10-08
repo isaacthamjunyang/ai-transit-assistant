@@ -8,6 +8,8 @@ from fastapi import Body, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
+import logging
+import logging
 import math
 import re
 
@@ -33,6 +35,8 @@ from leave_now import LEAVE_NOW_MARGIN_S
 from journey import build_journey, bus_arrival_window, miss_line, parse_journey_time, planning_warning
 from journey_plan import plan_journey
 from lta_static import load_static_data
+from service_hours import data_status, startup_warning
+from service_hours import data_status, startup_warning
 from nearby import BOARDING_RADIUS_M, haversine_m, nearby_boarding_stops
 from pace import is_near_stop
 from reroute import (
@@ -70,6 +74,9 @@ access_log_filter.install()
 async def lifespan(app: FastAPI):
     app.state.onemap_session = OneMapSession()
     app.state.lta_static = load_static_data()
+    warning = startup_warning(datetime.now(SGT).date())
+    if warning:
+        logging.getLogger("uvicorn.error").warning(warning)
     yield
 
 
@@ -145,6 +152,12 @@ def walk_speed_js() -> FileResponse:
 @app.get("/place-icons.js")
 def place_icons_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "place-icons.js", media_type="text/javascript")
+
+
+@app.get("/api/data-status", response_model=None)
+def data_status_endpoint() -> dict:
+    """How current the static data is: the last holiday year and the bus data date. No input, no coordinates."""
+    return data_status()
 
 
 @app.get("/api/demo", response_model=None)
@@ -974,6 +987,7 @@ def destination_stops(
     user_lon: Annotated[float, Query(ge=-180, le=180)],
     boarding_stop_code: Annotated[str | None, Query()] = None,
     service_no: Annotated[str | None, Query()] = None,
+    arrive_by: Annotated[str | None, Query()] = None,
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
@@ -1000,6 +1014,10 @@ def destination_stops(
                 status_code=422,
                 content={"detail": "service_no must be a non-empty string."},
             )
+    try:
+        parsed_arrive_by = None if arrive_by is None else parse_journey_time(arrive_by)
+    except ValueError:
+        return JSONResponse(status_code=422, content={"detail": "arrive_by must be an ISO timestamp."})
     cache = getattr(app.state, "lta_static", None)
     if cache is None:
         return JSONResponse(
@@ -1018,6 +1036,7 @@ def destination_stops(
         boarding_stop_code=boarding,
         service_no=service,
         walk_speed_m_s=speed,
+        arrive_by=parsed_arrive_by,
     )
     return {**listed, **response_fields(speed, speed_source)}
 
@@ -1258,6 +1277,7 @@ def route_plan(
         alternates,
         now=moment,
         walk_speed_m_s=speed,
+        arrive_by=parsed_arrive_by,
     )
     options = planned.get("options") or []
     minutes = [option.get("generalized_time_minutes") for option in options]

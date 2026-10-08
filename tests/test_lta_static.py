@@ -459,6 +459,7 @@ def test_home_page_still_loads_from_cache(tmp_path: Path, monkeypatch):
         "/api/demo/run",
         "/api/demo/reset",
         "/api/explain-option",
+        "/api/data-status",
     }
 
 

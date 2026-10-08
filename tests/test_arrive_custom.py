@@ -263,7 +263,8 @@ def test_no_from_now_wording_remains_in_the_page_copy_style_guide_css_or_plan():
 def test_the_time_input_has_no_wrapper_or_in_field_span_and_describes_itself_with_the_message_only():
     assert re.search(r'<div class="arrive-custom">\s*<label[^>]*>[^<]*</label>\s*<input id="arrive-by-time" class="arrive-time" type="time"[^>]*aria-describedby="arrive-by-error">\s*<div id="arrive-day"', INDEX)
     block = CSS.split(".arrive-time {", 1)[1].split("}", 1)[0]
-    assert "min-height: var(--tap-min)" in block and "width:" not in block and "padding" not in block
+    assert "min-height: var(--tap-min)" in block and "padding" not in block
+    assert not re.search(r"(?<![-a-z])width:\s*[\d.]+(px|rem|em)", block)  # no fixed width, only 100%
 
 
 def test_the_passed_time_message_still_works_and_the_minute_recheck_is_kept_for_it(report):
@@ -308,3 +309,42 @@ def test_the_prefill_code_only_fills_an_empty_time_and_rounds_up():
 def test_the_plan_says_nothing_is_shown_under_the_time_field():
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
     assert "Nothing is shown under the time field except" in plan and "5 minutes ahead, rounded up to the whole minute" in plan
+
+
+# ---- the control fits inside its card (iOS Safari gave the time input its own wide intrinsic width)
+
+def test_the_time_input_css_removes_the_native_width_and_centring():
+    block = CSS.split(".arrive-time {", 1)[1].split("}", 1)[0]
+    for rule in ("-webkit-appearance: none", "appearance: none", "width: 100%", "min-width: 0", "max-width: 100%",
+                 "box-sizing: border-box", "text-align: left", "min-height: var(--tap-min)"):
+        assert rule in block, rule
+    value = CSS.split(".arrive-time::-webkit-date-and-time-value {", 1)[1].split("}", 1)[0]
+    assert "text-align: left" in value
+    parents = CSS.split(".arrive-block,\n.arrive-panel,", 1)[1].split("}", 1)[0]
+    for selector in (".arrive-chips > *", "#arrive-by-custom", ".arrive-custom", ".arrive-day"):
+        assert selector in parents, selector
+    assert "min-width: 0" in parents and "max-width: 100%" in parents
+
+
+@pytest.fixture(scope="module")
+def fit(tmp_path_factory):
+    require_edge()
+    with running_app(tmp_path_factory.mktemp("arrivefit"), eta_minutes=[10.3]) as base:
+        return run_scenario("arrivefit", base, {"widths": [320, 360, 390]})["result"]["widths"]
+
+
+@pytest.mark.parametrize("width", ["320", "360", "390"])
+def test_the_time_field_day_row_and_chips_end_inside_the_card_at_phone_widths(fit, width):
+    shown = fit[width]
+    assert shown["pageScroll"] is False and shown["panelScroll"] is False and shown["timeScroll"] is False
+    for part in shown["parts"]:
+        assert part["right"] <= shown["innerRight"] + 0.5, (part, shown["innerRight"])
+        assert part["left"] >= shown["innerLeft"] - 0.5, part
+    assert shown["time"]["right"] <= shown["innerRight"] + 0.5 and shown["innerRight"] <= shown["panelRight"]
+
+
+@pytest.mark.parametrize("width", ["320", "360", "390"])
+def test_the_time_value_is_left_aligned_unstyled_and_at_least_44_px_high(fit, width):
+    shown = fit[width]
+    assert shown["textAlign"] in ("left", "start") and shown["appearance"] == "none"
+    assert shown["time"]["height"] >= 44

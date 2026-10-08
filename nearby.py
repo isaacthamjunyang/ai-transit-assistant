@@ -4,11 +4,14 @@ Distance is straight-line haversine, not a walking route.
 """
 
 import math
+from datetime import datetime, timedelta, timezone
 
 from config import WALK_SPEED_DEFAULT_MPS
 from lta_static import StopAndRouteCache
+from service_hours import service_runs_at
 from walk_speed import walk_minutes as _walk_minutes
 
+SGT = timezone(timedelta(hours=8))
 EARTH_RADIUS_M = 6_371_000
 BOARDING_RADIUS_M = 400
 WALK_SPEED_M_S = WALK_SPEED_DEFAULT_MPS
@@ -38,7 +41,10 @@ def nearby_boarding_stops(
     longitude: float,
     radius_m: float = BOARDING_RADIUS_M,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    now: datetime | None = None,
 ) -> list[dict]:
+    """Stops near a point with the services that run there when the user would arrive (now plus the walk)."""
+    moment = now if now is not None else datetime.now(SGT)
     services = _services_by_stop(cache.routes)
     found = []
     for stop in cache.stops:
@@ -67,7 +73,11 @@ def nearby_boarding_stops(
         )
     found.sort(key=lambda item: (item["_raw_m"], item["stop_code"]))
     for item in found:
-        item["services"] = services.get(item["stop_code"], [])
+        board_at = moment + timedelta(minutes=item["walk_minutes"])  # a stop list has no route, so no wait to add
+        item["services"] = [
+            service for service in services.get(item["stop_code"], [])
+            if service_runs_at(cache, service, item["stop_code"], board_at)
+        ]
         del item["_raw_m"]
     return found
 

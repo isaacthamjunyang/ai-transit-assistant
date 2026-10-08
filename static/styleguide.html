@@ -73,6 +73,15 @@
           <button type="button" class="menu-radio" role="radio" aria-checked="false">Dark</button>
         </div>
       </div>
+      <h4>Menu data lines (muted, bottom of the menu; not shown on journey pages)</h4>
+      <div class="menu-sheet is-preview">
+        <div class="menu-data">
+          <p class="menu-data__line">Public holidays updated to 2027</p>
+          <p class="menu-data__line">Bus data updated 29 Sep 2026</p>
+          <p class="menu-data__line">Bus data date unknown</p>
+          <p class="menu-data__line">Data status unavailable</p>
+        </div>
+      </div>
       <div class="back-bar">
         <button type="button" class="icon-button back-bar__button" aria-label="Back">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -946,7 +955,7 @@
       } else if (kind === "no-location") {
         body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + jo.needLocation + "</p><button type=\"button\" class=\"secondary\">" + jo.tryAgain + "</button></div>";
       } else {
-        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + jo.noRoute + "</p><div class=\"overview-state__actions\"><button type=\"button\" class=\"secondary\">" + jo.editDestinationAction + "</button><button type=\"button\" class=\"secondary\">" + jo.editArriveByAction + "</button></div></div>";
+        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + (kind === "no-service" ? jo.noService : jo.noRoute) + "</p><div class=\"overview-state__actions\"><button type=\"button\" class=\"secondary\">" + jo.editDestinationAction + "</button><button type=\"button\" class=\"secondary\">" + jo.editArriveByAction + "</button></div></div>";
       }
       return "<div class=\"card overview-card\" aria-busy=\"" + (kind === "loading" ? "true" : "false") + "\"><h4 class=\"overview-title\">" + jo.title + "</h4>" + body + "</div>";
     }
@@ -1004,6 +1013,7 @@
         + "<h4>Screen 5: planning (loading)</h4>" + sgOverviewState("loading")
         + "<h4>Screen 5: no location</h4>" + sgOverviewState("no-location")
         + "<h4>Screen 5: no route</h4>" + sgOverviewState("no-route")
+        + "<h4>Screen 5: no bus running at this time</h4>" + sgOverviewState("no-service")
         + "<h4>Start journey, with the motion privacy line above it</h4><p class=\"note\" aria-live=\"off\">" + jo.motionPrivacy + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
         + "<h4>Start journey, motion sensor off or denied</h4><p class=\"note\" aria-live=\"off\">" + jo.motionOff + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
         + "<h4>Bus card: LIVE, refresh idle</h4><div class=\"card live-card\">" + sgBusCard("live", "", false) + "</div>"
