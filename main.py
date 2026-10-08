@@ -23,6 +23,7 @@ from explain import (
     handle_explain_request,
     chosen_action,
     handle_option_explain_request,
+    model_path_enabled,
     seconds_until_leave_by,
     _scored_journey_bus,
 )
@@ -676,9 +677,16 @@ def reroute_options(
     }
 
 
+def _model_disabled() -> JSONResponse:
+    """The model path is off (AI_EXPLANATION_ENABLED, default false): no key is read and no client is built."""
+    return JSONResponse(status_code=503, content={"status": "disabled"})
+
+
 @app.post("/api/explain-option", response_model=None)
 def explain_option(body: Annotated[dict, Body()]) -> dict | JSONResponse:
     """The Page C clause for the recommended option. The model sees the reason code and the action only."""
+    if not model_path_enabled():
+        return _model_disabled()
     status, payload = handle_option_explain_request(body)
     if status != 200:
         return JSONResponse(status_code=status, content=payload)
@@ -687,6 +695,8 @@ def explain_option(body: Annotated[dict, Body()]) -> dict | JSONResponse:
 
 @app.post("/api/explain", response_model=None)
 def explain(body: Annotated[dict, Body()]) -> dict | JSONResponse:
+    if not model_path_enabled():
+        return _model_disabled()
     status, payload = handle_explain_request(body)
     if status != 200:
         return JSONResponse(status_code=status, content=payload)

@@ -173,10 +173,10 @@ def test_a_late_option_stays_and_is_labelled_after_the_target():
     assert all(row["after_target"] for row in _all(result))
 
 
-def test_the_recommended_row_carries_two_deterministic_sentences():
+def test_the_recommended_row_carries_the_reason_sentence_only():
     row = _search()["recommended"]
     text = row["explanation"]["text"]
-    assert text.startswith(row["reason_text"]) and text.endswith("It is advisable to switch to another bus.")
+    assert text == row["reason_text"] and "It is advisable" not in text
     assert row["explanation"]["action"] == "switch_route"
 
 

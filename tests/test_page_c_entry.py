@@ -429,7 +429,7 @@ def test_a_switch_from_page_c_decides_again_for_the_new_bus():
 def test_the_muted_line_and_the_ring_label_follow_the_agreed_wording():
     script = (
         'var ARRIVING_IN_TEXT = "Arriving in {n} min", ARRIVING_SOON_TEXT = "Arriving in <1 min", ARRIVING_NOW_TEXT = "Arriving now";'
-        'var RING_LABEL_TEXT = "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent";'
+        'var RING_LABEL_TEXT = "about {p} percent chance of catching Bus {service}{eta}{at}";'
         'var RING_ETA_TEXT = " arriving in {n} minutes", RING_ETA_SOON_TEXT = " arriving in under 1 minute", RING_ETA_NOW_TEXT = " arriving now", RING_AT_TEXT = " at {stop}";'
         "var selectedService = '11'; var selectedBoardingStop = {description: 'Tanjong Rhu Stn Exit 2', stop_code: '90041'};"
         + _function("fillText") + "\n" + _function("boardingStopName") + "\n" + _function("etaParts") + "\n" + _function("ringLabel") + "\n"
@@ -442,9 +442,9 @@ def test_the_muted_line_and_the_ring_label_follow_the_agreed_wording():
     got = _run_node(script)
     assert got["min15"] == "Arriving in 15 min" and got["soon"] == "Arriving in <1 min" and got["now"] == "Arriving now"
     assert got["none"] is None and got["missed"] is None
-    assert got["label"] == "92 percent chance of catching Bus 11 arriving in 15 minutes at Tanjong Rhu Stn Exit 2, range 80 to 95 percent"
-    assert got["noEta"] == "92 percent chance of catching Bus 11 at Tanjong Rhu Stn Exit 2, range 80 to 95 percent"
-    assert got["nowLabel"] == "92 percent chance of catching Bus 11 arriving now at Tanjong Rhu Stn Exit 2, range 80 to 95 percent"
+    assert got["label"] == "about 92 percent chance of catching Bus 11 arriving in 15 minutes at Tanjong Rhu Stn Exit 2"
+    assert got["noEta"] == "about 92 percent chance of catching Bus 11 at Tanjong Rhu Stn Exit 2"
+    assert got["nowLabel"] == "about 92 percent chance of catching Bus 11 arriving now at Tanjong Rhu Stn Exit 2"
 
 
 def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title__():
@@ -460,7 +460,7 @@ def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title__():
     for prefix in ("catch", "pc"):
         assert f'id="{prefix}-sub-stop"' in HTML and f'id="{prefix}-sub-eta"' in HTML
     assert "Arriving in {n} min" in COPY and "Chance to catch your Bus {service}" in COPY
-    assert 'ringLabel: "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent"' in COPY
+    assert 'ringLabel: "about {p} percent chance of catching Bus {service}{eta}{at}"' in COPY
 
 
 def test_the_pill_shares_a_row_with_the_heading_and_the_heading_wraps_instead_of_overlapping():

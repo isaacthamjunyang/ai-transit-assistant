@@ -38,15 +38,15 @@ def test_duplicates_are_gone_and_needed_ids_stay():
         assert 'id="%s"' % occupant in slot
 
 
-def test_ring_label_always_carries_the_range_with_the_point():
+def test_ring_label_carries_the_point_only():
     html = _page()
     text = _between(html, "function probabilityText(chance)", "function setRing")
-    assert '"Catch probability: " + chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%)"' in text
+    assert '"Catch probability: about " + chance.point + "%"' in text
     ring = _between(html, "function setRing(id, chance, emptyText)", "function setPillState")
     assert 'box.setAttribute("aria-label", ringLabel(chance,' in ring  # names the bus, its arrival and the stop
     label = _between(html, "function ringLabel(chance, hero)", "function ")
-    assert "a: chance.range_low" in label and "b: chance.range_high" in label  # the range always travels with the point
-    assert "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent" in html
+    assert "range_low" not in label and "range_high" not in label  # the range is not displayed
+    assert "about {p} percent chance of catching Bus {service}{eta}{at}" in html
     assert 'value.setAttribute("stroke-dasharray"' in ring
     assert ".style" not in ring
     card = _between(html, "function renderCatchCard(hero)", "function renderLeaveTiles")
@@ -58,20 +58,14 @@ def test_ring_label_always_carries_the_range_with_the_point():
     assert "if you leave now and walk at a normal pace" in markup
 
 
-def test_no_new_probability_text_without_its_range():
+def test_no_on_screen_probability_text_shows_a_range():
     html = _page()
     block = _between(html, "// Screen 7: probability card", "function startDemoControls")
-    # The ring's centre text is the one exception: setRing sets the range-bearing aria-label beside it,
-    # and the card shows "Range: low – high%" next to the ring.
+    # On screen a probability is a point ("about 64%"). The range stays in the data and in the notifications.
+    assert "(range" not in block and "range_low +" not in block and "range_high +" not in block
     ring = _between(block, "function setRing(id, chance, emptyText)", "function setPillState")
     assert ring.index('chance.point + "%"') < ring.index("ringLabel(chance")
-    block = block.replace(ring, "")
-    mini = _between(block, "function buildProbRing(chance)", "function badgePills")
-    assert mini.index('chance.point + "%"') > mini.index("probabilityText(chance)")
-    block = block.replace(mini, "")
-    for match in re.finditer(r'\.point \+ "%', block):
-        window = block[match.start(): match.start() + 140]
-        assert "range" in window, window
+    assert 'chanceAriaText(chance)' in _between(block, "function buildProbRing(chance)", "function badgePills")
 
 
 def test_tiles_mirror_existing_values():
@@ -88,27 +82,32 @@ def test_tiles_mirror_existing_values():
     views = _between(html, "function renderArrivalViews(estimate)", "function showMiss")
     assert "lastTileEstimate = " in views
     markup = _between(html, 'id="leave-tiles"', "</section>")
-    assert "Estimated arrival" in markup and ">Arrive by<" not in markup
+    assert "Estimated destination arrival" in markup and ">Arrive by<" not in markup
 
 
-def test_ai_flag_defaults_on_and_the_card_is_never_empty(tmp_path, monkeypatch):
+def test_ai_flag_defaults_off_and_the_card_is_never_empty(tmp_path, monkeypatch):
     monkeypatch.delenv("AI_EXPLANATION_ENABLED", raising=False)
     blank = tmp_path / ".env"
     blank.write_text("AI_EXPLANATION_ENABLED=\n", encoding="utf-8")
-    assert explain.ai_explanation_enabled(blank) is True
+    assert explain.ai_explanation_enabled(blank) is False  # blank or unset means off
+    on = tmp_path / "on.env"
+    on.write_text("AI_EXPLANATION_ENABLED=true\n", encoding="utf-8")
+    assert explain.ai_explanation_enabled(on) is True
     off = tmp_path / "off.env"
     off.write_text("AI_EXPLANATION_ENABLED=false\n", encoding="utf-8")
     assert explain.ai_explanation_enabled(off) is False
-    assert "AI_EXPLANATION_ENABLED=true" in (ROOT / ".env.example").read_text(encoding="utf-8")
+    assert "AI_EXPLANATION_ENABLED=false" in (ROOT / ".env.example").read_text(encoding="utf-8")
     html = _page()
     assert "var AI_EXPLANATION_ENABLED = true;" in html
     begin = _between(html, "function beginExplanation(pack)", "function syncExplanation")
     assert "headline" not in begin and "reasoning" not in begin  # the schema has one field, the clause
+    assert begin.index("pack.model_enabled !== true") < begin.index("fetch(")  # no model_enabled, no call
     assert 'JSON.stringify({ fact_sheet: pack.fact_sheet, snapshot: pack.snapshot })' in begin
     assert "body.snapshot !== lastExplanationPack.snapshot" in begin  # a reply for an older poll is dropped
     sync = _between(html, "function syncExplanation(body)", "function notifyReroute")
     assert "renderExplanation({ text: pack.text" in sync  # the text is shown on every poll, so the card is never empty
-    assert "Probabilities come from the app's own calculation. AI only explains them." in html
+    assert "Worked out from the app's own estimates." in html
+    assert "Probabilities come from the app's own calculation" not in html
 
 
 def test_reroute_is_a_pending_proposal_until_the_tap():
@@ -152,11 +151,11 @@ def test_pending_wording_for_the_notification_stays_and_the_old_fallback_sentenc
     assert "new Notification(reroute.notification_title, { body: reroute.notification_body })" in html
 
 
-def test_option_rows_are_buttons_that_carry_a_range():
+def test_option_rows_are_buttons_that_carry_a_point():
     html = _page()
     row = _between(html, "function buildOptionRow(row)", "function renderPageC()")
     assert 'createElement("button")' in row and "alt-row__hit" in row
-    assert "CHANCE_TEXT" in row and "CHANCE_RANGE_TEXT" in row  # "{point}% chance" and "(range {low}–{high}%)"
+    assert "CHANCE_TEXT" in row and "CHANCE_RANGE_TEXT" not in row  # "{point}% chance", no range
     assert "formatDistance(row.distance_m)" in row and "WALK_TO_TEXT" in row
     assert "AT_YOUR_STOP_TEXT" in row and "REACH_DESTINATION_TEXT" in row and "AFTER_TARGET_TEXT" in row
     assert "Next Bus" not in row

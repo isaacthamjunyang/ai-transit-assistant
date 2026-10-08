@@ -3,13 +3,17 @@
 export default async function (h) {
   await h.open(h.config.guide, { width: 390, height: 900, dark: false, settle: 900 });
   return await h.eval(`(function () {
-    var out = { ranges: [], cards: [], tiles: [] };
+    var out = { ranges: [], points: [], cards: [], tiles: [] };
     var text = document.body.textContent;
     var found = text.match(/[Rr]ange:?\\s*\\d+\\s*[\\u2013-]\\s*\\d+\\s*%/g) || [];
     found.forEach(function (s) { var n = s.match(/\\d+/g); out.ranges.push([Number(n[0]), Number(n[1]), s]); });
     Array.prototype.slice.call(document.querySelectorAll("[aria-label]")).forEach(function (el) {
       var m = /range (\\d+) to (\\d+) percent/.exec(el.getAttribute("aria-label"));
       if (m) { out.ranges.push([Number(m[1]), Number(m[2]), el.getAttribute("aria-label")]); }
+    });
+    Array.prototype.slice.call(document.querySelectorAll(".prob-ring__text")).forEach(function (el) {
+      var n = /^(\\d+)%$/.exec(el.textContent.trim());
+      if (n) { out.points.push(Number(n[1])); }
     });
     Array.prototype.slice.call(document.querySelectorAll(".ai-card__text")).forEach(function (el) { out.cards.push(el.textContent); });
     Array.prototype.slice.call(document.querySelectorAll(".leave-tiles > .leave-tile:first-child")).forEach(function (el) {

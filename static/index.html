@@ -47,7 +47,6 @@
         <button type="button" class="menu-radio" id="theme-light" role="radio" aria-checked="false">Light</button>
         <button type="button" class="menu-radio" id="theme-dark" role="radio" aria-checked="false">Dark</button>
       </div>
-      <button type="button" class="menu-row" id="back-home" aria-disabled="true">Back</button>
       <details id="demo-controls" hidden>
       <summary>Demo Controls</summary>
       <label for="demo-scenario">Scenario</label>
@@ -65,6 +64,11 @@
     </details>
     </div>
   </header>
+  <div class="back-bar" id="back-bar" hidden>
+    <button type="button" class="icon-button back-bar__button" id="back-home" aria-label="Back">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+  </div>
   <div class="wrap wrap--notices">
     <p id="demo-banner" class="demo-banner" hidden>SIMULATED DEMO MODE</p>
     <div id="leave-dialog" class="leave-dialog" role="dialog" aria-labelledby="leave-dialog-title" hidden>
@@ -446,7 +450,7 @@
             <span id="pc-ring-text" class="prob-ring__text"></span>
           </div>
           <div class="catch-card__copy">
-            <p id="pc-range" class="catch-card__range"></p>
+            <p id="pc-arrives" class="catch-card__arrives" hidden><span class="catch-card__arrives-label">Bus arrives</span><span id="pc-arrives-time" class="catch-card__arrives-time"></span></p>
           </div>
         </div>
         <p class="catch-card__caption">if you leave now and walk at a normal pace</p>
@@ -484,7 +488,7 @@
           <span id="catch-ring-text" class="prob-ring__text"></span>
         </div>
         <div class="catch-card__copy">
-          <p id="catch-range" class="catch-card__range"></p>
+          <p id="catch-arrives" class="catch-card__arrives" hidden><span class="catch-card__arrives-label">Bus arrives</span><span id="catch-arrives-time" class="catch-card__arrives-time"></span></p>
         </div>
       </div>
       <p id="catch-caption" class="catch-card__caption">if you leave now and walk at a normal pace</p>
@@ -501,7 +505,7 @@
       <div id="reroute-moment" class="reroute-moment" hidden></div>
     </section>
     <div id="pace-slot" class="pace-slot live-only" hidden></div>
-    <section id="leave-tiles" class="leave-tiles live-only" aria-label="Leave by and estimated arrival" hidden>
+    <section id="leave-tiles" class="leave-tiles live-only" aria-label="Leave by and estimated destination arrival" hidden>
       <div id="tile-leave" class="leave-tile">
         <span class="leave-tile__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div>
@@ -514,7 +518,7 @@
       <div class="leave-tile">
         <span class="leave-tile__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 21V4M6 4h11l-2 4 2 4H6" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
         <div>
-          <p class="leave-tile__label">Estimated arrival</p>
+          <p class="leave-tile__label">Estimated destination arrival</p>
           <p id="tile-arrival" class="leave-tile__value">—</p>
           <p id="tile-arrival-range" class="leave-tile__meta" hidden></p>
         </div>
@@ -534,7 +538,7 @@
       <p id="ai-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
       <span id="ai-explanation-status" class="ai-card__status"></span>
       <p id="ai-explanation-text" class="ai-card__text"></p>
-      <p class="ai-card__note">Probabilities come from the app's own calculation. AI only explains them.</p>
+      <p class="ai-card__note">Worked out from the app's own estimates.</p>
     </section>
     <section id="walk-page" class="walk-page" aria-labelledby="walk-title" hidden>
       <h2 id="walk-title" class="walk-title">Walk to your stop</h2>
@@ -545,7 +549,6 @@
       <section class="card walk-status" aria-live="polite">
         <p id="walk-distance" class="walk-status__distance">—</p>
         <p id="walk-minutes" class="walk-status__minutes" hidden></p>
-        <p class="walk-status__note">straight-line distance</p>
         <progress id="walk-progress" class="walk-progress" max="100" value="0" aria-hidden="true"></progress>
         <p id="walk-state" class="walk-status__state">Waiting for your location…</p>
       </section>
@@ -562,7 +565,7 @@
             <span id="walk-ring-text" class="prob-ring__text"></span>
           </div>
           <div class="catch-card__copy">
-            <p id="walk-range" class="catch-card__range"></p>
+            <p id="walk-arrives" class="catch-card__arrives" hidden><span class="catch-card__arrives-label">Bus arrives</span><span id="walk-arrives-time" class="catch-card__arrives-time"></span></p>
             <p id="walk-trend" class="walk-chance__trend" hidden></p>
           </div>
         </div>
@@ -663,7 +666,7 @@
     (function applyAiExplanationFlag() {
       var card = document.getElementById("ai-explanation");
       if (card) {
-        card.classList.toggle("is-enabled", AI_EXPLANATION_ENABLED === true);
+        card.classList.add("is-enabled");
       }
     })();
     var STALE_HEADING = "LTA data is stale";
@@ -1602,23 +1605,23 @@
     // (leaveMode). The page keeps a copy of the templates (tests pin the two together). Only the clause (sentence three)
     // is fetched from the model, once per action, and a reply counts only when its snapshot key is the one on screen.
     //
-    // MIRROR: explanationMinutes, leaveClockText, explanationSentenceTwo, explanationLead and the EXPL_ strings copy
-    // explain.py (tile_minutes, format_clock, sentence_one, sentence_two, S2_*). Change one side and you must change
+    // MIRROR: explanationMinutes, leaveClockText, explanationSentenceOne, explanationSentenceTwo, explanationCardText
+    // and the EXPL_ strings copy explain.py (tile_minutes, format_clock, sentence_one, sentence_two, card_text, S1_*, S2_*). Change one side and you must change
     // the other. The pack fields read here are listed in explain.PAGE_PACK_FIELDS. Tests that pin them:
     // tests/test_explanation_consistency.py (boundary grid, seeded random test, drift tests, pack-field tests) and
     // tests/test_walk_speed_page.py (real poll payloads).
-    var EXPL_ARRIVING_NOW = "The bus is arriving now.";
-    var EXPL_UNLIKELY = "You are {distance} from the stop, but catching this bus is unlikely.";
-    var EXPL_LEAVE_BY = {
-      measured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave by {time}.",
-      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave by {time}.",
-      "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave by {time}."
+    var EXPL_ARRIVING_NOW = "The bus is arriving now";
+    var EXPL_BUS_MINUTES = "The bus is {e} away";
+    var EXPL_YOU_ARE = ", and you are {distance} from the stop";
+    var EXPL_UNLIKELY = ", but catching this bus is unlikely.";
+    var EXPL_SPEED = {
+      measured: " and walking at about {kmh}\u00a0km/h.",
+      remembered: " and walking at your usual speed of {kmh}\u00a0km/h.",
+      "default": " and walking at an average speed of {kmh}\u00a0km/h."
     };
-    var EXPL_LEAVE_NOW = {
-      measured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave now.",
-      remembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave now.",
-      "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave now."
-    };
+    var EXPL_LEAVE_BY = "Leave by {time} so you have {x} to reach your stop and catch the bus arriving at {arrival}.";
+    var EXPL_LEAVE_NOW = "Leave now so you have {e} to reach your stop and catch the bus arriving at {arrival}.";
+    var EXPL_LEAVE_NOW_ARRIVING = "Leave now to try to catch the bus arriving at {arrival}.";
     var EXPL_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe.";
     var EXPL_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off.";
     var LEAVE_TILE_IN_MIN = "in {n}\u00a0min · {w}\u00a0min walk";
@@ -1678,38 +1681,55 @@
       return source === "gps" || source === "cadence" ? "measured" : source === "remembered" ? "remembered" : "default";
     }
 
-    // MIRROR of explain.sentence_two. mode is leaveMode(...) for the same instant.
-    function explanationSentenceTwo(pack, mode, nowMs) {
-      var distance = formatDistance(pack.distance_m);
-      if (pack.band === "low" || pack.action === "switch_route" || pack.action === "do_not_rely") {
-        return EXPL_UNLIKELY.replace("{distance}", distance);
+    // MIRROR of explain.is_unlikely.
+    function explanationIsUnlikely(pack) {
+      return pack.band === "low" || pack.action === "switch_route" || pack.action === "do_not_rely";
+    }
+
+    // MIRROR of explain.sentence_one: the bus and the walk in one sentence.
+    function explanationSentenceOne(pack, e) {
+      var bus = e < 1 ? EXPL_ARRIVING_NOW : EXPL_BUS_MINUTES.replace("{e}", explanationMinutesWord(e));
+      var text = bus + EXPL_YOU_ARE.replace("{distance}", formatDistance(pack.distance_m));
+      if (explanationIsUnlikely(pack)) {
+        return text + EXPL_UNLIKELY;
+      }
+      return text + EXPL_SPEED[explanationSpeedKind(pack.walk_speed_source)].replace("{kmh}", (pack.walk_speed_used * 3.6).toFixed(1));
+    }
+
+    // MIRROR of explain.minutes_to_reach: the two clock times as displayed (seconds dropped), at least 1.
+    function explanationReachMinutes(arrivalIso, leaveIso) {
+      return Math.max(1, Math.floor(new Date(arrivalIso).getTime() / 60000) - Math.floor(new Date(leaveIso).getTime() / 60000));
+    }
+
+    // MIRROR of explain.sentence_two: the leave sentence, "" when unlikely. mode is leaveMode(...) for the same instant.
+    function explanationSentenceTwo(pack, e, mode, arrivalIso, nowMs) {
+      if (explanationIsUnlikely(pack)) {
+        return "";
       }
       var now = mode === "now";
-      var text = (now ? EXPL_LEAVE_NOW : EXPL_LEAVE_BY)[explanationSpeedKind(pack.walk_speed_source)]
-        .replace("{distance}", distance)
-        .replace("{kmh}", (pack.walk_speed_used * 3.6).toFixed(1))
-        .replace("{time}", leaveClockText(pack.leave_by, nowMs));
+      var arrival = leaveClockText(arrivalIso, nowMs);
+      var text;
+      if (now) {
+        text = e < 1
+          ? EXPL_LEAVE_NOW_ARRIVING.replace("{arrival}", arrival)
+          : EXPL_LEAVE_NOW.replace("{e}", explanationMinutesWord(e)).replace("{arrival}", arrival);
+      } else {
+        text = EXPL_LEAVE_BY.replace("{time}", leaveClockText(pack.leave_by, nowMs))
+          .replace("{x}", explanationMinutesWord(explanationReachMinutes(arrivalIso, pack.leave_by)))
+          .replace("{arrival}", arrival);
+      }
       if (pack.uncertain) {
         text += " " + (now ? EXPL_UNCERTAIN_NOW : EXPL_UNCERTAIN_BY);
       }
       return text;
     }
 
-    // Sentences one and two (the Python sentence_one and sentence_two) for e minutes to the bus, at nowMs.
-    function explanationLead(pack, e, nowMs) {
-      var one = e < 1 ? EXPL_ARRIVING_NOW : "The bus is " + explanationMinutesWord(e) + " away.";
+    // MIRROR of explain.card_text for e minutes to the bus, the bus arriving at arrivalIso, at nowMs.
+    function explanationCardText(pack, e, arrivalIso, nowMs) {
       var mode = leaveMode(pack.leave_by, pack.leave_now_threshold_s, nowMs);
-      return one + " " + explanationSentenceTwo(pack, mode, nowMs);
-    }
-
-    // Sentence three for the action the page acts on: the poll's own clause (the model's or the fixed one) while the
-    // action is the poll's, the fixed clause of the new action after a flip, until the next poll.
-    function explanationClauseFor(pack, mode) {
-      var shown = localAction(pack.action, mode);
-      if (shown === pack.action) {
-        return explanationClause;
-      }
-      return pack.clauses && typeof pack.clauses[shown] === "string" ? pack.clauses[shown] : explanationClause;
+      var one = explanationSentenceOne(pack, e);
+      var two = explanationSentenceTwo(pack, e, mode, arrivalIso, nowMs);
+      return two ? one + " " + two : one;
     }
 
     // What the Leave by tile shows now: { mode: "by" | "now", value, meta, uncertain }. Never a time and "Leave now"
@@ -1749,7 +1769,7 @@
       var e = explanationMinutes(arrival);
       var nowMs = Date.now();
       var mode = leaveMode(pack.leave_by, pack.leave_now_threshold_s, nowMs);
-      var text = e === null || mode === null ? pack.text : explanationLead(pack, e, nowMs) + " " + explanationClauseFor(pack, mode);
+      var text = e === null || mode === null ? pack.text : explanationCardText(pack, e, arrival, nowMs);
       renderExplanation({ text: text, simulated: !!(lastSuccess && lastSuccess.simulated === true) });
     }
 
@@ -1768,10 +1788,11 @@
     }
 
     function beginExplanation(pack) {
-      if (AI_EXPLANATION_ENABLED !== true) {
+      // The server says whether a model request may be made at all (the flag, or Demo scenario 12).
+      if (!pack || pack.model_enabled !== true) {
         return;
       }
-      if (!pack || !pack.fact_sheet) {
+      if (!pack.fact_sheet) {
         return;
       }
       if (explanationInFlight) {
@@ -1992,10 +2013,7 @@
 
     function clearPrimaryBus() {
       setRing("catch-ring", null, "—");
-      var range = document.getElementById("catch-range");
-      if (range) {
-        range.textContent = "";
-      }
+      setBusArrives("catch", null, false);
       var pill = document.getElementById("catch-pill");
       if (pill) {
         pill.hidden = true;
@@ -3377,7 +3395,7 @@
       var range = formatRange(estimate.arrival_low, estimate.arrival_high);
       var sentence = withTarget
         ? "Arrive about " + point + " (" + range + ")"
-        : "Estimated arrival about " + point + " (" + range + ")";
+        : "Estimated destination arrival about " + point + " (" + range + ")";
       var today = singaporeParts(new Date()).key;
       var pointDay = singaporeParts(new Date(estimate.estimated_arrival)).key;
       var lowDay = singaporeParts(new Date(estimate.arrival_low)).key;
@@ -3438,7 +3456,7 @@
       }
       var sentence = "Next Bus " + miss.service_no + " in " + miss.in_minutes + " min";
       if (miss.estimated_arrival) {
-        sentence += " · arrive about " + formatClock(miss.estimated_arrival, true);
+        sentence += " · reach destination about " + formatClock(miss.estimated_arrival, true);
         var late = arriveByInput && arriveByInput.value && typeof miss.spare_minutes === "number" ? latePhrase(miss.spare_minutes) : "";
         if (late) {
           sentence += " (" + late + ")";
@@ -4632,16 +4650,11 @@
 
     function syncBackRow() {
       syncHomeButton();
-      var back = document.getElementById("back-home");
-      if (!back) {
+      var bar = document.getElementById("back-bar");
+      if (!bar) {
         return;
       }
-      back.hidden = false;
-      if (screenStack.length <= 1) {
-        back.setAttribute("aria-disabled", "true");
-      } else {
-        back.removeAttribute("aria-disabled");
-      }
+      bar.hidden = screenStack[screenStack.length - 1] === "home";
     }
 
     function pushScreen(name) {
@@ -4863,9 +4876,6 @@
       closeMenu();
     });
     document.getElementById("back-home").addEventListener("click", function () {
-      if (this.getAttribute("aria-disabled") === "true") {
-        return;
-      }
       requestBack();
     });
     document.getElementById("leave-stay").addEventListener("click", function () {
@@ -5796,10 +5806,27 @@
     var CATCH_PILL_TEXT = { live: "live", schedule: "schedule only", stale: "stale", unavailable: "unavailable" };
 
     function probabilityText(chance) {
-      return "Catch probability: " + chance.point + "% (range " + chance.range_low + "–" + chance.range_high + "%)";
+      return "Catch probability: about " + chance.point + "%";
     }
 
-    // The band (ok, mid, low) comes from Python. The number, the range and the pace chip always show too.
+    function chanceAriaText(chance) {
+      return "about " + chance.point + " percent chance";
+    }
+
+    // The bus arrival clock time at the right of a ring card (A, W and C); hidden without a usable probability.
+    function setBusArrives(prefix, hero, usable) {
+      var line = document.getElementById(prefix + "-arrives");
+      var time = document.getElementById(prefix + "-arrives-time");
+      if (!line || !time) {
+        return;
+      }
+      var iso = usable && hero && !hero.is_missed && hero.arrival_time ? hero.arrival_time : "";
+      var ok = !!iso && isFinite(new Date(iso).getTime());
+      time.textContent = ok ? formatClock(iso, false) : "";
+      line.hidden = !ok;
+    }
+
+    // The band (ok, mid, low) comes from Python. The number and the pace chip always show too.
     var RING_BAND_CLASS = { ok: "prob-ring--ok", mid: "prob-ring--mid", low: "prob-ring--low" };
 
     function ringBandClass(chance) {
@@ -5858,10 +5885,7 @@
       var state = !hero ? "unavailable" : dataIsStale() ? "stale" : hero.monitored ? "live" : "schedule";
       setPillState(document.getElementById("catch-pill"), document.getElementById("catch-pill-text"), state);
       setRing("catch-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
-      var range = document.getElementById("catch-range");
-      if (range) {
-        range.textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
-      }
+      setBusArrives("catch", hero, usable);
       var walkPace = catchWalkPace();
       document.getElementById("catch-caption").textContent = walkPace.caption;
       // The pace line shows what the server used for this poll, whatever the source, including the normal pace.
@@ -6518,7 +6542,7 @@
       var pillState = !hero ? "unavailable" : dataIsStale() ? "stale" : hero.monitored ? "live" : "schedule";
       setPillState(document.getElementById("walk-pill"), document.getElementById("walk-pill-text"), pillState);
       setRing("walk-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
-      document.getElementById("walk-range").textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
+      setBusArrives("walk", hero, usable);
       document.getElementById("walk-chance-title").textContent = catchHeading(false);
       var trend = document.getElementById("walk-trend");
       trend.textContent = usable && walkTrend.text ? WALK_TREND_TEXT[walkTrendKey(walkTrend.text, state)] : "";
@@ -6620,11 +6644,9 @@
     var ARRIVES_IN_TEXT = "Arrives in {minutes}";
     var TO_DESTINATION_TEXT = "To {destination}";
     var LEAVE_BY_TEXT = "Leave by {time}";
-    var ARRIVE_TEXT = "Arrive {time}";
-    var RANGE_NOTE_TEXT = "range {range_low}–{range_high}%";
+    var ARRIVE_TEXT = "Destination arrival {time}";
     var SWITCH_TO_TEXT = "Switch to Bus {service} in {minutes}";
     var CHANCE_TEXT = "{point}% chance";
-    var CHANCE_RANGE_TEXT = "(range {range_low}–{range_high}%)";
     var REACH_DESTINATION_TEXT = "Reach destination about {time}";
     var AT_YOUR_STOP_TEXT = "At your stop";
     var WALK_TO_TEXT = "Walk to {stop} ({distance})";
@@ -6670,7 +6692,7 @@
       var ring = document.createElement("div");
       ring.className = "prob-ring prob-ring--small";
       ring.setAttribute("role", "img");
-      ring.setAttribute("aria-label", probabilityText(chance));
+      ring.setAttribute("aria-label", chanceAriaText(chance));
       if (ringBandClass(chance)) {
         ring.classList.add(ringBandClass(chance));
       }
@@ -6881,11 +6903,7 @@
       var arrive = document.createElement("p");
       arrive.className = "option-card__arrive";
       arrive.textContent = row.estimated_arrival ? fillText(ARRIVE_TEXT, { time: formatClock(row.estimated_arrival, true) }) : "";
-      var note = document.createElement("p");
-      note.className = "option-card__range";
-      note.textContent = fillText(RANGE_NOTE_TEXT, row);
       aside.appendChild(arrive);
-      aside.appendChild(note);
       main.appendChild(tile);
       main.appendChild(body);
       main.appendChild(aside);
@@ -6906,7 +6924,7 @@
       hit.type = "button";
       hit.className = "alt-row__hit";
       var minutes = arrivalMinutes(row.arrival_time);
-      hit.setAttribute("aria-label", "Bus " + row.service_no + ", " + fillText(ARRIVES_IN_TEXT, { minutes: minutes }).toLowerCase() + ", " + probabilityText(row));
+      hit.setAttribute("aria-label", "Bus " + row.service_no + ", " + fillText(ARRIVES_IN_TEXT, { minutes: minutes }).toLowerCase() + ", " + chanceAriaText(row));
       var icon = document.createElement("span");
       icon.className = "alt-row__icon";
       icon.setAttribute("aria-hidden", "true");
@@ -6921,12 +6939,8 @@
       var odds = document.createElement("span");
       odds.className = "alt-row__chance";
       odds.textContent = fillText(CHANCE_TEXT, row);
-      var spread = document.createElement("span");
-      spread.className = "alt-row__range";
-      spread.textContent = fillText(CHANCE_RANGE_TEXT, row);
       top.appendChild(name);
       top.appendChild(odds);
-      top.appendChild(spread);
       body.appendChild(top);
       if ((row.badges || []).length) {
         body.appendChild(badgePills(row));
@@ -6994,7 +7008,7 @@
     var ARRIVING_IN_TEXT = "Arriving in {n} min";
     var ARRIVING_SOON_TEXT = "Arriving in <1 min";
     var ARRIVING_NOW_TEXT = "Arriving now";
-    var RING_LABEL_TEXT = "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent";
+    var RING_LABEL_TEXT = "about {p} percent chance of catching Bus {service}{eta}{at}";
     var RING_ETA_TEXT = " arriving in {n} minutes";
     var RING_ETA_SOON_TEXT = " arriving in under 1 minute";
     var RING_ETA_NOW_TEXT = " arriving now";
@@ -7068,9 +7082,7 @@
         p: chance.point,
         service: selectedService || "",
         eta: eta ? eta.ring : "",
-        at: stop ? fillText(RING_AT_TEXT, { stop: stop }) : "",
-        a: chance.range_low,
-        b: chance.range_high
+        at: stop ? fillText(RING_AT_TEXT, { stop: stop }) : ""
       });
     }
 
@@ -7296,7 +7308,7 @@
       setRing("pc-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
       document.getElementById("pc-title").textContent = catchHeading(true);
       setCatchSub("pc", hero);
-      document.getElementById("pc-range").textContent = usable ? "Range: " + chance.range_low + " – " + chance.range_high + "%" : "";
+      setBusArrives("pc", hero, usable);
       document.getElementById("pc-warn").hidden = !(usable && isUnlikely(hero));
     }
 
@@ -7456,7 +7468,7 @@
       list.appendChild(stepItem("destination", "Destination", [stepLine(destinationDisplayName())], null));
       document.getElementById("new-journey-arrive-value").textContent = document.getElementById("overview-arrive-value").textContent;
       var estimate = document.getElementById("new-journey-arrive-estimate");
-      estimate.textContent = row.estimated_arrival ? "Estimated arrival about " + formatClock(row.estimated_arrival, true) : "";
+      estimate.textContent = row.estimated_arrival ? "Estimated destination arrival about " + formatClock(row.estimated_arrival, true) : "";
       estimate.hidden = !row.estimated_arrival;
     }
 

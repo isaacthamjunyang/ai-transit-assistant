@@ -193,9 +193,9 @@ def test_the_pace_line_is_muted_silent_and_inside_the_probability_card():
     assert INDEX.index('id="new-journey-start"') > INDEX.index('id="new-journey-motion-note"')
 
 
-def test_the_menu_keeps_only_appearance_and_back_and_adds_no_row():
+def test_the_menu_keeps_only_appearance_and_adds_no_row():
     menu = INDEX.split('id="menu-sheet"', 1)[1][:2600]
-    assert menu.count('class="menu-row"') == 2
+    assert menu.count('class="menu-row"') == 1
     assert "motion" not in menu.lower()
 
 

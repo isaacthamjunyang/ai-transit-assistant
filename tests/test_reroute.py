@@ -194,7 +194,7 @@ def test_point_probability_does_not_replace_range_high():
     assert blocked["no_better_option"] is None
     switched = _decide([_primary(high=39, point=90), _bus("NextBus2", 54, 70, 10)])
     assert switched["switched"] is True
-    assert switched["reroute"]["probability_line"].endswith("vs previous 90%.")
+    assert switched["reroute"]["probability_line"].endswith("vs previous about 90%.")
 
 
 def test_next_bus_2_can_qualify():
@@ -682,7 +682,7 @@ def test_reroute_copy_uses_the_old_and_new_results():
     assert reroute["title"] == "Route Updated"
     assert reroute["message"] == "Switched to Bus 18 at Origin (01011)."
     assert reroute["probability_line"] == (
-        "Catch probability: 73% (range 60\u201381%) vs previous 28%."
+        "Catch probability: about 73% vs previous about 28%."
     )
     assert reroute["notification_title"] == "Route Updated \u2014 Bus 18"
     assert reroute["notification_body"] == (

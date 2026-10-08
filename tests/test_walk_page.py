@@ -223,9 +223,17 @@ def test_no_storage_no_logging_and_no_new_request_carries_the_position(report):
 
 # ---- the ring and the trend follow the server's values
 
-def test_the_ring_and_the_range_are_the_servers_numbers(report):
+def test_the_ring_is_the_servers_point_and_the_bus_arrival_time_replaces_the_range(report):
     chance = report["chance"]
-    assert report["open"]["ring"] == f"{chance['point']}%" and report["open"]["range"] == f"Range: {chance['low']} – {chance['high']}%"
+    assert report["open"]["ring"] == f"{chance['point']}%"
+    # the range is still in the server's numbers (the decisions use it) but it is not displayed on Page W
+    assert isinstance(chance["low"], int) and isinstance(chance["high"], int) and chance["low"] <= chance["point"] <= chance["high"]
+    assert report["open"]["rangeElement"] is False and "Range" not in report["open"]["cardText"] and "range" not in report["open"]["cardText"]
+    assert str(chance["low"]) + " – " + str(chance["high"]) not in report["open"]["cardText"]
+    # at the right of the ring: the muted label and the bus arrival clock time, 12-hour with a no-break space
+    assert report["open"]["arrivesHidden"] is False and report["open"]["arrives"] == chance["clock"]
+    assert re.fullmatch(r"\d{1,2}:\d\d (AM|PM)", report["open"]["arrives"]), report["open"]["arrives"]
+    assert "Bus arrives" in report["open"]["cardText"]
     assert report["open"]["heading"] == "Chance to catch Bus 18"
     assert 'role="img"' in INDEX.split('id="walk-ring"', 1)[1].split(">", 1)[0]  # the ring is an image with an aria-label
     assert '<section class="card catch-card walk-chance" aria-live="polite"' in INDEX  # and announced politely
@@ -247,7 +255,7 @@ def test_the_trend_shows_only_after_a_change_of_2_points_or_more_and_follows_the
     assert [row["hidden"] for row in seq] == [True, True, False, False, False, False]
     assert [row["trend"] for row in seq] == [
         "", "", TREND_BY_STATE[("rising", state)], TREND_BY_STATE[("rising", state)], "Steady", TREND_BY_STATE[("falling", state)]]
-    assert seq[2]["range"] == "Range: 59 – 69%"  # the range is the server's too
+    assert all("Range" not in row["cardText"] and "–" not in row["cardText"] for row in seq)  # no range text on the card
 
 
 @needs_node
@@ -314,7 +322,7 @@ def test_demo_mode_shows_the_simulated_tag(report):
 
 
 def test_stale_data_keeps_the_layout_with_an_unavailable_ring(report):
-    assert report["staleRing"]["ring"] == "Unavailable" and report["staleRing"]["range"] == ""
+    assert report["staleRing"]["ring"] == "Unavailable" and report["staleRing"]["arrivesHidden"] is True and report["staleRing"]["arrives"] == ""
 
 
 # ---- the strings: page and copy.js agree
@@ -322,7 +330,7 @@ def test_stale_data_keeps_the_layout_with_an_unavailable_ring(report):
 def test_the_page_strings_are_in_copy_js():
     esc = chr(92) + "u00a0"
     for text in ("See current location and walking pace", "Walk to your stop", "{distance} to the stop", "about {n}" + esc + "min walk",
-                 "straight-line distance", "On your way", "Not moving", "Arrived at the stop", "Waiting for your location…",
+                 "On your way", "Not moving", "Arrived at the stop", "Waiting for your location…",
                  "Recentre map", "Sensor details", "Moving away from the stop", "Checking your movement…", "Rising as you get closer", "Falling as you move away", "Steady",
                  "from GPS", "from your steps", "your usual pace", "average pace", "Not walking yet", "No motion permission",
                  "Near the stop", "Walking pace", "GPS speed", "GPS accuracy", "Steps per minute", "Step length", "Learned samples"):
@@ -334,7 +342,7 @@ def test_the_page_strings_are_in_copy_js():
                  "average pace", "about {n}" + esc + "min walk"):
         assert f'"{text}"' in INDEX, text
     for label in ("Sensor details", "Walking pace", "GPS speed", "GPS accuracy", "Steps per minute", "Step length", "Learned samples",
-                  "straight-line distance", "Recentre map", "See current location and walking pace"):
+                  "Recentre map", "See current location and walking pace"):
         assert label in INDEX, label
 
 
@@ -412,3 +420,19 @@ def test_a_stored_length_without_a_stored_count_cannot_show_0_72_with_0_samples(
     assert got["one"] == {"length": 0.72, "count": 1}  # 0.72 only ever appears with at least one sample
     assert got["length"] == 0.70 and got["count"] == 0
 
+
+
+# ---- the straight-line line is gone; the progress fill is the success token
+
+def test_the_straight_line_line_is_gone_everywhere():
+    css = (ROOT / "static" / "components.css").read_text(encoding="utf-8")
+    guide = (ROOT / "static" / "styleguide.html").read_text(encoding="utf-8")
+    for text in (INDEX, COPY, css, guide):
+        assert "straight-line distance" not in text and "straightLine" not in text and "walk-status__note" not in text
+
+
+def test_the_progress_fill_uses_the_success_ring_token():
+    css = (ROOT / "static" / "components.css").read_text(encoding="utf-8")
+    block = css.split(".walk-progress::-webkit-progress-value", 1)[1].split("}", 1)[0]
+    assert "var(--prob-ring-ok)" in block
+    assert css.split(".walk-progress::-moz-progress-bar", 1)[1].split("}", 1)[0].count("var(--prob-ring-ok)") == 1

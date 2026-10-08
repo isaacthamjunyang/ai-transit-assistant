@@ -10,10 +10,10 @@ Frontend: one static index.html with vanilla JS and Leaflet. No Node, no build s
 ## Hard rules
 - Python computes probability, leave-by, reroute choice, coordinates, and stop 
   selection. OpenAI only explains the fact sheet. Never let the model produce numbers.
-- Never show a bare "you'll make it". Always show a point value and a range.
+- Never show a bare "you'll make it". Show a point value ("about {p}%"); the range is kept for decisions and shown only in the Step 10 notification, the in-app Leave-now banner and the Location uncertain card.
 - On stale or failed data: show unavailable/stale, hide the percentage, no leave-now.
 - Reject LLM output that changes the range, changes the action, or contains unsafe 
-  advice (run, sprint, jaywalk). Fall back to the template sentence.
+  advice (run, sprint, jaywalk). Fall back to the template sentence (model path dormant).
 - Bus-only. Do not add trains, crowding, fares, accounts, background tracking, 
   or walking navigation.
 

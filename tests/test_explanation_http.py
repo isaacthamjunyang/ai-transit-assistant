@@ -1,7 +1,8 @@
 """The explanation over the HTTP poll path: the pack's keys, and a hostile model clause.
 
-Sentences one and two are written by Python in the poll response. Whatever a model (or a tampered request) offers
-as sentence three, they stay exactly as Python wrote them, and a bad clause falls back to the fixed one.
+The card text is written by Python in the poll response (two sentences). Whatever a model (or a tampered request)
+offers as a clause, the text stays exactly as Python wrote it, and a bad clause falls back to the fixed one. The model
+path is dormant: the pack carries model_enabled, and call and pending are false while it is off.
 """
 
 import json
@@ -88,9 +89,14 @@ def _poll(client, extra=None):
     return response.json()
 
 
+@pytest.fixture
+def model_on(monkeypatch):
+    monkeypatch.setenv("AI_EXPLANATION_ENABLED", "true")
+
+
 def _lead(pack):
-    assert pack["text"].endswith(pack["clause"])
-    return pack["text"][: -len(pack["clause"])].rstrip()
+    assert not pack["text"].endswith(pack["clause"])  # the text is the two Python sentences only
+    return pack["text"]
 
 
 FIXED = "It is advisable to " + ACTION_ADVICE["wait"] + "."
@@ -104,13 +110,15 @@ def test_the_pack_over_http_has_the_keys_the_page_reads_and_the_right_types(clie
     assert isinstance(pack["walk_speed_used"], float) and pack["walk_speed_source"] in ("gps", "cadence", "remembered", "default")
     assert set(PAGE_PACK_FIELDS) <= set(pack)
     assert isinstance(pack["snapshot"], str) and pack["snapshot"].startswith("18|01011|")
-    assert isinstance(pack["text"], str) and isinstance(pack["clause"], str) and pack["text"].endswith(pack["clause"])
+    assert isinstance(pack["text"], str) and isinstance(pack["clause"], str) and not pack["text"].endswith(pack["clause"])
     assert pack["action"] in ACTIONS and pack["reason_code"] in REASON_CODES
     assert pack["fact_sheet"] == {"reason_code": pack["reason_code"], "chosen_action": pack["action"]}
     assert type(pack["walk_minutes"]) is int and pack["band"] in ("ok", "mid", "low", None)
-    assert pack["uncertain"] is False and isinstance(pack["call"], bool) and isinstance(pack["pending"], bool)
+    assert pack["uncertain"] is False and pack["call"] is False and pack["pending"] is False
+    assert pack["model_enabled"] is False  # the model path is off by default
     assert datetime.fromisoformat(pack["arrival_time"]).tzinfo is not None
-    assert pack["text"].startswith("The bus is 10 minutes away. You are ")
+    assert pack["text"].startswith("The bus is 10 minutes away, and you are 300 m from the stop and walking at ")
+    assert " Leave by " in pack["text"] and "It is advisable" not in pack["text"]
 
 
 HOSTILE = [
@@ -126,20 +134,20 @@ HOSTILE = [
 
 
 @pytest.mark.parametrize("label, action, advice", HOSTILE, ids=[h[0] for h in HOSTILE])
-def test_a_hostile_clause_in_the_poll_leaves_sentences_one_and_two_alone_and_uses_the_fixed_clause(
-        client, label, action, advice):
+def test_a_hostile_clause_in_the_poll_leaves_the_text_alone_and_uses_the_fixed_clause(
+        client, model_on, label, action, advice):
     baseline = _poll(client)["explanation"]
     assert baseline["clause"] == FIXED and baseline["action"] == "wait"
     pack = _poll(client, {"explained_action": action, "explained_advice": advice})["explanation"]
     assert _lead(pack) == _lead(baseline), label  # sentences one and two exactly as Python wrote them
-    assert pack["clause"] == FIXED and pack["text"].endswith(FIXED)
+    assert pack["clause"] == FIXED and FIXED not in pack["text"]
     assert pack["call"] is True  # the page asks the model again
     assert "99 minutes" not in pack["text"] and "\n" not in pack["text"] and "Headline" not in pack["text"]
 
 
 @pytest.mark.parametrize("label, action, advice", HOSTILE[:6], ids=[h[0] for h in HOSTILE[:6]])
-def test_a_hostile_model_reply_over_http_falls_back_and_the_next_poll_keeps_sentences_one_and_two(
-        client, monkeypatch, label, action, advice):
+def test_a_hostile_model_reply_over_http_falls_back_and_the_next_poll_keeps_the_text(
+        client, model_on, monkeypatch, label, action, advice):
     monkeypatch.setattr(explain, "read_openai_api_key", lambda: "sk-test-not-real")
     monkeypatch.setattr(explain, "_openai_complete",
                         lambda fact, key, request: {"status": 200, "body": json.dumps({"advice": advice})})
@@ -153,7 +161,7 @@ def test_a_hostile_model_reply_over_http_falls_back_and_the_next_poll_keeps_sent
     assert _lead(after) == _lead(baseline) and after["clause"] == FIXED and after["call"] is False
 
 
-def test_a_good_model_clause_replaces_only_sentence_three(client, monkeypatch):
+def test_a_good_model_clause_never_enters_the_card_text(client, model_on, monkeypatch):
     good = "wait for your alert before leaving"
     monkeypatch.setattr(explain, "read_openai_api_key", lambda: "sk-test-not-real")
     monkeypatch.setattr(explain, "_openai_complete",
@@ -163,6 +171,7 @@ def test_a_good_model_clause_replaces_only_sentence_three(client, monkeypatch):
     assert body["source"] == "model" and body["clause"] == f"It is advisable to {good}."
     after = _poll(client, {"explained_action": body["action"], "explained_advice": body["advice"]})["explanation"]
     assert _lead(after) == _lead(baseline) and after["clause"] == body["clause"] and after["call"] is False
+    assert good not in after["text"]
 
 
 # ---- the pack goes to the browser only: pinned keys, no leak to OpenAI, nothing logged, nothing stored
@@ -170,7 +179,7 @@ def test_a_good_model_clause_replaces_only_sentence_three(client, monkeypatch):
 PINNED_PACK_KEYS = [
     "snapshot", "fact_sheet", "text", "clause", "clauses", "action", "arrival_time", "leave_by", "distance_m",
     "walk_minutes", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "band", "uncertain", "call",
-    "pending", "reason_code",
+    "pending", "reason_code", "model_enabled",
 ]
 BROWSER_ONLY = ("leave_by", "distance_m", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "clauses",
                 "walk_minutes", "arrival_time", "text", "band", "uncertain")
@@ -185,7 +194,7 @@ def test_the_pack_key_list_is_pinned_and_in_this_order(client):
     assert pack["leave_now_threshold_s"] == 60
 
 
-def test_no_pack_field_or_number_reaches_the_openai_request_or_the_explain_body(client, monkeypatch):
+def test_no_pack_field_or_number_reaches_the_openai_request_or_the_explain_body(client, model_on, monkeypatch):
     pack = _poll(client)["explanation"]
     seen = []
 
@@ -214,7 +223,7 @@ def test_no_pack_field_or_number_reaches_the_openai_request_or_the_explain_body(
         assert client.post("/api/explain", json={"fact_sheet": sheet, "snapshot": pack["snapshot"]}).status_code == 422, key
 
 
-def test_nothing_in_the_pack_is_logged_or_stored(client, caplog, capsys, tmp_path):
+def test_nothing_in_the_pack_is_logged_or_stored(client, model_on, caplog, capsys, tmp_path):
     import sqlite3
 
     with caplog.at_level(0):

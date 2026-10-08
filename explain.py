@@ -1,11 +1,11 @@
 """The AI Explanation card.
 
-The text has exactly three sentences. Python computes every number and writes sentences one and two from a fixed
-template, in the same poll response and from the same numbers as the arrival tile and the catch card, for the bus
-the tile shows. Sentence two is about the walk and the time to leave (the leave-by clock). The model's only job is the clause that completes "It is advisable to ...", and Python falls back
-to a fixed clause for the action whenever the model is missing, slow, or rejected. OpenAI receives the action and
-a reason code from a closed set and nothing else: no minutes, no probability, no range, no seconds, no
-coordinates, no stops.
+The text is written by Python from a fixed template, in the same poll response and from the same numbers as the
+arrival tile and the catch card, for the bus the tile shows: one sentence about the bus and the walk, then one
+leave sentence (the unlikely case is the one sentence alone). No model is called for it. The model path below (the
+clause that completes "It is advisable to ...", the validators, the endpoints) is dormant: it stays in the code and
+in the tests, but nothing on the card comes from it. OpenAI would receive the action and a reason code from a closed
+set and nothing else: no minutes, no probability, no range, no seconds, no coordinates, no stops.
 """
 
 import json
@@ -151,15 +151,19 @@ def model_name() -> str:
 
 
 def ai_explanation_enabled(env_path=None) -> bool:
-    """Page and server switch for the explanation card. Default on; only an explicit false-like value turns it off."""
+    """Switch for the model path. Default off; only an explicit true-like value turns it on."""
     path = ENV_PATH if env_path is None else env_path
     raw = _read_env_value(path, "AI_EXPLANATION_ENABLED")
     if not raw:
         raw = os.environ.get("AI_EXPLANATION_ENABLED", "")
     text = raw.strip().lower()
-    if not text:
-        return True
     return text in {"1", "true", "yes", "on"}
+
+
+def model_path_enabled(env_path=None) -> bool:
+    """True when a model request may be made: the flag is on, or Demo Mode runs the simulated OpenAI scenario
+    (which builds no client and reads no key)."""
+    return ai_explanation_enabled(env_path) or _openai_demo_active()
 
 
 def chosen_action(
@@ -248,32 +252,29 @@ def minutes_text(count: int) -> str:
 # the variant rules here must change that mirror too. Tests that pin them: tests/test_explanation_consistency.py
 # (boundary grid, seeded random test, drift tests) and tests/test_walk_speed_page.py.
 PAGE_PACK_FIELDS = (
-    "snapshot", "fact_sheet", "text", "clause", "clauses", "action", "arrival_time", "leave_by", "distance_m",
+    "snapshot", "fact_sheet", "text", "clause", "action", "arrival_time", "leave_by", "distance_m",
     "walk_minutes", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "band", "uncertain",
-    "call", "pending",
+    "call", "pending", "model_enabled",
 )
-# Every key of the pack: the page's fields plus reason_code (the model's code, kept for the tests).
-PACK_KEYS = PAGE_PACK_FIELDS + ("reason_code",)
+# Every key of the pack: the page's fields plus reason_code and clauses (the model's, kept and dormant).
+PACK_KEYS = PAGE_PACK_FIELDS + ("clauses", "reason_code")
 
-# Sentence two. {distance}, {kmh} and {time} are the only placeholders; the page mirror copies these strings.
-S2_UNLIKELY = "You are {distance} from the stop, but catching this bus is unlikely."
-S2_LEAVE_BY = {
-    "measured": "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave by {time}.",
-    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, "
-                  "so you should leave by {time}.",
-    "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, "
-               "you should leave by {time}.",
+# Sentence one (the bus and the walk) and sentence two (the leave sentence). {e}, {distance}, {kmh}, {time}, {x}
+# and {arrival} are the only placeholders; the page mirror copies these strings.
+S1_ARRIVING_NOW = "The bus is arriving now"
+S1_BUS_MINUTES = "The bus is {e} away"
+S1_YOU = ", and you are {distance} from the stop"
+S1_UNLIKELY = ", but catching this bus is unlikely."
+S1_SPEED = {
+    "measured": " and walking at about {kmh}\u00a0km/h.",
+    "remembered": " and walking at your usual speed of {kmh}\u00a0km/h.",
+    "default": " and walking at an average speed of {kmh}\u00a0km/h.",
 }
-S2_LEAVE_NOW = {
-    "measured": "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave now.",
-    "remembered": "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, "
-                  "so you should leave now.",
-    "default": "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, "
-               "you should leave now.",
-}
+S2_LEAVE_BY = "Leave by {time} so you have {x} to reach your stop and catch the bus arriving at {arrival}."
+S2_LEAVE_NOW = "Leave now so you have {e} to reach your stop and catch the bus arriving at {arrival}."
+S2_LEAVE_NOW_ARRIVING = "Leave now to try to catch the bus arriving at {arrival}."
 S2_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe."
 S2_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off."
-S1_ARRIVING_NOW = "The bus is arriving now."
 
 
 def format_distance(metres: float) -> str:
@@ -311,8 +312,18 @@ def speed_kind(source: str) -> str:
 
 def leave_mode(leave_seconds: float, threshold: float = LEAVE_NOW_MARGIN_S) -> str:
     """"now" when leave-by is the threshold or less away (or passed), otherwise "by". The one rule for the tile,
-    sentence two, sentence three and the pace chip."""
+    the leave sentence and the pace chip."""
     return "now" if leave_seconds <= threshold else "by"
+
+
+def clock_minute(moment: datetime) -> int:
+    """The minute a clock time shows: seconds dropped (Singapore time is a whole number of hours from UTC)."""
+    return int(moment.timestamp() // 60)
+
+
+def minutes_to_reach(arrival: datetime, leave_at: datetime) -> int:
+    """X: the difference of the two clock times as displayed, at least 1."""
+    return max(1, clock_minute(arrival) - clock_minute(leave_at))
 
 
 def build_numbers(
@@ -324,9 +335,10 @@ def build_numbers(
     walk_speed_used: float,
     walk_speed_source: str,
     leave_by: str,
+    arrival_time: str,
     now: datetime,
 ) -> dict:
-    """The numbers of sentences one and two. They stay on the server and are never sent to the model."""
+    """The numbers of the card text. They stay on the server."""
     for value in (bus_minutes, walk_minutes):
         if type(value) is not int:
             raise ValueError("Explanation numbers must be integers.")
@@ -338,6 +350,7 @@ def build_numbers(
     if distance_m < 0 or walk_speed_used <= 0:
         raise ValueError("Explanation numbers must be positive.")
     leave_at = parse_journey_time(leave_by)
+    arrival_at = parse_journey_time(arrival_time)
     return {
         "bus_minutes": bus_minutes,
         "walk_minutes": walk_minutes,
@@ -347,28 +360,46 @@ def build_numbers(
         "walk_speed_source": walk_speed_source if walk_speed_source in SOURCES else "default",
         "leave_seconds": (leave_at - now).total_seconds(),
         "time_text": format_clock(leave_at, now),
+        "arrival_text": format_clock(arrival_at, now),
+        "x_minutes": minutes_to_reach(arrival_at, leave_at),
     }
 
 
-def sentence_one(bus_minutes: int) -> str:
-    if bus_minutes < 1:
-        return S1_ARRIVING_NOW
-    return f"The bus is {minutes_text(bus_minutes)} away."
+def is_unlikely(numbers: dict, *, band: str | None) -> bool:
+    return band == "low" or numbers["chosen_action"] in ("switch_route", "do_not_rely")
+
+
+def sentence_one(numbers: dict, *, band: str | None, uncertain: bool = False) -> str:
+    """The bus and the walk in one sentence. Unlikely (low band, switch or do-not-rely) ends in the unlikely clause
+    instead of the speed."""
+    e = numbers["bus_minutes"]
+    bus = S1_ARRIVING_NOW if e < 1 else S1_BUS_MINUTES.replace("{e}", minutes_text(e))
+    text = bus + S1_YOU.replace("{distance}", format_distance(numbers["distance_m"]))
+    if is_unlikely(numbers, band=band):
+        return text + S1_UNLIKELY
+    kind = speed_kind(numbers["walk_speed_source"])
+    return text + S1_SPEED[kind].replace("{kmh}", format_kmh(numbers["walk_speed_used"]))
 
 
 def sentence_two(numbers: dict, *, band: str | None, uncertain: bool) -> str:
-    """First match wins: unlikely (low band, switch or do-not-rely), then the leave-by or leave-now sentence for the
-    speed source, with the uncertain-location sentence added after it."""
-    if band == "low" or numbers["chosen_action"] in ("switch_route", "do_not_rely"):
-        return S2_UNLIKELY.replace("{distance}", format_distance(numbers["distance_m"]))
+    """The leave sentence, with the uncertain-location sentence after it. Empty when unlikely: the card is then the
+    one sentence, with nothing after it."""
+    if is_unlikely(numbers, band=band):
+        return ""
     now = leave_mode(numbers["leave_seconds"]) == "now"
-    kind = speed_kind(numbers["walk_speed_source"])
-    text = (S2_LEAVE_NOW if now else S2_LEAVE_BY)[kind]
-    text = (
-        text.replace("{distance}", format_distance(numbers["distance_m"]))
-        .replace("{kmh}", format_kmh(numbers["walk_speed_used"]))
-        .replace("{time}", numbers["time_text"])
-    )
+    arrival = numbers["arrival_text"]
+    e = numbers["bus_minutes"]
+    if now:
+        if e < 1:
+            text = S2_LEAVE_NOW_ARRIVING.replace("{arrival}", arrival)
+        else:
+            text = S2_LEAVE_NOW.replace("{e}", minutes_text(e)).replace("{arrival}", arrival)
+    else:
+        text = (
+            S2_LEAVE_BY.replace("{time}", numbers["time_text"])
+            .replace("{x}", minutes_text(numbers["x_minutes"]))
+            .replace("{arrival}", arrival)
+        )
     if uncertain:
         text += " " + (S2_UNCERTAIN_NOW if now else S2_UNCERTAIN_BY)
     return text
@@ -383,18 +414,16 @@ def reason_code_for(numbers: dict, *, band: str | None, uncertain: bool) -> str:
     return "LEAVE_NOW" if leave_mode(numbers["leave_seconds"]) == "now" else "LEAVE_BY"
 
 
-def lead_text(numbers: dict, *, band: str | None, uncertain: bool) -> str:
-    """Sentences one and two."""
-    return sentence_one(numbers["bus_minutes"]) + " " + sentence_two(numbers, band=band, uncertain=uncertain)
+def card_text(numbers: dict, *, band: str | None, uncertain: bool) -> str:
+    """The whole card text: sentence one, then the leave sentence (none when unlikely). No model is called."""
+    one = sentence_one(numbers, band=band, uncertain=uncertain)
+    two = sentence_two(numbers, band=band, uncertain=uncertain)
+    return one + " " + two if two else one
 
 
 def clause_text(advice: str) -> str:
-    """Sentence three."""
+    """The model's clause (dormant: it is not part of the card text)."""
     return f"It is advisable to {advice}."
-
-
-def compose_text(numbers: dict, advice: str, *, band: str | None, uncertain: bool) -> str:
-    return lead_text(numbers, band=band, uncertain=uncertain) + " " + clause_text(advice)
 
 
 # ---- the model's clause ----
@@ -494,8 +523,8 @@ def fallback_view(fact_sheet: dict) -> dict:
 
 
 def produce_explanation(fact_sheet: dict, *, complete=None, api_key: str | None = None) -> dict:
-    key = read_openai_api_key() if api_key is None else api_key
     demo_supplies_result = complete is None and _openai_demo_active()
+    key = "" if demo_supplies_result else (read_openai_api_key() if api_key is None else api_key)
     if not key and not demo_supplies_result:
         return fallback_view(fact_sheet)
     request = explanation_request(fact_sheet)
@@ -622,16 +651,16 @@ def build_poll_explanation(
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
     walk_speed_source: str = "default",
 ) -> dict | None:
-    """The card's text for this poll, plus whether a model clause is needed for the action.
+    """The card's text for this poll.
 
     The card always describes the tracked bus, the one the arrival tile and the catch card show. A reroute that
     fires only changes the action to switch_route (and with it the wording); it never brings in the minutes
-    of the better bus. Sentences one and two use this poll's numbers. Only the clause is cached, keyed by the
-    action: it is reused while the action is unchanged and replaced by the fixed clause until the model's clause
-    for a new action arrives. The pack carries what the page needs to redraw sentences one and two from the
-    tile's own minutes every second (arrival time, walk minutes, band, uncertain flag), and the snapshot key. It
-    also carries what the page needs to flip leave-by to leave-now between polls: the leave-by time, the distance,
-    the speed used and its source, the leave-now threshold and both fixed clauses. None of it goes to the model.
+    of the better bus. The text uses this poll's numbers; no model is called for it. The pack carries what the
+    page needs to redraw it from the tile's own minutes every second (arrival time, walk minutes, band, uncertain
+    flag), and the snapshot key. It also carries what the page needs to flip leave-by to leave-now between polls:
+    the leave-by time, the distance, the speed used and its source and the leave-now threshold. The model fields
+    (fact_sheet, clause, clauses, call, pending, reason_code) stay for the dormant model path; model_enabled tells
+    the page whether it may make a request at all.
     """
     bus = _scored_journey_bus(payload.get("buses") or [])
     chance = bus.get("probability") if isinstance(bus, dict) else None
@@ -656,7 +685,8 @@ def build_poll_explanation(
         return None
     try:
         parse_journey_time(leave_by)
-    except ValueError:
+        parse_journey_time(arrival)
+    except (ValueError, TypeError):
         return None
     distance = round(distance, 1)
     action = chosen_action(
@@ -673,6 +703,7 @@ def build_poll_explanation(
         walk_speed_used=walk_speed_m_s,
         walk_speed_source=walk_speed_source,
         leave_by=leave_by,
+        arrival_time=arrival,
         now=now,
     )
     band = band if band in ("ok", "mid", "low") else None
@@ -681,11 +712,12 @@ def build_poll_explanation(
     sheet = {"reason_code": reason, "chosen_action": action}
     cached = explained_advice if explained_action == action and advice_is_valid(explained_advice, action) else None
     advice = cached if cached is not None else deterministic_advice(action)
-    needs_model = quality in ALLOWED_QUALITY and cached is None
+    model_enabled = model_path_enabled()
+    needs_model = model_enabled and quality in ALLOWED_QUALITY and cached is None
     return {
         "snapshot": snapshot_key(stop_code, str(payload.get("service_no") or ""), arrival, now),
         "fact_sheet": sheet,
-        "text": compose_text(numbers, advice, band=band, uncertain=uncertain),
+        "text": card_text(numbers, band=band, uncertain=uncertain),
         "clause": clause_text(advice),
         "clauses": {key: clause_text(ACTION_ADVICE[key]) for key in ("wait", "leave_now")},
         "action": action,
@@ -701,6 +733,7 @@ def build_poll_explanation(
         "uncertain": uncertain,
         "call": needs_model and not in_flight,
         "pending": needs_model and in_flight,
+        "model_enabled": model_enabled,
     }
 
 
@@ -785,6 +818,8 @@ def option_explanation_request(fact_sheet: dict) -> dict:
 def produce_option_advice(fact_sheet: dict, *, complete=None, api_key: str | None = None) -> dict:
     """{"advice", "source"}: the model's clause when valid, otherwise the fixed clause."""
     fixed = {"advice": deterministic_advice(OPTION_ACTION), "source": "fallback"}
+    if complete is None and _openai_demo_active():
+        return fixed  # Demo Mode has no simulated option reply: no client, no key
     key = read_openai_api_key() if api_key is None else api_key
     if not key and complete is None:
         return fixed

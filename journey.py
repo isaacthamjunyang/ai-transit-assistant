@@ -16,7 +16,7 @@ from walk_speed import range_speeds, walk_minutes
 
 SGT = timezone(timedelta(hours=8))
 ON_TRACK_LABEL = "Arrive-by check: On track"
-ON_TRACK_MESSAGE = "Estimated arrival is at or before your requested time."
+ON_TRACK_MESSAGE = "Estimated destination arrival is at or before your requested time."
 LATE_LABEL = "Arrive-by check: Risk of delay"
 LATE_MESSAGE = "Rough check: may miss arrive-by time."
 RIDE_UNAVAILABLE = "Ride time: Unavailable"

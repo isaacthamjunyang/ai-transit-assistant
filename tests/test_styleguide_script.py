@@ -33,35 +33,36 @@ def _guide_texts():
     return run_scenario("guidetexts", "", {"guide": GUIDE.resolve().as_uri()})["result"]
 
 
-def test_every_style_guide_ring_range_stays_at_or_below_92_percent():
+def test_every_style_guide_ring_point_stays_at_or_below_92_percent_and_shows_no_range():
     texts = _guide_texts()
-    assert len(texts["ranges"]) > 15
-    bad = [r for r in texts["ranges"] if r[1] > 92 or r[0] > r[1]]
-    assert not bad, bad  # the ring is capped at 92 percent and low never exceeds high
+    assert len(texts["points"]) > 15
+    bad = [p for p in texts["points"] if p > 92]
+    assert not bad, bad  # the ring is capped at 92 percent
+    assert texts["ranges"] == [], texts["ranges"]  # a probability on screen is a point, never a range
 
 
-def test_every_style_guide_leave_sentence_agrees_with_its_numbers_and_its_clause():
+def test_every_style_guide_leave_sentence_agrees_with_its_numbers():
     import re
 
     NB = "\u00a0"
     texts = _guide_texts()
     seen = {"by": 0, "now": 0}
     for card in texts["cards"]:
-        match = re.search(r"The bus is (\d+) minutes? away\. You are ([\d.]+)" + NB + r"(m|km) from the stop", card)
+        match = re.search(r"The bus is (\d+) minutes? away, and you are ([\d.]+)" + NB + r"(m|km) from the stop", card)
         if match is None:
             continue
         e = int(match.group(1))
         metres = float(match.group(2)) * (1000 if match.group(3) == "km" else 1)
         kmh = re.search(r"([\d.]+)" + NB + "km/h", card)
-        if "should leave by" in card or "you should leave by" in card:
+        if " Leave by " in card:
             seen["by"] += 1
             speed = float(kmh.group(1)) / 3.6
             assert e * 60 > metres / speed + 195 - 12, card  # more than 60 s to leave-by (the 12 s covers km/h rounding)
-            assert card.endswith("It is advisable to wait for your leave-by alert."), card
-        elif "should leave now" in card or "you should leave now" in card:
+            assert "It is advisable" not in card, card
+        elif " Leave now so you have " in card:
             seen["now"] += 1
-            assert card.endswith("It is advisable to leave now and walk to the bus stop."), card
-            assert e >= 3, card  # a bus under 3 minutes away is the unlikely sentence
+            assert "It is advisable" not in card, card
+            assert e >= 1 and (e == 1 or f"{e} minutes" in card), card  # leave now reads the minutes the tile shows
     assert seen["by"] >= 6 and seen["now"] >= 6, seen
 
 

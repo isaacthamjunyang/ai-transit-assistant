@@ -20,7 +20,7 @@ var copy = {
   rerouteCard: {
     title: "Route Updated",
     message: "Switched to Bus {new_service} at {new_stop_name} ({new_stop_code}).",
-    probability: "Catch probability: {new_point}% (range {new_low}–{new_high}%) vs previous {old_point}%."
+    probability: "Catch probability: about {new_point}% vs previous about {old_point}%."
   },
   rerouteNotification: {
     title: "Route Updated — Bus {new_service}",
@@ -30,29 +30,22 @@ var copy = {
     standard: "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the 15% improvement threshold.",
     postReroute: "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the post-reroute 20% improvement threshold."
   },
-  /* proposed, approved: the explanation is three sentences. Python builds sentences one and two from these
-     templates and keeps sentence three to a fixed clause per action unless the model supplies a valid one. */
+  /* approved: the explanation is written by Python from these templates (explain.py); no model is called for it.
+     Sentence one is busMinutes (or busArrivingNow) + youAre + a speed part, or the unlikely tail. Sentence two is the
+     leave sentence. {x} and {e} are minutes ("1 minute", "5 minutes"). */
   explanation: {
-    busArrivingNow: "The bus is arriving now.",
-    busMinutes: "The bus is {e} minutes away.",
-    busOneMinute: "The bus is 1 minute away.",
-    /* approved: sentence two, first match wins; {distance}, {kmh} and {time} are the placeholders */
-    unlikely: "You are {distance} from the stop, but catching this bus is unlikely.",
-    leaveByMeasured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave by {time}.",
-    leaveByRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave by {time}.",
-    leaveByDefault: "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave by {time}.",
-    leaveNowMeasured: "You are {distance} from the stop and walking at about {kmh}\u00a0km/h, so you should leave now.",
-    leaveNowRemembered: "You are {distance} from the stop and walking at your usual speed of {kmh}\u00a0km/h, so you should leave now.",
-    leaveNowDefault: "You are {distance} from the stop and, at an average walking speed of {kmh}\u00a0km/h, you should leave now.",
+    busArrivingNow: "The bus is arriving now",
+    busMinutes: "The bus is {e} away",
+    youAre: ", and you are {distance} from the stop",
+    unlikely: ", but catching this bus is unlikely.",
+    speedMeasured: " and walking at about {kmh}\u00a0km/h.",
+    speedRemembered: " and walking at your usual speed of {kmh}\u00a0km/h.",
+    speedDefault: " and walking at an average speed of {kmh}\u00a0km/h.",
+    leaveBy: "Leave by {time} so you have {x} to reach your stop and catch the bus arriving at {arrival}.",
+    leaveNow: "Leave now so you have {e} to reach your stop and catch the bus arriving at {arrival}.",
+    leaveNowArriving: "Leave now to try to catch the bus arriving at {arrival}.",
     uncertainBy: "Your location is uncertain, so leave a little earlier than that to be safe.",
-    uncertainNow: "Your location is uncertain, so the walking time may be off.",
-    adviceSentence: "It is advisable to {advice}.",
-    advice: {
-      wait: "wait for your leave-by alert",
-      leaveNow: "leave now and walk to the bus stop",
-      switchRoute: "switch to another bus",
-      doNotRely: "not rely only on this estimate"
-    }
+    uncertainNow: "Your location is uncertain, so the walking time may be off."
   },
   walkPage: {
     /* proposed, needs approval: the button row on Page A and the page title */
@@ -61,7 +54,6 @@ var copy = {
     /* proposed, needs approval: the status card; {n} and {distance} are filled by the page */
     distance: "{distance} to the stop",
     minutes: "about {n}\u00a0min walk",
-    straightLine: "straight-line distance",
     onWay: "On your way",
     still: "Not moving",
     /* proposed, needs approval: the fourth and fifth state lines */
@@ -103,17 +95,17 @@ var copy = {
   ],
   arriveBy: {
     onTrack: "Arrive-by check: On track",
-    onTrackMessage: "Estimated arrival is at or before your requested time.",
+    onTrackMessage: "Estimated destination arrival is at or before your requested time.",
     risk: "Arrive-by check: Risk of delay",
     riskMessage: "Rough check: may miss arrive-by time.",
     na: "Arrive-by check: N/A",
     naMessage: "Destination ride duration unavailable; cannot verify target arrival time.",
     estimateTarget: "Arrive about {point} ({range})",
-    estimateOnly: "Estimated arrival about {point} ({range})",
+    estimateOnly: "Estimated destination arrival about {point} ({range})",
     late: "about {minutes} min late",
     missLabel: "If you miss it",
-    missWithLate: "Next Bus {service} in {minutes} min · arrive about {point} ({late})",
-    missNoSpare: "Next Bus {service} in {minutes} min · arrive about {point}",
+    missWithLate: "Next Bus {service} in {minutes} min · reach destination about {point} ({late})",
+    missNoSpare: "Next Bus {service} in {minutes} min · reach destination about {point}",
     missWait: "Next Bus {service} in {minutes} min",
     warning: "Earliest arrival is about {earliest}, after your {target} target.",
     changeTime: "Change time",
@@ -134,7 +126,7 @@ var copy = {
   ifCatchPrefix: "If you catch this bus: ",
   aiExplanationTitle: "AI Explanation",
   updatingExplanation: "● Updating explanation...",
-  probabilityExample: "64% (range 51–78%)",
+  probabilityExample: "about 64%",
   pace: {
     slower: {
       title: "Walk slower",
@@ -271,12 +263,13 @@ var copy = {
     arrivingSoon: "Arriving in <1 min",
     arrivingNow: "Arriving now",
     /* proposed, needs approval: the ring's aria-label; {eta} and {at} are dropped when unknown */
-    ringLabel: "{p} percent chance of catching Bus {service}{eta}{at}, range {a} to {b} percent",
+    ringLabel: "about {p} percent chance of catching Bus {service}{eta}{at}",
     ringEta: " arriving in {n} minutes",
     ringEtaSoon: " arriving in under 1 minute",
     ringEtaNow: " arriving now",
     ringAt: " at {stop}",
-    range: "Range: {range_low} – {range_high}%",
+    /* approved: muted label left of the bus arrival clock time, at the right of the ring */
+    busArrives: "Bus arrives",
     caption: "if you leave now and walk at a normal pace",
     /* proposed, approved: the caption follows the source the server reports for the walking speed */
     captionCurrentPace: "if you leave now and keep walking at your current pace",
@@ -296,28 +289,26 @@ var copy = {
     leaveNowBusAway: "The bus is {e}\u00a0min away and the walk takes about {w}\u00a0min.",
     leaveNowBusArriving: "The bus is arriving now and the walk takes about {w}\u00a0min.",
     leaveUncertain: "Location uncertain: leave a bit earlier to be safe.",
-    estimatedArrival: "Estimated arrival",
+    estimatedArrival: "Estimated destination arrival",
     aiTitle: "AI Explanation",
     /* proposed, needs approval */
-    aiNote: "Probabilities come from the app's own calculation. AI only explains them."
+    aiNote: "Worked out from the app's own estimates."
   },
   rerouteProposal: {
     /* proposed, needs approval */
     warningTitle: "You're unlikely to catch Bus {service}",
     /* proposed, needs approval */
     warningTimedTitle: "You're unlikely to catch the Bus {service} arriving in {minutes}",
-    warningLine: "Catch probability: {point}% (range {range_low}–{range_high}%)",
+    warningLine: "Catch probability: about {point}%",
     betterFound: "Better option found",
     recommended: "Recommended option",
     arrivesIn: "Arrives in {minutes}",
     toDestination: "To {destination}",
     leaveBy: "Leave by {time}",
-    arrive: "Arrive {time}",
-    rangeNote: "range {range_low}–{range_high}%",
+    arrive: "Destination arrival {time}",
     switchTo: "Switch to Bus {service} in {minutes}",
     alternatives: "Alternative options",
     alternativeChance: "{point}% chance",
-    alternativeRange: "(range {range_low}–{range_high}%)",
     /* proposed, needs approval */
     otherBuses: "Other buses at your stop",
     /* proposed, needs approval */
@@ -357,8 +348,7 @@ var copy = {
     reasonHighestChanceOnTime: "Bus {s} is recommended: it has the highest chance of catching, and it should still get you there by your arrive-by time.",
     reasonHighestChance: "Bus {s} is recommended: it has the highest chance of catching.",
     reasonShorterWalk: "Bus {s} has a similar chance to the other options, and the walk to its stop is shorter.",
-    reasonNoneByTarget: "No option should reach your destination by your arrive-by time. Bus {s} should get you there earliest.",
-    advisable: "It is advisable to {advice}."
+    reasonNoneByTarget: "No option should reach your destination by your arrive-by time. Bus {s} should get you there earliest."
   },
   liveTracking: {
     refresh: "Refresh live arrivals",

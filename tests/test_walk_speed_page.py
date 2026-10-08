@@ -241,7 +241,15 @@ def test_a_recent_fix_does_not_wait_or_ask_for_another(fresh_fix_reports):
     assert report["pollMs"] == 20000
 
 
-def test_a_late_model_reply_for_an_older_poll_is_ignored_and_the_text_follows_the_tile(app):
+def test_with_the_model_path_off_the_page_makes_no_explain_call(app):
+    report = run_scenario("nomodel", app)["result"]
+    assert report["modelEnabled"] is False and report["pageFlag"] is False
+    assert report["calls"] == [], report["calls"]
+    assert report["text"].startswith("The bus is ")  # the card still shows Python's text
+
+
+def test_a_late_model_reply_for_an_older_poll_is_ignored_and_the_text_follows_the_tile(app, monkeypatch):
+    monkeypatch.setenv("AI_EXPLANATION_ENABLED", "true")  # the server reads it per request: the pack then says model_enabled
     report = run_scenario("explainsnap", app)["result"]
     assert report["firstPack"]["keys"] == ["chosen_action", "reason_code"]
     assert report["s1"] != report["s2"], "two polls must have two snapshot keys"
@@ -250,11 +258,12 @@ def test_a_late_model_reply_for_an_older_poll_is_ignored_and_the_text_follows_th
     assert report["pendingAfterPoll"] is True
     late = report["afterLate"]
     assert late["advice"] is None and "alert before leaving" not in late["text"], late
-    assert late["text"].startswith("The bus is")
+    assert late["text"].startswith("The bus is") and "It is advisable" not in late["text"]
     assert late["secondBody"]["snapshot"] == report["s2"]  # the newer poll asks for its own clause
     match = report["afterMatch"]
-    assert match["advice"].startswith("wait for your leave-by alert and keep") and match["text"].endswith(match["advice"] + ".")
-    assert "The bus is 7 minutes away." in report["tile"]["text"]
+    assert match["advice"].startswith("wait for your leave-by alert and keep") and match["advice"] not in match["text"]
+    assert match["text"] == late["text"]  # a model clause never changes the card text
+    assert report["tile"]["text"].startswith("The bus is 7 minutes away, and you are ")
     assert report["tile"]["sub"] == "Arriving in 7 min"
     assert report["cleared"] == ""
 

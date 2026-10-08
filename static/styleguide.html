@@ -44,7 +44,6 @@
         <button type="button" class="menu-radio" id="theme-light" role="radio" aria-checked="false" data-copy="home.light">Light</button>
         <button type="button" class="menu-radio" id="theme-dark" role="radio" aria-checked="false" data-copy="home.dark">Dark</button>
       </div>
-      <button type="button" class="menu-row" id="back-home" aria-disabled="true" data-copy="home.back">Back</button>
       <details id="guide-demo-controls">
         <summary>Demo Controls</summary>
         <label for="guide-scenario">Scenario</label>
@@ -63,7 +62,6 @@
           <span data-copy="home.appearance">Appearance</span>
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         </button>
-        <button type="button" class="menu-row" aria-disabled="true" data-copy="home.back">Back</button>
       </div>
       <div class="menu-sheet is-preview">
         <button type="button" class="menu-row" aria-expanded="true">
@@ -74,7 +72,11 @@
           <button type="button" class="menu-radio is-selected" role="radio" aria-checked="true">Light</button>
           <button type="button" class="menu-radio" role="radio" aria-checked="false">Dark</button>
         </div>
-        <button type="button" class="menu-row" data-copy="home.back">Back</button>
+      </div>
+      <div class="back-bar">
+        <button type="button" class="icon-button back-bar__button" aria-label="Back">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
       </div>
       <button type="button" class="stop-button is-selected" aria-selected="true">Selected row</button>
       <button type="button" class="stop-button is-hover">Hover row</button>
@@ -160,7 +162,6 @@
           <div class="meter__ring"></div>
           <div class="meter__center">
             <p class="meter__value">64%</p>
-            <p class="meter__range">51–78%</p>
           </div>
         </div>
         <p class="meter__caption"><span>40%</span><span>50%</span></p>
@@ -281,12 +282,12 @@
       <h2 id="arrive-panel-heading">Arrive-by estimate, miss line, and picker</h2>
       <div class="place-row-samples theme-sample-light">
         <p>Arrive about 6:24 PM (6:21–6:31 PM)</p>
-        <p>Estimated arrival about 6:24 PM (6:21–6:31 PM)</p>
+        <p>Estimated destination arrival about 6:24 PM (6:21–6:31 PM)</p>
         <div class="miss-row">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           <div>
             <p class="miss-row__label" data-copy="arriveBy.missLabel"></p>
-            <p>Next Bus 36 in 12 min · arrive about 6:36 PM (about 6 min late)</p>
+            <p>Next Bus 36 in 12 min · reach destination about 6:36 PM (about 6 min late)</p>
           </div>
         </div>
         <div class="banner banner--caution planning-banner">
@@ -305,12 +306,12 @@
       </div>
       <div class="place-row-samples theme-sample-dark">
         <p>Arrive about 6:24 PM (6:21–6:31 PM)</p>
-        <p>Estimated arrival about 6:24 PM (6:21–6:31 PM)</p>
+        <p>Estimated destination arrival about 6:24 PM (6:21–6:31 PM)</p>
         <div class="miss-row">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           <div>
             <p class="miss-row__label">If you miss it</p>
-            <p>Next Bus 36 in 12 min · arrive about 6:36 PM (about 6 min late)</p>
+            <p>Next Bus 36 in 12 min · reach destination about 6:36 PM (about 6 min late)</p>
           </div>
         </div>
         <div class="banner banner--caution planning-banner">
@@ -1019,8 +1020,19 @@
     var TILE_FLAG_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var CHEVRON_RIGHT = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
 
-    function sgProbLine(point, low, high) {
-      return rp.warningLine.replace("{point}", point).replace("{range_low}", low).replace("{range_high}", high);
+    function sgProbLine(point) {
+      return rp.warningLine.replace("{point}", point);
+    }
+
+    // The bus arrival clock time at the right of a ring card: a muted label and the time, hidden without a probability.
+    function sgBusArrives(minutes) {
+      return '<p class="catch-card__arrives"><span class="catch-card__arrives-label">' + lc.busArrives + '</span>'
+        + '<span class="catch-card__arrives-time">' + sgClock(minutes * 60) + '</span></p>';
+    }
+
+    function sgEtaMinutes(eta) {
+      var found = typeof eta === "string" ? eta.match(/\d+/) : null;
+      return eta === undefined ? 15 : found ? Number(found[0]) : null;
     }
 
     // The band comes from Python in the app; the samples name it.
@@ -1028,7 +1040,7 @@
 
     function sgRing(point, low, high, small, emptyText, bandName) {
       var empty = point === null;
-      var label = empty ? "Catch probability " + emptyText.toLowerCase() : sgProbLine(point, low, high);
+      var label = empty ? "Catch probability " + emptyText.toLowerCase() : "about " + point + " percent chance";
       var chosen = bandName || SG_BAND[point];
       var band = empty || !chosen ? "" : " prob-ring--" + chosen;
       return "<div class=\"prob-ring" + band + (small ? " prob-ring--small" : "") + (empty ? " is-empty" : "") + "\" role=\"img\" aria-label=\"" + label + "\">"
@@ -1059,8 +1071,8 @@
       return "<section class=\"card catch-card\" aria-live=\"polite\">"
         + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), sgSub(eta === undefined ? lc.arrivingIn.replace("{n}", "15") : eta, stop === undefined ? "Tanjong Rhu Stn Exit 2" : stop), state)
         + "<div class=\"catch-card__row\">" + sgRing(point, low, high, false, lc.unavailable)
-        + "<div class=\"catch-card__copy\"><p class=\"catch-card__range\">"
-        + (usable ? lc.range.replace("{range_low}", low).replace("{range_high}", high) : "") + "</p></div></div>"
+        + "<div class=\"catch-card__copy\">"
+        + (usable && sgEtaMinutes(eta) !== null ? sgBusArrives(sgEtaMinutes(eta)) : "") + "</div></div>"
         + "<p class=\"catch-card__caption\">" + caption + "</p>"
         + sgWalkRow(walk && walk.line ? walk.line : lc.walkPaceNormal.replace("{kmh}", "4.5")) + "</section>";
     }
@@ -1147,7 +1159,6 @@
     function sgExplainText(opts) {
       var x = copy.explanation;
       var e = opts.e;
-      var one = e < 1 ? x.busArrivingNow : e === 1 ? x.busOneMinute : x.busMinutes.replace("{e}", e);
       var metres = opts.distance === undefined ? 300 : opts.distance;
       var speed = opts.speed === undefined ? 1.25 : opts.speed;
       var lv = sgLeave(e, metres, speed);
@@ -1156,20 +1167,24 @@
       var source = opts.source || "gps";
       var kind = source === "gps" || source === "cadence" ? "Measured" : source === "remembered" ? "Remembered" : "Default";
       var now = lv.mode === "now";
-      var action = opts.action;
-      if (action === "wait" || action === "leaveNow") {
-        action = now ? "leaveNow" : "wait";
+      var bus = e < 1 ? x.busArrivingNow : x.busMinutes.replace("{e}", sgMinutes(e));
+      var one = bus + x.youAre.replace("{distance}", distance);
+      if (opts.band === "low" || opts.action === "switchRoute" || opts.action === "doNotRely") {
+        return one + x.unlikely;
       }
+      one += x["speed" + kind].replace("{kmh}", kmh);
+      var arrival = sgClock(e * 60);
       var two;
-      if (opts.band === "low" || action === "switchRoute" || action === "doNotRely") {
-        two = x.unlikely.replace("{distance}", distance);
+      if (now) {
+        two = e < 1 ? x.leaveNowArriving.replace("{arrival}", arrival) : x.leaveNow.replace("{e}", sgMinutes(e)).replace("{arrival}", arrival);
       } else {
-        two = x[(now ? "leaveNow" : "leaveBy") + kind].replace("{distance}", distance).replace("{kmh}", kmh).replace("{time}", lv.time);
-        if (opts.uncertain) {
-          two += " " + (now ? x.uncertainNow : x.uncertainBy);
-        }
+        var reach = Math.max(1, Math.floor((SG_NOW_S + e * 60) / 60) - Math.floor((SG_NOW_S + lv.secs) / 60));
+        two = x.leaveBy.replace("{time}", lv.time).replace("{x}", sgMinutes(reach)).replace("{arrival}", arrival);
       }
-      return one + " " + two + " " + x.adviceSentence.replace("{advice}", x.advice[action]);
+      if (opts.uncertain) {
+        two += " " + (now ? x.uncertainNow : x.uncertainBy);
+      }
+      return one + " " + two;
     }
 
     function sgAiCard(mode, opts) {
@@ -1204,14 +1219,14 @@
         + '<div class="option-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
         + '<div class="option-card__copy"><p class="option-card__title">Bus ' + service + '</p><p class="option-card__arrives"><span class="option-card__live">' + rp.arrivesIn.replace("{minutes}", "6 min") + ' <span class="option-card__arrow" aria-hidden="true">' + ARROW_ICON + '</span></span></p>'
         + '<p class="option-card__meta">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</p><p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15\u00a0PM") + '</p></div>'
-        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '<p class="option-card__arrive">' + rp.arrive.replace("{time}", "6:36\u00a0PM") + '</p><p class="option-card__range">' + rp.rangeNote.replace("{range_low}", "55").replace("{range_high}", "70") + '</p></div></div></div>'
+        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '<p class="option-card__arrive">' + rp.arrive.replace("{time}", "6:36\u00a0PM") + '</p></div></div></div>'
         + '<section class="ai-card option-explain" aria-live="polite"><p class="ai-card__head"><span class="ai-card__icon" aria-hidden="true">' + SPARKLE_ICON + '</span><span>' + lc.aiTitle + '</span></p>'
-        + '<p class="ai-card__text">' + sgReasonSentence(reasonKey, service) + ' ' + rp.advisable.replace("{advice}", "switch to another bus") + '</p></section>'
+        + '<p class="ai-card__text">' + sgReasonSentence(reasonKey, service) + '</p></section>'
         + '<button type="button" class="primary primary--icon"><span>' + rp.switchTo.replace("{service}", service).replace("{minutes}", "6 min") + '</span>' + ARROW_ICON + '</button></div>';
     }
 
     function sgAutoBanner() {
-      return '<div class="banner banner--caution reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "36").replace("{minutes}", "3 min") + '</p><p>' + sgProbLine(28, 19, 37) + '</p></div></div>';
+      return '<div class="banner banner--caution reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "36").replace("{minutes}", "3 min") + '</p><p>' + sgProbLine(28) + '</p></div></div>';
     }
 
     function sgReroute() {
@@ -1229,7 +1244,7 @@
     function sgCurrentBusCard(stop) {
       return '<section class="card catch-card page-c-current" aria-live="polite">'
         + sgCardHead(lc.chanceToCatchPageC.replace("{service}", "11"), sgSub(lc.arrivingIn.replace("{n}", "2"), stop || "Tanjong Rhu Stn Exit 2"), "live")
-        + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy"><p class="catch-card__range">' + lc.range.replace("{range_low}", "3").replace("{range_high}", "8") + '</p></div></div>'
+        + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy">' + sgBusArrives(2) + '</div></div>'
         + '<p class="catch-card__caption">' + lc.caption + '</p>'
         + '<div class="page-c-warn">' + WARN_ICON + '<p>' + rp.currentWarning + '</p></div>'
         + '<button type="button" class="secondary">' + cp.seeArrivals + '</button></section>';
@@ -1263,7 +1278,7 @@
     }
 
     function sgUnlikelyBanner() {
-      return '<div class="banner banner--caution unlikely-banner"><div class="reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "11").replace("{minutes}", "4 min") + '</p><p>' + sgProbLine(12, 6, 20) + '</p></div></div>'
+      return '<div class="banner banner--caution unlikely-banner"><div class="reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "11").replace("{minutes}", "4 min") + '</p><p>' + sgProbLine(12) + '</p></div></div>'
         + '<button type="button" class="secondary">' + rp.seeOtherBuses + '</button></div>';
     }
 
@@ -1331,12 +1346,11 @@
         + sgWalkMap(o.accuracy || "small", o.state === "arrived")
         + "<section class=\"card walk-status\"><p class=\"walk-status__distance\">" + (hasFix ? w.distance.replace("{distance}", o.distance) : "—") + "</p>"
         + (hasFix ? "<p class=\"walk-status__minutes\">" + w.minutes.replace("{n}", o.minutes) + "</p>" : "")
-        + "<p class=\"walk-status__note\">" + w.straightLine + "</p>"
         + "<progress class=\"walk-progress\" max=\"100\" value=\"" + progress + "\" aria-hidden=\"true\"></progress>"
         + "<p class=\"walk-status__state\">" + stateText + "</p></section>"
         + "<section class=\"card catch-card walk-chance\" aria-live=\"polite\">" + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), "", "live")
         + "<div class=\"catch-card__row\">" + sgRing(ring[0], ring[1], ring[2], false, "", ring[3])
-        + "<div class=\"catch-card__copy\"><p class=\"catch-card__range\">" + lc.range.replace("{range_low}", ring[1]).replace("{range_high}", ring[2]) + "</p>"
+        + "<div class=\"catch-card__copy\">" + sgBusArrives(o.busMinutes === undefined ? 6 : o.busMinutes)
         + (trendText ? "<p class=\"walk-chance__trend\">" + trendText + "</p>" : "") + "</div></div></section>"
         + (o.sensors || sgSensors(false)) + "</div>"
         + sgSeeArrivalsBar();
@@ -1362,22 +1376,23 @@
         + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, sgTileState(15, 300, 1.25, true))
         + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, sgTileState(6, 250, 1.3, true))
         + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: sgLeave(15, 300, 1.25).time, e: 15 })
-        + "<h4>Leave by and Estimated arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
+        + "<h4>Leave by and Estimated destination arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
         + "<h4>Tiles with No target (no check)</h4>" + sgLeaveTiles(false)
         + "<h4>AI Explanation: loading</h4>" + sgAiCard("loading")
         + "<h4>AI Explanation: badge row, band ok (no prefix)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", badge: copy.arriveBy.onTrack })
         + "<h4>AI Explanation: badge row, band mid (prefix)</h4>" + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", badge: copy.arriveBy.risk, badgeClass: "badge--risk", prefix: true })
         + "<h4>AI Explanation: no target (no badge row)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait" })
-        + "<h4>Sentence 1: arriving now and one minute (the chance is low, so sentence two is the unlikely one)</h4>" + sgAiCard("normal", { e: 0, band: "low", action: "doNotRely" }) + sgAiCard("normal", { e: 1, band: "low", action: "doNotRely" })
-        + "<h4>Sentence 2, leave by: measured speed (GPS or steps)</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300 })
-        + "<h4>Sentence 2, leave by: your usual speed</h4>" + sgAiCard("normal", { e: 18, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820 })
-        + "<h4>Sentence 2, leave by: average walking speed (speed uncertain)</h4>" + sgAiCard("normal", { e: 20, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200 })
-        + "<h4>Sentence 2, leave now: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250 }) + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250 }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250 })
-        + "<h4>Sentence 2, leave by, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300, uncertain: true }) + sgAiCard("normal", { e: 18, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820, uncertain: true }) + sgAiCard("normal", { e: 20, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200, uncertain: true })
-        + "<h4>Sentence 2, leave now, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250, uncertain: true })
-        + "<h4>Sentence 2: unlikely, with and without an uncertain location (no uncertain sentence is added)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640, uncertain: true })
-        + "<h4>Sentence 2: catching this bus is unlikely (low band, switch, do not rely)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute", distance: 640 })
-        + "<h4>Sentence 3: every advice clause</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait" }) + sgAiCard("normal", { e: 7, band: "ok", action: "leaveNow" }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute" }) + sgAiCard("normal", { e: 5, band: "ok", action: "doNotRely" })
+        + "<h4>Unlikely, bus arriving now and one minute away (one sentence, nothing after it)</h4>" + sgAiCard("normal", { e: 0, band: "low", action: "doNotRely" }) + sgAiCard("normal", { e: 1, band: "low", action: "doNotRely" })
+        + "<h4>Leave by: measured speed (GPS or steps)</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300 })
+        + "<h4>Leave by: your usual speed</h4>" + sgAiCard("normal", { e: 18, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820 })
+        + "<h4>Leave by: average walking speed (speed uncertain)</h4>" + sgAiCard("normal", { e: 20, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200 })
+        + "<h4>Leave now: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250 }) + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250 }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250 })
+        + "<h4>Leave by, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300, uncertain: true }) + sgAiCard("normal", { e: 18, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820, uncertain: true }) + sgAiCard("normal", { e: 20, band: "ok", action: "wait", source: "default", speed: 1.25, distance: 1200, uncertain: true })
+        + "<h4>Leave now, with the uncertain-location sentence: measured, usual and average speed</h4>" + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "cadence", speed: 1.3, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", source: "remembered", speed: 1.1, distance: 250, uncertain: true }) + sgAiCard("normal", { e: 6, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 250, uncertain: true })
+        + "<h4>Unlikely, with and without an uncertain location (no uncertain sentence is added)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640, uncertain: true })
+        + "<h4>Unlikely: low band, switch route, do not rely (the same one sentence)</h4>" + sgAiCard("normal", { e: 8, band: "low", action: "doNotRely", distance: 640 }) + sgAiCard("normal", { e: 5, band: "ok", action: "switchRoute", distance: 640 })
+        + "<h4>Leave now: the bus arriving now, and one minute away</h4>" + sgAiCard("normal", { e: 0, band: "ok", action: "leaveNow", source: "gps", speed: 1.25, distance: 20 }) + sgAiCard("normal", { e: 1, band: "ok", action: "leaveNow", source: "default", speed: 1.25, distance: 60 })
+        + "<h4>Leave by: only a few minutes to reach the stop (the walk is short)</h4>" + sgAiCard("normal", { e: 4, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 120 })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
         + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
         + "<h4>No better option</h4><p class=\"banner banner--quiet reroute-none\">" + copy.noBetter.standard.replace("{point}", "28") + "</p>";
@@ -1496,7 +1511,7 @@
       var warn = function (text) { return '<p class="alt-row__warn">' + WARN_ICON + '<span>' + text + '</span></p>'; };
       return '<li class="alt-row' + (opts.unlikely ? " alt-row--unlikely" : "") + '"><button type="button" class="alt-row__hit"><span class="alt-row__icon" aria-hidden="true">' + BUS_SVG + '</span>'
         + '<div class="alt-row__body"><p class="alt-row__top"><span class="alt-row__service">' + jo.bus.replace("{service}", service) + '</span>'
-        + '<span class="alt-row__chance">' + rp.alternativeChance.replace("{point}", point) + '</span><span class="alt-row__range">' + rp.alternativeRange.replace("{range_low}", low).replace("{range_high}", high) + '</span></p>'
+        + '<span class="alt-row__chance">' + rp.alternativeChance.replace("{point}", point) + '</span></p>'
         + sgPills(opts.pills)
         + '<p class="alt-row__bottom"><span class="alt-row__arrives">' + rp.arrivesIn.replace("{minutes}", minutes) + '</span><span class="alt-row__reach">' + rp.reachDestination.replace("{time}", reach) + '</span></p>'
         + '<p class="alt-row__bottom">' + walk + '</p>'
@@ -1601,7 +1616,7 @@
 
     function sgRingRow() {
       return '<div class="ring-samples">' + [[92, 92, 92, "ok"], [64, 51, 78, "ok"], [45, 38, 52, "mid"], [30, 20, 38, "low"]].map(function (r) {
-        return '<div class="ring-sample">' + sgRing(r[0], r[1], r[2], false, "", r[3]) + '<p class="field__hint">' + sgProbLine(r[0], r[1], r[2]) + '</p></div>';
+        return '<div class="ring-sample">' + sgRing(r[0], r[1], r[2], false, "", r[3]) + '<p class="field__hint">' + sgProbLine(r[0]) + '</p></div>';
       }).join("") + '</div>';
     }
 

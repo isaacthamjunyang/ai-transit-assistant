@@ -49,6 +49,5 @@ def test_the_explanation_has_no_leg_2_variant():
     import inspect
 
     assert "leg2" not in inspect.signature(explain.sentence_two).parameters
-    assert "leg2" not in inspect.signature(explain.compose_text).parameters
     assert not hasattr(explain, "parse_context")  # the page sends the model no context at all
     assert "reach_distance_m" not in inspect.signature(explain.build_poll_explanation).parameters

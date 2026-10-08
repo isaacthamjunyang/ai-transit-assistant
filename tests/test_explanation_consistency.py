@@ -1,10 +1,11 @@
 """The AI card cannot disagree with the arrival tile: one tracked bus, one rounding, one snapshot per poll.
 
-Python writes sentences one and two in the poll response. The page redraws them every second with a small mirror of
-the Python templates (explanationLead, leaveMode, leaveClockText, formatDistance). These tests pin the mirror to
-Python on a boundary grid, on every minute from 0 to 90, and on seeded random cases (distance, speed source, km/h,
-leave-by time, leave now, uncertain location), pin the minutes to the tile's minutes (etaParts), and pin the late-reply
-rule in the real page (Edge). A Python-only branch or a reworded string makes one of them fail.
+Python writes the card text in the poll response (a bus-and-walk sentence, then the leave sentence). The page redraws
+it every second with a small mirror of the Python templates (explanationCardText, leaveMode, leaveClockText,
+formatDistance). These tests pin the mirror to Python on a boundary grid, on the minute rollovers of the two clock times,
+on every minute from 0 to 90, and on seeded random cases (distance, speed source, km/h, leave-by time, arrival time,
+leave now, uncertain location), pin the minutes to the tile's minutes (etaParts), and pin the late-reply rule in the
+real page (Edge). A Python-only branch or a reworded string makes one of them fail.
 """
 
 import json
@@ -15,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from explain import build_numbers, lead_text, tile_minutes
+from explain import build_numbers, card_text, tile_minutes
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
@@ -62,17 +63,19 @@ def _run_node(program: str):
 # ---- cases: one dict per sentence-one-and-two variant
 
 def _case(e=10, w=3, action="wait", band="ok", unc=False, leave_in=600, source="gps", speed=1.25, distance=300.0,
-          now=NOW):
+          now=NOW, arr_off=None):
+    """arr_off: the bus arrival in seconds after now (the tile's minutes e by default)."""
     return {"e": e, "w": w, "action": action, "band": band, "unc": unc, "leave_in": leave_in, "source": source,
-            "speed": speed, "distance": distance, "now": now.isoformat()}
+            "speed": speed, "distance": distance, "now": now.isoformat(), "arr_off": e * 60 if arr_off is None else arr_off}
 
 
 def _python_lead(c) -> str:
     now = datetime.fromisoformat(c["now"])
     leave_by = (now + timedelta(seconds=c["leave_in"])).isoformat()
     numbers = build_numbers(bus_minutes=c["e"], walk_minutes=c["w"], chosen_action=c["action"], distance_m=c["distance"],
-                            walk_speed_used=c["speed"], walk_speed_source=c["source"], leave_by=leave_by, now=now)
-    return lead_text(numbers, band=c["band"], uncertain=c["unc"])
+                            walk_speed_used=c["speed"], walk_speed_source=c["source"], leave_by=leave_by,
+                            arrival_time=(now + timedelta(seconds=c["arr_off"])).isoformat(), now=now)
+    return card_text(numbers, band=c["band"], uncertain=c["unc"])
 
 
 def _python_leads(cases):
@@ -88,7 +91,7 @@ def _mirror_cases(cases):
         "  var pack = {walk_minutes: c.w, band: c.band, uncertain: c.unc, action: c.action,\n"
         "    leave_by: new Date(nowMs + c.leave_in * 1000).toISOString(), leave_now_threshold_s: " + str(THRESHOLD) + ",\n"
         "    distance_m: c.distance, walk_speed_used: c.speed, walk_speed_source: c.source};\n"
-        "  out.push(explanationLead(pack, c.e, nowMs));\n"
+        "  out.push(explanationCardText(pack, c.e, new Date(nowMs + c.arr_off * 1000).toISOString(), nowMs));\n"
         "});\nconsole.log(JSON.stringify(out));"
     )
     return _run_node(program)
@@ -137,12 +140,13 @@ def test_the_text_between_polls_follows_the_tile_not_the_poll_time():
 
 
 def test_the_mirror_exists_in_the_page_and_the_card_redraws_every_second():
-    assert "function explanationLead(pack, e, nowMs)" in INDEX and "function renderExplanationNow()" in INDEX
+    assert "function explanationCardText(pack, e, arrivalIso, nowMs)" in INDEX and "function renderExplanationNow()" in INDEX
     tick = _between(INDEX, "function refreshDisplay(generation)", "function clearPrimaryBus")
     assert "renderExplanationNow();" in tick
     now = _between(INDEX, "function renderExplanationNow()", "function resetExplanationState()")
     assert "featuredBus(lastSuccess.buses)" in now  # the tile's own bus
     assert "leaveMode(pack.leave_by, pack.leave_now_threshold_s, nowMs)" in now  # the one leave rule, the tile's clock
+    assert "explanationCardText(pack, e, arrival, nowMs)" in now and "explanationClauseFor" not in INDEX  # no model clause
 
 
 def test_page_c_explanation_is_unaffected():
@@ -190,6 +194,10 @@ def _boundary_cases():
         for leave_in in (61, 90, 900, 3600, 15000, 43200, 50000, 90000):
             for unc in (False, True):
                 cases.append(_case(now=now, leave_in=leave_in, unc=unc))
+    for arr_off in (0, 29, 30, 59, 60, 61, 119, 120, 599, 600, 601, 3600, 7199):
+        for leave_in in (-1, 0, 60, 61, 119, 120, 299, 300, 540, 541, 3599, 3600):
+            for now in (NOW, NOW + timedelta(seconds=29), NOW + timedelta(seconds=59), midnight):
+                cases.append(_case(e=arr_off // 60, leave_in=leave_in, arr_off=arr_off, now=now))
     return cases
 
 
@@ -218,7 +226,7 @@ def _random_cases(count):
             e=rng.randint(0, 90), w=rng.randint(0, 45), action=rng.choice(ACTIONS), band=rng.choice(BANDS),
             unc=rng.random() < 0.5, leave_in=rng.choice([rng.randint(-900, 900), rng.randint(-90000, 90000), 60, 61, 59, 0]),
             source=rng.choice(SOURCES), speed=rng.randint(50, 140) / 100, distance=round(rng.choice([rng.uniform(0, 3000), rng.uniform(0, 30)]), 1),
-            now=now))
+            now=now, arr_off=rng.choice([rng.randint(0, 7200), rng.randint(-60, 120)])))
     return cases
 
 
@@ -241,6 +249,47 @@ def test_the_page_mirror_equals_python_on_every_minute_and_walk_pair_in_range():
              for unc in (False, True) for band in ("ok", "low")]
     assert len(cases) == 91 * 46 * 16
     assert _mirror_cases(cases) == _python_leads(cases)
+
+
+ROLLOVERS = [(540, 299), (599, 240), (540, 300), (539, 299), (600, 299), (540, 540), (540, 900), (600, 541), (3600, 3059)]
+
+
+@needs_node
+def test_the_page_mirror_equals_python_at_the_minute_rollovers_of_the_two_clock_times():
+    midnight = datetime(2026, 10, 5, 23, 55, 0, tzinfo=SGT)
+    cases = []
+    for arr_off, leave_in in ROLLOVERS:
+        for now in (NOW, NOW + timedelta(seconds=29), NOW + timedelta(seconds=59), midnight, midnight + timedelta(seconds=45)):
+            for unc in (False, True):
+                cases.append(_case(e=arr_off // 60, leave_in=leave_in, arr_off=arr_off, now=now, unc=unc))
+    got, expected = _mirror_cases(cases), _python_leads(cases)
+    bad = [(c, g, x) for c, g, x in zip(cases, got, expected) if g != x]
+    assert not bad, f"{len(bad)} differ, first: {bad[0]}"
+    # leave by 9:04:59 and arrival 9:09:00 read 9:04 and 9:09: five minutes, on both sides
+    five = _mirror_cases([_case(e=9, leave_in=299, arr_off=540), _case(e=9, leave_in=240, arr_off=599)])
+    assert all("so you have 5 minutes to reach your stop" in text for text in five), five
+    assert "catch the bus arriving at 9:09\u00a0AM" in five[0] and "Leave by 9:04\u00a0AM" in five[0]
+
+
+@needs_node
+def test_every_leave_by_case_in_the_mirror_has_at_least_two_minutes():
+    # leave-by is the arrival minus the walk minus the 135 s margin
+    import re
+
+    cases = []
+    for arr_off in range(240, 420, 7):
+        for walk_s in (0, 1, 20, 59, 60, 119, 120, 300, 600, 3000):
+            for now in (NOW, NOW + timedelta(seconds=17), NOW + timedelta(seconds=44)):
+                cases.append(_case(e=round(arr_off / 60), leave_in=arr_off - walk_s - 135, arr_off=arr_off, now=now))
+    got = _mirror_cases(cases)
+    assert got == _python_leads(cases)
+    seen = 0
+    for text in got:
+        found = re.search(r"so you have (\d+) minutes? to reach", text)
+        if "Leave by" in text:
+            seen += 1
+            assert found and int(found.group(1)) >= 2, text
+    assert seen > 100
 
 
 @needs_node
@@ -280,6 +329,7 @@ def test_the_server_pack_carries_every_field_the_page_reads():
     pack = build_poll_explanation(payload, now=NOW, cache=Cache(), user_lat=1.3 + 225 / 111_195, user_lon=103.8,
                                   stop_code="1", explained_action=None, explained_advice=None, in_flight=False,
                                   reroute_fired=False)
+    assert pack["model_enabled"] is False  # the model path is off by default
     missing = [name for name in PAGE_PACK_FIELDS if name not in pack]
     assert not missing, missing
     assert tuple(pack) == tuple(PACK_KEYS) or set(pack) == set(PACK_KEYS)  # the pinned key list

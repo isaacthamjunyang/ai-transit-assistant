@@ -12,7 +12,6 @@ from arrivals import BUS_POSITIONS, ArrivalUnavailable
 from catch_heuristic import MISSED_AFTER_S, is_location_uncertain, location_age_seconds, ring_band
 from config import MIN_REAL_CHANCE_RANGE_HIGH, WALK_SPEED_DEFAULT_MPS
 from destination_stops import _arrival_terms, _hops, _links, _total_minutes
-from explain import ACTION_ADVICE, compose_option_text
 from journey import bus_arrival_window, leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
 from nearby import BOARDING_RADIUS_M, haversine_m, walk_minutes
@@ -622,7 +621,7 @@ def rank_options(rows: list[dict], recommendation: dict | None, arrive_by: datet
         chosen["explanation"] = {
             "reason_code": code,
             "action": "switch_route",
-            "text": compose_option_text(code, chosen["service_no"], ACTION_ADVICE["switch_route"]),
+            "text": chosen["reason_text"],
         }
         recommended = chosen
 
@@ -649,7 +648,8 @@ def _option_row(
     service = candidate["service_no"]
     name = candidate["stop_name"]
     code = candidate["stop_code"]
-    line = (
+    line = f"Catch probability: about {candidate['point']}%."
+    notification_line = (
         f"Catch probability: {candidate['point']}% "
         f"(range {candidate['range_low']}\u2013{candidate['range_high']}%)."
     )
@@ -680,7 +680,7 @@ def _option_row(
             "message": f"Switched to Bus {service} at {name} ({code}).",
             "probability_line": line,
             "notification_title": f"Route Updated \u2014 Bus {service}",
-            "notification_body": f"Switched to Bus {service} at {name}. {line}",
+            "notification_body": f"Switched to Bus {service} at {name}. {notification_line}",
             "reroute_reason": f"Switched from Bus {current_service} ({current_stop}) to Bus {service} ({code})",
         },
     }
@@ -833,7 +833,7 @@ def _switch_copy(*, old_service, old_stop, old_high, old_point, winner) -> dict:
         "title": "Route Updated",
         "message": f"Switched to Bus {service} at {name} ({code}).",
         "probability_line": (
-            f"Catch probability: {point}% (range {low}\u2013{high}%) vs previous {old_point}%."
+            f"Catch probability: about {point}% vs previous about {old_point}%."
         ),
         "notification_title": f"Route Updated \u2014 Bus {service}",
         "notification_body": (

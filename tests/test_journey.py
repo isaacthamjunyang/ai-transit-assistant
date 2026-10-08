@@ -110,7 +110,7 @@ def test_numeric_ride_compares_arrive_by_without_a_probability():
     early = _journey(_usable_cache(), arrive_by=NOW + timedelta(minutes=30))
     assert early["comparison_label"] == "Arrive-by check: On track"
     assert early["comparison_note"] == (
-        "Estimated arrival is at or before your requested time."
+        "Estimated destination arrival is at or before your requested time."
     )
     assert early["ride_minutes"] == ride_minutes
     same_time = _journey(
@@ -119,7 +119,7 @@ def test_numeric_ride_compares_arrive_by_without_a_probability():
     )
     assert same_time["comparison_label"] == "Arrive-by check: On track"
     assert same_time["comparison_note"] == (
-        "Estimated arrival is at or before your requested time."
+        "Estimated destination arrival is at or before your requested time."
     )
 
 
@@ -168,7 +168,7 @@ def test_transfer_within_the_arrive_by_time_is_on_track():
     assert body["ride_minutes"] == minutes
     assert minutes == math.ceil(haversine_m(user[0], user[1], USER[0], USER[1]) / 1.25 / 60 + 15)
     assert body["comparison_label"] == "Arrive-by check: On track"
-    assert body["comparison_note"] == "Estimated arrival is at or before your requested time."
+    assert body["comparison_note"] == "Estimated destination arrival is at or before your requested time."
 
 
 def test_transfer_past_the_arrive_by_time_is_a_risk_of_delay():

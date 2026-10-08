@@ -64,7 +64,7 @@ const PAGE_CODE = `(function (theme, groups) {
         if ((style.overflow === "hidden" || style.overflowY === "hidden") && el.scrollHeight > el.clientHeight + 1 && el.clientHeight > 0) { out.clipped.push(["text clipped", label]); }
         if (style.textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1) { out.clipped.push(["ellipsis cut", label]); }
       });
-      ["leave-tile__value", "leave-tile__meta", "leave-tile__warn", "leave-tile__label", "ai-card__text", "walk-status__note", "walk-chance__trend", "walk-sensors__why", "walk-open-row__sub", "walk-status__state", "walk-status__distance", "sample-walk-map__chip"].forEach(function (cls) {
+      ["leave-tile__value", "leave-tile__meta", "leave-tile__warn", "leave-tile__label", "ai-card__text", "walk-chance__trend", "walk-sensors__why", "walk-open-row__sub", "walk-status__state", "walk-status__distance", "sample-walk-map__chip"].forEach(function (cls) {
         Array.prototype.slice.call(node.getElementsByClassName(cls)).forEach(function (el) {
           var fg = parse(getComputedStyle(el).color);
           if (!fg) { return; }

@@ -1,7 +1,7 @@
 """Every deterministic string of the AI card is safe: no guarantee, no unsafe advice, no stray digit.
 
 Deterministic means written by Python or by the page, not by the model: the sentence-one variants, every
-sentence-two string (and the uncertain-location sentences), and every fixed clause. A phrase from the guarantee or
+leave-sentence string (and the uncertain-location sentences), and every fixed clause (the dormant model path). A phrase from the guarantee or
 unsafe-language lists, "will make it", "guaranteed", "definitely", or a digit that does not come through a template
 placeholder, makes this test fail.
 """
@@ -14,11 +14,15 @@ from explain import (
     ACTION_ADVICE,
     GUARANTEE_PHRASES,
     S1_ARRIVING_NOW,
+    S1_BUS_MINUTES,
+    S1_SPEED,
+    S1_UNLIKELY,
+    S1_YOU,
     S2_LEAVE_BY,
     S2_LEAVE_NOW,
+    S2_LEAVE_NOW_ARRIVING,
     S2_UNCERTAIN_BY,
     S2_UNCERTAIN_NOW,
-    S2_UNLIKELY,
     UNSAFE_PHRASES,
     clause_text,
     contains_guarantee,
@@ -27,24 +31,26 @@ from explain import (
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTRA_BANNED = ("will make it", "guaranteed", "definitely", "certain to", "for sure", "no chance of missing")
-PLACEHOLDERS = ("{distance}", "{kmh}", "{time}")
+PLACEHOLDERS = ("{distance}", "{kmh}", "{time}", "{x}", "{arrival}")
 
 
 def _templates() -> dict[str, str]:
     strings = {
         "sentence one, arriving now": S1_ARRIVING_NOW,
-        "sentence one, minutes": "The bus is {e} minutes away.",
-        "sentence one, one minute": "The bus is 1 minute away.",
-        "sentence two, unlikely": S2_UNLIKELY,
-        "sentence two, uncertain after leave by": S2_UNCERTAIN_BY,
-        "sentence two, uncertain after leave now": S2_UNCERTAIN_NOW,
+        "sentence one, minutes": S1_BUS_MINUTES,
+        "sentence one, one minute": "The bus is 1 minute away",
+        "sentence one, you are": S1_YOU,
+        "sentence one, unlikely": S1_UNLIKELY,
+        "leave sentence, by": S2_LEAVE_BY,
+        "leave sentence, now": S2_LEAVE_NOW,
+        "leave sentence, now, bus arriving now": S2_LEAVE_NOW_ARRIVING,
+        "leave sentence, uncertain after leave by": S2_UNCERTAIN_BY,
+        "leave sentence, uncertain after leave now": S2_UNCERTAIN_NOW,
     }
-    for kind, text in S2_LEAVE_BY.items():
-        strings[f"sentence two, leave by, {kind}"] = text
-    for kind, text in S2_LEAVE_NOW.items():
-        strings[f"sentence two, leave now, {kind}"] = text
+    for kind, text in S1_SPEED.items():
+        strings[f"sentence one, speed, {kind}"] = text
     for action, advice in ACTION_ADVICE.items():
-        strings[f"sentence three, {action}"] = clause_text(advice)
+        strings[f"dormant clause, {action}"] = clause_text(advice)
     return strings
 
 
@@ -74,7 +80,7 @@ def _check(name: str, text: str) -> None:
 
 def test_every_deterministic_string_is_safe():
     templates = _templates()
-    assert len(templates) == 6 + len(S2_LEAVE_BY) + len(S2_LEAVE_NOW) + len(ACTION_ADVICE)
+    assert len(templates) == 10 + len(S1_SPEED) + len(ACTION_ADVICE)
     for name, text in templates.items():
         _check(name, text)
 
@@ -100,7 +106,7 @@ def test_the_page_and_copy_strings_of_the_card_are_safe_too():
 def test_a_rendered_card_is_safe_for_every_variant():
     from datetime import datetime, timedelta, timezone
 
-    from explain import build_numbers, compose_text
+    from explain import build_numbers, card_text
 
     now = datetime(2026, 10, 5, 9, 0, tzinfo=timezone(timedelta(hours=8)))
     for e in (0, 1, 10):
@@ -111,8 +117,9 @@ def test_a_rendered_card_is_safe_for_every_variant():
                         for leave_in in (600, 0):
                             numbers = build_numbers(
                                 bus_minutes=e, walk_minutes=3, chosen_action=action, distance_m=420.0, walk_speed_used=1.3,
-                                walk_speed_source=source, leave_by=(now + timedelta(seconds=leave_in)).isoformat(), now=now)
-                            text = compose_text(numbers, ACTION_ADVICE[action], band=band, uncertain=unc)
+                                walk_speed_source=source, leave_by=(now + timedelta(seconds=leave_in)).isoformat(),
+                                arrival_time=(now + timedelta(minutes=e)).isoformat(), now=now)
+                            text = card_text(numbers, band=band, uncertain=unc)
                             assert not contains_guarantee(text) and not contains_unsafe(text), text
                             lowered = text.lower()
                             for phrase in EXTRA_BANNED:

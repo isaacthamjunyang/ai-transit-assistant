@@ -11,7 +11,7 @@ const ROWS = `({
   whyBeforeRows: !!(document.getElementById("walk-sensor-why").compareDocumentPosition(document.querySelector(".walk-sensors__list")) & Node.DOCUMENT_POSITION_FOLLOWING),
   whyIsFirstInPanel: document.getElementById("walk-sensors-panel").firstElementChild === document.getElementById("walk-sensor-why"),
   whyFont: parseFloat(getComputedStyle(document.getElementById("walk-sensor-why")).fontSize),
-  captionFont: parseFloat(getComputedStyle(document.querySelector(".walk-status__note")).fontSize),
+  captionFont: (function () { var e = document.createElement("p"); e.className = "note"; document.body.appendChild(e); var f = parseFloat(getComputedStyle(e).fontSize); e.remove(); return f; })(),
   bodyFont: parseFloat(getComputedStyle(document.getElementById("walk-sensor-pace")).fontSize),
   whyIcon: !!document.getElementById("walk-sensor-why").querySelector("svg.icon"),
   whySilent: !document.getElementById("walk-sensor-why").closest("[aria-live]") && !document.getElementById("walk-sensor-why").hasAttribute("aria-live")

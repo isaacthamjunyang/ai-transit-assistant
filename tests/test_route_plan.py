@@ -506,7 +506,7 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
     for gone in ("I'm On Board", "Start Next Leg", "Track Leg 2", "You passed your stop", "id=\"route-plan\""):
         assert gone not in html, gone
     assert 'id="back-home"' in html
-    assert ">Back</button>" in html
+    assert 'aria-label="Back"' in html and ">Back</button>" not in html
     assert html.count("watchPosition(") == 1  # Page W's own fallback watch is the only one in the page script
     assert html.count("Arrived at ") == 1  # the removed missed-stop string is gone; Page W's state line is the one use
     assert "No direct or 1-transfer bus connection available for this trip." in html

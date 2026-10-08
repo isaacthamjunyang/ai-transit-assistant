@@ -14,5 +14,6 @@ import explain
 def _no_real_openai(monkeypatch, tmp_path):
     monkeypatch.setattr(explain, "ENV_PATH", tmp_path / "no-openai.env")  # a file that does not exist
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("AI_EXPLANATION_ENABLED", raising=False)  # the model path is off unless a test turns it on
 
     yield

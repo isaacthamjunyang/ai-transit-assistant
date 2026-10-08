@@ -20,8 +20,8 @@ SGT = timezone(timedelta(hours=8))
 
 
 def test_python_sentence_two_templates_keep_the_number_with_km_h():
-    templates = list(explain.S2_LEAVE_BY.values()) + list(explain.S2_LEAVE_NOW.values())
-    assert len(templates) == 6
+    templates = list(explain.S1_SPEED.values())
+    assert len(templates) == 3
     for text in templates:
         assert "{kmh}" + NB + "km/h" in text and "{kmh} km/h" not in text, text
 
@@ -38,14 +38,16 @@ def test_the_rendered_sentences_hold_the_no_break_spaces():
     now = datetime(2026, 10, 5, 9, 0, tzinfo=SGT)
     numbers = explain.build_numbers(
         bus_minutes=10, walk_minutes=4, chosen_action="wait", distance_m=300.0, walk_speed_used=1.25,
-        walk_speed_source="gps", leave_by=(now + timedelta(seconds=600)).isoformat(), now=now)
-    text = explain.sentence_two(numbers, band="ok", uncertain=False)
-    assert "4.5" + NB + "km/h" in text and "9:10" + NB + "AM" in text and "300" + NB + "m" in text
+        walk_speed_source="gps", leave_by=(now + timedelta(seconds=600)).isoformat(),
+        arrival_time=(now + timedelta(seconds=1200)).isoformat(), now=now)
+    text = explain.card_text(numbers, band="ok", uncertain=False)
+    assert "4.5" + NB + "km/h" in text and "9:10" + NB + "AM" in text and "9:20" + NB + "AM" in text
+    assert "300" + NB + "m" in text
 
 
 def test_copy_js_page_and_tile_strings_hold_the_no_break_spaces():
     for source in (COPY, INDEX):
-        assert source.count("{kmh}" + ESC + "km/h") >= 6
+        assert source.count("{kmh}" + ESC + "km/h") >= 3
         assert not re.search(r"(about|speed of) \{kmh\} km/h", source)  # the sentence templates only
     for name, expected in (
         ("leaveByIn", "in {n}" + ESC + "min · {w}" + ESC + "min walk"),

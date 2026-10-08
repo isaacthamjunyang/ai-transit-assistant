@@ -41,12 +41,14 @@ def test_arrive_by_sits_on_step_one_and_a_blank_value_omits_the_query():
         assert gate < param
 
 
-def test_explanation_flag_defaults_on_and_the_card_is_one_class():
+def test_the_card_is_one_class_and_the_model_fetches_are_gated():
     html = INDEX.read_text(encoding="utf-8")
     css = (ROOT / "static" / "components.css").read_text(encoding="utf-8")
     assert "var AI_EXPLANATION_ENABLED = true;" in html
     begin = html.split("function beginExplanation", 1)[1].split("function syncExplanation", 1)[0]
-    assert begin.index("AI_EXPLANATION_ENABLED") < begin.index('fetch("/api/explain"')
+    assert begin.index("pack.model_enabled !== true") < begin.index('fetch("/api/explain"')  # the pack gates the call
+    option = html.split("function requestOptionExplanation", 1)[1].split("\n    function ", 1)[0]
+    assert option.index("AI_EXPLANATION_ENABLED !== true") < option.index('fetch("/api/explain-option"')
     assert "#ai-explanation.is-enabled" in css
     assert "AI Explanation" in html
 

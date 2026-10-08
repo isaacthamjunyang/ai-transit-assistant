@@ -61,10 +61,10 @@ def test_the_action_the_sentences_the_clauses_and_the_alert_flip_at_the_same_sec
     assert chosen_action(reroute_fired_this_poll=False, data_quality="live", range_high=80, leave_by_seconds=seconds) == pack["action"]
     assert leave_mode(seconds) == ("now" if leave_now else "by")
     assert pack["reason_code"] == ("LEAVE_NOW" if leave_now else "LEAVE_BY")
-    assert ("so you should leave now." in pack["text"] or "you should leave now." in pack["text"]) == leave_now
-    assert ("you should leave by " in pack["text"]) == (not leave_now)
+    assert (" Leave now so you have " in pack["text"]) == leave_now
+    assert (" Leave by " in pack["text"]) == (not leave_now)
     assert pack["clause"] == "It is advisable to " + ACTION_ADVICE["leave_now" if leave_now else "wait"] + "."
-    assert pack["text"].endswith(pack["clause"])
+    assert pack["clause"] not in pack["text"]  # the dormant model clause is never part of the card text
     # the notification time is leave_by - 60 s, so it is due at exactly this second and not before
     leave_by = NOW + timedelta(seconds=seconds)
     due = NOW >= notification_time_from_leave_by(leave_by)

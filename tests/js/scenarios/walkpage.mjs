@@ -13,7 +13,7 @@ const SNAP = `(function () {
     pageW: document.body.classList.contains("is-page-w"), pageA: document.body.classList.contains("is-page-a"),
     walkHidden: document.getElementById("walk-page").hidden,
     title: text("walk-title"), distance: text("walk-distance"), minutes: text("walk-minutes"), state: text("walk-state"),
-    ring: text("walk-ring-text"), range: text("walk-range"), trend: text("walk-trend"), trendHidden: document.getElementById("walk-trend").hidden,
+    ring: text("walk-ring-text"), arrives: text("walk-arrives-time"), arrivesHidden: document.getElementById("walk-arrives").hidden, rangeElement: !!document.getElementById("walk-range"), cardText: document.getElementById("walk-ring").closest(".walk-chance").textContent, trend: text("walk-trend"), trendHidden: document.getElementById("walk-trend").hidden,
     heading: text("walk-chance-title"), progress: document.getElementById("walk-progress").value,
     mapInSlot: !!(slot && mapElement.parentNode === slot), you: count(".walk-you"), stop: count(".map-stop--live"),
     line: count(".walk-line"), accuracy: count(".walk-accuracy"), youLatLng: you ? [you.lat, you.lng] : null,
@@ -42,7 +42,7 @@ export default async function (h) {
   out.open = await h.eval(SNAP);
 
   // the ring and the server's numbers
-  out.chance = await h.eval("(function () { var hero = featuredBus(lastSuccess.buses); return { point: hero.probability.point, low: hero.probability.range_low, high: hero.probability.range_high }; })()");
+  out.chance = await h.eval("(function () { var hero = featuredBus(lastSuccess.buses); return { point: hero.probability.point, low: hero.probability.range_low, high: hero.probability.range_high, clock: formatClock(hero.arrival_time, false) }; })()");
 
   // state machine: approaching, not moving (direct fixes with explicit times), arrived (the server's near_stop)
   const seq = async (list) => {
@@ -111,7 +111,7 @@ export default async function (h) {
     out.trendSeq[state] = [];
     for (const point of [60, 61, 64, 64, 64, 60]) {
       await h.eval(`walkSamples = walkSamples.slice(); walkNotePoll({ near_stop: false, buses: [Object.assign({}, featuredBus(lastSuccess.buses), { probability: Object.assign({}, featuredBus(lastSuccess.buses).probability, { point: ${point}, range_low: ${point} - 5, range_high: ${point} + 5 }) })] }); true`);
-      out.trendSeq[state].push(await h.eval(`({ ring: document.getElementById("walk-ring-text").textContent, range: document.getElementById("walk-range").textContent, trend: document.getElementById("walk-trend").textContent, hidden: document.getElementById("walk-trend").hidden, state: document.getElementById("walk-state").textContent })`));
+      out.trendSeq[state].push(await h.eval(`({ ring: document.getElementById("walk-ring-text").textContent, cardText: document.getElementById("walk-ring").closest(".walk-chance").textContent, trend: document.getElementById("walk-trend").textContent, hidden: document.getElementById("walk-trend").hidden, state: document.getElementById("walk-state").textContent })`));
     }
   }
   await h.eval("walkNotePoll(lastSuccess); true");
@@ -131,7 +131,7 @@ export default async function (h) {
   })()`);
   await h.eval("walkOnFix({ t: Date.now() + 6000, lat: " + stopLat + " + 150 / 111195, lon: " + stopLon + ", accuracy: 8, heading: null, speed: null }); true");
   // stale data keeps the layout: the ring reads Unavailable
-  out.staleRing = await h.eval("displayFrozen = true; renderWalkPage(); var r = { ring: document.getElementById('walk-ring-text').textContent, range: document.getElementById('walk-range').textContent, pill: document.getElementById('walk-pill-text').textContent }; displayFrozen = false; renderWalkPage(); r");
+  out.staleRing = await h.eval("displayFrozen = true; renderWalkPage(); var r = { ring: document.getElementById('walk-ring-text').textContent, arrivesHidden: document.getElementById('walk-arrives').hidden, arrives: document.getElementById('walk-arrives-time').textContent, pill: document.getElementById('walk-pill-text').textContent }; displayFrozen = false; renderWalkPage(); r");
 
   // the rescore: about every 5 s, only while Page W is open and visible; no position in any other new request
   await h.eval("walkLastRescoreAt = 0; walkRescoreBusy = false; true");

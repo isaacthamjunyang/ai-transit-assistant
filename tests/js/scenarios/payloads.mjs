@@ -33,7 +33,7 @@ export default async function (h) {
       Date.now = function () { return pollMs; };
       try {
         var e = explanationMinutes(featuredBus(lastSuccess.buses).arrival_time);
-        var lead = explanationLead(pack, e, pollMs);
+        var lead = explanationCardText(pack, e, featuredBus(lastSuccess.buses).arrival_time, pollMs);
         renderExplanationNow();
         return { e: e, lead: lead, text: document.getElementById('ai-explanation-text').textContent };
       } finally {
