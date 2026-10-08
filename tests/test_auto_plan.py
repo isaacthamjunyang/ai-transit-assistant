@@ -177,7 +177,7 @@ def test_back_arrow_is_gone_everywhere():
 
 def test_confirm_opens_the_overview_which_replans_on_every_entry():
     html = _page()
-    confirm = _between(html, 'confirmDestinationStop.addEventListener("click"', "arriveByInput.addEventListener")
+    confirm = _between(html, 'confirmDestinationStop.addEventListener("click"', "function onArriveCustomEdit")
     assert "confirmedDestinationStop = copyDestinationStop(selectedDestinationStop)" in confirm
     assert confirm.index("confirmedDestinationStop = copyDestinationStop") < confirm.index('pushScreen("journey")')
     apply = _between(html, "function applyScreen(name)", "function syncHomeButton")

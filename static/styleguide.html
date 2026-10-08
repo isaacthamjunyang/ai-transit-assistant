@@ -301,8 +301,17 @@
           <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false" data-copy="arriveBy.inHour"></button>
           <button type="button" class="arrive-chip" role="radio" aria-checked="false" data-copy="arriveBy.custom"></button>
         </div>
-        <p class="note">Arrive by 6:45 PM</p>
         <p class="field-error" data-copy="arriveBy.past"></p>
+        <h4>Custom arrive-by: a time and Today / Tomorrow (Tomorrow selected), then the two messages</h4>
+        <div class="arrive-custom">
+          <label class="arrive-custom__label" data-copy="arriveBy.timeLabel"></label>
+          <input class="arrive-time" type="time" value="00:10" aria-label="Arrive by time">
+          <div class="arrive-day" role="radiogroup" aria-label="Arrive by day">
+            <button type="button" class="arrive-chip arrive-day__option" role="radio" aria-checked="false" aria-label="Arrive today" data-copy="arriveBy.dayToday"></button>
+            <button type="button" class="arrive-chip arrive-day__option is-selected" role="radio" aria-checked="true" aria-label="Arrive tomorrow" data-copy="arriveBy.dayTomorrow"></button>
+          </div>
+        </div>
+        <p class="field-error" data-copy="arriveBy.tooFar"></p>
       </div>
       <div class="place-row-samples theme-sample-dark">
         <p>Arrive about 6:24 PM (6:21–6:31 PM)</p>
@@ -325,8 +334,7 @@
           <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false">In 1 hour</button>
           <button type="button" class="arrive-chip" role="radio" aria-checked="false">Custom</button>
         </div>
-        <p class="note">Arrive by 6:45 PM (tomorrow)</p>
-        <p class="field-error">That time has already passed. Choose a later time.</p>
+        <p class="field-error" data-copy="arriveBy.past"></p>
       </div>
     </section>
 

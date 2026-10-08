@@ -29,7 +29,7 @@ def test_destination_stop_selection_does_not_require_reachability_or_a_boarding_
     assert "boarding_stop_code" not in load
     assert "BusArrival" not in load
     assert "/api/arrivals" not in load
-    confirm = html.split('confirmDestinationStop.addEventListener("click"', 1)[1].split("arriveByInput.addEventListener", 1)[0]
+    confirm = html.split('confirmDestinationStop.addEventListener("click"', 1)[1].split("function onArriveCustomEdit", 1)[0]
     assert "is_reachable" not in confirm
     assert 'pushScreen("journey")' in confirm
     assert 'getElementById("boarding-stage")' not in confirm

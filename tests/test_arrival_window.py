@@ -312,7 +312,7 @@ def test_new_arrive_by_strings_avoid_guaranteed_arrival_wording():
     combined = (block + "\n" + phrases).lower()
     for banned in GUARANTEE_PHRASES:
         assert banned not in combined
-    assert "That time has already passed. Choose a later time." in html
+    assert "That time has already passed today. Choose Tomorrow or a later time." in html
     assert "If you miss it" in html
     assert "Change time" in html
     assert re.search(r"In 30 min", html)

@@ -53,12 +53,10 @@ def test_no_target_counts_but_an_untouched_field_or_past_custom_time_does_not():
     assert "arriveByPicked = true" in apply
     none = _between(html, 'getElementById("arrive-none").addEventListener("click"', "});")
     assert 'applyArriveValue("", "arrive-none")' in none
-    change = _between(html, 'arriveByInput.addEventListener("change", function () {', "refreshPlanningWarning();")
-    past = change.index("isPastArriveBy(arriveByInput.value)")
-    early_return = change.index("return;", past)
-    assert past < early_return < change.index("arriveByPicked = !!arriveByInput.value")
+    edit = _between(html, "function onArriveCustomEdit()", "arriveTimeInput.addEventListener")
+    assert edit.index("arriveCustomResult()") < edit.index("arriveByPicked = result.problem === null")  # a past time is not picked
     custom = _between(html, 'getElementById("arrive-custom").addEventListener("click"', "});")
-    assert "arriveByPicked" not in custom
+    assert "onArriveCustomEdit()" in custom
 
 
 def test_header_button_resets_the_journey_and_keeps_the_fields():
@@ -120,13 +118,13 @@ def test_arrive_by_display_strings():
     for chip, text in (("arrive-none", "No target"), ("arrive-30", "In 30 min"), ("arrive-60", "In 1 hour"), ("arrive-custom", "Custom")):
         assert '"%s": "%s"' % (chip, text) in labels
     summary = _between(html, "function syncArriveBySummary()", "function renderJourney")
-    assert 'display.textContent = "Select time"' in summary
+    assert 'display.textContent = arriveByChoice === "arrive-custom" ? ARRIVE_LABELS["arrive-custom"] : "Select time"' in summary
     assert '" · " + formatArriveByClock(arriveByInput.value)' in summary
     assert 'arriveByChoice !== "arrive-none"' in summary
     assert "select-field__time" in summary
     assert 'displayTime: "{label} · {time}"' in copy
     reopen = _between(html, "function openArrivePanel()", "function closeArrivePanel")
-    assert 'selectArriveChip(arriveByPicked ? arriveByChoice : "")' in reopen
+    assert 'selectArriveChip(arriveByPicked || arriveByChoice === "arrive-custom" ? arriveByChoice : "")' in reopen
 
 
 def test_screen_one_sits_flush_and_scrollbars_are_themed():

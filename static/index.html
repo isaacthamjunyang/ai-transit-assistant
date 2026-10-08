@@ -192,10 +192,17 @@
               <button type="button" class="arrive-chip" id="arrive-60" role="radio" aria-checked="false">In 1 hour</button>
               <button type="button" class="arrive-chip" id="arrive-custom" role="radio" aria-checked="false">Custom</button>
             </div>
-            <p id="arrive-by-resolved" class="note" hidden></p>
             <div id="arrive-by-custom" hidden>
-              <input id="arrive-by" type="datetime-local" aria-label="Arrive by">
-              <p id="arrive-by-error" class="field-error" hidden>That time has already passed. Choose a later time.</p>
+              <input id="arrive-by" type="hidden">
+              <div class="arrive-custom">
+                <label class="arrive-custom__label" for="arrive-by-time">Time</label>
+                <input id="arrive-by-time" class="arrive-time" type="time" step="60" aria-label="Arrive by time" aria-describedby="arrive-by-error">
+                <div id="arrive-day" class="arrive-day" role="radiogroup" aria-label="Arrive by day">
+                  <button type="button" class="arrive-chip arrive-day__option is-selected" id="arrive-day-today" role="radio" aria-checked="true" aria-label="Arrive today">Today</button>
+                  <button type="button" class="arrive-chip arrive-day__option" id="arrive-day-tomorrow" role="radio" aria-checked="false" aria-label="Arrive tomorrow">Tomorrow</button>
+                </div>
+              </div>
+              <p id="arrive-by-error" class="field-error" role="alert" hidden>That time has already passed today. Choose Tomorrow or a later time.</p>
             </div>
           </div>
           <p id="arrive-required" class="field-help" aria-live="polite"><svg class="icon field-help__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7.5v5.5M12 16.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span class="field-help__text"></span></p>
@@ -2299,6 +2306,13 @@
     var journeyService = document.getElementById("journey-service");
     var journeyRide = document.getElementById("journey-ride");
     var arriveByInput = document.getElementById("arrive-by");
+    var arriveTimeInput = document.getElementById("arrive-by-time");
+    var arriveDay = "today";
+    var arriveByBlocked = false;
+    var ARRIVE_PAST_TEXT = "That time has already passed today. Choose Tomorrow or a later time.";
+    var ARRIVE_FAR_TEXT = "That time is more than 24 hours away. Choose an earlier time.";
+    var ARRIVE_MAX_AHEAD_MS = 24 * 60 * 60 * 1000;
+    var ARRIVE_PREFILL_MIN = 5;
     var arriveByCommitted = "";
     var arriveByChoice = "arrive-none";
     var arriveByPicked = false;
@@ -3385,6 +3399,79 @@
       return isFinite(chosen.getTime()) && chosen.getTime() < Date.now();
     }
 
+    // The Singapore calendar day, offset days from today (Asia/Singapore, never the phone's time zone), as YYYY-MM-DD.
+    function singaporeDay(offsetDays) {
+      var parts = singapore24(new Date());
+      var noon = dateFromSingapore(parts.year, parts.month, parts.day, 12, 0);
+      return singaporeStamp(new Date(noon.getTime() + offsetDays * 86400000)).split("T")[0];
+    }
+
+    // The Custom control: the time input and the Today / Tomorrow toggle give one Singapore value, "YYYY-MM-DDTHH:MM",
+    // the same format the chips give and the server gets. problem: "empty", "past" or "far" (over 24 hours ahead).
+    function arriveCustomResult() {
+      var time = arriveTimeInput.value;
+      if (!/^\d{2}:\d{2}$/.test(time)) {
+        return { value: "", problem: "empty" };
+      }
+      var value = singaporeDay(arriveDay === "tomorrow" ? 1 : 0) + "T" + time;
+      var at = new Date(value + ":00+08:00").getTime();
+      if (!isFinite(at)) {
+        return { value: "", problem: "empty" };
+      }
+      if (at <= Date.now()) {
+        return { value: "", problem: "past" };
+      }
+      if (at - Date.now() > ARRIVE_MAX_AHEAD_MS) {
+        return { value: "", problem: "far" };
+      }
+      return { value: value, problem: null };
+    }
+
+    function renderArriveDay() {
+      markChoice(document.getElementById("arrive-day-today"), arriveDay === "today", true);
+      markChoice(document.getElementById("arrive-day-tomorrow"), arriveDay === "tomorrow", true);
+    }
+
+    // A preset (or any value) shows its time and day in the Custom control.
+    function reflectArriveInControls(value) {
+      if (!value) {
+        arriveTimeInput.value = "";
+        arriveDay = "today";
+      } else {
+        var parts = String(value).split("T");
+        arriveTimeInput.value = parts[1] || "";
+        arriveDay = parts[0] === singaporeDay(0) ? "today" : "tomorrow";
+      }
+      renderArriveDay();
+    }
+
+    // Once a minute, on the minute, while the Custom control is open: a time that has passed while the page sat open
+    // gets the "already passed today" message and a disabled Confirm (Confirm re-checks it on a click as well).
+    function arriveRecheckTick() {
+      var panel = document.getElementById("arrive-by-panel");
+      var custom = document.getElementById("arrive-by-custom");
+      if (panel && !panel.hidden && custom && !custom.hidden && arriveTimeInput.value) {
+        onArriveCustomEdit();
+      }
+      setTimeout(arriveRecheckTick, 60000 - (Date.now() % 60000) + 50);
+    }
+    setTimeout(arriveRecheckTick, 60000 - (Date.now() % 60000) + 50);
+
+    function showArriveProblem(problem) {
+      var error = document.getElementById("arrive-by-error");
+      if (!error) {
+        return;
+      }
+      error.textContent = problem === "past" ? ARRIVE_PAST_TEXT : problem === "far" ? ARRIVE_FAR_TEXT : "";
+      error.hidden = problem !== "past" && problem !== "far";
+    }
+
+    // Confirm stays disabled while Custom has no valid time.
+    function syncArriveGate() {
+      confirmDestinationStop.disabled = arriveByBlocked;
+      confirmDestinationStop.setAttribute("aria-disabled", arriveByBlocked ? "true" : "false");
+    }
+
     function formatClock(iso, withTomorrow) {
       var parts = singaporeParts(new Date(iso));
       var text = parts.hm + "\u00a0" + parts.suffix;
@@ -3510,7 +3597,7 @@
       var wasHidden = panel.hidden;
       panel.hidden = false;
       if (wasHidden) {
-        selectArriveChip(arriveByPicked ? arriveByChoice : "");
+        selectArriveChip(arriveByPicked || arriveByChoice === "arrive-custom" ? arriveByChoice : "");
       }
       if (field) {
         field.setAttribute("aria-expanded", "true");
@@ -3572,13 +3659,11 @@
       arriveByCommitted = value;
       arriveByChoice = chipId;
       arriveByPicked = true;
+      arriveByBlocked = false;
       arriveByInput.value = value;
+      reflectArriveInControls(value);
+      syncArriveGate();
       selectArriveChip(chipId);
-      var resolved = document.getElementById("arrive-by-resolved");
-      if (resolved) {
-        resolved.hidden = !value;
-        resolved.textContent = value ? "Arrive by " + formatArriveByClock(value) : "";
-      }
       syncArriveBySummary();
       if (!journeyPanel.hidden) {
         loadJourney();
@@ -3637,7 +3722,8 @@
       return parts[0] + " " + parts[1];
     }
 
-    function formatArriveByClock(value) {
+    // "5:35 PM" with a no-break space before AM or PM (no day word); formatArriveByClock adds "(tomorrow)".
+    function arriveClockOnly(value) {
       var time = String(value).split("T")[1] || "";
       var parts = time.split(":");
       var hour = Number(parts[0]);
@@ -3650,7 +3736,14 @@
       if (hour12 === 0) {
         hour12 = 12;
       }
-      var clock = hour12 + ":" + minute + "\u00a0" + suffix;
+      return hour12 + ":" + minute + "\u00a0" + suffix;
+    }
+
+    function formatArriveByClock(value) {
+      var clock = arriveClockOnly(value);
+      if (clock === "Select time") {
+        return clock;
+      }
       var today = singaporeStamp(new Date()).split("T")[0];
       var day = String(value).split("T")[0];
       if (day && day !== today) {
@@ -3666,7 +3759,8 @@
       if (display) {
         display.replaceChildren();
         if (!arriveByPicked) {
-          display.textContent = "Select time";
+          // a Custom choice with no valid time yet (an untouched prefill, a passed time) shows just "Custom"
+          display.textContent = arriveByChoice === "arrive-custom" ? ARRIVE_LABELS["arrive-custom"] : "Select time";
         } else {
           display.appendChild(document.createTextNode(ARRIVE_LABELS[arriveByChoice] || ""));
           if (arriveByChoice !== "arrive-none" && arriveByInput.value) {
@@ -3811,6 +3905,12 @@
       if (!selectedDestinationStop || !selectedDestinationStop.stop_code) {
         return;
       }
+      if (arriveByChoice === "arrive-custom") {
+        onArriveCustomEdit();  // the time may have passed since it was typed
+      }
+      if (arriveByBlocked) {
+        return;
+      }
       clearLeaveNowState();
       clearRerouteState();
       resetExplanationState();
@@ -3825,33 +3925,21 @@
       updateStepRail();
     });
 
-    arriveByInput.addEventListener("change", function () {
-      var error = document.getElementById("arrive-by-error");
-      if (arriveByInput.value && isPastArriveBy(arriveByInput.value)) {
-        arriveByInput.value = arriveByCommitted;
-        if (error) {
-          error.hidden = false;
-        }
-        syncArriveBySummary();
-        return;
-      }
-      if (error) {
-        error.hidden = true;
-      }
-      arriveByCommitted = arriveByInput.value;
-      arriveByChoice = arriveByInput.value ? "arrive-custom" : "";
-      arriveByPicked = !!arriveByInput.value;
-      selectArriveChip(arriveByChoice);
-      var resolved = document.getElementById("arrive-by-resolved");
-      if (resolved) {
-        resolved.hidden = !arriveByInput.value;
-        resolved.textContent = arriveByInput.value
-          ? "Arrive by " + formatArriveByClock(arriveByInput.value)
-          : "";
-      }
+    // The Custom time or day changed: one Singapore value, or a message and a disabled Confirm.
+    function onArriveCustomEdit() {
+      var result = arriveCustomResult();
+      var changed = result.value !== arriveByCommitted;
+      showArriveProblem(result.problem);
+      arriveByBlocked = result.problem !== null;
+      arriveByCommitted = result.value;
+      arriveByInput.value = result.value;
+      arriveByChoice = "arrive-custom";
+      arriveByPicked = result.problem === null;
+      selectArriveChip("arrive-custom");
       syncArriveBySummary();
-      if (arriveByInput.value) {
-        closeArrivePanel();
+      syncArriveGate();
+      if (!changed || !result.value) {
+        return;
       }
       if (!journeyPanel.hidden) {
         loadJourney();
@@ -3860,6 +3948,26 @@
         requestArrivals(monitorGeneration);
       }
       refreshPlanningWarning();
+    }
+
+    arriveTimeInput.addEventListener("input", onArriveCustomEdit);
+    arriveTimeInput.addEventListener("change", onArriveCustomEdit);
+    ["today", "tomorrow"].forEach(function (day) {
+      document.getElementById("arrive-day-" + day).addEventListener("click", function () {
+        arriveDay = day;
+        renderArriveDay();
+        onArriveCustomEdit();
+      });
+    });
+    document.getElementById("arrive-day").addEventListener("keydown", function (event) {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(event.key) === -1) {
+        return;
+      }
+      event.preventDefault();
+      arriveDay = arriveDay === "today" ? "tomorrow" : "today";
+      renderArriveDay();
+      document.getElementById("arrive-day-" + arriveDay).focus();
+      onArriveCustomEdit();
     });
 
     document.getElementById("arrive-by-field").addEventListener("click", function () {
@@ -3881,9 +3989,22 @@
     document.getElementById("arrive-60").addEventListener("click", function () {
       applyArriveValue(singaporeStamp(resolveChipDate(60)), "arrive-60");
     });
+    // An empty time opens prefilled with the Singapore time 5 minutes ahead, rounded up to the whole minute. It is in the
+    // future, so it is valid and Confirm is enabled at once. Past midnight it is on the next Singapore day and the toggle
+    // follows. A time already chosen, or set by a preset, is kept.
+    function prefillArriveTime() {
+      if (arriveTimeInput.value) {
+        return;
+      }
+      var at = Math.ceil((Date.now() + ARRIVE_PREFILL_MIN * 60000) / 60000) * 60000;
+      reflectArriveInControls(singaporeStamp(new Date(at)));
+    }
+
     document.getElementById("arrive-custom").addEventListener("click", function () {
-      selectArriveChip("arrive-custom");
       openArrivePanel();
+      selectArriveChip("arrive-custom");
+      prefillArriveTime();
+      onArriveCustomEdit();
     });
 
     function clearLeaveNowTimer() {
@@ -4258,6 +4379,9 @@
         arriveByCommitted = "";
         arriveByChoice = "arrive-none";
         arriveByPicked = false;
+        arriveByBlocked = false;
+        reflectArriveInControls("");
+        syncArriveGate();
         selectArriveChip("");
       }
       var arriveError = document.getElementById("arrive-by-error");

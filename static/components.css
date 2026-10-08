@@ -608,7 +608,7 @@ a {
 
 .field__control,
 input[type="text"],
-input[type="datetime-local"],
+input[type="time"],
 select,
 #destination {
   width: 100%;
@@ -920,6 +920,39 @@ select,
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.arrive-custom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.arrive-custom__label {
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+}
+
+.arrive-time {
+  min-height: var(--tap-min);
+  box-sizing: border-box;
+}
+
+.arrive-day {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.arrive-day__option {
+  flex: 1 1 0;
+}
+
+/* The selected day has a thicker accent border (the 1 px border plus a 2 px ring, which takes no room) and bold text, so
+   it is not told by colour alone. The options share the row equally, so bold text cannot change their width. */
+.arrive-day__option.is-selected {
+  font-weight: 700;
+  border-color: var(--color-selected-outline);
+  box-shadow: 0 0 0 2px var(--color-selected-outline);
 }
 
 .arrive-chip {

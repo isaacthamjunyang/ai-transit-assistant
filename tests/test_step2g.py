@@ -27,7 +27,7 @@ def test_arrive_by_sits_on_step_one_and_a_blank_value_omits_the_query():
     html = INDEX.read_text(encoding="utf-8")
     form = html.split('id="destination-form"', 1)[1].split("</form>", 1)[0]
     assert 'id="arrive-by"' in form
-    assert 'type="datetime-local"' in form
+    assert 'type="datetime-local"' not in form and 'id="arrive-by-time"' in form and 'type="time"' in form
     assert "arrive-by-block" not in html
     overview = html.split('id="leave-by-section"', 1)[1].split('id="reroute-block"', 1)[0]
     assert 'id="journey-comparison"' in overview

@@ -75,6 +75,10 @@ export default async function (h) {
     renderWalkPage();
     document.getElementById("walk-sensors").scrollIntoView();
   })(); true`);
+  // A rescore or poll that is already on its way carries the speed an earlier case injected and would write the server's
+  // echo of it over the next case. No new request is sent while the cases are read.
+  await h.eval("walkRescoreTick = function () {}; requestArrivals = function () {}; true");
+  await h.sleep(1500);
   const cases = {
     gps: "serverWalkSource = 'gps'; serverWalkSpeed = 1.3; paceEstimator.snapshot = function () { return { gpsSpeed: 1.3, gpsAccuracy: 8, cadence: window.__cad.normal, stepLength: 0.72, stepCount: 4 }; };",
     steps: "serverWalkSource = 'cadence'; serverWalkSpeed = 1.2; paceEstimator.snapshot = function () { return { gpsSpeed: null, gpsAccuracy: 12, cadence: window.__cad.normal, stepLength: 0.67, stepCount: 6 }; };",
