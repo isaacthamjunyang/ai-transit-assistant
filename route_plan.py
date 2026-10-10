@@ -30,10 +30,11 @@ NO_FEASIBLE_ROUTE = "no_feasible_route"
 NO_FEASIBLE_MESSAGE = "No direct or 1-transfer bus connection available for this trip."
 
 
-def reroute_enabled(route_type: str | None, leg_index: int | None) -> bool:
-    """The active leg keeps the existing Step 11 check. The arguments stay accepted."""
+def reroute_enabled(route_type: str | None, leg_index: int | None, leg_kind: str | None = None) -> bool:
+    """The active leg keeps the existing Step 11 check. A train first leg has no alternates to score and no
+    live arrivals, so the reroute search and the automatic switch are off for it."""
     del route_type, leg_index
-    return True
+    return leg_kind != "rail"
 
 
 def plan_route(

@@ -67,6 +67,7 @@ from onemap import (
 from walk_speed import resolve_walk_speed, response_fields
 import pt_plan
 import pt_route
+import rail_arrivals
 
 access_log_filter.install()
 
@@ -238,7 +239,12 @@ def arrivals(
     reroute: Annotated[int | None, Query()] = None,
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
+    leg_kind: Annotated[str | None, Query()] = None,
+    train_departure: Annotated[str | None, Query()] = None,
+    headsign: Annotated[str | None, Query(max_length=80)] = None,
 ) -> dict | JSONResponse:
+    """With leg_kind=rail the first leg is a scheduled train: stop_code is its station, service_no its line,
+    train_departure the planner's scheduled departure. No BusArrival call and no LTA call are made."""
     speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     stop_code = stop_code.strip()
     service_no = service_no.strip()
@@ -247,6 +253,8 @@ def arrivals(
             status_code=422,
             content={"detail": "stop_code and service_no are required."},
         )
+    if leg_kind is not None and leg_kind not in rail_arrivals.LEG_KINDS:
+        return JSONResponse(status_code=422, content={"detail": "leg_kind must be bus or rail."})
     if location_timestamp is not None:
         try:
             normalize_location_timestamp(location_timestamp)
@@ -257,6 +265,12 @@ def arrivals(
                     "detail": "location_timestamp must be a finite non-negative number.",
                 },
             )
+    if leg_kind == rail_arrivals.LEG_KIND_RAIL:
+        return _rail_response(
+            station=stop_code, line=service_no, headsign=headsign, train_departure=train_departure, lat=lat, lon=lon,
+            accuracy=accuracy, location_timestamp=location_timestamp, speed=speed, speed_source=speed_source,
+            explanation_rendered=explanation_rendered, explained_action=explained_action,
+            explained_advice=explained_advice, explanation_in_flight=explanation_in_flight, rescore=False)
     if pinned_eta is not None and not math.isfinite(pinned_eta):
         return JSONResponse(
             status_code=422,
@@ -341,7 +355,7 @@ def arrivals(
         and cache is not None
         and lat is not None
         and lon is not None
-        and reroute_enabled(route_type, leg_index)
+        and reroute_enabled(route_type, leg_index, leg_kind)
         and reroute != 0  # Page C is open: the page asks the server to skip this evaluation. Nothing else changes.
     ):
         load_alternate = _alternate_loader(cache, lat, lon, accuracy, location_timestamp, moment, destination_code, speed)
@@ -453,6 +467,9 @@ def rescore(
     explained_action: Annotated[str | None, Query()] = None,
     explained_advice: Annotated[str | None, Query(max_length=200)] = None,
     explanation_in_flight: Annotated[int | None, Query()] = None,
+    leg_kind: Annotated[str | None, Query()] = None,
+    train_departure: Annotated[str | None, Query()] = None,
+    headsign: Annotated[str | None, Query(max_length=80)] = None,
 ) -> dict | JSONResponse:
     """Page A and Page W: the same catch probability as the poll, from the latest remembered arrivals and a newer fix.
 
@@ -469,6 +486,15 @@ def rescore(
         except ValueError:
             return JSONResponse(status_code=422, content={"detail": "location_timestamp must be a finite non-negative number."})
     speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
+    if leg_kind is not None and leg_kind not in rail_arrivals.LEG_KINDS:
+        return JSONResponse(status_code=422, content={"detail": "leg_kind must be bus or rail."})
+    if leg_kind == rail_arrivals.LEG_KIND_RAIL:
+        # A train has no remembered arrivals: it is scored again from its timetable and the newer fix. No LTA call.
+        return _rail_response(
+            station=stop_code.strip(), line=service_no.strip(), headsign=headsign, train_departure=train_departure,
+            lat=lat, lon=lon, accuracy=accuracy, location_timestamp=location_timestamp, speed=speed,
+            speed_source=speed_source, explanation_rendered=explanation_rendered, explained_action=explained_action,
+            explained_advice=explained_advice, explanation_in_flight=explanation_in_flight, rescore=True)
     cache = getattr(app.state, "lta_static", None)
     moment = datetime.now(SGT)
     near_stop = _near_stop(cache, stop_code.strip(), lat, lon)  # pace.is_near_stop, the poll's own function and 30 m rule
@@ -520,6 +546,49 @@ def rescore(
         if pack is not None:
             payload["explanation"] = pack
     return payload
+
+
+def _rail_response(*, station, line, headsign, train_departure, lat, lon, accuracy, location_timestamp, speed,
+                   speed_source, explanation_rendered, explained_action, explained_advice, explanation_in_flight,
+                   rescore: bool) -> dict | JSONResponse:
+    """The poll or rescore answer for a train first leg, from the rail table. No LTA call, no BusArrival, nothing
+    stored or logged. The answer is always data quality "schedule" and never at_stop."""
+    moment = datetime.now(SGT)
+    table = getattr(app.state, "rail_table", None)
+    try:
+        if not isinstance(train_departure, str):
+            raise ValueError
+        payload = rail_arrivals.rail_payload(
+            table, station_code=station, line_code=line, headsign=(headsign or "").strip() or None,
+            departure_iso=train_departure, user_lat=lat, user_lon=lon, accuracy=accuracy,
+            location_timestamp=location_timestamp, now=moment, walk_speed_m_s=speed)
+    except ValueError:
+        return JSONResponse(status_code=422, content={"detail": rail_arrivals.BAD_TRAIN_MESSAGE})
+    payload.update(response_fields(speed, speed_source))
+    payload["leave_now_threshold_s"] = LEAVE_NOW_MARGIN_S
+    payload["chosen_action"] = _poll_action(payload, moment, False)
+    if explanation_rendered is not None:
+        point = payload.get("station_point")
+        pack = build_poll_explanation(
+            payload, now=moment, cache=getattr(app.state, "lta_static", None), user_lat=lat, user_lon=lon,
+            stop_code=station, explained_action=explained_action, explained_advice=explained_advice,
+            in_flight=explanation_in_flight == 1, reroute_fired=False, walk_speed_m_s=speed,
+            walk_speed_source=speed_source, station_point=tuple(point) if point else None,
+            train_line=payload["line_name"])
+        if pack is not None:
+            payload["explanation"] = pack
+    if not rescore:
+        payload["arrival_estimate"] = None
+        payload["if_you_miss"] = None
+        return payload
+    kept = {key: payload.get(key) for key in (
+        "status", "stop_code", "service_no", "fetched_at", "leave_by", "near_stop", "leave_now_threshold_s",
+        "chosen_action", "walk_speed_used", "walk_speed_source", "leg_kind", "line_code", "line_name", "headsign",
+        "scheduled", "live", "headway_s", "next_departures", "next_departures_text", "not_live_text", "if_you_miss_text", "left_text",
+        "notifications", "explanation") if key in payload}
+    kept["rescored"] = True
+    kept["buses"] = [{key: bus.get(key) for key in RESCORE_BUS_FIELDS} for bus in payload["buses"]]
+    return kept
 
 
 def _near_stop(cache, stop_code, lat, lon) -> bool:
@@ -659,13 +728,33 @@ def reroute_options(
     entry: Annotated[str, Query()] = "recommended",
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
+    leg_kind: Annotated[str | None, Query()] = None,
+    train_departure: Annotated[str | None, Query()] = None,
+    headsign: Annotated[str | None, Query(max_length=80)] = None,
 ) -> dict | JSONResponse:
     """On-demand options (the missed entry and the unlikely entry). Same candidates and calls as the automatic search.
+    For a train first leg (leg_kind=rail) there is no search: the answer says it is off and lists the next scheduled
+    departures.
 
     entry is "recommended" (after "No, I missed it") or "better" (the unlikely entry). It only names the
     card's heading chip. Both choose from all eligible options and ignore the improvement rule."""
     if entry not in ("recommended", "better"):
         return JSONResponse(status_code=422, content={"detail": "entry must be recommended or better."})
+    if leg_kind is not None and leg_kind not in rail_arrivals.LEG_KINDS:
+        return JSONResponse(status_code=422, content={"detail": "leg_kind must be bus or rail."})
+    if leg_kind == rail_arrivals.LEG_KIND_RAIL:
+        try:
+            anchor = parse_journey_time(train_departure) if isinstance(train_departure, str) else None
+            if anchor is None:
+                raise ValueError
+        except ValueError:
+            return JSONResponse(status_code=422, content={"detail": rail_arrivals.BAD_TRAIN_MESSAGE})
+        moment = datetime.now(SGT)
+        coming = rail_arrivals.next_departures(
+            getattr(app.state, "rail_table", None), stop_code.strip(), (headsign or "").strip() or None, anchor, moment)
+        return {"status": "ok", "reroute_enabled": False, "leg_kind": "rail", "stop_code": stop_code.strip(),
+                "service_no": service_no.strip(), "options": [], "no_buses": False,
+                "next_departures": [d.replace(microsecond=0).isoformat() for d in coming]}
     cache = getattr(app.state, "lta_static", None)
     if cache is None or not all(math.isfinite(value) for value in (lat, lon, accuracy, dest_lat, dest_lon)):
         return JSONResponse(status_code=422, content={"detail": "A reroute search needs the static cache and finite coordinates."})
@@ -1063,8 +1152,14 @@ def journey(
     leg1_direction: Annotated[int | None, Query()] = None,
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
+    leg_kind: Annotated[str | None, Query()] = None,
+    headsign: Annotated[str | None, Query(max_length=80)] = None,
 ) -> dict | JSONResponse:
+    """With leg_kind=rail, boarding_stop_code is the station, service_no the line, eta the scheduled departure and
+    leg1_ride_minutes the whole ride."""
     speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
+    if leg_kind is not None and leg_kind not in rail_arrivals.LEG_KINDS:
+        return JSONResponse(status_code=422, content={"detail": "leg_kind must be bus or rail."})
     coordinates = (dest_lat, dest_lon, user_lat, user_lon)
     if any(not math.isfinite(value) for value in coordinates):
         return JSONResponse(
@@ -1115,6 +1210,17 @@ def journey(
                 "detail": "Static stop data is unavailable.",
             },
         )
+    if leg_kind == rail_arrivals.LEG_KIND_RAIL:
+        if not boarding or not service:
+            return JSONResponse(
+                status_code=422, content={"detail": "A train journey needs boarding_stop_code and service_no."})
+        built = rail_arrivals.rail_journey(
+            getattr(app.state, "rail_table", None), cache, station_code=boarding, line_code=service,
+            headsign=(headsign or "").strip() or None, departure_iso=eta, user_lat=user_lat, user_lon=user_lon,
+            dest_lat=dest_lat, dest_lon=dest_lon, destination_stop_code=stop_code, arrive_by=parsed_arrive_by,
+            ride_minutes=leg1_ride_minutes, arrival_status=arrival_status, now=datetime.now(SGT),
+            walk_speed_m_s=speed)
+        return {**built, **response_fields(speed, speed_source)}
     built = build_journey(
         cache,
         dest_lat,

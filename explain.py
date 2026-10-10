@@ -257,7 +257,7 @@ def minutes_text(count: int) -> str:
 PAGE_PACK_FIELDS = (
     "snapshot", "fact_sheet", "text", "clause", "action", "arrival_time", "leave_by", "distance_m",
     "walk_minutes", "walk_speed_used", "walk_speed_source", "leave_now_threshold_s", "band", "uncertain",
-    "call", "pending", "model_enabled", "at_stop",
+    "call", "pending", "model_enabled", "at_stop", "train_line",
 )
 # Every key of the pack: the page's fields plus reason_code and clauses (the model's, kept and dormant).
 PACK_KEYS = PAGE_PACK_FIELDS + ("clauses", "reason_code")
@@ -281,6 +281,23 @@ S2_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off."
 # At the stop (the probability carries at_stop): the whole card, nothing after it.
 S_AT_STOP = "You are at the stop. You have {e} to wait."
 S_AT_STOP_ARRIVING = "You are at the stop. The bus is arriving now."
+# A train as the first leg (scheduled, not live): the whole of sentence one, with the existing leave sentence after it.
+# {line} is the line's name ("North-South Line"), {e} the whole minutes. The page mirror copies these (EXPL_TRAIN*).
+S_TRAIN = "The {line} train is scheduled in {e}\u00a0min. Live train times are not available."
+S_TRAIN_NOW = "The {line} train is scheduled to leave now. Live train times are not available."
+TRAIN_NOT_LIVE = "Train times are scheduled, not live."
+# Unlikely train: the whole card, nothing after it. Arriving-now form when the train leaves in under a minute.
+S_TRAIN_UNLIKELY = "The {line} train is scheduled in {e}\u00a0min, and you are {distance} from the station, but catching this train is unlikely."
+S_TRAIN_NOW_UNLIKELY = "The {line} train is scheduled to leave now, and you are {distance} from the station, but catching this train is unlikely."
+# The leave sentence of a train card (same rules and numbers as S2_*, in train and station words).
+S2_TRAIN_LEAVE_BY = "Leave by {time} so you have {x} to reach your station and catch the train departing at {arrival}."
+S2_TRAIN_LEAVE_NOW = "Leave now so you have {e} to reach your station and catch the train departing at {arrival}."
+S2_TRAIN_LEAVE_NOW_DEPARTING = "Leave now to try to catch the train departing at {arrival}."
+# Projected departures (the table has the headway, not each train) are shown with "about".
+TRAIN_ABOUT = "about {time}"
+TRAIN_NEXT = "Next trains: {list}."
+TRAIN_MISS = "If you miss it, the next train is at about {time}."
+TRAIN_LEFT = "The {line} train has left. The next one is at about {time}."
 
 
 def format_distance(metres: float) -> str:
@@ -344,8 +361,10 @@ def build_numbers(
     arrival_time: str,
     now: datetime,
     at_stop: bool = False,
+    train_line: str | None = None,
 ) -> dict:
-    """The numbers of the card text. They stay on the server."""
+    """The numbers of the card text. They stay on the server. train_line (the line's name) makes sentence one the
+    train sentence: the first leg is a scheduled train, not a bus."""
     for value in (bus_minutes, walk_minutes):
         if type(value) is not int:
             raise ValueError("Explanation numbers must be integers.")
@@ -370,6 +389,7 @@ def build_numbers(
         "arrival_text": format_clock(arrival_at, now),
         "x_minutes": minutes_to_reach(arrival_at, leave_at),
         "at_stop": at_stop is True,
+        "train_line": train_line if isinstance(train_line, str) and train_line.strip() else None,
     }
 
 
@@ -383,6 +403,16 @@ def sentence_one(numbers: dict, *, band: str | None, uncertain: bool = False) ->
     e = numbers["bus_minutes"]
     if numbers.get("at_stop"):
         return S_AT_STOP_ARRIVING if e < 1 else S_AT_STOP.replace("{e}", minutes_text(e))
+    line = numbers.get("train_line")
+    if line:
+        if is_unlikely(numbers, band=band):
+            distance = format_distance(numbers["distance_m"])
+            if e < 1:
+                return S_TRAIN_NOW_UNLIKELY.replace("{line}", line).replace("{distance}", distance)
+            return S_TRAIN_UNLIKELY.replace("{line}", line).replace("{e}", str(e)).replace("{distance}", distance)
+        if e < 1:
+            return S_TRAIN_NOW.replace("{line}", line)
+        return S_TRAIN.replace("{line}", line).replace("{e}", str(e))
     bus = S1_ARRIVING_NOW if e < 1 else S1_BUS_MINUTES.replace("{e}", minutes_text(e))
     text = bus + S1_YOU.replace("{distance}", format_distance(numbers["distance_m"]))
     if is_unlikely(numbers, band=band):
@@ -399,14 +429,16 @@ def sentence_two(numbers: dict, *, band: str | None, uncertain: bool) -> str:
     now = leave_mode(numbers["leave_seconds"]) == "now"
     arrival = numbers["arrival_text"]
     e = numbers["bus_minutes"]
+    train = bool(numbers.get("train_line"))
     if now:
         if e < 1:
-            text = S2_LEAVE_NOW_ARRIVING.replace("{arrival}", arrival)
+            text = (S2_TRAIN_LEAVE_NOW_DEPARTING if train else S2_LEAVE_NOW_ARRIVING).replace("{arrival}", arrival)
         else:
-            text = S2_LEAVE_NOW.replace("{e}", minutes_text(e)).replace("{arrival}", arrival)
+            text = (S2_TRAIN_LEAVE_NOW if train else S2_LEAVE_NOW).replace("{e}", minutes_text(e)).replace(
+                "{arrival}", arrival)
     else:
         text = (
-            S2_LEAVE_BY.replace("{time}", numbers["time_text"])
+            (S2_TRAIN_LEAVE_BY if train else S2_LEAVE_BY).replace("{time}", numbers["time_text"])
             .replace("{x}", minutes_text(numbers["x_minutes"]))
             .replace("{arrival}", arrival)
         )
@@ -660,8 +692,11 @@ def build_poll_explanation(
     reroute_fired: bool,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
     walk_speed_source: str = "default",
+    station_point: tuple[float, float] | None = None,
+    train_line: str | None = None,
 ) -> dict | None:
-    """The card's text for this poll.
+    """The card's text for this poll. With train_line and station_point the tracked "bus" is a scheduled train and
+    the distance is to its station.
 
     The card always describes the tracked bus, the one the arrival tile and the catch card show. A reroute that
     fires only changes the action to switch_route (and with it the wording); it never brings in the minutes
@@ -680,7 +715,10 @@ def build_poll_explanation(
     high = chance.get("range_high")
     band = chance.get("band")
     arrival = bus.get("arrival_time")
-    distance = boarding_distance_m(cache, stop_code, user_lat, user_lon)
+    if station_point is not None and user_lat is not None and user_lon is not None:
+        distance = haversine_m(float(user_lat), float(user_lon), float(station_point[0]), float(station_point[1]))
+    else:
+        distance = boarding_distance_m(cache, stop_code, user_lat, user_lon)
     walk = None if distance is None else overview_walk_minutes(distance, walk_speed_m_s)
     bus_minutes = tile_minutes(arrival, now)
     leave_by = payload.get("leave_by")
@@ -718,6 +756,7 @@ def build_poll_explanation(
         arrival_time=arrival,
         now=now,
         at_stop=at_stop,
+        train_line=train_line,
     )
     band = band if band in ("ok", "mid", "low") else None
     uncertain = quality == "location uncertain"
@@ -726,7 +765,8 @@ def build_poll_explanation(
     cached = explained_advice if explained_action == action and advice_is_valid(explained_advice, action) else None
     advice = cached if cached is not None else deterministic_advice(action)
     model_enabled = model_path_enabled()
-    needs_model = model_enabled and quality in ALLOWED_QUALITY and cached is None and not at_stop
+    needs_model = model_enabled and quality in ALLOWED_QUALITY and cached is None and not at_stop \
+        and numbers["train_line"] is None
     return {
         "snapshot": snapshot_key(stop_code, str(payload.get("service_no") or ""), arrival, now),
         "fact_sheet": sheet,
@@ -748,6 +788,7 @@ def build_poll_explanation(
         "pending": needs_model and in_flight,
         "model_enabled": model_enabled,
         "at_stop": at_stop,
+        "train_line": numbers["train_line"],
     }
 
 

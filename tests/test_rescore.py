@@ -201,7 +201,8 @@ def test_the_rescore_query_uses_the_polls_parameter_names_and_the_log_filter_cov
 
     names = set(inspect.signature(main.rescore).parameters)
     assert names == {"stop_code", "service_no", "lat", "lon", "accuracy", "location_timestamp", "walk_speed", "walk_speed_source",
-                     "explanation_rendered", "explained_action", "explained_advice", "explanation_in_flight"}
+                     "explanation_rendered", "explained_action", "explained_advice", "explanation_in_flight",
+                     "leg_kind", "train_departure", "headsign"}  # the last three: a train as the first leg
     poll_names = set(inspect.signature(main.arrivals).parameters)
     assert names <= poll_names  # the same names as the poll
     assert {"lat", "lon", "accuracy", "location_timestamp", "walk_speed", "walk_speed_source"} <= access_log_filter.PRIVATE_QUERY_PARAMS

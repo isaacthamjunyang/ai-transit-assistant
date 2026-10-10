@@ -63,11 +63,11 @@ def _run_node(program: str):
 # ---- cases: one dict per sentence-one-and-two variant
 
 def _case(e=10, w=3, action="wait", band="ok", unc=False, leave_in=600, source="gps", speed=1.25, distance=300.0,
-          now=NOW, arr_off=None, at_stop=False):
+          now=NOW, arr_off=None, at_stop=False, train=None):
     """arr_off: the bus arrival in seconds after now (the tile's minutes e by default)."""
     return {"e": e, "w": w, "action": action, "band": band, "unc": unc, "leave_in": leave_in, "source": source,
             "speed": speed, "distance": distance, "now": now.isoformat(), "arr_off": e * 60 if arr_off is None else arr_off,
-            "at_stop": at_stop}
+            "at_stop": at_stop, "train": train}
 
 
 def _python_lead(c) -> str:
@@ -76,7 +76,7 @@ def _python_lead(c) -> str:
     numbers = build_numbers(bus_minutes=c["e"], walk_minutes=c["w"], chosen_action=c["action"], distance_m=c["distance"],
                             walk_speed_used=c["speed"], walk_speed_source=c["source"], leave_by=leave_by,
                             arrival_time=(now + timedelta(seconds=c["arr_off"])).isoformat(), now=now,
-                            at_stop=c.get("at_stop", False))
+                            at_stop=c.get("at_stop", False), train_line=c.get("train"))
     return card_text(numbers, band=c["band"], uncertain=c["unc"])
 
 
@@ -92,7 +92,8 @@ def _mirror_cases(cases):
         "  var nowMs = Date.parse(c.now);\n"
         "  var pack = {walk_minutes: c.w, band: c.band, uncertain: c.unc, action: c.action,\n"
         "    leave_by: new Date(nowMs + c.leave_in * 1000).toISOString(), leave_now_threshold_s: " + str(THRESHOLD) + ",\n"
-        "    distance_m: c.distance, walk_speed_used: c.speed, walk_speed_source: c.source, at_stop: c.at_stop === true};\n"
+        "    distance_m: c.distance, walk_speed_used: c.speed, walk_speed_source: c.source, at_stop: c.at_stop === true,\n"
+        "    train_line: c.train};\n"
         "  out.push(explanationCardText(pack, c.e, new Date(nowMs + c.arr_off * 1000).toISOString(), nowMs));\n"
         "});\nconsole.log(JSON.stringify(out));"
     )
@@ -200,6 +201,17 @@ def _boundary_cases():
         for leave_in in (-1, 0, 60, 61, 119, 120, 299, 300, 540, 541, 3599, 3600):
             for now in (NOW, NOW + timedelta(seconds=29), NOW + timedelta(seconds=59), midnight):
                 cases.append(_case(e=arr_off // 60, leave_in=leave_in, arr_off=arr_off, now=now))
+    for e in (0, 1, 2, 10, 59):  # a train as the first leg: the train sentence, then the existing leave sentence
+        for leave_in in LEAVE_IN:
+            for action in ACTIONS:
+                for band in BANDS:
+                    for unc in (False, True):
+                        for line in ("North-South Line", "NS"):
+                            cases.append(_case(e=e, action=action, band=band, unc=unc, leave_in=leave_in, train=line))
+    for distance in (0, 0.4, 0.5, 49.5, 300, 999.4, 999.5, 1000, 1249, 1950, 25000):  # unlikely: "{distance} from the station"
+        for e in (0, 1, 2, 10):
+            for action, band in (("do_not_rely", "ok"), ("switch_route", "mid"), ("wait", "low"), ("wait", "ok")):
+                cases.append(_case(e=e, action=action, band=band, distance=float(distance), train="Thomson-East Coast Line"))
     return cases
 
 
@@ -228,7 +240,8 @@ def _random_cases(count):
             e=rng.randint(0, 90), w=rng.randint(0, 45), action=rng.choice(ACTIONS), band=rng.choice(BANDS),
             unc=rng.random() < 0.5, leave_in=rng.choice([rng.randint(-900, 900), rng.randint(-90000, 90000), 60, 61, 59, 0]),
             source=rng.choice(SOURCES), speed=rng.randint(50, 140) / 100, distance=round(rng.choice([rng.uniform(0, 3000), rng.uniform(0, 30)]), 1),
-            now=now, arr_off=rng.choice([rng.randint(0, 7200), rng.randint(-60, 120)])))
+            now=now, arr_off=rng.choice([rng.randint(0, 7200), rng.randint(-60, 120)]),
+            train=rng.choice([None, None, "North-South Line", "Thomson-East Coast Line", "Circle Line", "NS"])))
     return cases
 
 

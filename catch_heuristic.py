@@ -330,6 +330,100 @@ def score_buses(
     return scored
 
 
+def score_scheduled_rail(
+    trains: list[dict],
+    *,
+    user_lat: float | None,
+    user_lon: float | None,
+    accuracy_m: float | None,
+    stop_lat: float | None,
+    stop_lon: float | None,
+    headway_for,
+    now: datetime,
+    location_timestamp: float | None = None,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+) -> list[dict]:
+    """A sibling of score_buses for a train that comes from a timetable, not from live arrivals.
+
+    Each train carries `arrival_time`, its scheduled departure (OneMap's time for the leg). The slack functions and
+    catch_probability are the bus ones. The differences:
+    - There is no live data, so the train is never monitored and the quality is "schedule" (a poor fix still says
+      "location uncertain", the same precedence as a schedule-only bus).
+    - The timetable can be off by up to half a headway either way: low_slack loses half the headway and high_slack
+      gains it. `headway_for(departure)` gives the headway in seconds (rail_headway_seconds: the table's figure, or
+      300 s at peak and 420 s otherwise).
+    - Point, low and high are capped at SCHEDULE_CEILING, so a train never reads above 60 percent.
+    - The at-stop rule (97) needs a live arrival, so it never applies: `at_stop` is always false.
+    Same output shape as score_buses (is_primary, is_missed, probability with band and pace), plus `headway_s`."""
+    point_speed, slow_speed, fast_speed = range_speeds(walk_speed_m_s)
+    moment = _as_sgt(now)
+    age_seconds = None if location_timestamp is None else location_age_seconds(location_timestamp, moment)
+    located = _location_ready(user_lat, user_lon, accuracy_m, stop_lat, stop_lon)
+    distance_m = (
+        straight_line_m(float(user_lat), float(user_lon), float(stop_lat), float(stop_lon)) if located else None
+    )
+    scored = []
+    primary_chosen = False
+    for train in trains:
+        item = dict(train)
+        arrival = _parse_arrival(item.get("arrival_time"))
+        missed = arrival is not None and (arrival - moment).total_seconds() < -MISSED_AFTER_S
+        item["monitored"] = False
+        item["is_missed"] = missed
+        item["is_primary"] = False
+        if arrival is not None:
+            item["headway_s"] = int(headway_for(arrival))
+        if missed or arrival is None or not located or distance_m is None:
+            item["probability"] = None
+            if not missed and not primary_chosen:
+                item["is_primary"] = True
+                primary_chosen = True
+            scored.append(item)
+            continue
+        if not primary_chosen:
+            item["is_primary"] = True
+            primary_chosen = True
+        seconds_until = (arrival - moment).total_seconds()
+        accuracy = float(accuracy_m)
+        half_headway = item["headway_s"] / 2
+        slack = point_slack(seconds_until, distance_m, point_speed)
+        worse = low_slack(
+            seconds_until, distance_m, effective_accuracy_m(accuracy, age_seconds), slow_speed
+        ) - half_headway
+        better = high_slack(seconds_until, distance_m, fast_speed) + half_headway
+        point = min(catch_probability(slack), SCHEDULE_CEILING)
+        low = min(catch_probability(worse), SCHEDULE_CEILING)
+        high = min(catch_probability(better), SCHEDULE_CEILING)
+        location_reason = location_uncertainty_reason(accuracy, age_seconds)
+        quality = "location uncertain" if location_reason is not None else "schedule"
+        item["probability"] = {
+            "point": to_percent(point),
+            "range_low": to_percent(low),
+            "range_high": to_percent(high),
+            "slack_seconds": int(round(slack)),
+            "data_quality": quality,
+            "reliability_label": RELIABILITY_LABEL,
+            "is_missed": False,
+            "location_reason": location_reason,
+            "location_age_s": None if age_seconds is None else int(round(age_seconds)),
+            "location_accuracy_m": accuracy,
+            "at_stop": False,
+        }
+        item["probability"]["band"] = ring_band(item["probability"]["point"])
+        item["probability"]["pace"] = pace_guidance(
+            point=item["probability"]["point"],
+            range_low=item["probability"]["range_low"],
+            range_high=item["probability"]["range_high"],
+            data_quality=quality,
+            location_uncertain=quality == "location uncertain",
+            distance_to_stop_m=distance_m,
+            previous_category=None,
+            headroom_mps=fast_speed - point_speed,
+        )
+        scored.append(item)
+    return scored
+
+
 def _frequency_field(moment: datetime) -> str | None:
     local = _as_sgt(moment)
     minute_of_day = local.hour * 60 + local.minute

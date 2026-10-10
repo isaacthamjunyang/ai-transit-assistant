@@ -1648,6 +1648,14 @@
     // At the stop (the probability carries at_stop): the whole card and the Leave by tile. MIRROR of explain.S_AT_STOP*.
     var EXPL_AT_STOP = "You are at the stop. You have {e} to wait.";
     var EXPL_AT_STOP_ARRIVING = "You are at the stop. The bus is arriving now.";
+    // A train as the first leg (the pack carries train_line): the whole of sentence one. MIRROR of explain.S_TRAIN*.
+    var EXPL_TRAIN = "The {line} train is scheduled in {e}\u00a0min. Live train times are not available.";
+    var EXPL_TRAIN_NOW = "The {line} train is scheduled to leave now. Live train times are not available.";
+    var EXPL_TRAIN_UNLIKELY = "The {line} train is scheduled in {e}\u00a0min, and you are {distance} from the station, but catching this train is unlikely.";
+    var EXPL_TRAIN_NOW_UNLIKELY = "The {line} train is scheduled to leave now, and you are {distance} from the station, but catching this train is unlikely.";
+    var EXPL_TRAIN_LEAVE_BY = "Leave by {time} so you have {x} to reach your station and catch the train departing at {arrival}.";
+    var EXPL_TRAIN_LEAVE_NOW = "Leave now so you have {e} to reach your station and catch the train departing at {arrival}.";
+    var EXPL_TRAIN_LEAVE_NOW_DEPARTING = "Leave now to try to catch the train departing at {arrival}.";
     var AT_STOP_TEXT = "At the stop";
     var LEAVE_TILE_AT_STOP_AWAY = "The bus is {e}\u00a0min away.";
     var LEAVE_TILE_AT_STOP_ARRIVING = "The bus is arriving now.";
@@ -1718,6 +1726,17 @@
       if (pack.at_stop === true) {
         return e < 1 ? EXPL_AT_STOP_ARRIVING : EXPL_AT_STOP.replace("{e}", explanationMinutesWord(e));
       }
+      if (typeof pack.train_line === "string" && pack.train_line) {
+        if (explanationIsUnlikely(pack)) {
+          var station = formatDistance(pack.distance_m);
+          return e < 1
+            ? EXPL_TRAIN_NOW_UNLIKELY.replace("{line}", pack.train_line).replace("{distance}", station)
+            : EXPL_TRAIN_UNLIKELY.replace("{line}", pack.train_line).replace("{e}", String(e)).replace("{distance}", station);
+        }
+        return e < 1
+          ? EXPL_TRAIN_NOW.replace("{line}", pack.train_line)
+          : EXPL_TRAIN.replace("{line}", pack.train_line).replace("{e}", String(e));
+      }
       var bus = e < 1 ? EXPL_ARRIVING_NOW : EXPL_BUS_MINUTES.replace("{e}", explanationMinutesWord(e));
       var text = bus + EXPL_YOU_ARE.replace("{distance}", formatDistance(pack.distance_m));
       if (explanationIsUnlikely(pack)) {
@@ -1738,13 +1757,14 @@
       }
       var now = mode === "now";
       var arrival = leaveClockText(arrivalIso, nowMs);
+      var train = typeof pack.train_line === "string" && !!pack.train_line;
       var text;
       if (now) {
         text = e < 1
-          ? EXPL_LEAVE_NOW_ARRIVING.replace("{arrival}", arrival)
-          : EXPL_LEAVE_NOW.replace("{e}", explanationMinutesWord(e)).replace("{arrival}", arrival);
+          ? (train ? EXPL_TRAIN_LEAVE_NOW_DEPARTING : EXPL_LEAVE_NOW_ARRIVING).replace("{arrival}", arrival)
+          : (train ? EXPL_TRAIN_LEAVE_NOW : EXPL_LEAVE_NOW).replace("{e}", explanationMinutesWord(e)).replace("{arrival}", arrival);
       } else {
-        text = EXPL_LEAVE_BY.replace("{time}", leaveClockText(pack.leave_by, nowMs))
+        text = (train ? EXPL_TRAIN_LEAVE_BY : EXPL_LEAVE_BY).replace("{time}", leaveClockText(pack.leave_by, nowMs))
           .replace("{x}", explanationMinutesWord(explanationReachMinutes(arrivalIso, pack.leave_by)))
           .replace("{arrival}", arrival);
       }

@@ -33,6 +33,22 @@ var copy = {
     card: "You are at the stop. You have {e} to wait.",
     cardArriving: "You are at the stop. The bus is arriving now."
   },
+  /* A train as the first leg (scheduled, not live). explTrain* are the whole of the AI card's first sentence; the leave
+     sentence after it is the existing one. {line} is the line's name, {e} whole minutes. Mirrors explain.S_TRAIN*. */
+  train: {
+    explTrain: "The {line} train is scheduled in {e}\u00a0min. Live train times are not available.",
+    explTrainNow: "The {line} train is scheduled to leave now. Live train times are not available.",
+    explTrainUnlikely: "The {line} train is scheduled in {e}\u00a0min, and you are {distance} from the station, but catching this train is unlikely.",
+    explTrainNowUnlikely: "The {line} train is scheduled to leave now, and you are {distance} from the station, but catching this train is unlikely.",
+    leaveByTrain: "Leave by {time} so you have {x} to reach your station and catch the train departing at {arrival}.",
+    leaveNowTrain: "Leave now so you have {e} to reach your station and catch the train departing at {arrival}.",
+    leaveNowDepartingTrain: "Leave now to try to catch the train departing at {arrival}.",
+    trainNotLive: "Train times are scheduled, not live.",
+    trainAbout: "about {time}",
+    trainNext: "Next trains: {list}.",
+    trainMiss: "If you miss it, the next train is at about {time}.",
+    trainLeft: "The {line} train has left. The next one is at about {time}."
+  },
   rerouteCard: {
     title: "Route Updated",
     message: "Switched to Bus {new_service} at {new_stop_name} ({new_stop_code}).",

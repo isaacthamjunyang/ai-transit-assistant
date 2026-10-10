@@ -448,23 +448,30 @@ def _bus_headsign(cache, service_no: str, direction) -> str | None:
 
 def _journey(cache, assessed: dict, destination_stop_code: str, arrive_by, moment: datetime, speed: float) -> dict:
     """The Step 9 journey object, built from OneMap's numbers instead of the cached distances."""
-    transit = _transit(assessed["itinerary"])
-    ride_minutes = math.ceil(assessed["minutes"])
-    comparison = _comparison(moment, ride_minutes, arrive_by)
     terms = {
         "board_walk_minutes": walk_minutes(assessed["walk_first_m"], speed), "wait_minutes": assessed["wait_min"],
         "ride_minutes": assessed["ride_min"], "end_walk_metres": assessed["end_walk_m"],
     }
+    leave_by = resolve_leave_by(eta=None, distance_m=assessed["walk_first_m"], arrival_status="ok", now=moment,
+                                walk_speed_m_s=speed)
+    services = [leg["service_no"] for leg in _transit(assessed["itinerary"]) if leg["kind"] == KIND_BUS]
+    return journey_from_terms(moment, destination_stop_code=destination_stop_code, services=services, terms=terms,
+                              ride_minutes=math.ceil(assessed["minutes"]), arrive_by=arrive_by, leave_by=leave_by,
+                              speed=speed)
+
+
+def journey_from_terms(moment: datetime, *, destination_stop_code: str, services: list[str], terms: dict,
+                       ride_minutes: int, arrive_by, leave_by: datetime | None, speed: float) -> dict:
+    """The fields of journey.build_journey from the Step 9 terms (board walk, wait, ride, end walk)."""
+    comparison = _comparison(moment, ride_minutes, arrive_by)
     window = arrival_window(moment, board_walk_minutes=terms["board_walk_minutes"], wait_minutes=terms["wait_minutes"],
                             ride_minutes=terms["ride_minutes"], end_walk_metres=terms["end_walk_metres"],
                             arrive_by=arrive_by, basis="planned", walk_speed_m_s=speed)
     if window is not None and window["point_minutes"] != ride_minutes:
         window = _shift_window(window, ride_minutes - window["point_minutes"], arrive_by)
-    leave_by = resolve_leave_by(eta=None, distance_m=assessed["walk_first_m"], arrival_status="ok", now=moment,
-                                walk_speed_m_s=speed)
     return {
         "status": "ok", "destination_stop_code": destination_stop_code, "ride_minutes": ride_minutes,
-        "connecting_services": [leg["service_no"] for leg in transit if leg["kind"] == KIND_BUS],
+        "connecting_services": services,
         "ride_label": comparison["ride_label"], "comparison_label": comparison["comparison_label"],
         "comparison_note": comparison["comparison_note"], "estimated_arrival": comparison["estimated_arrival"],
         "arrival_point": None if window is None else _as_sgt_iso(window["estimated_arrival"]),
