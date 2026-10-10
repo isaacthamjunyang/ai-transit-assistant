@@ -83,7 +83,7 @@ def _between(text, start, end):
 def _tile_source():
     page = _between(INDEX, "var EXPL_ARRIVING_NOW", "// Redraws the card from the poll on screen")
     parts = _between(INDEX, "function singaporeParts(date) {", "function pad2(value)")
-    return FORMAT_DISTANCE + "\n" + parts + "\n" + page + '\nvar LEAVE_NOW_TEXT = "Leave now";\n'
+    return FORMAT_DISTANCE + "\n" + parts + "\n" + page + '\nvar LEAVE_NOW_TEXT = "Leave now";\nfunction isTrain() { return false; }  // a bus journey: the train words are unused here\n'
 
 
 @needs_node

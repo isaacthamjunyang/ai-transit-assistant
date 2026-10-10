@@ -1085,6 +1085,47 @@
       }).join("") + "</div>";
     }
 
+    // The route lines of the map (plan 4.3): walk dashed, bus solid, train solid, LRT dotted, a casing only where the colour
+    // alone is under 3:1 on the land (CC in light; NE, DT and TE in dark). The same tokens the page's map reads.
+    function sgMapLines() {
+      var rows = [['walk', 'Walk'], ['bus', 'Bus']].concat(SG_LINE_CODES.map(function (code) { return [code.toLowerCase(), code]; }));
+      return rows.map(function (pair) {
+        return '<div class="map-line-sample map-line-sample--' + pair[0] + '"><span>' + pair[1] + '</span>'
+          + '<svg viewBox="0 0 200 24" aria-hidden="true" focusable="false">'
+          + '<line class="map-line-sample__casing" x1="6" y1="12" x2="194" y2="12"></line>'
+          + '<line class="map-line-sample__line" x1="6" y1="12" x2="194" y2="12"></line></svg></div>';
+      }).join('');
+    }
+
+    // A train as the first leg (plan_edits_9 4.6, 4.8): the words of Pages A and B and the missed-train card, from copy.js.
+    function trainPagesSample() {
+      var tp = copy.trainPage;
+      var line = "North-South Line";
+      var tiles = "<div class=\"leave-tiles\"><div class=\"leave-tile\"><div><p class=\"leave-tile__label\">Leave by</p><p class=\"leave-tile__value\">8:44" + " AM</p>"
+        + "<p class=\"leave-tile__meta\">in 3 min · 3 min walk</p></div></div>"
+        + "<div class=\"leave-tile\"><div><p class=\"leave-tile__label\">" + tp.departsLabel + "</p><p class=\"leave-tile__value\">8:50 AM</p></div></div></div>";
+      var pageA = "<div class=\"card catch-card\"><div class=\"catch-card__head\"><div class=\"catch-card__heading\"><p class=\"catch-card__title\">" + sgFill(tp.catchHeading, { line: line }) + "</p></div>"
+        + sgPill("schedule") + "</div><p class=\"catch-card__sub\">" + sgFill(tp.departsIn, { n: 6 }) + " · Bishan MRT Station</p>"
+        + "<p class=\"catch-card__caption catch-card__not-live\">" + tp.notLive + "</p></div>" + tiles
+        + "<div class=\"miss-row\"><div><p>" + copy.train.trainMiss.replace("{time}", "8:54 AM") + "</p></div></div>"
+        + "<div class=\"catch-bar catch-bar--single\"><button type=\"button\" class=\"primary\"><span>" + tp.seeTimes + "</span></button></div>";
+      var pageB = "<div class=\"card live-card\"><p class=\"bus-card__title\"><span>" + sgBadge("NS") + "<span>" + line + "</span></span>" + sgPill("schedule") + "</p>"
+        + "<p class=\"bus-card__to\">" + sgFill(tp.toward, { terminus: "Marina South Pier" }) + "</p><p class=\"live-then\">" + sgFill(tp.departsAt, { time: "8:50 AM" }) + "</p>"
+        + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"bus-tiles bus-tiles--3\">"
+        + ["8:50", "8:54", "8:58"].map(function (time, index) {
+          return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + sgFill(tp.about, { time: time + " AM" })
+            + "</span><span class=\"bus-tile-card__service\">" + line + "</span></li>";
+        }).join("") + "</ul><div class=\"status-grid\"><p class=\"status-cell\"><span>" + tp.scheduled + "</span></p><p class=\"status-cell\"><span>" + sgFill(tp.every, { n: 4 }) + "</span></p></div>"
+        + "<div class=\"catch-bar\"><p class=\"catch-bar__title\">" + tp.question + "</p></div></div>";
+      var missed = "<div class=\"card train-missed\"><p class=\"train-missed__left\">" + sgFill(tp.left, { line: line, time: "8:54 AM" }) + "</p>"
+        + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"train-rows\">"
+        + ["8:54", "8:58", "9:02"].map(function (time) { return "<li class=\"train-rows__item\">" + sgFill(tp.about, { time: time + " AM" }) + "</li>"; }).join("")
+        + "</ul><button type=\"button\" class=\"primary\">Plan a new journey</button></div>";
+      return "<h4>A train first leg: Page A (ring caption, tiles, miss row, See train times)</h4>" + pageA
+        + "<h4>A train first leg: Page B (line, direction, departs, next trains, status)</h4>" + pageB
+        + "<h4>A train first leg: the missed train (plain rows, no Switch button)</h4>" + missed;
+    }
+
     function legsSample() {
       var nb = "\u00a0";
       var rows = [
@@ -1113,7 +1154,8 @@
         sgLegRow("rail", "", [sgLineHead("DT"), sgDetail(jo.board + " Bayfront MRT Station (DT16)"), sgDetail(jo.getOff + " Chinatown MRT Station (DT19)"),
           sgDetail(sgFill(jo.stopsAndMin, { k: 3, m: 7 })), sgDetail(sgFill(jo.scheduledAbout, { n: 5 }))], "")
       ];
-      return "<h4>Line badges: the code and the name are both text (NS, EW, CG, NE, CC, DT, TE, BP, SK, PG, SS)</h4>"
+      return "<h4>Map route lines on the land stand-in (a casing only where the plan says)</h4><div class=\"stack\">" + sgMapLines() + "</div>"
+        + "<h4>Line badges: the code and the name are both text (NS, EW, CG, NE, CC, DT, TE, BP, SK, PG, SS)</h4>"
         + "<div class=\"card\">" + SG_LINE_CODES.map(sgLineHead).join("") + "</div>"
         + "<h4>Journey overview: one row per leg, chips under the reason line</h4>"
         + "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + jo.title + "</h4>" + sgReason(jo.reasonNoTarget)
@@ -1125,8 +1167,9 @@
         + "<h4>Priority chips: nothing for MRT only, and the best-available line</h4><div class=\"overview-priority\">" + sgChips("mrt_only", [])
         + "<p class=\"overview-note\">" + jo.bestAvailable + "</p></div>"
         + "<div class=\"card overview-card\"><p class=\"banner banner--caution\">" + jo.noMrtOnly + "</p></div>"
-        + "<h4>A train first leg: the first leg says \"About N min, scheduled\"; Start journey stays off for now</h4>"
-        + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + firstTrain.join("") + "</ol><p class=\"overview-note\">" + jo.trainLiveSoon + "</p></div>";
+        + "<h4>A train first leg: the first leg says \"About N min, scheduled\"; Start journey is on</h4>"
+        + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + firstTrain.join("") + "</ol></div>"
+        + trainPagesSample();
     }
 
     document.getElementById("legs-sample-light").innerHTML = legsSample();

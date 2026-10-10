@@ -63,7 +63,7 @@ def test_bottom_button_runs_the_existing_select_and_start_action():
     assert "<span>Start journey</span>" in markup
     assert "Select & Start Journey" not in html
     start = _between(html, 'getElementById("start-journey").addEventListener("click"', "});")
-    assert start.index("selectPlannedRoute(pendingRouteOption)") < start.index('pushScreen("live")')
+    assert start.index("selectPlannedRoute(pendingRouteOption") < start.index('pushScreen("live")')
 
 
 def test_arrive_by_box_mirrors_the_shared_display_and_opens_the_sheet():

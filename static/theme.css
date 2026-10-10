@@ -82,6 +82,32 @@
   --map-range-text: #1B68E7; /* link colour; 5.0:1 on --color-card */
   --map-live-bus: #0A6B43; /* white text 6.6:1 */
   --map-live-bus-ink: #FFFFFF;
+  /* Route lines on the map (plan 4.3): the line's colour, and a casing only where the colour alone is under 3:1
+     against the land. none = no casing. Measured in tests/test_map_lines.py. */
+  --map-line-ns: var(--line-ns);
+  --map-line-ns-casing: none;
+  --map-line-ew: var(--line-ew);
+  --map-line-ew-casing: none;
+  --map-line-cg: var(--line-cg);
+  --map-line-cg-casing: none;
+  --map-line-ne: var(--line-ne);
+  --map-line-ne-casing: none;
+  --map-line-cc: var(--line-cc);
+  --map-line-cc-casing: var(--color-ink);
+  --map-line-dt: var(--line-dt);
+  --map-line-dt-casing: none;
+  --map-line-te: var(--line-te);
+  --map-line-te-casing: none;
+  --map-line-bp: var(--line-bp);
+  --map-line-bp-casing: none;
+  --map-line-sk: var(--line-sk);
+  --map-line-sk-casing: none;
+  --map-line-pg: var(--line-pg);
+  --map-line-pg-casing: none;
+  --map-line-ss: var(--color-ink);
+  --map-line-ss-casing: none;
+  --map-line-bus: var(--color-primary);
+  --map-land-standin: var(--color-paper); /* the land the line contrast is measured on */
   --step-node-destination: #1C3A7A; /* white flag 10.9:1 */
 }
 
@@ -177,6 +203,32 @@
     --map-range-text: #8DBBFF; /* info-text colour; 8.0:1 on --color-card */
     --map-live-bus: #0A6B43; /* white text 6.6:1 */
     --map-live-bus-ink: #FFFFFF;
+    /* Route lines on the map (plan 4.3): the line's colour, and a casing only where the colour alone is under 3:1
+       against the land. none = no casing. Measured in tests/test_map_lines.py. */
+    --map-line-ns: var(--line-ns);
+    --map-line-ns-casing: none;
+    --map-line-ew: var(--line-ew);
+    --map-line-ew-casing: none;
+    --map-line-cg: var(--line-cg);
+    --map-line-cg-casing: none;
+    --map-line-ne: var(--line-ne);
+    --map-line-ne-casing: #FFFFFF;
+    --map-line-cc: var(--line-cc);
+    --map-line-cc-casing: none;
+    --map-line-dt: var(--line-dt);
+    --map-line-dt-casing: #FFFFFF;
+    --map-line-te: var(--line-te);
+    --map-line-te-casing: #FFFFFF;
+    --map-line-bp: var(--line-bp);
+    --map-line-bp-casing: none;
+    --map-line-sk: var(--line-sk);
+    --map-line-sk-casing: none;
+    --map-line-pg: var(--line-pg);
+    --map-line-pg-casing: none;
+    --map-line-ss: var(--color-ink);
+    --map-line-ss-casing: none;
+    --map-line-bus: var(--color-primary);
+    --map-land-standin: var(--color-card); /* the land the line contrast is measured on */
     --step-node-destination: #2A4D99; /* derived; white flag 8.0:1 */
   }
 }
@@ -240,6 +292,32 @@
   --map-range-text: #1B68E7; /* link colour; 5.0:1 on --color-card */
   --map-live-bus: #0A6B43; /* white text 6.6:1 */
   --map-live-bus-ink: #FFFFFF;
+  /* Route lines on the map (plan 4.3): the line's colour, and a casing only where the colour alone is under 3:1
+     against the land. none = no casing. Measured in tests/test_map_lines.py. */
+  --map-line-ns: var(--line-ns);
+  --map-line-ns-casing: none;
+  --map-line-ew: var(--line-ew);
+  --map-line-ew-casing: none;
+  --map-line-cg: var(--line-cg);
+  --map-line-cg-casing: none;
+  --map-line-ne: var(--line-ne);
+  --map-line-ne-casing: none;
+  --map-line-cc: var(--line-cc);
+  --map-line-cc-casing: var(--color-ink);
+  --map-line-dt: var(--line-dt);
+  --map-line-dt-casing: none;
+  --map-line-te: var(--line-te);
+  --map-line-te-casing: none;
+  --map-line-bp: var(--line-bp);
+  --map-line-bp-casing: none;
+  --map-line-sk: var(--line-sk);
+  --map-line-sk-casing: none;
+  --map-line-pg: var(--line-pg);
+  --map-line-pg-casing: none;
+  --map-line-ss: var(--color-ink);
+  --map-line-ss-casing: none;
+  --map-line-bus: var(--color-primary);
+  --map-land-standin: var(--color-paper); /* the land the line contrast is measured on */
   --step-node-destination: #1C3A7A; /* white flag 10.9:1 */
 }
 
@@ -302,5 +380,31 @@
   --map-range-text: #8DBBFF; /* info-text colour; 8.0:1 on --color-card */
   --map-live-bus: #0A6B43; /* white text 6.6:1 */
   --map-live-bus-ink: #FFFFFF;
+  /* Route lines on the map (plan 4.3): the line's colour, and a casing only where the colour alone is under 3:1
+     against the land. none = no casing. Measured in tests/test_map_lines.py. */
+  --map-line-ns: var(--line-ns);
+  --map-line-ns-casing: none;
+  --map-line-ew: var(--line-ew);
+  --map-line-ew-casing: none;
+  --map-line-cg: var(--line-cg);
+  --map-line-cg-casing: none;
+  --map-line-ne: var(--line-ne);
+  --map-line-ne-casing: #FFFFFF;
+  --map-line-cc: var(--line-cc);
+  --map-line-cc-casing: none;
+  --map-line-dt: var(--line-dt);
+  --map-line-dt-casing: #FFFFFF;
+  --map-line-te: var(--line-te);
+  --map-line-te-casing: #FFFFFF;
+  --map-line-bp: var(--line-bp);
+  --map-line-bp-casing: none;
+  --map-line-sk: var(--line-sk);
+  --map-line-sk-casing: none;
+  --map-line-pg: var(--line-pg);
+  --map-line-pg-casing: none;
+  --map-line-ss: var(--color-ink);
+  --map-line-ss-casing: none;
+  --map-line-bus: var(--color-primary);
+  --map-land-standin: var(--color-card); /* the land the line contrast is measured on */
   --step-node-destination: #2A4D99; /* derived; white flag 8.0:1 */
 }

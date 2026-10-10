@@ -431,7 +431,7 @@ def test_the_muted_line_and_the_ring_label_follow_the_agreed_wording():
         'var ARRIVING_IN_TEXT = "Arriving in {n} min", ARRIVING_SOON_TEXT = "Arriving in <1 min", ARRIVING_NOW_TEXT = "Arriving now";'
         'var RING_LABEL_TEXT = "about {p} percent chance of catching Bus {service}{eta}{at}";'
         'var RING_ETA_TEXT = " arriving in {n} minutes", RING_ETA_SOON_TEXT = " arriving in under 1 minute", RING_ETA_NOW_TEXT = " arriving now", RING_AT_TEXT = " at {stop}";'
-        "var selectedService = '11'; var selectedBoardingStop = {description: 'Tanjong Rhu Stn Exit 2', stop_code: '90041'};"
+        "function isTrain() { return false; } var selectedService = '11'; var selectedBoardingStop = {description: 'Tanjong Rhu Stn Exit 2', stop_code: '90041'};"
         + _function("fillText") + "\n" + _function("boardingStopName") + "\n" + _function("etaParts") + "\n" + _function("ringLabel") + "\n"
         + "var at = function (s) { return {arrival_time: new Date(Date.now() + s * 1000).toISOString(), is_missed: false}; };"
         "var chance = {point: 92, range_low: 80, range_high: 95};"

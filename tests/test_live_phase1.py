@@ -68,7 +68,8 @@ def test_legs_panel_and_its_controls_are_gone():
                  "Activate Leg 2 Live Tracking"):
         assert gone not in html, gone
     # "Arrived at " belonged to the removed missed-stop UI; Page W's state line "Arrived at the stop" is the only use now
-    assert html.count("Arrived at ") == 1 and 'arrived: "Arrived at the stop"' in html
+    # (a train says "the station": TRAIN_PAGE.walkArrived)
+    assert html.count("Arrived at ") == 2 and 'arrived: "Arrived at the stop"' in html and 'walkArrived: "Arrived at the station"' in html
     for gone in ("live-card__board", "route-motif", "leg2-banner", "journey-timeline", "service-plate", "#track-leg-2"):
         assert gone not in css, gone
     assert "live-card__board" not in guide and "onBoard" not in copy

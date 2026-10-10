@@ -3281,6 +3281,180 @@ body.is-screen-journey main.wrap {
   font-weight: 500;
 }
 
+/* Style guide: the route lines of the map as SVG, on the land stand-in. A casing token of "none" draws no casing. */
+.map-line-sample {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--map-land-standin);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  color: var(--color-ink);
+  font-size: var(--type-caption);
+}
+
+.map-line-sample svg {
+  display: block;
+  width: 100%;
+  height: 1.5rem;
+}
+
+.map-line-sample__casing {
+  stroke-width: 10px;
+  stroke-linecap: butt;
+}
+
+.map-line-sample__line {
+  stroke-width: 6px;
+  stroke-linecap: butt;
+  fill: none;
+}
+
+.map-line-sample--walk .map-line-sample__line {
+  stroke: var(--map-walk-line);
+  stroke-width: 3px;
+  stroke-dasharray: 5 10;
+}
+
+.map-line-sample--bus .map-line-sample__line {
+  stroke: var(--map-line-bus);
+  stroke-width: 5px;
+}
+
+.map-line-sample--bp .map-line-sample__line,
+.map-line-sample--sk .map-line-sample__line,
+.map-line-sample--pg .map-line-sample__line {
+  stroke-dasharray: 1 9;
+  stroke-linecap: round;
+}
+
+.map-line-sample--ns .map-line-sample__casing {
+  stroke: var(--map-line-ns-casing);
+}
+
+.map-line-sample--ns .map-line-sample__line {
+  stroke: var(--map-line-ns);
+}
+
+.map-line-sample--ew .map-line-sample__casing {
+  stroke: var(--map-line-ew-casing);
+}
+
+.map-line-sample--ew .map-line-sample__line {
+  stroke: var(--map-line-ew);
+}
+
+.map-line-sample--cg .map-line-sample__casing {
+  stroke: var(--map-line-cg-casing);
+}
+
+.map-line-sample--cg .map-line-sample__line {
+  stroke: var(--map-line-cg);
+}
+
+.map-line-sample--ne .map-line-sample__casing {
+  stroke: var(--map-line-ne-casing);
+}
+
+.map-line-sample--ne .map-line-sample__line {
+  stroke: var(--map-line-ne);
+}
+
+.map-line-sample--cc .map-line-sample__casing {
+  stroke: var(--map-line-cc-casing);
+}
+
+.map-line-sample--cc .map-line-sample__line {
+  stroke: var(--map-line-cc);
+}
+
+.map-line-sample--dt .map-line-sample__casing {
+  stroke: var(--map-line-dt-casing);
+}
+
+.map-line-sample--dt .map-line-sample__line {
+  stroke: var(--map-line-dt);
+}
+
+.map-line-sample--te .map-line-sample__casing {
+  stroke: var(--map-line-te-casing);
+}
+
+.map-line-sample--te .map-line-sample__line {
+  stroke: var(--map-line-te);
+}
+
+.map-line-sample--bp .map-line-sample__casing {
+  stroke: var(--map-line-bp-casing);
+}
+
+.map-line-sample--bp .map-line-sample__line {
+  stroke: var(--map-line-bp);
+}
+
+.map-line-sample--sk .map-line-sample__casing {
+  stroke: var(--map-line-sk-casing);
+}
+
+.map-line-sample--sk .map-line-sample__line {
+  stroke: var(--map-line-sk);
+}
+
+.map-line-sample--pg .map-line-sample__casing {
+  stroke: var(--map-line-pg-casing);
+}
+
+.map-line-sample--pg .map-line-sample__line {
+  stroke: var(--map-line-pg);
+}
+
+.map-line-sample--ss .map-line-sample__casing {
+  stroke: var(--map-line-ss-casing);
+}
+
+.map-line-sample--ss .map-line-sample__line {
+  stroke: var(--map-line-ss);
+}
+
+/* A train as the first leg: the missed-train card (the left text, the next departures as plain rows) and small fixes. */
+.train-missed {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.train-missed__left {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--type-body);
+  font-weight: 600;
+}
+
+.train-rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.train-rows__item {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  color: var(--color-ink);
+}
+
+.catch-card__not-live {
+  color: var(--color-muted);
+}
+
+.bus-card__title .line-badge {
+  margin-right: var(--space-2);
+}
+
 .overview-state__actions {
   display: flex;
   flex-wrap: wrap;

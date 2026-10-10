@@ -220,7 +220,7 @@ def test_edit_links_are_present_or_absent_as_specified():
 def test_start_runs_select_planned_route_and_the_overview_has_no_pickers():
     html = _page()
     start = _between(html, 'getElementById("start-journey").addEventListener("click"', "});")
-    assert start.index("selectPlannedRoute(pendingRouteOption)") < start.index('pushScreen("live")')
+    assert start.index("selectPlannedRoute(pendingRouteOption") < start.index('pushScreen("live")')
     overview = _between(html, 'id="journey-overview"', "</section>")
     for picker in ("stop-button", "route-choice", "service-button", 'type="radio"', "<select"):
         assert picker not in overview

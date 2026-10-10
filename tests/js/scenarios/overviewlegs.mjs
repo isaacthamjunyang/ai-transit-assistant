@@ -27,7 +27,7 @@ const READ = `(function () {
   function visible(id) { var el = document.getElementById(id); return !!el && !el.hidden && getComputedStyle(el).display !== "none"; }
   function say(id) { var el = document.getElementById(id); return el && visible(id) ? text(el) : null; }
   return {
-    rows: rows, chips: chips, totals: say("overview-totals"), trainNote: say("overview-train-note"),
+    rows: rows, chips: chips, totals: say("overview-totals"),
     fallbackNote: say("overview-fallback-note"), priorityNote: say("overview-priority-note"),
     noRoute: visible("overview-no-route") ? text(document.getElementById("overview-no-route-text")) : null,
     noService: visible("overview-no-service"), reason: say("overview-reason-text"),

@@ -43,7 +43,7 @@ def _mirror_source() -> str:
     tile = _between(INDEX, "var ARRIVING_IN_TEXT", "// The muted line under the heading")
     fill = _between(INDEX, "function fillText(template, values) {", "// \"5 min\", or \"under 1 min\"")
     parts = _between(INDEX, "function singaporeParts(date) {", "function pad2(value)")
-    return FORMAT_DISTANCE + "\n" + parts + "\n" + fill + "\n" + tile + "\n" + page + '\nvar LEAVE_NOW_TEXT = "Leave now";\n'
+    return FORMAT_DISTANCE + "\n" + parts + "\n" + fill + "\n" + tile + "\n" + page + '\nvar LEAVE_NOW_TEXT = "Leave now";\nfunction isTrain() { return false; }  // a bus journey: the train words are unused here\n'
 
 
 needs_node = pytest.mark.skipif(NODE is None, reason="node is not installed, so the mirror parity tests did not run")

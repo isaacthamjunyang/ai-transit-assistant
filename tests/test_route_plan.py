@@ -508,7 +508,7 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
     assert 'id="back-home"' in html
     assert 'aria-label="Back"' in html and ">Back</button>" not in html
     assert html.count("watchPosition(") == 1  # Page W's own fallback watch is the only one in the page script
-    assert html.count("Arrived at ") == 1  # the removed missed-stop string is gone; Page W's state line is the one use
+    assert html.count("Arrived at ") == 2  # the removed missed-stop string is gone; Page W's state line (stop; station for a train)
     assert "No direct or 1-transfer bus connection available for this trip." in html
     assert 'journeyComparison.textContent = "Arrive-by check: N/A"' not in html
     journey_request = html.split("function loadJourney()", 1)[1].split("fetch(url)", 1)[0]
@@ -524,7 +524,7 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
     assert "&leg_index=" in html
     assert "openLeg2" not in html and "activeRoutePlan.leg_index = 2" not in html
     begin = html.split("function beginPlannedLeg()", 1)[1].split("function syncPlannedLegAfterReroute", 1)[0]
-    assert begin.index("leg.boarding_stop_code") < begin.index("startMonitoring(leg.service_no, true)")  # fresh fix first
+    assert begin.index("leg.boarding_stop_code") < begin.index("startMonitoring(legService(leg), true)")  # fresh fix first
     assert "Fastest Route" not in html  # labels stay server-side; the app picks one option
     plan = html.split("function planJourney()", 1)[1].split("function peekOverviewArrivals", 1)[0]
     assert "beginPlannedLeg()" not in plan

@@ -94,7 +94,7 @@ PAIRS = {  # copy.js journeyOverview key: the page's constant
     "totals": "JO_TOTALS", "transfersMany": "JO_TRANSFERS_MANY", "transfersOne": "JO_TRANSFERS_ONE",
     "transfersNone": "JO_TRANSFERS_NONE", "noRouteFound": "JO_NO_ROUTE_FOUND", "noBusOnly": "JO_NO_BUS_ONLY",
     "noMrtOnly": "JO_NO_MRT_ONLY", "bestAvailable": "JO_BEST_AVAILABLE", "needsRouteService": "JO_NEEDS_ROUTE_SERVICE",
-    "fallbackNote": "JO_FALLBACK_NOTE", "trainLiveSoon": "JO_TRAIN_LIVE_SOON",
+    "fallbackNote": "JO_FALLBACK_NOTE",
 }
 
 
@@ -308,14 +308,13 @@ def test_fewest_transfers_says_best_available_when_it_changes_nothing(best_avail
     assert after["priorityNote"] == "This is the best available for this trip."
 
 
-def test_a_train_first_route_is_shown_but_start_journey_stays_off_with_a_note(train_first):
+def test_a_train_first_route_is_shown_and_start_journey_is_on(train_first):
     first = train_first["first"]
     rows = first["rows"]
     assert rows[2]["badge"]["text"] == "NS" and rows[2]["badge"]["name"] == "North-South Line"
     assert re.search(r"About \d+" + NB + "min, scheduled", rows[2]["text"])  # the first leg, a train: not "Arriving in"
     assert "Arriving in" not in rows[2]["text"]
-    assert first["startDisabled"] is True
-    assert first["trainNote"] == "Live guidance for a train start is not ready yet. Choose Bus only to start this journey."
+    assert first["startDisabled"] is False  # the live pages for a train exist now (part 2)
     assert first["arrivalRequests"] == 0  # no bus poll and no bus lookup for a train
 
 
@@ -326,7 +325,7 @@ def test_the_bus_planner_fallback_shows_its_note_and_disables_the_chips_it_canno
     disabled = {c["id"]: c["disabled"] for c in first["chips"]}
     assert disabled == {"priority-fastest": None, "priority-fewest_transfers": None, "priority-least_walking": "true",
                         "priority-bus_only": None, "priority-mrt_only": "true"}
-    assert first["startDisabled"] is False and first["trainNote"] is None
+    assert first["startDisabled"] is False
     kinds = [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in first["rows"]]
     assert kinds == ["origin", "walk", "bus", "walk", "destination"]
     assert first["rows"][2]["lines"][0].startswith("Bus 18") and first["totals"]
@@ -343,6 +342,6 @@ def test_arrow_keys_move_between_enabled_chips_and_refetch(fallback):
 def test_the_plan_describes_the_overview_the_badges_and_the_chips():
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
     for text in ("**Journey overview.**", "**Line badges.**", "**Priority chips.**", "`--line-<code>-ink`",
-                 "Needs the route service.", "Live guidance for a train start is not ready yet.",
+                 "Needs the route service.",
                  "The page always sends `priority`", "Change from {a} to {b} at {station}"):
         assert text in plan, text

@@ -323,9 +323,37 @@ var copy = {
     noMrtOnly: "No MRT or LRT route found. Try another priority.",
     bestAvailable: "This is the best available for this trip.",
     needsRouteService: "Needs the route service.",
-    fallbackNote: "Showing bus routes only. The route service is unavailable.",
-    /* temporary (part 1): a train first leg can be reviewed here but its live pages are not built yet */
-    trainLiveSoon: "Live guidance for a train start is not ready yet. Choose Bus only to start this journey."
+    fallbackNote: "Showing bus routes only. The route service is unavailable."
+  },
+  /* proposed, needs approval (plan_edits_9 4.6, 4.8): the words of the live pages for a train first leg that the server
+     does not send. Mirrored by hand in index.html (TRAIN_PAGE). */
+  trainPage: {
+    walkTitle: "Walk to your station",
+    walkDistance: "{distance} to the station",
+    walkArrived: "Arrived at the station",
+    catchHeading: "Chance to catch the {line} train",
+    ringLabel: "about {p} percent chance of catching the {line} train{eta}{at}",
+    departsIn: "Departs in {n} min",
+    departsSoon: "Departs in <1 min",
+    departsNow: "Departs now",
+    ringDepartsIn: " departing in {n} minutes",
+    ringDepartsSoon: " departing in under 1 minute",
+    ringDepartsNow: " departing now",
+    departsLabel: "Train departs",
+    tileAway: "The train departs in {e}\u00a0min and the walk takes about {w}\u00a0min.",
+    tileDeparting: "The train is departing now and the walk takes about {w}\u00a0min.",
+    seeTimes: "See train times",
+    question: "Did you catch the train?",
+    nextTrains: "Next trains",
+    scheduled: "Scheduled",
+    every: "Every about {n} min",
+    departsAt: "Departs {time}",
+    toward: "Toward {terminus}",
+    leftOnly: "The {line} train has left.",
+    trainTitle: "{line} train",
+    about: "about {time}",
+    left: "The {line} train has left. The next one is at about {time}.",
+    notLive: "Train times are scheduled, not live."
   },
   /* proposed, needs approval (plan_edits_9 4.2): the line names shown beside the badge */
   lineNames: {
