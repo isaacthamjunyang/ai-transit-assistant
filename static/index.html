@@ -303,6 +303,17 @@
       <div class="card overview-card" id="overview-card" aria-busy="false">
         <h2 id="overview-title" class="overview-title">Your journey</h2>
         <p id="overview-reason" class="overview-reason" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span id="overview-reason-text"></span></p>
+        <div id="overview-priority" class="overview-priority">
+          <div class="arrive-chips" role="radiogroup" aria-label="Priority">
+            <button type="button" class="arrive-chip is-selected" id="priority-fastest" role="radio" aria-checked="true" tabindex="0" data-priority="fastest">Fastest</button>
+            <button type="button" class="arrive-chip" id="priority-fewest_transfers" role="radio" aria-checked="false" tabindex="-1" data-priority="fewest_transfers">Fewest transfers</button>
+            <button type="button" class="arrive-chip" id="priority-least_walking" role="radio" aria-checked="false" tabindex="-1" data-priority="least_walking">Least walking</button>
+            <button type="button" class="arrive-chip" id="priority-bus_only" role="radio" aria-checked="false" tabindex="-1" data-priority="bus_only">Bus only</button>
+            <button type="button" class="arrive-chip" id="priority-mrt_only" role="radio" aria-checked="false" tabindex="-1" data-priority="mrt_only">MRT only</button>
+          </div>
+          <p id="overview-fallback-note" class="overview-note" hidden></p>
+          <p id="overview-priority-note" class="overview-note" hidden></p>
+        </div>
         <ol id="overview-skeleton" class="journey-steps journey-steps--skeleton" aria-hidden="true" hidden>
           <li class="journey-step"><span class="step-node step-node--skeleton"></span><span class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></span></li>
           <li class="journey-step"><span class="step-node step-node--skeleton"></span><span class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></span></li>
@@ -315,7 +326,7 @@
           <button type="button" class="secondary" id="overview-retry">Try again</button>
         </div>
         <div id="overview-no-route" class="overview-state" hidden>
-          <p class="banner banner--caution">No direct or 1-transfer bus connection available for this trip.</p>
+          <p id="overview-no-route-text" class="banner banner--caution">No direct or 1-transfer bus connection available for this trip.</p>
           <div class="overview-state__actions">
             <button type="button" class="secondary" id="overview-edit-destination">Edit destination</button>
             <button type="button" class="secondary" id="overview-edit-time">Edit arrive-by time</button>
@@ -332,6 +343,8 @@
           <p class="banner banner--denied">Nearby stops are unavailable.</p>
         </div>
         <ol id="overview-timeline" class="journey-steps"></ol>
+        <p id="overview-totals" class="overview-totals" hidden></p>
+        <p id="overview-train-note" class="overview-note" hidden></p>
       </div>
       <div class="arrive-box">
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
@@ -2612,6 +2625,8 @@
         });
     });
 
+    var TRAIN_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"13\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><rect x=\"8.5\" y=\"6\" width=\"7\" height=\"4\" rx=\"1\" fill=\"currentColor\"></rect><circle cx=\"9.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><circle cx=\"14.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><path d=\"M8 21l2-5M16 21l-2-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+    var CHANGE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var BUS_TILE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"5\" y=\"3\" width=\"14\" height=\"15\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><path d=\"M5 11h14M8 18v2M16 18v2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><circle cx=\"8.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle><circle cx=\"15.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle></svg>";
     var WALK_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"1.8\" fill=\"currentColor\"></circle><path d=\"M10 21l2-6 2.5 2.5V21M8 12l2.5-4.5h3l2 3.5 2.5 1M12.5 7.5L11 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var NOTE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 11v6M12 7.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
@@ -4809,6 +4824,8 @@
         journeyPanel.hidden = (name !== "live" && name !== "arrivals" && name !== "newjourney" && name !== "walk") || !confirmedDestinationStop;
       }
       if (name === "journey") {
+        planPriority = "fastest";
+        syncPriorityChips();
         planJourney();
       }
       if (name === "arrivals") {
@@ -5187,6 +5204,48 @@
       no_target: "Chosen for you: the quickest option we found."
     };
     var SCHEDULE_HEADWAY = "Schedule: about every {minutes} min.";
+    // Mirrors of copy.js journeyOverview (plan_edits_9 4.9) and lineNames. Tests pin the two together.
+    var JO_WALK_ROW = "Walk {n}\u00a0min";
+    var JO_WALK_ROW_TO = "{distance} to {place}";
+    var JO_TOWARD = "Toward {terminus}";
+    var JO_BOARD = "Board";
+    var JO_GET_OFF = "Get off";
+    var JO_STOPS = "{k} stops · {m}\u00a0min";
+    var JO_STOP_ONE = "1 stop · {m}\u00a0min";
+    var JO_CHANGE_STATION = "Change at {station}";
+    var JO_CHANGE_STOP = "Change at {stop}";
+    var JO_CHANGE_CODES = "Change from {a} to {b} at {station}";
+    var JO_TRANSFER_TIMES = "{w}\u00a0min walk · about {t}\u00a0min wait";
+    var JO_TRANSFER_WALK = "{w}\u00a0min walk";
+    var JO_TRANSFER_WAIT = "About {t}\u00a0min wait";
+    var JO_SCHEDULED_ABOUT = "About {n}\u00a0min, scheduled";
+    var JO_SCHEDULED_AT = "About {time} · every about {h}\u00a0min";
+    var JO_SCHEDULED_TIME = "About {time}";
+    var JO_TOTALS = "{n}\u00a0min · {t} · {w}\u00a0min walking";
+    var JO_TRANSFERS_MANY = "{t} transfers";
+    var JO_TRANSFERS_ONE = "1 transfer";
+    var JO_TRANSFERS_NONE = "No transfers";
+    var JO_NO_ROUTE_STATIC = "No direct or 1-transfer bus connection available for this trip.";
+    var JO_NO_ROUTE_FOUND = "No route found for this trip.";
+    var JO_NO_BUS_ONLY = "No bus-only route found. Try another priority.";
+    var JO_NO_MRT_ONLY = "No MRT or LRT route found. Try another priority.";
+    var JO_BEST_AVAILABLE = "This is the best available for this trip.";
+    var JO_NEEDS_ROUTE_SERVICE = "Needs the route service.";
+    var JO_FALLBACK_NOTE = "Showing bus routes only. The route service is unavailable.";
+    var JO_TRAIN_LIVE_SOON = "Live guidance for a train start is not ready yet. Choose Bus only to start this journey.";
+    var LINE_NAMES = {
+      NS: "North-South Line", EW: "East-West Line", CG: "Changi Airport Branch", NE: "North-East Line",
+      CC: "Circle Line", DT: "Downtown Line", TE: "Thomson-East Coast Line", BP: "Bukit Panjang LRT",
+      SK: "Sengkang LRT", PG: "Punggol LRT", SS: "Sentosa Express"
+    };
+    var LINE_BADGE_CODES = ["NS", "EW", "CG", "NE", "CC", "DT", "TE", "BP", "SK", "PG", "SS"];
+    // The priority chips. Each journey starts on Fastest (it is not remembered); a chip refetches the plan.
+    var PRIORITY_IDS = ["fastest", "fewest_transfers", "least_walking", "bus_only", "mrt_only"];
+    var FALLBACK_UNSUPPORTED = ["least_walking", "mrt_only"];
+    var planPriority = "fastest";
+    var planFallback = false;
+    var pendingItinerary = null;
+    var overviewJourneyMinutes = null;
     var FLAG_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var PIN_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z\" fill=\"currentColor\"></path><circle cx=\"12\" cy=\"11\" r=\"2.5\" class=\"step-node__hole\"></circle></svg>";
 
@@ -5211,6 +5270,8 @@
       document.getElementById("start-journey").disabled = state !== "ready";
       if (state !== "ready") {
         document.getElementById("overview-reason").hidden = true;
+        document.getElementById("overview-totals").hidden = true;
+        document.getElementById("overview-train-note").hidden = true;
       }
     }
 
@@ -5219,6 +5280,7 @@
       overviewPeek = null;
       overviewPeekRequested = false;
       pendingRouteOption = null;
+      pendingItinerary = null;
       if (!confirmedDestinationStop || !selectedDestination) {
         setOverviewState("unavailable");
         return;
@@ -5237,6 +5299,7 @@
       if (arriveByInput.value) {
         url += "&arrive_by=" + encodeURIComponent(arriveByInput.value);
       }
+      url += "&priority=" + encodeURIComponent(planPriority);
       url += walkSpeedQuery();
       fetch(url)
         .then(function (response) {
@@ -5252,15 +5315,21 @@
             return;
           }
           renderPlanningWarning(body.planning_warning);
+          planFallback = body.fallback_note === true;
+          syncPriorityChips();
+          showPlanNotes(body);
           if (body.route_status === "no_service") {
             setOverviewState("no-service");
             return;
           }
           if (body.route_status !== "ok" || !body.option) {
+            document.getElementById("overview-no-route-text").textContent = noRouteText(body);
             setOverviewState("no-route");
             return;
           }
           pendingRouteOption = body.option;
+          pendingItinerary = body.itinerary || null;
+          overviewJourneyMinutes = body.journey && typeof body.journey.ride_minutes === "number" ? body.journey.ride_minutes : null;
           var first = body.option.legs[0];
           var stop = body.boarding_stop || {};
           selectedBoardingStop = {
@@ -5269,7 +5338,7 @@
             latitude: stop.latitude,
             longitude: stop.longitude,
             distance_m: stop.distance_m,
-            services: [first.service_no]
+            services: legIsRail(first) ? [] : [first.service_no]
           };
           var reason = document.getElementById("overview-reason");
           document.getElementById("overview-reason-text").textContent = PLAN_REASON_TEXT[body.reason] || "";
@@ -5279,7 +5348,10 @@
           }
           setOverviewState("ready");
           renderJourneyOverview();
-          peekOverviewArrivals(first);
+          syncStartAvailability();
+          if (!legIsRail(first)) {
+            peekOverviewArrivals(first);
+          }
         })
         .catch(function () {
           if (generation === planGeneration) {
@@ -5329,7 +5401,8 @@
       var node = document.createElement("span");
       node.className = "step-node step-node--" + kind;
       node.setAttribute("aria-hidden", "true");
-      node.innerHTML = kind === "origin" ? PIN_SVG : kind === "destination" ? FLAG_SVG : kind === "done" ? CATCH_YES_SVG : BUS_TILE_SVG;
+      node.innerHTML = kind === "origin" ? PIN_SVG : kind === "destination" ? FLAG_SVG : kind === "done" ? CATCH_YES_SVG
+        : kind === "walk" ? WALK_SVG : kind === "rail" ? TRAIN_SVG : kind === "change" ? CHANGE_SVG : BUS_TILE_SVG;
       var body = document.createElement("div");
       body.className = "journey-step__body";
       lines.forEach(function (line) {
@@ -5407,6 +5480,170 @@
       return pill;
     }
 
+    function legIsRail(leg) {
+      return !!leg && leg.kind === "rail";
+    }
+
+    function legIsWalk(leg) {
+      return !!leg && leg.kind === "walk";
+    }
+
+    function stopLabel(name, code) {
+      return (name || code) + " (" + code + ")";
+    }
+
+    // "Bishan MRT Station" and "Vivocity Station" read "Bishan" and "Vivocity" in a sentence.
+    function stationName(name) {
+      return String(name || "").replace(/\s+(MRT|LRT)\s+Station$/i, "").replace(/\s+Station$/i, "");
+    }
+
+    // The line's badge: the code as text on the line's own token colour. An unknown code gets the neutral badge.
+    function lineBadge(code) {
+      var upper = String(code || "").toUpperCase();
+      var badge = document.createElement("span");
+      badge.className = "line-badge" + (LINE_BADGE_CODES.indexOf(upper) !== -1 ? " line-badge--" + upper.toLowerCase() : "");
+      badge.textContent = upper;
+      return badge;
+    }
+
+    // Badge and the line's name side by side: the code and the name are both text, so colour is never the only signal.
+    function lineHead(leg) {
+      var code = String(leg.line_code || "").toUpperCase();
+      var line = document.createElement("p");
+      line.className = "journey-step__line";
+      line.appendChild(lineBadge(code));
+      var name = document.createElement("span");
+      name.textContent = LINE_NAMES[code] || leg.line_name || code;
+      line.appendChild(name);
+      return line;
+    }
+
+    function legStopsLine(leg) {
+      var count = typeof leg.stop_count === "number" ? leg.stop_count : Math.max(1, (leg.stops || []).length - 1);
+      var minutes = typeof leg.ride_minutes === "number" ? Math.max(1, Math.round(leg.ride_minutes)) : null;
+      if (minutes === null) {
+        return "";
+      }
+      return fillText(count === 1 ? JO_STOP_ONE : JO_STOPS, { k: count, m: minutes });
+    }
+
+    // The schedule line of a leg after the first: OneMap's time, and the published headway when there is one.
+    function scheduleLine(leg) {
+      var time = leg.depart ? leaveClockText(leg.depart, Date.now()) : "";
+      var headway = typeof leg.published_headway_minutes === "number" ? leg.published_headway_minutes : null;
+      if (time && headway !== null) {
+        return fillText(JO_SCHEDULED_AT, { time: time, h: headway });
+      }
+      if (time) {
+        return fillText(JO_SCHEDULED_TIME, { time: time });
+      }
+      return headway !== null ? SCHEDULE_HEADWAY.replace("{minutes}", headway) : "";
+    }
+
+    // One row for a bus or train leg. position 0 is the first transit leg: a bus shows its live line, a train
+    // "About N min, scheduled". Later legs show the schedule line. No fares and no street names.
+    function transitRow(leg, position, live) {
+      var rail = legIsRail(leg);
+      var lines = [rail ? lineHead(leg) : serviceLine(leg, live)];
+      if (leg.headsign) {
+        lines.push(stepLine(fillText(JO_TOWARD, { terminus: leg.headsign })));
+      }
+      lines.push(stepLine(JO_BOARD + " " + stopLabel(leg.boarding_stop_name, leg.boarding_stop_code)));
+      lines.push(stepLine(JO_GET_OFF + " " + stopLabel(leg.alighting_stop_name, leg.alighting_stop_code)));
+      lines.push(stepLine(legStopsLine(leg)));
+      if (position === 0) {
+        if (rail && leg.depart) {
+          var minutes = Math.max(1, Math.round((new Date(leg.depart).getTime() - Date.now()) / 60000));
+          lines.push(stepLine(fillText(JO_SCHEDULED_ABOUT, { n: minutes })));
+        } else if (live && live.monitored && !displayFrozen && live.arrival_time) {
+          var when = countdownLabel(live.arrival_time);
+          lines.push(stepLine(/min/.test(when) ? "Arriving in " + when : when, "journey-step__arriving"));
+        }
+      } else {
+        lines.push(stepLine(scheduleLine(leg)));
+        if (!rail) {
+          lines.push(stepLine(FIRST_BUS_ONLY_NOTE));
+        }
+      }
+      return stepItem(rail ? "rail" : "bus", null, lines, null);
+    }
+
+    // The change between two transit legs: where, how long the walk is and how long the wait is.
+    function transferRow(previous, next, walks, fallbackMetres) {
+      var station = stationName(previous.alighting_stop_name || previous.alighting_stop_code);
+      var sameStation = station.toLowerCase() === stationName(next.boarding_stop_name || next.boarding_stop_code).toLowerCase();
+      var title;
+      if (legIsRail(previous) && legIsRail(next) && sameStation && previous.alighting_stop_code !== next.boarding_stop_code) {
+        title = fillText(JO_CHANGE_CODES, { a: previous.alighting_stop_code, b: next.boarding_stop_code, station: station });
+      } else if (legIsRail(previous) || legIsRail(next)) {
+        title = fillText(JO_CHANGE_STATION, { station: station });
+      } else {
+        title = fillText(JO_CHANGE_STOP, { stop: previous.alighting_stop_name || previous.alighting_stop_code });
+      }
+      var metres = 0;
+      var seconds = 0;
+      walks.forEach(function (walk) {
+        metres += walk.distance_m || 0;
+        seconds += walk.duration_s || 0;
+      });
+      if (!walks.length && typeof fallbackMetres === "number" && fallbackMetres > 0) {
+        metres = fallbackMetres;
+      }
+      var walkMin = metres > 0 ? walkMinutes(metres) : 0;
+      var waitMin = 0;
+      if (previous.arrive && next.depart) {
+        waitMin = Math.round((new Date(next.depart).getTime() - new Date(previous.arrive).getTime()) / 60000 - seconds / 60);
+      }
+      var detail = "";
+      if (walkMin > 0 && waitMin > 0) {
+        detail = fillText(JO_TRANSFER_TIMES, { w: walkMin, t: waitMin });
+      } else if (walkMin > 0) {
+        detail = fillText(JO_TRANSFER_WALK, { w: walkMin });
+      } else if (waitMin > 0) {
+        detail = fillText(JO_TRANSFER_WAIT, { t: waitMin });
+      }
+      return stepItem("change", title, [stepLine(detail)], null);
+    }
+
+    // The walk from the last stop to the place. Its Edit link is the old "Edit destination stop" control.
+    function finalWalkRow(walks, destStop) {
+      var metres = 0;
+      walks.forEach(function (walk) {
+        metres += walk.distance_m || 0;
+      });
+      var edit = { label: "Edit destination stop", action: function () { backToScreen("stops"); } };
+      if (metres > 0) {
+        return stepItem("walk", fillText(JO_WALK_ROW, { n: walkMinutes(metres) }),
+          [stepLine(fillText(JO_WALK_ROW_TO, { distance: formatDistance(metres), place: destinationDisplayName() }))], edit);
+      }
+      if (destStop && typeof destStop.walk_minutes === "number") {
+        return stepItem("walk", fillText(JO_WALK_ROW, { n: destStop.walk_minutes }), [stepLine("To " + destinationDisplayName())], edit);
+      }
+      return destStop ? stepItem("walk", "", [stepLine(destStop.stop_name)], edit) : null;
+    }
+
+    function overviewTotalsText(transit, toBoardMetres) {
+      var minutes;
+      var transfers;
+      var walking;
+      if (pendingItinerary && pendingItinerary.totals) {
+        minutes = pendingItinerary.totals.minutes;
+        transfers = pendingItinerary.totals.transfers;
+        walking = pendingItinerary.totals.walk_minutes;
+      } else {
+        minutes = overviewJourneyMinutes;
+        transfers = Math.max(0, transit.length - 1);
+        walking = (toBoardMetres !== null ? walkMinutes(toBoardMetres) : 0)
+          + (confirmedDestinationStop && typeof confirmedDestinationStop.walk_minutes === "number" ? confirmedDestinationStop.walk_minutes : 0);
+      }
+      if (typeof minutes !== "number" || typeof walking !== "number") {
+        return "";
+      }
+      var count = transfers === 0 ? JO_TRANSFERS_NONE : transfers === 1 ? JO_TRANSFERS_ONE : fillText(JO_TRANSFERS_MANY, { t: transfers });
+      return fillText(JO_TOTALS, { n: minutes, t: count, w: walking });
+    }
+
+    // One row per leg of the chosen itinerary (OneMap: walk, bus and train legs; the bus planner: its bus legs).
     function renderJourneyOverview() {
       var list = document.getElementById("overview-timeline");
       var option = pendingRouteOption;
@@ -5414,57 +5651,141 @@
         return;
       }
       list.replaceChildren();
-      var legs = option.legs;
-      var first = legs[0];
-      var boardPoint = legLatLngs(first)[0];
+      var legs = pendingItinerary && pendingItinerary.legs ? pendingItinerary.legs : option.legs;
+      var transit = legs.filter(function (leg) { return !legIsWalk(leg); });
+      var firstTransit = transit[0];
+      var boardPoint = legLatLngs(firstTransit)[0];
       var toBoard = boardPoint && userLat !== null && userLon !== null
         ? haversineMetres(userLat, userLon, boardPoint[0], boardPoint[1])
         : null;
       list.appendChild(stepItem("origin", "", [
         stepLine("From", "journey-step__kicker"),
-        stepLine("Your current location", "journey-step__title"),
-        stepLine(toBoard !== null ? formatDistance(toBoard) + " to boarding stop" : "")
+        stepLine("Your current location", "journey-step__title")
       ], null));
-      list.appendChild(stepItem("stop", "Boarding stop", [
-        stepLine((first.boarding_stop_name || first.boarding_stop_code) + " (" + first.boarding_stop_code + ")"),
-        stepLine(toBoard !== null ? "~ " + walkMinutes(toBoard) + " min walk" : "")
-      ], null));
-      legs.forEach(function (leg, index) {
-        var live = index === 0 ? liveDataFor(leg) : null;
-        var lines = [serviceLine(leg, live), stepLine("To " + destinationDisplayName())];
-        if (live && live.monitored && !displayFrozen && live.arrival_time) {
-          var when = countdownLabel(live.arrival_time);
-          lines.push(stepLine(/min/.test(when) ? "Arriving in " + when : when, "journey-step__arriving"));
-        }
-        if (index > 0) {
-          if (typeof leg.published_headway_minutes === "number") {
-            lines.push(stepLine(SCHEDULE_HEADWAY.replace("{minutes}", leg.published_headway_minutes)));
+      if (toBoard !== null) {
+        list.appendChild(stepItem("walk", fillText(JO_WALK_ROW, { n: walkMinutes(toBoard) }), [
+          stepLine(fillText(JO_WALK_ROW_TO, {
+            distance: formatDistance(toBoard),
+            place: stopLabel(firstTransit.boarding_stop_name, firstTransit.boarding_stop_code)
+          }))
+        ], null));
+      }
+      var previous = null;
+      var between = [];
+      legs.forEach(function (leg) {
+        if (legIsWalk(leg)) {
+          if (previous) {
+            between.push(leg);
           }
-          lines.push(stepLine(FIRST_BUS_ONLY_NOTE));
+          return;
         }
-        list.appendChild(stepItem("bus", "Bus service", lines, null));
-        if (index === 0 && legs.length > 1) {
-          var transferWalk = typeof option.transfer_distance_m === "number" && option.transfer_distance_m > 0
-            ? "~ " + walkMinutes(option.transfer_distance_m) + " min walk"
-            : "";
-          list.appendChild(stepItem("stop", "Transfer stop", [
-            stepLine((leg.alighting_stop_name || leg.alighting_stop_code) + " (" + leg.alighting_stop_code + ")"),
-            stepLine(transferWalk)
-          ], null));
+        if (previous) {
+          list.appendChild(transferRow(previous, leg, between, pendingItinerary ? 0 : option.transfer_distance_m));
+          between = [];
         }
+        var position = transit.indexOf(leg);
+        list.appendChild(transitRow(leg, position, position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null));
+        previous = leg;
       });
-      var destStop = confirmedDestinationStop;
-      if (destStop) {
-        list.appendChild(stepItem("stop", "Destination stop", [
-          stepLine(destStop.stop_name),
-          stepLine(typeof destStop.walk_minutes === "number" ? "~ " + destStop.walk_minutes + " min walk to destination" : "")
-        ], { label: "Edit destination stop", action: function () { backToScreen("stops"); } }));
+      var finalRow = finalWalkRow(between, confirmedDestinationStop);
+      if (finalRow) {
+        list.appendChild(finalRow);
       }
       list.appendChild(stepItem("destination", "Destination", [
         stepLine(destinationDisplayName())
       ], { label: "Edit destination", action: function () { backToScreen("results"); } }));
+      var totals = document.getElementById("overview-totals");
+      totals.textContent = overviewTotalsText(transit, toBoard);
+      totals.hidden = !totals.textContent;
       syncArriveBySummary();
       syncOverviewArrive();
+    }
+
+    // Priority chips: a radio group. Each journey opens on Fastest; a tap or an arrow key picks one and refetches.
+    function priorityDisabled(id) {
+      return planFallback && FALLBACK_UNSUPPORTED.indexOf(id) !== -1;
+    }
+
+    function syncPriorityChips() {
+      PRIORITY_IDS.forEach(function (id) {
+        var chip = document.getElementById("priority-" + id);
+        if (!chip) {
+          return;
+        }
+        var on = id === planPriority;
+        chip.setAttribute("aria-checked", on ? "true" : "false");
+        chip.classList.toggle("is-selected", on);
+        chip.tabIndex = on ? 0 : -1;
+        if (priorityDisabled(id)) {
+          chip.setAttribute("aria-disabled", "true");
+        } else {
+          chip.removeAttribute("aria-disabled");
+        }
+      });
+    }
+
+    function selectPriority(id) {
+      if (PRIORITY_IDS.indexOf(id) === -1 || id === planPriority || priorityDisabled(id)) {
+        return;
+      }
+      planPriority = id;
+      syncPriorityChips();
+      planJourney();
+    }
+
+    PRIORITY_IDS.forEach(function (id, index) {
+      var chip = document.getElementById("priority-" + id);
+      chip.addEventListener("click", function () {
+        selectPriority(id);
+      });
+      chip.addEventListener("keydown", function (event) {
+        var step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
+          : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
+        if (!step) {
+          return;
+        }
+        event.preventDefault();
+        for (var offset = 1; offset <= PRIORITY_IDS.length; offset += 1) {
+          var next = PRIORITY_IDS[(index + step * offset + PRIORITY_IDS.length * offset) % PRIORITY_IDS.length];
+          if (!priorityDisabled(next)) {
+            document.getElementById("priority-" + next).focus();
+            selectPriority(next);
+            return;
+          }
+        }
+      });
+    });
+
+    // The fallback note, the "Needs the route service." line and the "best available" line under the chips.
+    function showPlanNotes(body) {
+      var fallback = document.getElementById("overview-fallback-note");
+      var note = document.getElementById("overview-priority-note");
+      fallback.textContent = planFallback ? JO_FALLBACK_NOTE : "";
+      fallback.hidden = !planFallback;
+      note.textContent = planFallback ? JO_NEEDS_ROUTE_SERVICE : (body && body.best_available === true ? JO_BEST_AVAILABLE : "");
+      note.hidden = !note.textContent;
+    }
+
+    // What the no-route banner says: the bus planner keeps its own sentence, a chip with nothing has its own.
+    function noRouteText(body) {
+      if (body.route_status === "priority_unavailable") {
+        return JO_NEEDS_ROUTE_SERVICE;
+      }
+      if (body.planner !== "onemap") {
+        return JO_NO_ROUTE_STATIC;
+      }
+      return planPriority === "bus_only" ? JO_NO_BUS_ONLY : planPriority === "mrt_only" ? JO_NO_MRT_ONLY : JO_NO_ROUTE_FOUND;
+    }
+
+    // A train first leg can be reviewed here, but its live pages are not built yet (part 2): Start journey stays off.
+    function syncStartAvailability() {
+      var rail = !!(pendingRouteOption && pendingRouteOption.legs && legIsRail(pendingRouteOption.legs[0]));
+      var note = document.getElementById("overview-train-note");
+      if (rail) {
+        document.getElementById("start-journey").disabled = true;
+      }
+      note.textContent = rail ? JO_TRAIN_LIVE_SOON : "";
+      note.hidden = !rail;
     }
 
     function syncOverviewArrive() {

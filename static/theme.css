@@ -85,6 +85,39 @@
   --step-node-destination: #1C3A7A; /* white flag 10.9:1 */
 }
 
+/* MRT and LRT line badges (the official fills of the LTA train GTFS). The fill is a brand colour, the same in both
+   themes; the text colour is the one that gives at least 4.5:1 on it: white on NS 5.02, NE 6.84, DT 7.44 and TE 5.35,
+   black on EW/CG 6.03 (white is 3.48), CC 10.78 and the LRT lines 5.09 (white is 4.13). SS (Sentosa Express) has no
+   official colour: it uses the neutral tint and the ink. */
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"],
+.theme-sample-light,
+.theme-sample-dark {
+  --line-ns: #D62821;
+  --line-ns-ink: #FFFFFF;
+  --line-ew: #189E4A;
+  --line-ew-ink: #000000;
+  --line-cg: #189E4A;
+  --line-cg-ink: #000000;
+  --line-ne: #844184;
+  --line-ne-ink: #FFFFFF;
+  --line-cc: #F2AD27;
+  --line-cc-ink: #000000;
+  --line-dt: #0354A6;
+  --line-dt-ink: #FFFFFF;
+  --line-te: #9D5A25;
+  --line-te-ink: #FFFFFF;
+  --line-bp: #6E8270;
+  --line-bp-ink: #000000;
+  --line-sk: #6E8270;
+  --line-sk-ink: #000000;
+  --line-pg: #6E8270;
+  --line-pg-ink: #000000;
+  --line-ss: var(--tint-neutral);
+  --line-ss-ink: var(--color-ink);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-paper: #0E1726; /* derived, not in mockup */

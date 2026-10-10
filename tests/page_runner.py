@@ -66,7 +66,7 @@ def _free_port() -> int:
 
 @contextmanager
 def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str = "warning", lta_status: int = 200,
-                reroute_stub: bool = False):
+                reroute_stub: bool = False, onemap=None, rail_table: dict | None = None):
     """The real FastAPI app on a local port, with the fake cache and a fake LTA.
 
     eta_minutes is one number (one bus) or a list (NextBus, NextBus2, NextBus3). With reroute_stub the reroute
@@ -86,6 +86,10 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
     patches.delenv("OPENAI_API_KEY", raising=False)
 
     patches.setattr(observations, "DEFAULT_DB_PATH", tmp_path / "observations.db")
+    # OneMap: with no `onemap` stub the app has no token, so the planner uses the bus planner (fallback) and no OneMap
+    # call is made. With a stub, routing answers come from it: onemap(mode) returns the answer body, or None for a 404.
+    patches.setattr("main.read_onemap_credentials", lambda: ("stub-token", "", "") if onemap else ("", "", ""))
+    patches.setattr("main.load_rail_table", lambda: rail_table)
     patches.delenv("DEMO_MODE", raising=False)
     patches.setattr("main.load_static_data", lambda: cache)
     patches.setattr(arrivals, "read_account_key", lambda: "test-account-key")
@@ -112,6 +116,11 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
         patches.setattr("main.plan_reroute", fired_decision)
 
     def fake_get(self, url, *args, **kwargs):
+        if "routingsvc/route" in str(url):
+            body = onemap(kwargs.get("params", {}).get("mode")) if onemap else None
+            return httpx.Response(200, json=body) if body is not None else httpx.Response(404, json={"error": "none"})
+        if "onemap.gov.sg" in str(url):  # nothing else may reach OneMap from a test
+            return httpx.Response(503, json={})
         if "/v3/BusArrival" in str(url):
             if lta_status != 200:
                 return httpx.Response(lta_status, json={})
@@ -138,6 +147,8 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
         thread.join(timeout=10)
         patches.undo()
         demo.reset_to_live()
+        arrivals._peek_handoff.clear()  # a peek the overview made and no Start ever used must not reach the next test
+        arrivals.clear_remembered_arrivals()
 
 
 def _wait_until_serving(server, base: str, limit_s: float = 30.0) -> None:

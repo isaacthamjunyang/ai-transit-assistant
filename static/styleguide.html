@@ -586,6 +586,18 @@
       </div>
     </section>
 
+    <section class="stack" aria-labelledby="legs-heading">
+      <h2 id="legs-heading">Line badges, leg rows and priority chips</h2>
+      <div class="place-row-samples theme-sample-light">
+        <h3>Light</h3>
+        <div id="legs-sample-light" class="stack"></div>
+      </div>
+      <div class="place-row-samples theme-sample-dark">
+        <h3>Dark</h3>
+        <div id="legs-sample-dark" class="stack"></div>
+      </div>
+    </section>
+
     <section class="stack" aria-labelledby="map-heading">
       <h2 id="map-heading">Map markers</h2>
       <div id="guide-map" class="guide-map" aria-label="Sample map with user, boarding stop, and destination stop"></div>
@@ -1032,6 +1044,93 @@
         + "<h4>Status grid: location uncertain</h4>" + sgStatus("uncertain");
     }
 
+    // Line badges, leg rows and the priority chips (plan_edits_9 4.1, 4.2, 4.4). The same classes as the overview.
+    var SG_LINE_CODES = ["NS", "EW", "CG", "NE", "CC", "DT", "TE", "BP", "SK", "PG", "SS"];
+    var SG_WALK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"1.8\" fill=\"currentColor\"></circle><path d=\"M10 21l2-6-3-3 1-4 3 2 3 1M12 15l3 2 1 4M10 8l-3 3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var SG_TRAIN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"13\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><rect x=\"8.5\" y=\"6\" width=\"7\" height=\"4\" rx=\"1\" fill=\"currentColor\"></rect><circle cx=\"9.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><circle cx=\"14.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><path d=\"M8 21l2-5M16 21l-2-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+    var SG_CHANGE_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    function sgFill(template, values) {
+      Object.keys(values).forEach(function (key) {
+        template = template.split("{" + key + "}").join(values[key]);
+      });
+      return template;
+    }
+
+    function sgBadge(code) {
+      return "<span class=\"line-badge line-badge--" + code.toLowerCase() + "\">" + code + "</span>";
+    }
+
+    function sgLineHead(code) {
+      return "<p class=\"journey-step__line\">" + sgBadge(code) + "<span>" + copy.lineNames[code] + "</span></p>";
+    }
+
+    function sgLegRow(kind, title, lines, editLabel) {
+      var icon = kind === "walk" ? SG_WALK_ICON : kind === "rail" ? SG_TRAIN_ICON : kind === "change" ? SG_CHANGE_ICON
+        : kind === "origin" ? PIN_FILL_ICON : kind === "destination" ? FLAG_ICON : BUS_SVG;
+      return "<li class=\"journey-step journey-step--" + kind + "\"><span class=\"step-node step-node--" + kind + "\" aria-hidden=\"true\">" + icon + "</span>"
+        + "<div class=\"journey-step__body\">" + (title ? "<p class=\"journey-step__title\">" + title + "</p>" : "") + lines.join("") + "</div>"
+        + (editLabel ? "<button type=\"button\" class=\"link-button journey-step__edit\" aria-label=\"" + editLabel + "\">" + jo.edit + "</button>" : "")
+        + "</li>";
+    }
+
+    function sgChips(selected, disabled) {
+      var labels = [["fastest", jo.priorityFastest], ["fewest_transfers", jo.priorityFewest], ["least_walking", jo.priorityLeastWalk],
+        ["bus_only", jo.priorityBus], ["mrt_only", jo.priorityMrt]];
+      return "<div class=\"arrive-chips\" role=\"radiogroup\" aria-label=\"" + jo.priorityLabel + "\">" + labels.map(function (pair) {
+        var on = pair[0] === selected;
+        var off = disabled.indexOf(pair[0]) !== -1;
+        return "<button type=\"button\" class=\"arrive-chip" + (on ? " is-selected" : "") + "\" role=\"radio\" aria-checked=\"" + on + "\""
+          + (off ? " aria-disabled=\"true\"" : "") + ">" + pair[1] + "</button>";
+      }).join("") + "</div>";
+    }
+
+    function legsSample() {
+      var nb = "\u00a0";
+      var rows = [
+        sgLegRow("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title")], ""),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 4 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "300" + nb + "m", place: "Opp Stamford Pr Sch (04119)" }))], ""),
+        sgLegRow("bus", "", ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "36") + "</span>" + sgPill("live") + "</p>",
+          sgDetail(sgFill(jo.busToward, { terminus: "Marina Bay Sands" })), sgDetail(jo.board + " Opp Stamford Pr Sch (04119)"),
+          sgDetail(jo.getOff + " Bef Toh Guan Rd (28059)"), sgDetail(sgFill(jo.stopsAndMin, { k: 7, m: 8 })),
+          sgDetail(sgFill(copy.liveCatch.arrivingIn, { n: 4 }), "journey-step__arriving")], ""),
+        sgLegRow("change", sgFill(jo.changeAtStop, { stop: "Bef Toh Guan Rd" }), [sgDetail(sgFill(jo.transferTimes, { w: 2, t: 2 }))], ""),
+        sgLegRow("rail", "", [sgLineHead("NS"), sgDetail(sgFill(jo.trainToward, { terminus: "Marina South Pier" })),
+          sgDetail(jo.board + " Bishan MRT Station (NS17)"), sgDetail(jo.getOff + " Raffles Place MRT Station (NS26)"),
+          sgDetail(sgFill(jo.stopsAndMin, { k: 6, m: 12 })), sgDetail(sgFill(jo.scheduledAt, { time: "8:44" + nb + "AM", h: 3 }))], ""),
+        sgLegRow("change", sgFill(jo.changeCodes, { a: "NS26", b: "EW14", station: "Raffles Place" }), [sgDetail(sgFill(jo.transferWaitOnly, { t: 3 }))], ""),
+        sgLegRow("rail", "", [sgLineHead("EW"), sgDetail(sgFill(jo.trainToward, { terminus: "Tuas Link" })),
+          sgDetail(jo.board + " Raffles Place MRT Station (EW14)"), sgDetail(jo.getOff + " Jurong East MRT Station (EW24)"),
+          sgDetail(sgFill(jo.stopsAndMin, { k: 7, m: 15 })), sgDetail(sgFill(jo.scheduledTime, { time: "8:57" + nb + "AM" }))], ""),
+        sgLegRow("change", sgFill(jo.changeAtStation, { station: "Jurong East" }), [sgDetail(sgFill(jo.transferTimes, { w: 3, t: 3 }))], ""),
+        sgLegRow("rail", "", [sgLineHead("BP"), sgDetail(jo.board + " Bukit Panjang LRT Station (BP6)"), sgDetail(jo.getOff + " Segar LRT Station (BP11)"),
+          sgDetail(sgFill(jo.stopsAndMin, { k: 3, m: 6 })), sgDetail(sgFill(jo.scheduledTime, { time: "9:12" + nb + "AM" }))], ""),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "150" + nb + "m", place: "Marina Bay Sands" }))], jo.editDestinationStop),
+        sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], jo.editDestination)
+      ];
+      var totals = sgFill(jo.totals, { n: 63, t: sgFill(jo.transfersMany, { t: 3 }), w: 12 });
+      var firstTrain = [
+        sgLegRow("rail", "", [sgLineHead("DT"), sgDetail(jo.board + " Bayfront MRT Station (DT16)"), sgDetail(jo.getOff + " Chinatown MRT Station (DT19)"),
+          sgDetail(sgFill(jo.stopsAndMin, { k: 3, m: 7 })), sgDetail(sgFill(jo.scheduledAbout, { n: 5 }))], "")
+      ];
+      return "<h4>Line badges: the code and the name are both text (NS, EW, CG, NE, CC, DT, TE, BP, SK, PG, SS)</h4>"
+        + "<div class=\"card\">" + SG_LINE_CODES.map(sgLineHead).join("") + "</div>"
+        + "<h4>Journey overview: one row per leg, chips under the reason line</h4>"
+        + "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + jo.title + "</h4>" + sgReason(jo.reasonNoTarget)
+        + "<div class=\"overview-priority\">" + sgChips("fastest", []) + "</div>"
+        + "<ol class=\"journey-steps\">" + rows.join("") + "</ol><p class=\"overview-totals\">" + totals + "</p></div>"
+        + "<h4>Priority chips: Least walking selected</h4><div class=\"overview-priority\">" + sgChips("least_walking", []) + "</div>"
+        + "<h4>Priority chips: the bus planner is the fallback (two chips disabled, both notes)</h4><div class=\"overview-priority\">"
+        + sgChips("fastest", ["least_walking", "mrt_only"]) + "<p class=\"overview-note\">" + jo.fallbackNote + "</p><p class=\"overview-note\">" + jo.needsRouteService + "</p></div>"
+        + "<h4>Priority chips: nothing for MRT only, and the best-available line</h4><div class=\"overview-priority\">" + sgChips("mrt_only", [])
+        + "<p class=\"overview-note\">" + jo.bestAvailable + "</p></div>"
+        + "<div class=\"card overview-card\"><p class=\"banner banner--caution\">" + jo.noMrtOnly + "</p></div>"
+        + "<h4>A train first leg: the first leg says \"About N min, scheduled\"; Start journey stays off for now</h4>"
+        + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + firstTrain.join("") + "</ol><p class=\"overview-note\">" + jo.trainLiveSoon + "</p></div>";
+    }
+
+    document.getElementById("legs-sample-light").innerHTML = legsSample();
+    document.getElementById("legs-sample-dark").innerHTML = legsSample();
     document.getElementById("live-sample-light").innerHTML = liveSample();
     document.getElementById("live-sample-dark").innerHTML = liveSample();
     var lc = copy.liveCatch;

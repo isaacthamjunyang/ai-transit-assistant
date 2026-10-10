@@ -181,7 +181,7 @@ def test_confirm_opens_the_overview_which_replans_on_every_entry():
     assert "confirmedDestinationStop = copyDestinationStop(selectedDestinationStop)" in confirm
     assert confirm.index("confirmedDestinationStop = copyDestinationStop") < confirm.index('pushScreen("journey")')
     apply = _between(html, "function applyScreen(name)", "function syncHomeButton")
-    assert 'if (name === "journey") {\n        planJourney();' in apply
+    assert 'if (name === "journey") {\n        planPriority = "fastest";\n        syncPriorityChips();\n        planJourney();' in apply
     plan = _between(html, "function planJourney()", "function peekOverviewArrivals")
     assert '"/api/journey-plan?user_lat="' in plan
     assert 'setOverviewState("loading")' in plan and 'setOverviewState("no-location")' in plan
@@ -208,8 +208,8 @@ def test_at_most_one_lookup_per_overview_open_and_none_in_demo_mode():
 
 def test_edit_links_are_present_or_absent_as_specified():
     html = _page()
-    render = _between(html, "function renderJourneyOverview()", "function syncOverviewArrive()")
-    assert 'stepItem("stop", "Boarding stop"' in render
+    render = _between(html, "function legIsRail(leg)", "function syncOverviewArrive()")
+    assert 'stepItem("walk", fillText(JO_WALK_ROW' in render  # the walk to the first stop; no "Boarding stop" row
     for label in ("Edit boarding stop", "Edit bus service", "Edit transfer stop"):
         assert label not in html
     assert 'label: "Edit destination stop", action: function () { backToScreen("stops"); }' in render

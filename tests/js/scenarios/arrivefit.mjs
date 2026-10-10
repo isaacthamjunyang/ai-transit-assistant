@@ -10,7 +10,7 @@ const MEASURE = `(function () {
   function box(el) { var r = el.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height }; }
   var time = document.getElementById("arrive-by-time");
   var tcs = getComputedStyle(time);
-  var parts = [time].concat(Array.prototype.slice.call(document.querySelectorAll("#arrive-day button, .arrive-chips button")));
+  var parts = [time].concat(Array.prototype.slice.call(document.querySelectorAll("#arrive-day button, .arrive-chips button")).filter(function (el) { return el.getBoundingClientRect().width > 0; }));
   return {
     viewport: document.documentElement.clientWidth,
     pageScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,

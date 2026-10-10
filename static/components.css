@@ -3160,6 +3160,127 @@ body.is-screen-journey main.wrap {
   padding-block: var(--space-2);
 }
 
+/* Line badge: the line's official fill with its code as text, and the line name beside it (.journey-step__line), so
+   colour is never the only signal. The text colour is set in theme.css for at least 4.5:1 on each fill. */
+.line-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 1.5rem;
+  padding: 0 var(--space-2);
+  box-sizing: border-box;
+  border-radius: var(--radius-pill);
+  background: var(--tint-neutral);
+  color: var(--color-ink);
+  font-size: var(--type-caption);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.line-badge--ns {
+  background: var(--line-ns);
+  color: var(--line-ns-ink);
+}
+
+.line-badge--ew {
+  background: var(--line-ew);
+  color: var(--line-ew-ink);
+}
+
+.line-badge--cg {
+  background: var(--line-cg);
+  color: var(--line-cg-ink);
+}
+
+.line-badge--ne {
+  background: var(--line-ne);
+  color: var(--line-ne-ink);
+}
+
+.line-badge--cc {
+  background: var(--line-cc);
+  color: var(--line-cc-ink);
+}
+
+.line-badge--dt {
+  background: var(--line-dt);
+  color: var(--line-dt-ink);
+}
+
+.line-badge--te {
+  background: var(--line-te);
+  color: var(--line-te-ink);
+}
+
+.line-badge--bp {
+  background: var(--line-bp);
+  color: var(--line-bp-ink);
+}
+
+.line-badge--sk {
+  background: var(--line-sk);
+  color: var(--line-sk-ink);
+}
+
+.line-badge--pg {
+  background: var(--line-pg);
+  color: var(--line-pg-ink);
+}
+
+.line-badge--ss {
+  background: var(--line-ss);
+  color: var(--line-ss-ink);
+  border: 1px solid var(--color-line-strong);
+}
+
+.journey-step__line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.step-node--walk,
+.step-node--change {
+  background: var(--color-secondary);
+  color: var(--color-ink);
+}
+
+/* The priority chips reuse .arrive-chips and .arrive-chip. A selected chip keeps its size (its outline is a shadow) and a
+   disabled one is told by a dashed border and muted text as well as by aria-disabled, so it is not colour alone. */
+.overview-priority {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+}
+
+.arrive-chip[aria-disabled="true"] {
+  color: var(--color-muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.overview-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+  line-height: 1.4;
+}
+
+.overview-totals {
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
 .overview-state__actions {
   display: flex;
   flex-wrap: wrap;

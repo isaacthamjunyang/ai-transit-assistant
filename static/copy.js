@@ -288,7 +288,58 @@ var copy = {
     reasonNoTarget: "Chosen for you: the quickest option we found.",
     /* proposed: shown on the second bus of a transfer route; the headway line is omitted when it is not available */
     firstBusOnly: "Live tracking covers your first bus only.",
-    headway: "Schedule: about every {minutes} min."
+    headway: "Schedule: about every {minutes} min.",
+    /* proposed, needs approval (plan_edits_9 4.9): one row per leg. {n} {m} {k} {w} {t} are whole numbers. */
+    walkRow: "Walk {n}\u00a0min",
+    walkRowTo: "{distance} to {place}",
+    busToward: "Toward {terminus}",
+    trainToward: "Toward {terminus}",
+    board: "Board",
+    getOff: "Get off",
+    stopsAndMin: "{k} stops · {m}\u00a0min",
+    stopOneAndMin: "1 stop · {m}\u00a0min",
+    changeAtStation: "Change at {station}",
+    changeAtStop: "Change at {stop}",
+    changeCodes: "Change from {a} to {b} at {station}",
+    transferTimes: "{w}\u00a0min walk · about {t}\u00a0min wait",
+    transferWalkOnly: "{w}\u00a0min walk",
+    transferWaitOnly: "About {t}\u00a0min wait",
+    scheduledAbout: "About {n}\u00a0min, scheduled",
+    scheduledAt: "About {time} · every about {h}\u00a0min",
+    scheduledTime: "About {time}",
+    totals: "{n}\u00a0min · {t} · {w}\u00a0min walking",
+    transfersMany: "{t} transfers",
+    transfersOne: "1 transfer",
+    transfersNone: "No transfers",
+    /* proposed, needs approval: the priority chips and their messages */
+    priorityLabel: "Priority",
+    priorityFastest: "Fastest",
+    priorityFewest: "Fewest transfers",
+    priorityLeastWalk: "Least walking",
+    priorityBus: "Bus only",
+    priorityMrt: "MRT only",
+    noRouteFound: "No route found for this trip.",
+    noBusOnly: "No bus-only route found. Try another priority.",
+    noMrtOnly: "No MRT or LRT route found. Try another priority.",
+    bestAvailable: "This is the best available for this trip.",
+    needsRouteService: "Needs the route service.",
+    fallbackNote: "Showing bus routes only. The route service is unavailable.",
+    /* temporary (part 1): a train first leg can be reviewed here but its live pages are not built yet */
+    trainLiveSoon: "Live guidance for a train start is not ready yet. Choose Bus only to start this journey."
+  },
+  /* proposed, needs approval (plan_edits_9 4.2): the line names shown beside the badge */
+  lineNames: {
+    NS: "North-South Line",
+    EW: "East-West Line",
+    CG: "Changi Airport Branch",
+    NE: "North-East Line",
+    CC: "Circle Line",
+    DT: "Downtown Line",
+    TE: "Thomson-East Coast Line",
+    BP: "Bukit Panjang LRT",
+    SK: "Sengkang LRT",
+    PG: "Punggol LRT",
+    SS: "Sentosa Express"
   },
   liveCatch: {
     /* proposed, needs approval; a deliberate deviation from mockup 7, recorded in the plan */

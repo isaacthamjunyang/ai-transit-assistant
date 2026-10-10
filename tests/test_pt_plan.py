@@ -801,4 +801,4 @@ def test_the_priority_request_never_sends_the_user_position_through_the_endpoint
 def test_the_page_files_are_untouched_by_this_phase():
     root = Path(__file__).resolve().parents[1]
     page = (root / "static" / "index.html").read_text(encoding="utf-8")
-    assert "priority=" not in page and "/api/journey-plan" in page  # the page does not send a priority yet
+    assert '"&priority=" + encodeURIComponent(planPriority)' in page  # the page always sends a priority (phase 5)

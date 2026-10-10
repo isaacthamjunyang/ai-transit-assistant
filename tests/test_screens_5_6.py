@@ -19,23 +19,24 @@ def _between(text: str, start: str, end: str) -> str:
 
 def test_overview_order_and_edit_routes():
     html = _page()
-    render = _between(html, "function renderJourneyOverview()", "function syncOverviewArrive()")
-    order = [
+    render = _between(html, "function legIsRail(leg)", "function syncOverviewArrive()")
+    main = _between(render, "function renderJourneyOverview()", "function priorityDisabled")
+    order = [  # origin, the walk to the first stop, one row per leg, the final walk, the destination
         'stepItem("origin"',
-        '"Boarding stop"',
-        '"Bus service"',
-        '"Destination stop"',
+        "stepItem(\"walk\", fillText(JO_WALK_ROW, { n: walkMinutes(toBoard) })",
+        "transitRow(leg, position",
+        "finalWalkRow(between, confirmedDestinationStop)",
         'stepItem("destination", "Destination"',
     ]
-    positions = [render.index(marker) for marker in order]
+    positions = [main.index(marker) for marker in order]
     assert positions == sorted(positions)
-    origin = _between(render, 'stepItem("origin"', "));")
+    origin = _between(main, 'stepItem("origin"', "));")
     assert "], null)" in origin + ")"
     assert "Edit boarding stop" not in html and "Edit bus service" not in html and "Edit transfer stop" not in html
-    assert "list.appendChild(stepItem(\"bus\", \"Bus service\", lines, null));" in render
+    assert 'stepItem(rail ? "rail" : "bus", null, lines, null)' in render
     assert 'label: "Edit destination stop", action: function () { backToScreen("stops"); }' in render
     assert 'label: "Edit destination", action: function () { backToScreen("results"); }' in render
-    assert '" to boarding stop"' in render and "formatDistance(toBoard)" in render
+    assert "formatDistance(toBoard)" in main
     # Edit is the same as Back: it walks the history stack and adds no state of its own.
     back = _between(html, "function backToScreen(name)", "function closeStopsNote")
     assert "history.go(-steps)" in back
@@ -43,10 +44,10 @@ def test_overview_order_and_edit_routes():
 
 def test_transfer_variant_adds_a_transfer_stop_and_a_schedule_only_second_bus():
     html = _page()
-    render = _between(html, "function renderJourneyOverview()", "function syncOverviewArrive()")
-    assert "index === 0 && legs.length > 1" in render
-    assert '"Transfer stop"' in render
-    assert "var live = index === 0 ? liveDataFor(leg) : null;" in render
+    render = _between(html, "function legIsRail(leg)", "function syncOverviewArrive()")
+    assert "list.appendChild(transferRow(previous, leg, between," in render  # a change row between two transit legs
+    assert "function transferRow(" in render and "JO_CHANGE_STOP" in render
+    assert "position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null" in render  # only the first bus is live
     assert 'typeof leg.published_headway_minutes === "number"' in render
     copy = COPY.read_text(encoding="utf-8")
     assert "/* proposed, needs approval */" in copy

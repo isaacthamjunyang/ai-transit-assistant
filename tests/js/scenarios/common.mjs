@@ -2,7 +2,7 @@
 export async function openHome(h, extra = {}) {
   const c = h.config;
   await h.open(c.base + "/" + (extra.query || ""), {
-    dark: extra.dark ?? h.config.dark, prelude: {
+    dark: extra.dark ?? h.config.dark, width: extra.width, height: extra.height, prelude: {
       position: { lat: c.userNorth[0], lon: c.userNorth[1], acc: 8 },
       permission: extra.permission || "none", storage: extra.storage,
     },
