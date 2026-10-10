@@ -9,6 +9,9 @@ var copy = {
     holidays: "Public holidays updated to {year}",
     bus: "Bus data updated {date}",
     busUnknown: "Bus data date unknown",
+    rail: "Train timetable updated {date}",
+    railUnknown: "Train timetable date unknown",
+    attribution: "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0",
     unavailable: "Data status unavailable"
   },
   notificationCard: {

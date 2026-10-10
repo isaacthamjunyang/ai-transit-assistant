@@ -16,6 +16,7 @@ const READ = `(function () {
     boxDisplay: getComputedStyle(box).display, boxHeight: box.getBoundingClientRect().height,
     sheetBottom: sheet.getBoundingClientRect().bottom, boxBottom: box.getBoundingClientRect().bottom,
     holidays: one("menu-data-holidays"), bus: one("menu-data-bus"),
+    rail: one("menu-data-rail"), attribution: one("menu-data-attribution"),
     surface: getComputedStyle(sheet).backgroundColor, bodyClass: document.body.className };
 })()`;
 

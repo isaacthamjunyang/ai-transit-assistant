@@ -18,6 +18,7 @@ import httpx
 import onemap
 from nearby import haversine_m
 from onemap import DestinationUnavailable, OneMapSession, _AuthRejected, format_place_name
+from service_hours import rail_direction
 
 ROUTE_URL = "https://www.onemap.gov.sg/api/public/routingsvc/route"
 ROUTE_TIMEOUT_SECONDS = 10
@@ -168,6 +169,7 @@ class PtRouter:
         client: httpx.Client,
         budget: CallBudget,
         lta_cache=None,
+        rail_table: dict | None = None,
         token: str = "",
         email: str = "",
         password: str = "",
@@ -193,7 +195,7 @@ class PtRouter:
             "numItineraries": 3,
         }
         status, payload = _request(session, client, params, token, email, password, moment)
-        result = parse_response(status, payload, origin, destination, lta_cache)
+        result = parse_response(status, payload, origin, destination, lta_cache, rail_table)
         result["mode"] = mode
         result["from_cache"] = False
         self._store(key, moment, copy.deepcopy(result))
@@ -338,7 +340,9 @@ def _error_text(body: dict) -> str:
 # ---- Parser -----------------------------------------------------------------------------------------------
 
 
-def parse_response(status: int, payload: dict, origin: Place, destination: Place, lta_cache=None) -> dict:
+def parse_response(
+    status: int, payload: dict, origin: Place, destination: Place, lta_cache=None, rail_table: dict | None = None
+) -> dict:
     """Normalise one OneMap answer.
 
     {"status": "ok" | "no_route" | "no_transit", "reason": str, "itineraries": [...], "dropped": {...}}
@@ -346,7 +350,8 @@ def parse_response(status: int, payload: dict, origin: Place, destination: Place
     - Only walking itineraries are "no_transit" (nothing runs now, or the trip is too short to ride).
     - An origin or destination that OneMap moved more than SNAP_TOLERANCE_M is "no_route": the point was off its
       network and the route belongs to a different trip.
-    - An itinerary with a bus leg under 60 seconds is dropped and counted in dropped["short_bus"]."""
+    - An itinerary with a bus leg under 60 seconds is dropped and counted in dropped["short_bus"].
+    - With the rail table, a rail leg gets its headsign ("Marina South Pier") and direction id; without it, None."""
     dropped = {"short_bus": 0, "walk_only": 0, "malformed": 0}
     if status == 404:
         return _result(STATUS_NO_ROUTE, "not_found", [], dropped)
@@ -366,7 +371,7 @@ def parse_response(status: int, payload: dict, origin: Place, destination: Place
     index = _bus_index(lta_cache) if lta_cache is not None else None
     itineraries = []
     for item in raw:
-        parsed = _itinerary(item, lta_cache, index)
+        parsed = _itinerary(item, lta_cache, index, rail_table)
         if parsed is None:
             dropped["malformed"] += 1
         elif not any(leg["kind"] != KIND_WALK for leg in parsed["legs"]):
@@ -397,12 +402,12 @@ def _snap_distance(point: object, place: Place) -> float | None:
     return haversine_m(place.latitude, place.longitude, float(lat), float(lon))
 
 
-def _itinerary(item: object, lta_cache, index) -> dict | None:
+def _itinerary(item: object, lta_cache, index, rail_table=None) -> dict | None:
     if not isinstance(item, dict) or not isinstance(item.get("legs"), list) or not item["legs"]:
         return None
     legs = []
     for raw in item["legs"]:
-        leg = _leg(raw, lta_cache, index)
+        leg = _leg(raw, lta_cache, index, rail_table)
         if leg is None:
             return None
         legs.append(leg)
@@ -432,7 +437,7 @@ def _route_type(transit: list[dict]) -> str:
     return "multi_leg"
 
 
-def _leg(raw: object, lta_cache, index) -> dict | None:
+def _leg(raw: object, lta_cache, index, rail_table=None) -> dict | None:
     if not isinstance(raw, dict):
         return None
     start, end = _epoch(raw.get("startTime")), _epoch(raw.get("endTime"))
@@ -456,17 +461,19 @@ def _leg(raw: object, lta_cache, index) -> dict | None:
         return {**base, **_bus_fields(raw, origin, target, stops, ridden, minutes, lta_cache, index)}
     if mode in RAIL_MODES:
         line = str(raw.get("routeShortName") or raw.get("route") or "").strip()
+        board, alight = str(origin.get("stopCode", "")), str(target.get("stopCode", ""))
+        toward = rail_direction(rail_table, line, board, alight)
         return {
             **base,
             "kind": KIND_RAIL,
             "mode": mode,
             "line_code": line,
             "line_name": format_place_name(str(raw.get("routeLongName") or "")),
-            "headsign": None,
-            "direction": None,
-            "boarding_stop_code": str(origin.get("stopCode", "")),
+            "headsign": toward[0] if toward else None,
+            "direction": toward[1] if toward else None,
+            "boarding_stop_code": board,
             "boarding_stop_name": format_place_name(str(origin.get("name", ""))),
-            "alighting_stop_code": str(target.get("stopCode", "")),
+            "alighting_stop_code": alight,
             "alighting_stop_name": format_place_name(str(target.get("name", ""))),
             "stop_count": ridden,
             "ride_minutes": round(minutes, 2),

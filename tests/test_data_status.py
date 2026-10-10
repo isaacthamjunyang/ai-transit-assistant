@@ -1,5 +1,6 @@
 """Holiday list use, GET /api/data-status, the menu lines and the startup warning."""
 
+import json
 import logging
 import os
 import re
@@ -81,20 +82,39 @@ def test_the_endpoint_shape_and_the_singapore_date(client, tmp_path, monkeypatch
     _write_routes(tmp_path, datetime(2026, 9, 29, 0, 30, tzinfo=SGT))  # still 28 Sep in UTC
     response = client.get("/api/data-status")
     assert response.status_code == 200
-    assert response.json() == {"holidays_year": 2027, "bus_data_date": "2026-09-29"}
+    assert response.json() == {"holidays_year": 2027, "bus_data_date": "2026-09-29", "rail_data_date": None}
+
+
+def test_the_endpoint_reports_the_build_date_recorded_in_the_train_timetable(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(service_hours, "CACHE_DIR", tmp_path)
+    (tmp_path / "rail_timetable.json").write_text(
+        json.dumps({"schema": 1, "built": "2026-10-10", "stations": {}}), encoding="utf-8")
+    body = client.get("/api/data-status").json()
+    assert body["rail_data_date"] == "2026-10-10" and body["bus_data_date"] is None
 
 
 def test_the_endpoint_returns_null_when_the_file_is_missing(client, tmp_path, monkeypatch):
     monkeypatch.setattr(service_hours, "CACHE_DIR", tmp_path)
     body = client.get("/api/data-status").json()
-    assert body == {"holidays_year": 2027, "bus_data_date": None}
-    assert bus_data_date(tmp_path) is None
+    assert body == {"holidays_year": 2027, "bus_data_date": None, "rail_data_date": None}
+    assert bus_data_date(tmp_path) is None and service_hours.rail_data_date(tmp_path) is None
+
+
+@pytest.mark.parametrize("text", [
+    "", "not json", "[]", '{"schema": 2, "built": "2026-10-10", "stations": {}}',
+    '{"schema": 1, "built": "10 Oct", "stations": {}}', '{"schema": 1, "built": 5, "stations": {}}',
+    '{"schema": 1, "built": "2026-10-10"}',
+])
+def test_an_unreadable_or_wrong_train_timetable_gives_a_null_date(tmp_path, text):
+    (tmp_path / "rail_timetable.json").write_text(text, encoding="utf-8")
+    assert service_hours.rail_data_date(tmp_path) is None
 
 
 def test_the_endpoint_takes_no_input_and_returns_no_place(client):
     body = client.get("/api/data-status", params={"lat": "1.3", "lon": "103.8"}).json()
-    assert set(body) == {"holidays_year", "bus_data_date"}
+    assert set(body) == {"holidays_year", "bus_data_date", "rail_data_date"}
     assert body["bus_data_date"] is None or re.fullmatch(r"\d{4}-\d{2}-\d{2}", body["bus_data_date"])
+    assert body["rail_data_date"] is None or re.fullmatch(r"\d{4}-\d{2}-\d{2}", body["rail_data_date"])
 
 
 # ---- the startup warning
@@ -158,6 +178,25 @@ def test_the_menu_has_the_two_lines_fetched_once_with_the_exact_text():
         assert text in COPY, text
     sheet = INDEX.split('id="menu-sheet"', 1)[1].split("</header>", 1)[0]
     assert sheet.rstrip().endswith("</div>") and sheet.index("menu-data") > sheet.index("demo-reset")  # at the bottom
+
+
+ATTRIBUTION = "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0"
+
+
+def test_the_menu_has_the_train_timetable_and_attribution_lines_with_the_exact_text():
+    assert 'id="menu-data-rail"' in INDEX and 'id="menu-data-attribution"' in INDEX
+    for text in ('"Train timetable updated "', '"Train timetable date unknown"', ATTRIBUTION, "body.rail_data_date"):
+        assert text in INDEX, text
+    assert INDEX.count(ATTRIBUTION) == 1  # one constant, used by the success and the failure state
+    for text in ('rail: "Train timetable updated {date}"', 'railUnknown: "Train timetable date unknown"',
+                 f'attribution: "{ATTRIBUTION}"'):
+        assert text in COPY, text
+    sheet = INDEX.split('id="menu-sheet"', 1)[1].split("</header>", 1)[0]
+    assert sheet.index("menu-data-bus") < sheet.index("menu-data-rail") < sheet.index("menu-data-attribution")
+    assert "Train timetable updated 10 Oct 2026" in GUIDE and "Train timetable date unknown" in GUIDE
+    assert ATTRIBUTION in GUIDE
+    plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
+    assert "`Train timetable updated {d Mon yyyy}`" in plan and ATTRIBUTION in plan and "rail_data_date" in plan
 
 
 def test_the_menu_lines_are_muted_small_hold_their_space_and_hide_on_journey_pages():
@@ -227,6 +266,16 @@ def _visible(line):
     )
 
 
+def test_home_menu_shows_the_train_timetable_and_attribution_lines(menu_ok):
+    shown = menu_ok["afterOpen"]
+    assert _visible(shown["rail"]) and _visible(shown["attribution"])
+    assert re.fullmatch(r"Train timetable updated \d{1,2} [A-Z][a-z]{2} \d{4}|Train timetable date unknown",
+                        shown["rail"]["text"])
+    assert shown["attribution"]["text"] == ATTRIBUTION
+    assert shown["rail"]["color"] == shown["bus"]["color"] == shown["attribution"]["color"]  # one muted style
+    assert shown["boxBottom"] <= shown["sheetBottom"]
+
+
 def test_home_menu_shows_both_lines_with_visible_text(menu_ok):
     shown = menu_ok["afterOpen"]
     assert shown["bodyClass"].find("is-screen-home") != -1 and shown["sheetHidden"] is False
@@ -244,7 +293,8 @@ def test_a_failed_fetch_shows_data_status_unavailable_in_the_same_muted_style(fi
     assert shown["holidays"]["text"] == "Data status unavailable" and _visible(shown["holidays"])
     assert shown["holidays"]["color"] == menu_ok["afterOpen"]["holidays"]["color"]  # the same muted colour
     assert shown["holidays"]["fontSize"] == menu_ok["afterOpen"]["holidays"]["fontSize"]
-    assert shown["bus"]["text"] == ""  # one line says it, not two
+    assert shown["bus"]["text"] == "" and shown["rail"]["text"] == ""  # one line says it, not three
+    assert shown["attribution"]["text"] == ATTRIBUTION and _visible(shown["attribution"])  # the credit stays
 
 
 def test_after_a_failure_the_next_menu_open_tries_again(menu_404, menu_network):

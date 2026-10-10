@@ -49,6 +49,14 @@ On startup the server looks for `cache/bus_stops.json`, `cache/bus_routes.json`,
 - If no valid cache exists, the server downloads BusStops, BusRoutes, and BusServices from LTA DataMall and writes those files.
 - If that first download fails, the server stops and reports the static data as unavailable. It does not invent stops or frequencies.
 
+### Train timetable (optional, for MRT and LRT legs)
+
+`cache/rail_timetable.json` holds the first and last train and the headway for every station, direction and day type. It is built from the LTA train GTFS (DataMall guide 2.31, `GTFSScheduleTrain`). The command makes no network call and needs no key: download the zip yourself, unzip it into a folder, then run
+
+    .venv\Scripts\python build_rail_timetable.py tmp\gtfs_train
+
+The folder (or a .zip) is the first argument. `--out` changes the target, `--today YYYY-MM-DD` sets the build date, `--allow-expired` builds from a feed whose end date has passed. The table is written to a temporary file, checked, and only then moved into place; the old one is kept as `rail_timetable.json.bak`, and a table that fails the checks never replaces it. Without the file the server still runs: train legs have no direction and use the fallback headway of 300 s in the weekday peak and 420 s otherwise. Rebuild it monthly and when LTA announces a change. The menu shows the build date and `Contains information from LTA DataMall under the Singapore Open Data Licence v1.0`.
+
 The map uses Leaflet and OpenStreetMap. Distances are straight-line, not a walking route. After you choose a stop and one service, the page polls live arrivals every 20 seconds and shows the catch probability returned by the server. A fresh poll also updates the leave-by clock. A stale or unavailable arrival does not keep a precise leave-by time.
 
 ## Multi-leg journey

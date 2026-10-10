@@ -23,6 +23,12 @@ LEAVE_MARGIN_SECONDS = 135   # chosen by me: at leave_by the app's own catch cha
 AT_STOP_PROBABILITY = 97
 AT_STOP_MAX_ACCURACY_M = 30
 
+# Train headway used when the rail timetable has no figure: 300 s in the weekday peak hours, 420 s otherwise.
+# Peak hours are the departure hours 07:00 to 08:59 and 17:00 to 19:59, Monday to Friday (LTA: 2 to 3 min peak, 5 to 7 off-peak).
+RAIL_HEADWAY_PEAK_S = 300
+RAIL_HEADWAY_OFFPEAK_S = 420
+RAIL_PEAK_HOURS = (7, 8, 17, 18, 19)
+
 UNANSWERED_END_MINUTES = 10
 MAX_MONITOR_MINUTES = 60
 

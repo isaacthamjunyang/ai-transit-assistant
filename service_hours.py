@@ -13,11 +13,18 @@ Rules:
 - Missing hours (no row, or no readable time) mean "eligible", and are counted so a test can see how often.
 """
 
+import json
 from datetime import date, datetime, timedelta, timezone
 
 from pathlib import Path
 
-from config import PUBLIC_HOLIDAYS, PUBLIC_HOLIDAYS_YEAR
+from config import (
+    PUBLIC_HOLIDAYS,
+    PUBLIC_HOLIDAYS_YEAR,
+    RAIL_HEADWAY_OFFPEAK_S,
+    RAIL_HEADWAY_PEAK_S,
+    RAIL_PEAK_HOURS,
+)
 from lta_static import CACHE_DIR, ROUTES_FILENAME
 
 SGT = timezone(timedelta(hours=8))
@@ -26,11 +33,15 @@ BUS_DATA_MAX_AGE_DAYS = 30
 LIVE_MAX_AGE_SECONDS = 120  # a live arrival overrides the schedule only while the lookup is this recent
 PLAN_AHEAD_MINUTES = 60  # an arrive-by boarding time this much later than the shown one means "planning ahead"
 NO_SERVICE = "no_service"
+RAIL_TABLE_FILENAME = "rail_timetable.json"
+RAIL_TABLE_SCHEMA = 1
+RAIL_LAST_TRAIN_GRACE_MINUTES = LAST_BUS_GRACE_MINUTES  # the same 5 minutes as the last bus
 
 _FIELDS = {"WD": ("WD_FirstBus", "WD_LastBus"), "SAT": ("SAT_FirstBus", "SAT_LastBus"), "SUN": ("SUN_FirstBus", "SUN_LastBus")}
 _INDEX_ATTRIBUTE = "_service_hours_index"
 
 _missing_hours = {"count": 0}
+_missing_rail_hours = {"count": 0}
 
 
 def missing_hours_count() -> int:
@@ -40,6 +51,15 @@ def missing_hours_count() -> int:
 
 def reset_missing_hours_count() -> None:
     _missing_hours["count"] = 0
+
+
+def missing_rail_hours_count() -> int:
+    """How many train checks found no row for the station and direction and so treated the train as running."""
+    return _missing_rail_hours["count"]
+
+
+def reset_missing_rail_hours_count() -> None:
+    _missing_rail_hours["count"] = 0
 
 
 def bus_data_date(cache_dir: Path | None = None) -> str | None:
@@ -53,8 +73,13 @@ def bus_data_date(cache_dir: Path | None = None) -> str | None:
 
 
 def data_status(cache_dir: Path | None = None) -> dict:
-    """What the menu shows: how far the holiday list reaches and when the bus data was written. No input, no place."""
-    return {"holidays_year": PUBLIC_HOLIDAYS_YEAR, "bus_data_date": bus_data_date(cache_dir)}
+    """What the menu shows: how far the holiday list reaches, when the bus data was written and when the train
+    timetable was built. No input, no place."""
+    return {
+        "holidays_year": PUBLIC_HOLIDAYS_YEAR,
+        "bus_data_date": bus_data_date(cache_dir),
+        "rail_data_date": rail_data_date(cache_dir),
+    }
 
 
 def startup_warning(today: date, cache_dir: Path | None = None) -> str | None:
@@ -227,3 +252,152 @@ def _as_sgt(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=SGT)
     return value.astimezone(SGT)
+
+
+# ---- Trains -----------------------------------------------------------------------------------------------
+#
+# Data: cache/rail_timetable.json, built by build_rail_timetable.py from the LTA train GTFS. Per station code and
+# direction (the headsign, for example "Marina South Pier") and day type WD / SAT / SUN: the first and last train as
+# "HHMM" (hours past 24 are the next calendar day) and the headway in seconds for each departure hour.
+# The rules match the bus rules: the time is when the user would board, the day type comes from day_type() and
+# PUBLIC_HOLIDAYS, a train is running from the first train to the last train plus 5 minutes, a window that began the
+# day before also counts, and missing hours (no row, no usable day type) keep the train eligible and are counted.
+
+
+def load_rail_table(cache_dir: Path | None = None) -> dict | None:
+    """The train timetable, or None when the file is missing, unreadable or not schema 1."""
+    path = (cache_dir or CACHE_DIR) / RAIL_TABLE_FILENAME
+    try:
+        table = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(table, dict) or table.get("schema") != RAIL_TABLE_SCHEMA or not isinstance(
+        table.get("stations"), dict
+    ):
+        return None
+    return table
+
+
+def rail_data_date(cache_dir: Path | None = None) -> str | None:
+    """The Singapore date (YYYY-MM-DD) the train timetable was built, or None when there is no usable table."""
+    table = load_rail_table(cache_dir)
+    built = table.get("built") if table else None
+    if not isinstance(built, str):
+        return None
+    try:
+        return date.fromisoformat(built).isoformat()
+    except ValueError:
+        return None
+
+
+def rail_runs_at(table: dict | None, station_code: str, direction: str | int | None, when: datetime) -> bool:
+    """True when a train leaves this station in this direction at `when` (Singapore time), or when its hours are
+    unknown. `direction` is the headsign ("Marina South Pier"), the GTFS direction id (0 or 1), or None for any."""
+    rows = _rail_rows(table, station_code, direction)
+    moment = _as_sgt(when)
+    verdicts = [_rail_row_verdict(row, moment) for row in rows]
+    known = [verdict for verdict in verdicts if verdict is not None]
+    if not known:
+        _missing_rail_hours["count"] += 1
+        return True
+    return any(known)
+
+
+def rail_headway_seconds(table: dict | None, station_code: str, direction: str | int | None, when: datetime) -> int:
+    """Seconds between trains at `when`: the timetable's median for that departure hour, or the fallback (300 s in
+    the weekday peak hours, 420 s otherwise) when the table has no figure. With no direction the shortest wins."""
+    moment = _as_sgt(when)
+    found = []
+    for row in _rail_rows(table, station_code, direction):
+        for day, hour in _rail_service_hours(moment):
+            seconds = ((row.get(day_type(day)) or {}).get("headway_s") or {}).get(str(hour))
+            if isinstance(seconds, int) and seconds > 0:
+                found.append(seconds)
+                break
+    if found:
+        return min(found)
+    service_day, hour = _rail_service_hours(moment)[0]
+    peak = day_type(service_day) == "WD" and hour in RAIL_PEAK_HOURS
+    return RAIL_HEADWAY_PEAK_S if peak else RAIL_HEADWAY_OFFPEAK_S
+
+
+def rail_direction(table: dict | None, line_code: str, from_station: str, to_station: str) -> tuple[str, int] | None:
+    """(headsign, direction id) of a ride from one station to another on a line, or None when unknown.
+
+    A pattern fits when it lists the first station before the second. When several fit (a line with a short
+    working or a branch), the headsign with the most trains wins, then the name."""
+    if not isinstance(table, dict) or not line_code or not from_station or not to_station:
+        return None
+    stations = table.get("stations") or {}
+    fits = []
+    for headsign, codes in ((table.get("patterns") or {}).get(line_code) or {}).items():
+        if not _in_order(codes, from_station, to_station):
+            continue
+        entry = (stations.get(from_station, {}).get("directions") or {}).get(headsign) or {}
+        fits.append((-int(entry.get("trips", 0)), headsign, entry.get("direction_id")))
+    if not fits:
+        return None
+    _count, headsign, direction_id = sorted(fits, key=lambda item: (item[0], item[1]))[0]
+    return headsign, direction_id if isinstance(direction_id, int) else 0
+
+
+def _in_order(codes: list[str], first: str, second: str) -> bool:
+    starts = [index for index, code in enumerate(codes) if code == first]
+    ends = [index for index, code in enumerate(codes) if code == second]
+    return bool(starts and ends and min(starts) < max(ends))
+
+
+def _rail_rows(table: dict | None, station_code: str, direction: str | int | None) -> list[dict]:
+    if not isinstance(table, dict):
+        return []
+    station = (table.get("stations") or {}).get(str(station_code).strip())
+    if not isinstance(station, dict):
+        return []
+    rows = []
+    for headsign, row in (station.get("directions") or {}).items():
+        if direction is None:
+            rows.append(row)
+        elif isinstance(direction, int) and not isinstance(direction, bool):
+            if row.get("direction_id") == direction:
+                rows.append(row)
+        elif str(direction).strip().casefold() == headsign.casefold():
+            rows.append(row)
+    return rows
+
+
+def _rail_row_verdict(row: dict, moment: datetime) -> bool | None:
+    """True or False from the row's hours; None when the row has no day type at all."""
+    if not any(isinstance(row.get(kind), dict) for kind in ("WD", "SAT", "SUN")):
+        return None
+    answers = []
+    for offset in (0, -1):  # a window that began today, and one that began yesterday and runs past midnight
+        day = moment.date() + timedelta(days=offset)
+        entry = row.get(day_type(day))
+        window = _rail_window(entry, day) if isinstance(entry, dict) else False
+        if window is None:
+            continue
+        if window is not False:
+            start, end = window
+            if start <= moment <= end + timedelta(minutes=RAIL_LAST_TRAIN_GRACE_MINUTES):
+                return True
+        answers.append(False)
+    return False if answers else None
+
+
+def _rail_window(entry: dict, day: date):
+    start_minutes = _minutes(entry.get("first"))
+    end_minutes = _minutes(entry.get("last"))
+    if start_minutes is None or end_minutes is None:
+        return None
+    if end_minutes < start_minutes:
+        end_minutes += 24 * 60
+    midnight = datetime(day.year, day.month, day.day, tzinfo=SGT)
+    return midnight + timedelta(minutes=start_minutes), midnight + timedelta(minutes=end_minutes)
+
+
+def _rail_service_hours(moment: datetime) -> list[tuple[date, int]]:
+    """(service day, hour bucket) pairs to try, best first. Before 05:00 the train belongs to yesterday's
+    timetable (hour 24 to 28); the table keeps those hours past 24."""
+    today = (moment.date(), moment.hour)
+    yesterday = (moment.date() - timedelta(days=1), moment.hour + 24)
+    return [yesterday, today] if moment.hour < 5 else [today]

@@ -65,6 +65,8 @@
       <div class="menu-data" id="menu-data">
         <p class="menu-data__line" id="menu-data-holidays"></p>
         <p class="menu-data__line" id="menu-data-bus"></p>
+        <p class="menu-data__line" id="menu-data-rail"></p>
+        <p class="menu-data__line" id="menu-data-attribution"></p>
       </div>
     </div>
   </header>
@@ -4981,6 +4983,7 @@
     // The two muted lines at the bottom of the menu: fetched once, the first time the menu opens.
     var MENU_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     var menuDataRequested = false;
+    var MENU_ATTRIBUTION = "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0";
     function formatDataDate(iso) {
       var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
       if (!parts) {
@@ -5003,6 +5006,9 @@
           var shown = formatDataDate(body.bus_data_date);
           document.getElementById("menu-data-holidays").textContent = "Public holidays updated to " + body.holidays_year;
           document.getElementById("menu-data-bus").textContent = shown ? "Bus data updated " + shown : "Bus data date unknown";
+          var railShown = formatDataDate(body.rail_data_date);
+          document.getElementById("menu-data-rail").textContent = railShown ? "Train timetable updated " + railShown : "Train timetable date unknown";
+          document.getElementById("menu-data-attribution").textContent = MENU_ATTRIBUTION;
         })
         .catch(showMenuDataUnavailable);
     }
@@ -5011,6 +5017,8 @@
       menuDataRequested = false;
       document.getElementById("menu-data-holidays").textContent = "Data status unavailable";
       document.getElementById("menu-data-bus").textContent = "";
+      document.getElementById("menu-data-rail").textContent = "";
+      document.getElementById("menu-data-attribution").textContent = MENU_ATTRIBUTION;
     }
     document.getElementById("menu-open").addEventListener("click", function () {
       var sheet = document.getElementById("menu-sheet");
