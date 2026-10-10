@@ -35,8 +35,7 @@ from leave_now import LEAVE_NOW_MARGIN_S
 from journey import build_journey, bus_arrival_window, miss_line, parse_journey_time, planning_warning
 from journey_plan import plan_journey
 from lta_static import load_static_data
-from service_hours import data_status, startup_warning
-from service_hours import data_status, startup_warning
+from service_hours import data_status, load_rail_table, startup_warning
 from nearby import BOARDING_RADIUS_M, haversine_m, nearby_boarding_stops
 from pace import is_near_stop
 from reroute import (
@@ -66,6 +65,8 @@ from onemap import (
     search_destinations,
 )
 from walk_speed import resolve_walk_speed, response_fields
+import pt_plan
+import pt_route
 
 access_log_filter.install()
 
@@ -73,6 +74,8 @@ access_log_filter.install()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.onemap_session = OneMapSession()
+    app.state.pt_router = pt_route.PtRouter()
+    app.state.rail_table = load_rail_table()
     app.state.lta_static = load_static_data()
     warning = startup_warning(datetime.now(SGT).date())
     if warning:
@@ -1144,8 +1147,11 @@ def journey_plan(
     arrive_by: Annotated[str | None, Query()] = None,
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
+    priority: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
-    """The app picks the boarding stop and the route. Static data only."""
+    """The app picks the boarding stop and the route. Static data only, unless `priority` asks for OneMap routing."""
+    if priority is not None and pt_plan.valid_priority(priority) is None:
+        return JSONResponse(status_code=422, content={"detail": pt_plan.PRIORITY_MESSAGE})
     speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     coordinates = (user_lat, user_lon, dest_lat, dest_lon)
     if any(not math.isfinite(value) for value in coordinates):
@@ -1175,6 +1181,12 @@ def journey_plan(
                 "detail": "Static stop data is unavailable.",
             },
         )
+    if priority is not None:
+        planned = _priority_plan(
+            cache, route=False, priority=priority, user_lat=user_lat, user_lon=user_lon,
+            destination_stop_code=destination, dest_lat=dest_lat, dest_lon=dest_lon, arrive_by=parsed_arrive_by,
+            walk_speed_m_s=speed)
+        return {**planned, **response_fields(speed, speed_source)}
     planned = plan_journey(
         cache,
         user_lat=user_lat,
@@ -1186,6 +1198,29 @@ def journey_plan(
         walk_speed_m_s=speed,
     )
     return {**planned, **response_fields(speed, speed_source)}
+
+
+def _priority_plan(cache, *, route: bool, priority: str, **plan_args) -> dict:
+    """The OneMap planner for /api/journey-plan and /api/route-plan when `priority` is given.
+
+    The user's position is passed in only to measure the walk to the first stop; it never reaches OneMap.
+    A Demo Mode OneMap failure, or any routing failure, uses the static bus planner (fallback_note true)."""
+    session = getattr(app.state, "onemap_session", None)
+    if session is None:
+        session = OneMapSession()
+        app.state.onemap_session = session
+    router = getattr(app.state, "pt_router", None)
+    if router is None:
+        router = pt_route.PtRouter()
+        app.state.pt_router = router
+    token, email, password = read_onemap_credentials()
+    use_onemap = not demo.destination_is_simulated()
+    with httpx.Client(timeout=pt_route.ROUTE_TIMEOUT_SECONDS) as client:
+        common = dict(router=router, session=session, client=client, rail_table=getattr(app.state, "rail_table", None),
+                      token=token, email=email, password=password, use_onemap=use_onemap)
+        if route:
+            return pt_plan.route_plan_result(cache, priority=priority, **common, **plan_args)
+        return pt_plan.journey_plan_result(cache, priority=priority, **common, **plan_args)
 
 
 @app.get("/api/arrivals/peek", response_model=None)
@@ -1233,7 +1268,10 @@ def route_plan(
     arrive_by: Annotated[str | None, Query()] = None,
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
+    priority: Annotated[str | None, Query()] = None,
 ) -> dict | JSONResponse:
+    if priority is not None and pt_plan.valid_priority(priority) is None:
+        return JSONResponse(status_code=422, content={"detail": pt_plan.PRIORITY_MESSAGE})
     speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     coordinates = (user_lat, user_lon, dest_lat, dest_lon)
     if any(not math.isfinite(value) for value in coordinates):
@@ -1266,6 +1304,19 @@ def route_plan(
         )
     alternates = [] if alternate_stops is None else alternate_stops.split(",")
     moment = datetime.now(SGT)
+    if priority is not None:
+        planned = _priority_plan(
+            cache, route=True, priority=priority, origin_stop_code=origin, alternates=alternates,
+            user_lat=user_lat, user_lon=user_lon, destination_stop_code=destination, dest_lat=dest_lat,
+            dest_lon=dest_lon, arrive_by=parsed_arrive_by, walk_speed_m_s=speed, now=moment)
+        if planned.get("planner") == "static" and planned.get("route_status") != pt_plan.PRIORITY_UNAVAILABLE:
+            options = planned.get("options") or []
+            minutes = [option.get("generalized_time_minutes") for option in options]
+            if planned.get("route_status") == "alternate_boarding":
+                minutes = [(planned.get("alternate_stop") or {}).get("generalized_time_minutes")]
+            planned["planning_warning"] = planning_warning(moment, parsed_arrive_by, minutes)
+        planned.update(response_fields(speed, speed_source))
+        return planned
     planned = suggest_alternate_boarding(
         cache,
         origin,

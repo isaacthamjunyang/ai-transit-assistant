@@ -57,9 +57,14 @@ def _has_sort_fields(option: dict) -> bool:
     return all(key in option for key in ("generalized_time_minutes", "transfers", "total_route_km", "legs"))
 
 
-def pick_journey_option(options: list[dict], arrive_by: datetime | None) -> dict:
+def fewest_transfers_key(option: dict) -> tuple:
+    """Fewest transfers first, then the usual order. Used by the static fallback of the fewest_transfers priority."""
+    return (option.get("transfers", 0), *merged_order_key(option))
+
+
+def pick_journey_option(options: list[dict], arrive_by: datetime | None, key=merged_order_key) -> dict:
     """Pure: order the options and pick one. Each option may carry `estimated_arrival` (datetime or None)."""
-    ordered = sorted(options, key=merged_order_key)
+    ordered = sorted(options, key=key)
     if not ordered:
         return {"option": None, "reason": NO_ROUTE, "ordered": []}
     if arrive_by is None:
@@ -119,8 +124,11 @@ def plan_journey(
     arrive_by: datetime | None = None,
     now: datetime | None = None,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    priority: str = "fastest",
 ) -> dict:
+    """priority is "fastest" (the default) or "fewest_transfers"; any other value plans as fastest."""
     moment = now if now is not None else datetime.now(SGT)
+    order = fewest_transfers_key if priority == "fewest_transfers" else merged_order_key
     candidates = nearby_boarding_stops(
         cache, user_lat, user_lon, BOARDING_RADIUS_M, walk_speed_m_s=walk_speed_m_s
     )
@@ -147,7 +155,7 @@ def plan_journey(
             options.append({**option, "boarding_walk_m": stop["distance_m"]})
     journeys: dict[int, dict] = {}
     if arrive_by is not None:
-        for option in sorted(options, key=merged_order_key):
+        for option in sorted(options, key=order):
             journey = _journey_for(
                 cache,
                 option,
@@ -165,7 +173,7 @@ def plan_journey(
             option["estimated_arrival"] = parse_journey_time(point) if point else None
             if option["estimated_arrival"] is not None and option["estimated_arrival"] <= arrive_by:
                 break
-    picked = pick_journey_option(options, arrive_by)
+    picked = pick_journey_option(options, arrive_by, order)
     chosen = picked["option"]
     if chosen is None:
         return {
