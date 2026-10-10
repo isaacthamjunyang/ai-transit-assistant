@@ -2,7 +2,7 @@
 
 Singapore bus catch assistant for the AI Lodge Hackathon ("Projects for Daily Life"). The app predicts whether the user will catch a bus and says when to leave, using live LTA DataMall arrivals plus a heuristic. OpenAI explains the result in plain language. It does not invent the number, the destination coordinates, or the bus stop.
 
-Decisions already made: OpenAI for explanations; this build is **bus-only**. Trains are a later extension (DataMall has no live MRT arrival API). Seat/crowding, background OS location tracking, and fare optimization stay out of scope. The Bus Arrival `Load` field is ignored so crowding cannot sneak in. Destination input is a place search (OneMap), not a bus-stop code. Turn-by-turn walking navigation is out of scope.
+Decisions already made: OpenAI for explanations; this build plans bus and MRT/LRT journeys. Only buses have live arrivals. A train leg uses scheduled times and says so (DataMall has no live MRT arrival API). Seat/crowding, background OS location tracking, and fare optimization stay out of scope. The Bus Arrival `Load` field is ignored so crowding cannot sneak in. Destination input is a place search (OneMap), not a bus-stop code. Turn-by-turn walking navigation is out of scope.
 
 ## What changed
 
@@ -29,7 +29,7 @@ Current docs (checked against [OneMap Search](https://www.onemap.gov.sg/apidocs/
 - Header: `Authorization: <token>` (the docs pass the token itself, not a `Bearer` prefix).
 - Token: `POST https://www.onemap.gov.sg/api/auth/post/getToken` with the OneMap account email and password. Tokens last 3 days. Cache the token until `expiry_timestamp`. Do not call `getToken` on every search.
 - A free OneMap account is required. Store `ONEMAP_EMAIL` and `ONEMAP_PASSWORD` in `.env` (gitignored). An optional pasted `ONEMAP_TOKEN` is accepted; if it returns 401 and email/password are absent, show unavailable and ask for a fresh token.
-- Routing APIs are not used.
+- Public transport routing is used for journey legs: `GET https://www.onemap.gov.sg/api/public/routingsvc/route` with `start`, `end` (`lat,lon`), `routeType=pt`, `date=MM-DD-YYYY`, `time=HH:MM:SS`, `mode=TRANSIT|BUS|RAIL`, `numItineraries=1..3`, and the same `Authorization` token. It is depart-at only (`arriveBy` is ignored), returns at most 3 itineraries and no live data (`realTime` is always false). The origin sent is the coordinate of the nearest public stop or station, never the user's position. An itinerary with a bus leg that rides under 60 seconds is dropped.
 
 **Zero results.** If `found` is 0 or `results` is empty, say no matches and ask the user to rephrase (building, road, or postal code). Do not guess a place. Do not pick a nearby stop.
 
@@ -37,7 +37,7 @@ Current docs (checked against [OneMap Search](https://www.onemap.gov.sg/apidocs/
 
 **OneMap down.** Timeout (about 8 seconds), HTTP error, 401 after a failed refresh, 403, or 429: status **unavailable**, same pattern as LTA. Say destination search is unavailable. Do not invent coordinates. Do not call a second geocoder. Do not fall back to the old unauthenticated URL. Do not start stop ranking or the catch flow.
 
-**Rate limit.** The August 2025 workshop page says tokenized search is capped at 250 calls and does not say whether that window is per minute, per day, or per token. A demo stays inside that by searching once per submit, first page only. On 429, show unavailable and do not retry in a loop. The 20-second bus poll never calls OneMap.
+**Rate limit.** The August 2025 workshop page says tokenized search is capped at 250 calls and does not say whether that window is per minute, per day, or per token. A demo stays inside that by searching once per submit, first page only. On 429, show unavailable and do not retry in a loop. Routing adds at most one call per planning request (up to three with an arrive-by time or a priority change), cached 5 minutes in memory. The 20-second bus poll and the 5-second rescore never call OneMap. The routing limit is unconfirmed; on 429 the static bus planner is used.
 
 ## Updated user journey
 
@@ -339,8 +339,11 @@ Measured against the light and dark tokens in `static/theme.css`. Every pair bel
 | Danger text on tint | 5.56 | 7.94 |
 | Neutral text on tint | 6.79 | 6.88 |
 | Simulated text on tint | 5.83 | 6.96 |
+| Line badge text (NS, NE, DT, TE white; EW, CC, LRT black), lowest | 5.02 | 5.02 |
 
 The Page W progress fill uses the success token with at least 3:1 against its track in both themes.
+
+Map route lines (one per leg, in the official line colours) are at least 3:1 against the land in both themes, either directly or through a casing line (a wider line under it that is itself at least 3:1 against the land and at least 3:1 against the line colour). Mode is also shown by pattern, never by colour alone.
 
 ### Empty, loading, and error
 
@@ -350,7 +353,7 @@ The standard loading indicator is the existing card-header status `● Updating 
 
 ### Map
 
-Map markers use theme tokens, not hex in JavaScript. Three markers: user, boarding stop, and destination stop. Marker shape and icon art are PLACEHOLDER until the mockup specifies them.
+Map markers use theme tokens, not hex in JavaScript. Three markers: user, boarding stop, and destination stop. Marker shape and icon art are PLACEHOLDER until the mockup specifies them. Route lines are the decoded OneMap paths, one per leg, in the line tokens with a casing where the contrast needs it (3:1). Mode is also shown by pattern.
 
 ### Screens
 
@@ -359,7 +362,9 @@ Map markers use theme tokens, not hex in JavaScript. Three markers: user, boardi
 | Search | Form field, primary button |
 | Pick place | List item, info card |
 | Pick stop | Map (user and boarding-stop markers), list item, primary button |
-| Journey overview (route picked by the app, with the reason) | Timeline card, badge, primary button |
+| Journey overview (route picked by the app, with the reason) | Timeline card with one row per leg, line badges, priority chips, primary button |
+| Priority picker | Chip row (Fastest, Fewest transfers, Least walking, Bus only, MRT only) |
+| Train timing | Card with two tap questions, after `Yes, I caught it` on a train |
 | Live journey | Page A (probability ring, pace chip, tiles, If you miss it, AI Explanation card), Page W (Walk to your stop: map, status card, probability ring, Sensor details) and Page B (bus card, next buses, live map, status grid), one shared alert slot, a sticky button or bar on each |
 | Reroute | Card (`success` while the switch is shown), banner only through the alert slot |
 | Unavailable | Card variant `unavailable`, status badge |
@@ -381,7 +386,7 @@ Sections that currently define user-facing strings:
 - Step 11 specification: both no-better sentences, the reroute card, the reroute notification, and `reroute_reason`
 - Step 12 specification: the AI Explanation title, `● Updating explanation...`, the fallback template, and the four action sentences
 - Step 13 specification: `SIMULATED DEMO MODE`, `[SIMULATED]`, and the seven scenario names
-- Step 14 specification: the no-feasible-route sentence, the three option labels, the caution banner, and the question bar and end card strings in that section (proposed, needs approval)
+- Step 14 specification: the no-feasible-route sentence, the three option labels, the caution banner, and the question bar and end card strings in that section (proposed, needs approval); Step 14 multi-leg: the leg rows, line names, priority chips, train strings and timing feedback strings (proposed, needs approval)
 - Section 3, Walking speed: the two extra probability captions, the four `Walking pace` lines, and the two overview motion-sensor lines (approved)
 
 ### Live screen simplification
@@ -428,10 +433,11 @@ One shared function, `service_runs_at(cache, service, stop, datetime_sgt, direct
 - Which time: the time the user would board, never the time of the request. The shown time is now plus the walk plus the expected wait, the same boarding the card's `Arrive about` uses. With an arrive-by time the route is also checked at the time that works back from it (the arrive-by time minus the route's time after boarding, never earlier than the shown time); when that is more than 60 minutes after the shown time the user is planning ahead and only that time is checked. Both must be running. A transfer's second leg is checked at the first leg's boarding time plus its ride and the transfer penalty.
 - Live data wins, narrowly: a monitored arrival from a lookup of that exact stop and service made in the last 120 seconds is in service whatever the schedule says. An old or undated lookup does not count. An unmonitored (schedule-only) arrival must also fit its hours. If live data shows nothing and the schedule says the service is outside its hours, it is dropped. If live data shows nothing and the schedule says it should run, it is kept and labelled schedule only, as before.
 - Missing hours (no row, no readable time, or all three day types `-`) keep the service eligible. Each such check adds one to a count (`missing_hours_count()`) so a test can see how often it happens.
-- When a destination has routes but none of their buses run at the boarding time, the plan returns `route_status: "no_service"` and the page shows `No buses are running to this destination at this time.` (copy.js `journeyOverview.noService`) with the same Edit destination and Edit arrive-by time buttons as the no-route state. The destination stop list shows the same sentence when no stop is reachable for that reason (`no_service: true`). A worse route is never shown in place of a closed one; the next open route is shown as it really is. The hours are checked on every path, including a journey being built for a chosen boarding stop and service.
-- Data status: `GET /api/data-status` takes no input and returns `{"holidays_year": 2027, "bus_data_date": "YYYY-MM-DD"}`. `holidays_year` is `PUBLIC_HOLIDAYS_YEAR` (the newest year in `PUBLIC_HOLIDAYS`, set from the MOM list in `config.py`). `bus_data_date` is the Singapore date of `cache/bus_routes.json`, or `null` when the file is missing.
+- Rail: `rail_runs_at(table, station, direction, when)` uses the first and last train of `cache/rail_timetable.json` (built from the LTA train GTFS) with the same 5 minute grace, the same day types and the same `PUBLIC_HOLIDAYS` rule. A missing row keeps the leg eligible. Every leg of an itinerary is checked at its own OneMap time; one failing leg drops the itinerary. The table's headway is used when a train leg is first; with no row it is 300 s at peak and 420 s off-peak. The source line shown in the app is `Train times: LTA DataMall, Singapore Open Data Licence v1.0.`
+- When a destination has routes but none of their buses run at the boarding time, the plan returns `route_status: "no_service"` and the page shows `No buses are running to this destination at this time.` (copy.js `journeyOverview.noService`) with the same Edit destination and Edit arrive-by time buttons as the no-route state. The destination stop list shows the same sentence when no stop is reachable for that reason (`no_service: true`). A walk-only OneMap answer counts as `no_service`. A worse route is never shown in place of a closed one; the next open route is shown as it really is. The hours are checked on every path, including a journey being built for a chosen boarding stop and service.
+- Data status: `GET /api/data-status` takes no input and returns `{"holidays_year": 2027, "bus_data_date": "YYYY-MM-DD"}`. `holidays_year` is `PUBLIC_HOLIDAYS_YEAR` (the newest year in `PUBLIC_HOLIDAYS`, set from the MOM list in `config.py`). `bus_data_date` is the Singapore date of `cache/bus_routes.json`, or `null` when the file is missing. It also returns `rail_data_date`, the Singapore date of `cache/rail_timetable.json`, or `null` when the file is missing.
 - Startup warning: once at server start, one warning is logged when the bus data is more than 30 days old or today's year is later than `PUBLIC_HOLIDAYS_YEAR`. It names the age and the years only, never a place.
-- Privacy: the function takes a service, a stop code and a time. No coordinates are stored or logged.
+- Privacy: the function takes a service, a stop code and a time. No coordinates are stored or logged. The routing call sends public stop coordinates only.
 
 ## Step 9 specification
 
@@ -472,6 +478,8 @@ When `ride_minutes` is null:
 - The journey stays usable, and the leave-by calculation stays functional.
 
 For a one-transfer route, the arrive-by check uses the sum of both legs' ride minutes together with the same walk and half-headway terms as a direct ride, and it shows N/A when either leg's ride_minutes is null.
+
+For a multi-leg route the arrive-by check uses OneMap's arrival time shifted by the difference between the planned and the actual first boarding. OneMap has no arrive-by, so the planner searches earlier departures (up to 3 calls behind the 5 minute cache).
 
 ### Arrival range, spare minutes, and a missed bus
 
@@ -1221,6 +1229,8 @@ Zero results use the existing OneMap rule: show the rephrase / no-match behavior
 
 API failure uses the existing OneMap rule: show unavailable, do not call another geocoder, do not guess coordinates, and do not continue into stop selection or the catch flow.
 
+The same simulated failure also covers OneMap routing: the planner uses the static bus planner and shows the fallback note.
+
 The affected destination-search state shows `[SIMULATED]`.
 
 ### 12. Unsafe / Contradictory OpenAI Output
@@ -1360,7 +1370,7 @@ Step 13 does not add features unrelated to demo mode, a new probability model, n
 
 ## Step 14 specification
 
-Step 14 is the multi-leg journey assistant. It extends the existing catch engine into an end-to-end guide with at most one transfer. Route generation stays deterministic and static. Live arrival polling stays separate and starts only after the app has picked one route option and the user presses Start journey. Step 14 is a stretch goal behind a finished single-leg flow. The rules in this specification stay locked. They do not move ahead of that single-leg flow.
+Step 14 is the multi-leg journey assistant. It extends the existing catch engine into an end-to-end guide with bus, MRT and LRT legs and up to 3 transfers. Route generation comes from OneMap routing (static, no live arrivals), with the static bus planner as the fallback. Live arrival polling stays separate and starts only after the app has picked one route option and the user presses Start journey. Step 14 is a stretch goal behind a finished single-leg flow. The rules in this specification stay locked. They do not move ahead of that single-leg flow.
 
 This section locks the product. It does not rewrite Steps 1–13. `catch_heuristic.score_buses`, `leave_by_time`, `notification_time = leave_by - 60s`, the Step 11 algorithm, Step 12 explanation, and the seven Step 13 scenarios stay as already specified. This section does not add Step 15.
 
@@ -1369,28 +1379,29 @@ This section locks the product. It does not rewrite Steps 1–13. `catch_heurist
 Selection order:
 
 1. Destination search. The user searches for a place and confirms one destination stop, `confirmed_destination_stop`. The existing Step 7 and Step 8 selection rules stay. The destination stop is not chosen automatically.
-2. Boarding stop and route, picked by the app. The app takes every cached bus stop within 400 m of the current GPS fix, using the existing boarding radius, runs the pathfinder below from each one to `confirmed_destination_stop`, and merges the options in the order of section 2 (including the transfer penalty). With an arrive-by time, it picks the first option whose estimated arrival (the Step 9 estimate) is at or before the target; if none is, it picks the first option and shows the existing planning warning. Without a target, it picks the first option. Ties break by fewest transfers, then the shorter walk to the boarding stop, then the lower service number. The picked option's first boarding stop is `origin_boarding_stop`. The overview shows one short line saying why this route was chosen. The user does not pick a boarding stop or a route option.
+2. Boarding stop and route, picked by the app. The app takes every cached bus stop within 400 m of the current GPS fix, using the existing boarding radius, runs the pathfinder below from each one to `confirmed_destination_stop`, and merges the options in the order of section 2 (including the transfer penalty). With an arrive-by time, it picks the first option whose estimated arrival (the Step 9 estimate) is at or before the target; if none is, it picks the first option and shows the existing planning warning. Without a target, it picks the first option. Ties break by fewest transfers, then the shorter walk to the boarding stop, then the lower service number. The picked option's first boarding stop is `origin_boarding_stop`. The overview shows one short line saying why this route was chosen. The user picks only a priority (Fastest by default, Fewest transfers, Least walking, Bus only, MRT only), never a boarding stop or a route. With OneMap routing the app makes one routing call from the nearest stop or station coordinate to the place instead of running the pathfinder from each stop; the pathfinder runs only as the fallback.
 3. Route pathfinder. The pathfinder reads cached `BusRoutes` and `BusStops` and builds candidate routes from each candidate boarding stop to `confirmed_destination_stop`.
 
 A sequence is `ServiceNo` + `Direction` ordered by `StopSequence`.
 
 Constraints:
 
-- A route is direct (0 transfers, one bus leg) or one transfer (exactly two bus legs). There is no second transfer.
+- A route is a list of walk, bus and MRT/LRT legs from OneMap (0 to 3 transfers). The static fallback keeps the old rule: direct (0 transfers, one bus leg) or one transfer (exactly two bus legs), bus only.
 - A transfer is valid only when Leg 2 boards at the same `BusStopCode` as Leg 1's alighting stop, or at a different cached stop whose straight-line distance from that alighting stop is at most 50 m. Those are co-located stops. This is not turn-by-turn walking navigation and it is not a pedestrian route.
 - Leg 1 must reach the transfer stop after the selected origin on its sequence. Leg 2 must reach `confirmed_destination_stop` after its boarding stop on a different `ServiceNo` + `Direction` sequence.
 - The maximum total journey budget is 90 minutes. The budget is the same generalized journey time used for ranking. A candidate above 90 minutes is rejected.
+- The co-located-stop rule and the 90-minute budget stay for the static fallback. For OneMap legs the 90-minute budget stays and a transfer is whatever OneMap reports.
 
-The search does not call OneMap, OpenAI, or `BusArrival`. It does not fetch live arrivals for candidate routes or for a future leg.
+The search calls OneMap routing (see the OneMap section) and nothing else live. It does not call OpenAI or `BusArrival`. It does not fetch live arrivals for candidate routes or for a future leg.
 
 If no direct or one-transfer candidate satisfies these constraints:
 
 - `route_status = "no_feasible_route"`
-- The UI card says exactly: `No direct or 1-transfer bus connection available for this trip.`
+- The UI card says exactly: `No route found for this trip.` (static fallback: `No direct or 1-transfer bus connection available for this trip.`). With a priority chip selected the sentence is the chip's: `No bus-only route found. Try another priority.` or `No MRT or LRT route found. Try another priority.`
 
-Do not synthesize a route with two or more transfers. Do not offer a low-confidence guess.
+Never synthesize a route: every leg is from OneMap or from the static fallback. A walk-only OneMap answer is not a route. Do not offer a low-confidence guess.
 
-`route_km` for a leg remains the existing `Distance` difference along that sequence, or null when that difference cannot be determined. `ride_minutes` remains `route_km / 18 km/h`, or null when `route_km` is null. Do not invent a duration. A candidate with no usable generalized journey time is not one of the labeled options. If that leaves no candidate inside the 90-minute budget, the result is `no_feasible_route`.
+`route_km` for a leg remains the existing `Distance` difference along that sequence, or null when that difference cannot be determined. For OneMap legs `ride_minutes` is the leg `duration` / 60. In the static fallback `ride_minutes` remains `route_km / 18 km/h`, or null when `route_km` is null. Do not invent a duration. A candidate with no usable generalized journey time is not one of the labeled options. If that leaves no candidate inside the 90-minute budget, the result is `no_feasible_route`.
 
 ### 2. Static route option ranking
 
@@ -1406,9 +1417,13 @@ Generalized journey time is `T_total + transfer penalty`.
 
 The 10 minutes is a ranking penalty only. It is not a measured transfer wait, not an arrive-by input, and not a leave-by input.
 
+For OneMap routes `T_total` is built from our walk to the first stop, the wait for the first leg, OneMap's minutes from first boarding to arrival and our walk from the last stop at the same speed. The ranking-only penalty is 3 equivalent minutes per transfer, and real waits are already in the minutes. The static fallback keeps 0 and 10.
+
 Transfer distance, used only by Option 2 below, is the straight-line distance between Leg 1's alighting stop and Leg 2's boarding stop. The same `BusStopCode` has transfer distance 0.
 
-Option labels, in this order:
+Priorities. The overview shows five chips: `Fastest` (default, every time), `Fewest transfers`, `Least walking`, `Bus only` and `MRT only`. Fastest, Fewest transfers and Least walking rank the `mode=TRANSIT` itineraries (Fewest transfers may add one `BUS` and one `RAIL` call). Bus only uses `mode=BUS` and MRT only uses `mode=RAIL`. At most 3 routing calls per planning request. Fastest sorts by minutes, Fewest transfers by transfers then minutes, Least walking by walking metres then minutes. A chip with no route shows its sentence; there is no silent switch to another chip. In the static fallback only the three labels below exist, and the other chips are disabled.
+
+Option labels (static fallback only), in this order:
 
 1. Option 1, `Fastest Route`. The valid candidate with the lowest generalized journey time.
 2. Option 2, `Fewest Transfers`. Among the remaining candidates, prefer 0 transfers over 1 transfer. If every remaining candidate has one transfer, choose the shortest transfer distance.
@@ -1426,9 +1441,10 @@ Leg 1, Bus A, after Start journey:
 - Compute `P_Leg1`, the range, slack, and the leave-by clock with the existing Python engine.
 - The Catch Chance hero describes Leg 1.
 
-Leg 2, Bus B (never tracked):
+Every leg after the first transit leg (never tracked):
 
-- Always: do not call `BusArrival` for Leg 2 and do not show a live catch probability, range, ETA, or leave-by for Leg 2. Show a schedule expectation only: the existing published headway for Leg 2's service at the projected arrival epoch at the transfer stop. The projected epoch is the selected Leg 1 ETA plus Leg 1 `ride_minutes`. It is not a second probability formula. The overview and the "on your way" overview add the muted note `Live tracking covers your first bus only.` under that line. The first-leg live page may show the muted line `Then Bus {service} at {stop}` for a transfer route. It is informational only and starts no tracking.
+- Always: do not call `BusArrival` for Leg 2 and do not show a live catch probability, range, ETA, or leave-by for Leg 2. Show a schedule expectation only: the existing published headway for that service (a train leg: the timetable headway) at the projected arrival epoch at the transfer stop. The projected epoch is the selected Leg 1 ETA plus Leg 1 `ride_minutes`. It is not a second probability formula. The overview and the "on your way" overview add the muted note `Live tracking covers your first bus only.` under that line. The first-leg live page may show the muted line `Then Bus {service} at {stop}` for a transfer route. It is informational only and starts no tracking.
+- First transit leg is MRT or LRT: do not call `BusArrival`. The probability uses the scheduled departure, half the headway as the uncertainty on each side, data quality `schedule` and the schedule-only cap of 60. The at-stop rule never applies. No leave-now notification is sent for a train until its wording is approved.
 ### 4. UI warning tier and the notification engine
 
 If the live Leg 1 point is below 50%:
@@ -1475,7 +1491,7 @@ Detection, the 40% trigger, the improvement margin and the cooldown do not chang
 
 Step 14 tests, using fixtures and not live APIs, must verify:
 
-1. The pathfinder returns at most 3 candidates, each with 0 or 1 transfer.
+1. The planner returns at most 3 itineraries, each with 0 to 3 transfers (static fallback: at most 3 candidates, each with 0 or 1 transfer).
 2. Static ranking does not call `BusArrival` during search.
 3. A journey whose valid candidates all exceed the 90-minute budget returns `route_status = "no_feasible_route"` and does not invent a route.
 4. The option labels are exactly `Fastest Route`, `Fewest Transfers`, and `Alternative Route`, and they follow section 2.
@@ -1492,7 +1508,7 @@ Do not implement in this specification lock:
 
 - Step 15 demo enhancements
 - Background location tracking
-- A live `BusArrival`, OneMap, or OpenAI call during route-option search
+- A live `BusArrival` or OpenAI call during route-option search
 - A change to the core Python catch-probability formula, the leave-by formula, or Step 10 notification timing
 
 Step 14 remains bus-only. It does not add trains, crowding, fares, accounts, server-side notifications, or turn-by-turn walking navigation.
