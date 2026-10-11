@@ -18,7 +18,7 @@ import httpx
 import onemap
 from nearby import haversine_m
 from onemap import DestinationUnavailable, OneMapSession, _AuthRejected, format_place_name
-from service_hours import rail_direction
+from service_hours import CIRCLE_WORDS, rail_circle_direction, rail_direction, rail_platform
 
 ROUTE_URL = "https://www.onemap.gov.sg/api/public/routingsvc/route"
 ROUTE_TIMEOUT_SECONDS = 10
@@ -266,13 +266,15 @@ def _request(session, client, params, manual, email, password, moment) -> tuple[
     for _attempt in range(2):
         current = onemap._usable_token(session, manual, moment)
         if current is None:
-            if refreshed or not mail or not secret:
-                raise RouteUnavailable("no_token")
+            if not refreshed and (not mail or not secret):
+                raise RouteUnavailable("no_credentials")
+            if refreshed:
+                raise RouteUnavailable("auth")
             _refresh(session, client, mail, secret)
             refreshed = True
             current = onemap._usable_token(session, manual, moment)
             if current is None:
-                raise RouteUnavailable("no_token")
+                raise RouteUnavailable("auth")
         try:
             status, payload = _route_once(client, current, params)
         except _AuthRejected:
@@ -293,6 +295,11 @@ def _refresh(session, client, mail: str, secret: str) -> None:
     try:
         onemap._generate_token(session, client, mail, secret)
     except DestinationUnavailable as exc:
+        cause = exc.__cause__
+        if isinstance(cause, httpx.TimeoutException):
+            raise RouteUnavailable("timeout") from exc
+        if isinstance(cause, httpx.HTTPError):
+            raise RouteUnavailable("network") from exc
         raise RouteUnavailable("auth") from exc
 
 
@@ -463,14 +470,19 @@ def _leg(raw: object, lta_cache, index, rail_table=None) -> dict | None:
         line = str(raw.get("routeShortName") or raw.get("route") or "").strip()
         board, alight = str(origin.get("stopCode", "")), str(target.get("stopCode", ""))
         toward = rail_direction(rail_table, line, board, alight)
+        headsign = toward[0] if toward else None
+        loop = rail_circle_direction(rail_table, line, toward[1]) if toward else None
         return {
             **base,
             "kind": KIND_RAIL,
             "mode": mode,
             "line_code": line,
             "line_name": format_place_name(str(raw.get("routeLongName") or "")),
-            "headsign": toward[0] if toward else None,
+            "headsign": headsign,
             "direction": toward[1] if toward else None,
+            "circle_direction": loop,  # "clockwise" or "anticlockwise" on a loop line, else None
+            "terminus": None if headsign is None or headsign.casefold() in CIRCLE_WORDS else headsign,
+            "platform": rail_platform(rail_table, board, headsign),
             "boarding_stop_code": board,
             "boarding_stop_name": format_place_name(str(origin.get("name", ""))),
             "alighting_stop_code": alight,

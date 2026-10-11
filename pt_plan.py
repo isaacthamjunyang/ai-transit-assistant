@@ -16,6 +16,7 @@ One routing call (pt_route) replaces the old per-stop loop of the static pathfin
 - Rail first leg: not scored here. The result describes the itinerary; catch probability is a later phase.
 """
 
+import logging
 import math
 from datetime import datetime, timedelta, timezone
 
@@ -203,19 +204,39 @@ def plan_multi_leg(
     }
 
 
+FALLBACK_REASONS = frozenset({"no_credentials", "auth", "timeout", "network", "rate_limited", "http_error",
+                              "rejected", "demo"})
+_log = logging.getLogger("uvicorn.error")
+
+
+def fallback_reason(exc: Exception) -> str:
+    """The non-secret code for why OneMap was not used. Never the exception text, a URL or a coordinate."""
+    if isinstance(exc, RouteRejected):
+        return "rejected"
+    code = getattr(exc, "reason", "")
+    return code if code in FALLBACK_REASONS else "http_error"
+
+
+def _with_reason(planned: dict, reason: str | None) -> dict:
+    if reason is not None:
+        _log.warning("OneMap routing not used, static planner answered: %s", reason)
+    return {**planned, "fallback_reason": reason}
+
+
 def journey_plan_result(cache, *, priority: str = DEFAULT_PRIORITY, use_onemap: bool = True, **kw) -> dict:
     """/api/journey-plan: the OneMap planner, or the static bus planner (fallback_note true) when OneMap fails or
     use_onemap is false (a Demo Mode OneMap failure). kw are the arguments of plan_multi_leg."""
     try:
         if not use_onemap:
             raise RouteUnavailable("demo")
-        return plan_multi_leg(cache, priority=priority, **kw)
-    except (RouteUnavailable, RouteRejected, BudgetExhausted):
-        return static_journey_plan(
+        return _with_reason(plan_multi_leg(cache, priority=priority, **kw), None)
+    except (RouteUnavailable, RouteRejected, BudgetExhausted) as exc:
+        return _with_reason(static_journey_plan(
             cache, priority=priority, user_lat=kw["user_lat"], user_lon=kw["user_lon"],
             destination_stop_code=kw.get("destination_stop_code", ""), dest_lat=kw["dest_lat"],
             dest_lon=kw["dest_lon"], arrive_by=kw.get("arrive_by"),
-            walk_speed_m_s=kw.get("walk_speed_m_s", WALK_SPEED_DEFAULT_MPS), now=kw.get("now"))
+            walk_speed_m_s=kw.get("walk_speed_m_s", WALK_SPEED_DEFAULT_MPS), now=kw.get("now")),
+            fallback_reason(exc))
 
 
 def route_plan_result(cache, *, origin_stop_code: str, alternates: list[str], priority: str = DEFAULT_PRIORITY,
@@ -224,13 +245,14 @@ def route_plan_result(cache, *, origin_stop_code: str, alternates: list[str], pr
     try:
         if not use_onemap:
             raise RouteUnavailable("demo")
-        return route_plan_body(plan_multi_leg(cache, priority=priority, origin_stop_code=origin_stop_code, **kw))
-    except (RouteUnavailable, RouteRejected, BudgetExhausted):
-        return static_route_plan(
+        planned = plan_multi_leg(cache, priority=priority, origin_stop_code=origin_stop_code, **kw)
+        return _with_reason(route_plan_body(planned), None)
+    except (RouteUnavailable, RouteRejected, BudgetExhausted) as exc:
+        return _with_reason(static_route_plan(
             cache, priority=priority, origin=origin_stop_code, destination=kw.get("destination_stop_code", ""),
             user_lat=kw["user_lat"], user_lon=kw["user_lon"], dest_lat=kw["dest_lat"], dest_lon=kw["dest_lon"],
             alternates=alternates, now=kw.get("now"), walk_speed_m_s=kw.get("walk_speed_m_s", WALK_SPEED_DEFAULT_MPS),
-            arrive_by=kw.get("arrive_by"))
+            arrive_by=kw.get("arrive_by")), fallback_reason(exc))
 
 
 def static_journey_plan(cache, *, priority, user_lat, user_lon, destination_stop_code, dest_lat, dest_lon, arrive_by,

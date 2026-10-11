@@ -802,3 +802,120 @@ def test_the_page_files_are_untouched_by_this_phase():
     root = Path(__file__).resolve().parents[1]
     page = (root / "static" / "index.html").read_text(encoding="utf-8")
     assert '"&priority=" + encodeURIComponent(planPriority)' in page  # the page always sends a priority (phase 5)
+
+
+# ---- fallback_reason --------------------------------------------------------------------------------------
+
+SECRET = "secret-token-value"
+ALL_REASONS = {"no_credentials", "auth", "timeout", "network", "rate_limited", "http_error", "rejected", "demo"}
+
+
+def _fallback(handler, route=False, **kw):
+    args = {**STATIC_ARGS, "token": SECRET, **kw}
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        common = dict(router=PtRouter(), session=OneMapSession(), client=client, rail_table=None, priority="fastest")
+        if route:
+            args.pop("destination_stop_code")
+            return pt_plan.route_plan_result(
+                lta(), origin_stop_code="54009", alternates=[], destination_stop_code="53231", **common, **args)
+        return pt_plan.journey_plan_result(lta(), **common, **args)
+
+
+def _answering(status=200, body=None, error=None, token_status=200, token_error=None):
+    def handler(request):
+        failure = token_error if request.method == "POST" else error
+        if failure:
+            raise failure
+        if request.method == "POST":
+            body_ = {"access_token": "fresh", "expiry_timestamp": 9999999999} if token_status == 200 else {}
+            return httpx.Response(token_status, json=body_)
+        return httpx.Response(status, json=body if body is not None else {})
+    return handler
+
+
+@pytest.mark.parametrize("route", [False, True])
+@pytest.mark.parametrize("handler, kw, reason", [
+    (_answering(500), {}, "http_error"),
+    (_answering(503), {}, "http_error"),
+    (_answering(200, {"error": "boom"}), {}, "http_error"),  # an answer we cannot read
+    (_answering(429, {"error": "slow"}), {}, "rate_limited"),
+    (_answering(400, {"error": "bad"}), {}, "rejected"),
+    (_answering(401, {"message": "Unauthorized"}), {}, "auth"),  # a 401 and no account to refresh with
+    (_answering(error=httpx.ReadTimeout("slow")), {}, "timeout"),
+    (_answering(error=httpx.ConnectError("down")), {}, "network"),
+    (_answering(200, {}), {"token": "", "email": "", "password": ""}, "no_credentials"),
+    (_answering(200, {}), {"use_onemap": False}, "demo"),
+])
+def test_each_failure_gives_its_own_fallback_reason(handler, kw, reason, route):
+    result = _fallback(handler, route=route, **kw)
+    assert result["fallback_reason"] == reason and result["fallback_reason"] in ALL_REASONS
+    assert result["fallback_note"] is True and result["planner"] == "static"
+
+
+@pytest.mark.parametrize("handler, reason", [
+    (_answering(401, {"message": "Unauthorized"}), "auth"),  # a 401 after the refresh
+    (_answering(200, {}, token_status=401), "auth"),  # the account is refused
+    (_answering(200, {}, token_error=httpx.ReadTimeout("slow")), "timeout"),
+    (_answering(200, {}, token_error=httpx.ConnectError("down")), "network"),
+])
+def test_the_account_refresh_separates_auth_from_no_credentials(handler, reason):
+    result = _fallback(handler, token="", email="me@example.com", password="pw-value")
+    assert result["fallback_reason"] == reason
+
+
+def test_a_token_that_is_missing_with_an_account_is_not_no_credentials():
+    result = _fallback(_answering(401, {"message": "Unauthorized"}), token="stale", email="a@b.sg", password="pw")
+    assert result["fallback_reason"] == "auth"
+
+
+def test_the_reason_is_null_when_onemap_answered():
+    server = Server(default=ok("direct_bus"))
+    with server.client() as client:
+        found = pt_plan.journey_plan_result(
+            lta(), priority="fastest", router=PtRouter(), session=OneMapSession(), client=client, rail_table=None,
+            token=SECRET, **STATIC_ARGS)
+    assert found["planner"] == "onemap" and found["fallback_reason"] is None and found["fallback_note"] is False
+    none = _fallback(_answering(404, {"error": "Unable to get route"}))
+    assert none["planner"] == "onemap" and none["fallback_reason"] is None
+
+
+@pytest.mark.parametrize("answer", [(404, {"error": "Unable to get route"}), (200, {"plan": {"itineraries": []}})])
+def test_onemap_working_but_finding_nothing_says_no_route_found_not_the_static_sentence(answer):
+    result = _fallback(_answering(*answer))
+    assert result["route_status"] == "no_feasible_route" and result["planner"] == "onemap"
+    assert result["message"] == "No route found for this trip." and result["fallback_note"] is False
+    assert result["fallback_reason"] is None
+
+
+def test_onemap_down_and_no_static_route_keeps_the_note_and_the_reason():
+    result = _fallback(_answering(500), destination_stop_code="", dest_lat=1.20, dest_lon=103.50)
+    assert result["route_status"] == "no_feasible_route" and result["planner"] == "static"
+    assert result["fallback_note"] is True and result["fallback_reason"] == "http_error" and result["option"] is None
+
+
+def test_the_reason_log_line_and_the_response_carry_no_secret_url_or_coordinate(caplog):
+    handler = _answering(error=httpx.ReadTimeout("took too long for https://example.test/secret?token=" + SECRET))
+    with caplog.at_level(logging.INFO):
+        result = _fallback(handler, token=SECRET, email="me@example.com", password="pw-value")
+    lines = [r.getMessage() for r in caplog.records if "OneMap routing not used" in r.getMessage()]
+    assert lines == ["OneMap routing not used, static planner answered: timeout"]
+    assert result["fallback_reason"] == "timeout"
+    for forbidden in (SECRET, "pw-value", "me@example.com", "example.test", "took too long"):
+        assert forbidden not in json.dumps(result) and forbidden not in " ".join(lines)
+
+
+def test_the_endpoints_return_the_fallback_reason(api):
+    api.holder["server"] = Server(default=(429, {"error": "slow"}))
+    journey = api.get("/api/journey-plan", params={**JOURNEY, "priority": "fastest"}).json()
+    route = api.get("/api/route-plan", params={**ROUTE, "priority": "fastest"}).json()
+    assert journey["fallback_reason"] == "rate_limited" and route["fallback_reason"] == "rate_limited"
+    api.holder["server"] = Server(default=ok("direct_bus"))
+    answered = api.get("/api/journey-plan", params={**JOURNEY, "priority": "fastest"}).json()
+    assert answered["fallback_reason"] is None
+    assert api.get("/api/route-plan", params={**ROUTE, "priority": "fastest"}).json()["fallback_reason"] is None
+
+
+def test_a_demo_destination_reports_the_demo_reason(api, monkeypatch):
+    monkeypatch.setattr(main.demo, "destination_is_simulated", lambda: True)
+    body = api.get("/api/journey-plan", params={**JOURNEY, "priority": "fastest"}).json()
+    assert body["fallback_reason"] == "demo"

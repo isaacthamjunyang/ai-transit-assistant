@@ -368,7 +368,7 @@ def test_a_second_401_is_unavailable_and_the_token_is_not_in_the_error():
     server = Server((401, {"message": "Unauthorized"}))
     with pytest.raises(pr.RouteUnavailable) as caught:
         _route(server, token="", email="me@example.com", password="pw")
-    assert len(server.posts) == 1  # one refresh, never a loop
+    assert len(server.posts) == 1 and caught.value.reason == "auth"  # one refresh, never a loop
     assert "fresh-token" not in str(caught.value) and "fresh-token" not in repr(caught.value)
 
 
@@ -381,9 +381,9 @@ def test_a_401_with_no_account_is_unavailable_without_a_refresh():
 
 def test_no_token_and_no_account_is_unavailable_with_no_call():
     server = Server(_ok_answer())
-    with pytest.raises(pr.RouteUnavailable):
+    with pytest.raises(pr.RouteUnavailable) as caught:
         _route(server, token="")
-    assert not server.gets
+    assert not server.gets and caught.value.reason == "no_credentials"
 
 
 def test_the_session_keeps_a_refreshed_token_in_memory_only():

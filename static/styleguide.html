@@ -1048,7 +1048,6 @@
     var SG_LINE_CODES = ["NS", "EW", "CG", "NE", "CC", "DT", "TE", "BP", "SK", "PG", "SS"];
     var SG_WALK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"1.8\" fill=\"currentColor\"></circle><path d=\"M10 21l2-6-3-3 1-4 3 2 3 1M12 15l3 2 1 4M10 8l-3 3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var SG_TRAIN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"13\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><rect x=\"8.5\" y=\"6\" width=\"7\" height=\"4\" rx=\"1\" fill=\"currentColor\"></rect><circle cx=\"9.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><circle cx=\"14.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><path d=\"M8 21l2-5M16 21l-2-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
-    var SG_CHANGE_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
 
     function sgFill(template, values) {
       Object.keys(values).forEach(function (key) {
@@ -1066,12 +1065,37 @@
     }
 
     function sgLegRow(kind, title, lines, editLabel) {
-      var icon = kind === "walk" ? SG_WALK_ICON : kind === "rail" ? SG_TRAIN_ICON : kind === "change" ? SG_CHANGE_ICON
+      var icon = kind === "walk" ? SG_WALK_ICON : kind === "rail" ? SG_TRAIN_ICON
         : kind === "origin" ? PIN_FILL_ICON : kind === "destination" ? FLAG_ICON : BUS_SVG;
       return "<li class=\"journey-step journey-step--" + kind + "\"><span class=\"step-node step-node--" + kind + "\" aria-hidden=\"true\">" + icon + "</span>"
         + "<div class=\"journey-step__body\">" + (title ? "<p class=\"journey-step__title\">" + title + "</p>" : "") + lines.join("") + "</div>"
         + (editLabel ? "<button type=\"button\" class=\"link-button journey-step__edit\" aria-label=\"" + editLabel + "\">" + jo.edit + "</button>" : "")
         + "</li>";
+    }
+
+    // A transit leg, rail or bus, in one shape: a start marker with the stop and code, the line row, the schedule or live
+    // line, an optional note, the ride line, then an end marker with the stop and code. Both markers carry the leg's icon and a
+    // ring. A rail leg (ringCode) takes its own line token colour for the rings and the bar; a bus leg stays neutral.
+    function sgLeg(kind, ringCode, startName, rowHtml, whenHtml, noteText, rideText, endName) {
+      var icon = kind === "rail" ? SG_TRAIN_ICON : BUS_SVG;
+      return "<li class=\"journey-step journey-step--" + kind + " journey-step--leg" + (ringCode ? " journey-step--rail-" + ringCode.toLowerCase() : "") + "\">"
+        + "<span class=\"journey-step__bar\" aria-hidden=\"true\"></span>"
+        + "<span class=\"step-node step-node--" + kind + "\" aria-hidden=\"true\">" + icon + "</span>"
+        + "<div class=\"journey-step__body\"><p class=\"journey-step__title\">" + startName + "</p>" + rowHtml + whenHtml
+        + (noteText ? sgDetail(noteText) : "") + sgDetail(rideText) + "</div>"
+        + "<span class=\"step-node step-node--" + kind + "-end\" aria-hidden=\"true\">" + icon + "</span>"
+        + "<div class=\"journey-step__body journey-step__body--end\"><p class=\"journey-step__title\">" + endName + "</p></div></li>";
+    }
+
+    function sgRailLeg(code, startName, lineText, whenText, rideText, endName) {
+      return sgLeg("rail", code, startName, "<p class=\"journey-step__line\">" + sgBadge(code) + " <span>" + lineText + "</span></p>",
+        whenText ? sgDetail(whenText) : "", "", rideText, endName);
+    }
+
+    function sgBusLeg(service, startName, toText, pill, whenText, whenClass, noteText, rideText, endName) {
+      return sgLeg("bus", "", startName, "<p class=\"journey-step__line\"><span class=\"line-badge\"><span class=\"visually-hidden\">Bus </span>" + service
+        + "</span> <span>" + toText + "</span>" + (pill ? sgPill(pill) : "") + "</p>",
+        whenText ? sgDetail(whenText, whenClass) : "", noteText, rideText, endName);
     }
 
     function sgChips(selected, disabled) {
@@ -1131,28 +1155,43 @@
       var rows = [
         sgLegRow("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title")], ""),
         sgLegRow("walk", sgFill(jo.walkRow, { n: 4 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "300" + nb + "m", place: "Opp Stamford Pr Sch (04119)" }))], ""),
-        sgLegRow("bus", "", ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "36") + "</span>" + sgPill("live") + "</p>",
-          sgDetail(sgFill(jo.busToward, { terminus: "Marina Bay Sands" })), sgDetail(jo.board + " Opp Stamford Pr Sch (04119)"),
-          sgDetail(jo.getOff + " Bef Toh Guan Rd (28059)"), sgDetail(sgFill(jo.stopsAndMin, { k: 7, m: 8 })),
-          sgDetail(sgFill(copy.liveCatch.arrivingIn, { n: 4 }), "journey-step__arriving")], ""),
-        sgLegRow("change", sgFill(jo.changeAtStop, { stop: "Bef Toh Guan Rd" }), [sgDetail(sgFill(jo.transferTimes, { w: 2, t: 2 }))], ""),
-        sgLegRow("rail", "", [sgLineHead("NS"), sgDetail(sgFill(jo.trainToward, { terminus: "Marina South Pier" })),
-          sgDetail(jo.board + " Bishan MRT Station (NS17)"), sgDetail(jo.getOff + " Raffles Place MRT Station (NS26)"),
-          sgDetail(sgFill(jo.stopsAndMin, { k: 6, m: 12 })), sgDetail(sgFill(jo.scheduledAt, { time: "8:44" + nb + "AM", h: 3 }))], ""),
-        sgLegRow("change", sgFill(jo.changeCodes, { a: "NS26", b: "EW14", station: "Raffles Place" }), [sgDetail(sgFill(jo.transferWaitOnly, { t: 3 }))], ""),
-        sgLegRow("rail", "", [sgLineHead("EW"), sgDetail(sgFill(jo.trainToward, { terminus: "Tuas Link" })),
-          sgDetail(jo.board + " Raffles Place MRT Station (EW14)"), sgDetail(jo.getOff + " Jurong East MRT Station (EW24)"),
-          sgDetail(sgFill(jo.stopsAndMin, { k: 7, m: 15 })), sgDetail(sgFill(jo.scheduledTime, { time: "8:57" + nb + "AM" }))], ""),
-        sgLegRow("change", sgFill(jo.changeAtStation, { station: "Jurong East" }), [sgDetail(sgFill(jo.transferTimes, { w: 3, t: 3 }))], ""),
-        sgLegRow("rail", "", [sgLineHead("BP"), sgDetail(jo.board + " Bukit Panjang LRT Station (BP6)"), sgDetail(jo.getOff + " Segar LRT Station (BP11)"),
-          sgDetail(sgFill(jo.stopsAndMin, { k: 3, m: 6 })), sgDetail(sgFill(jo.scheduledTime, { time: "9:12" + nb + "AM" }))], ""),
+        sgBusLeg("36", "Opp Stamford Pr Sch (04119)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "live",
+          sgFill(copy.liveCatch.arrivingIn, { n: 4 }), "journey-step__arriving", "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd (28059)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "130" + nb + "m", place: "Bishan MRT Station (NS17)" }))], ""),
+        sgRailLeg("NS", "Bishan MRT Station (NS17)", sgFill(jo.directionPlatform, { direction: sgFill(jo.trainToward, { terminus: "Marina South Pier" }), x: "B" }),
+          sgFill(jo.scheduledAt, { time: "8:44" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 6, m: 12 }), "Raffles Place MRT Station (NS26)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 1 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "90" + nb + "m", place: "Raffles Place MRT Station (EW14)" }))], ""),
+        sgRailLeg("EW", "Raffles Place MRT Station (EW14)", sgFill(jo.trainToward, { terminus: "Tuas Link" }),
+          sgFill(jo.scheduledAt, { time: "8:57" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 7, m: 15 }), "Jurong East MRT Station (EW24)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 3 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "261" + nb + "m", place: "Bukit Panjang LRT Station (BP6)" }))], ""),
+        sgRailLeg("BP", "Bukit Panjang LRT Station (BP6)", "", sgFill(jo.scheduledAt, { time: "9:12" + nb + "AM" }),
+          sgFill(jo.stopsAndMin, { k: 3, m: 6 }), "Segar LRT Station (BP11)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "110" + nb + "m", place: "Opp Segar Rd (45011)" }))], ""),
+        sgBusLeg("106", "Opp Segar Rd (45011)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "",
+          sgFill(jo.scheduledAt, { time: "9:24" + nb + "AM" }), "", jo.firstBusOnly, sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Bef Marina Bay Stn (03029)"),
         sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "150" + nb + "m", place: "Marina Bay Sands" }))], jo.editDestinationStop),
         sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], jo.editDestination)
       ];
       var totals = sgFill(jo.totals, { n: 63, t: sgFill(jo.transfersMany, { t: 3 }), w: 12 });
       var firstTrain = [
-        sgLegRow("rail", "", [sgLineHead("DT"), sgDetail(jo.board + " Bayfront MRT Station (DT16)"), sgDetail(jo.getOff + " Chinatown MRT Station (DT19)"),
-          sgDetail(sgFill(jo.stopsAndMin, { k: 3, m: 7 })), sgDetail(sgFill(jo.scheduledAbout, { n: 5 }))], "")
+        sgRailLeg("DT", "Bayfront MRT Station (DT16)", sgFill(jo.trainToward, { terminus: "Expo" }), sgFill(jo.scheduledIn, { n: 5 }),
+          sgFill(jo.stopsAndMin, { k: 3, m: 7 }), "Chinatown MRT Station (DT19)")
+      ];
+      var interchange = [
+        sgRailLeg("CC", "Haw Par Villa MRT Station (CC25)", sgFill(jo.loopToward, { direction: jo.anticlockwise, terminus: "HarbourFront" }),
+          sgFill(jo.scheduledAt, { time: "8:44" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 3, m: 6 }), "Buona Vista MRT Station (CC22)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "120" + nb + "m", place: "Buona Vista MRT Station (EW21)" }))], ""),
+        sgRailLeg("EW", "Buona Vista MRT Station (EW21)", sgFill(jo.trainToward, { terminus: "Pasir Ris" }),
+          sgFill(jo.scheduledAt, { time: "8:56" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 4, m: 8 }), "Tanjong Pagar MRT Station (EW15)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "100" + nb + "m", place: "Outram Park MRT Station (EW16)" }))], ""),
+        sgRailLeg("EW", "Outram Park MRT Station (EW16)", sgFill(jo.trainToward, { terminus: "Pasir Ris" }),
+          sgFill(jo.scheduledAt, { time: "9:06" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 2, m: 4 }), "Tiong Bahru MRT Station (EW17)")
+      ];
+      var trainWords = [
+        sgRailLeg("CC", "Promenade MRT Station (CC4)", sgFill(jo.directionPlatform, { direction: sgFill(jo.loopToward, { direction: jo.anticlockwise, terminus: "HarbourFront" }), x: "A" }),
+          jo.scheduledInOne, sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Botanic Gardens MRT Station (CC19)"),
+        sgRailLeg("CC", "Botanic Gardens MRT Station (CC19)", jo.clockwise, jo.scheduledNow, sgFill(jo.stopsAndMin, { k: 4, m: 7 }), "Bishan MRT Station (CC15)"),
+        sgRailLeg("NE", "Dhoby Ghaut MRT Station (NE6)", sgFill(jo.platformOnly, { x: "B" }), "", sgFill(jo.stopOneAndMin, { m: 2 }), "Little India MRT Station (NE7)")
       ];
       return "<h4>Map route lines on the land stand-in (a casing only where the plan says)</h4><div class=\"stack\">" + sgMapLines() + "</div>"
         + "<h4>Line badges: the code and the name are both text (NS, EW, CG, NE, CC, DT, TE, BP, SK, PG, SS)</h4>"
@@ -1167,8 +1206,12 @@
         + "<h4>Priority chips: nothing for MRT only, and the best-available line</h4><div class=\"overview-priority\">" + sgChips("mrt_only", [])
         + "<p class=\"overview-note\">" + jo.bestAvailable + "</p></div>"
         + "<div class=\"card overview-card\"><p class=\"banner banner--caution\">" + jo.noMrtOnly + "</p></div>"
-        + "<h4>A train first leg: the first leg says \"About N min, scheduled\"; Start journey is on</h4>"
+        + "<h4>Train leg row: a first leg says \"Scheduled \u00b7 In N min\"; Start journey is on</h4>"
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + firstTrain.join("") + "</ol></div>"
+        + "<h4>A change is a plain neutral walk row; a different line switches the colour, the same line keeps it</h4>"
+        + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + interchange.join("") + "</ol></div>"
+        + "<h4>Train leg row: a loop line adds Clockwise or Anticlockwise, \"In 1 min\", \"Now\", and a platform only when one is known</h4>"
+        + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + trainWords.join("") + "</ol></div>"
         + trainPagesSample();
     }
 

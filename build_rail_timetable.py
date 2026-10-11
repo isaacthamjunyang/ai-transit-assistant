@@ -18,7 +18,8 @@ What goes in the table (schema 1):
 - lines: per line code (NS, EW, ...) the GTFS long name, mode (SUBWAY for MRT, TRAM for LRT, as OneMap names it),
   and the official fill and text colours of routes.txt.
 - stations: per station code (the GTFS stop_code, one per line at an interchange) the name, coordinates, the
-  interchange group (parent_station) and, per direction, the headsign it is keyed by. A terminus that only ends
+  interchange group (parent_station) and, per direction, the headsign it is keyed by (with `platforms`, the platform
+  codes of platform_code in stops.txt that trains of that direction leave from; empty when any is blank or a list). A terminus that only ends
   trips of a headsign has no direction of that headsign (nobody boards there) but is still listed. A direction holds one entry
   per day type WD (Monday to Friday), SAT or SUN (Sunday and public holidays): first and last train as "HHMM"
   (hours past 24 are kept: "2414" is 00:14 the next day) and headway_s, the median gap between trains in seconds
@@ -131,7 +132,9 @@ def build_table(source: Path, today: date, allow_expired: bool = False) -> dict:
     meta: dict[tuple[str, str], dict] = {}
     orders: dict[tuple[str, str], list[tuple[int, str]]] = {}
     code_of = {stop_id: info["code"] for stop_id, info in stations_info["platforms"].items()}
-    trip_stops: dict[str, list[tuple[int, str, int]]] = defaultdict(list)
+    platform_of = {stop_id: info["platform"] for stop_id, info in stations_info["platforms"].items()}
+    boarded_from: dict[tuple[str, str], set[str]] = defaultdict(set)  # (code, headsign) -> platform codes ("" unknown)
+    trip_stops: dict[str, list[tuple[int, str, int, str]]] = defaultdict(list)
     for row in _rows(source, "stop_times"):
         trip = trips.get(row["trip_id"])
         if trip is None or (trip["line"], trip["direction_id"], trip["headsign"]) not in main:
@@ -140,19 +143,20 @@ def build_table(source: Path, today: date, allow_expired: bool = False) -> dict:
         if code is None:
             continue
         sequence = int(row["stop_sequence"])
-        trip_stops[row["trip_id"]].append((sequence, code, _seconds(row["departure_time"])))
+        trip_stops[row["trip_id"]].append((sequence, code, _seconds(row["departure_time"]), platform_of[row["stop_id"]]))
     for trip_id, stops in trip_stops.items():
         trip = trips[trip_id]
         stops.sort()
         key_line = (trip["line"], trip["headsign"])
-        codes = [code for _seq, code, _t in stops]
+        codes = [code for _seq, code, _t, _p in stops]
         if len(codes) > len(orders.get(key_line, [])):
             orders[key_line] = list(codes)
         final = last_sequence[trip_id]
-        for sequence, code, seconds in stops:
+        for sequence, code, seconds, platform in stops:
             if sequence == final:
                 continue  # the train ends here: nobody boards it
             key = (code, trip["headsign"])
+            boarded_from[key].add(platform)
             departures[key][trip["day_type"]].append(seconds)
             meta.setdefault(key, {"line": trip["line"], "direction_id": trip["direction_id"], "trips": 0})["trips"] += 1
     stations: dict[str, dict] = {}
@@ -162,7 +166,7 @@ def build_table(source: Path, today: date, allow_expired: bool = False) -> dict:
             "name": info.get("name", ""), "latitude": info.get("latitude"), "longitude": info.get("longitude"),
             "interchange": info.get("interchange"), "directions": {},
         })
-        entry = {**meta[(code, headsign)]}
+        entry = {**meta[(code, headsign)], "platforms": _platforms(boarded_from[(code, headsign)])}
         for day_type in DAY_TYPES:
             times = sorted(by_day.get(day_type, []))
             if times:
@@ -193,6 +197,14 @@ def build_table(source: Path, today: date, allow_expired: bool = False) -> dict:
         "patterns": patterns,
     }
     return table
+
+
+def _platforms(seen: set[str]) -> list[str]:
+    """The platform codes trains of one direction leave a station from. If any departure has no usable code (blank,
+    or a list such as "A / D / E"), the answer is unknown and the list is empty: a platform is never guessed."""
+    if not seen or any(not code or "/" in code for code in seen):
+        return []
+    return sorted(seen)
 
 
 def _day_entry(times: list[int]) -> dict:
@@ -297,7 +309,7 @@ def _station_info(source: Path) -> dict:
             continue
         point = {"latitude": _float(row["stop_lat"]), "longitude": _float(row["stop_lon"])}
         if kind == "0":
-            platforms[row["stop_id"]] = {"code": code}
+            platforms[row["stop_id"]] = {"code": code, "platform": (row.get("platform_code") or "").strip()}
             parent = row.get("parent_station", "").strip()
             entry = stations.setdefault(code, {"name": row["stop_name"].strip(), **point, "interchange": None})
             if parent and parent != code and entry["interchange"] is None:
@@ -350,6 +362,9 @@ def validate_table(table: dict, today: date, required_lines=REQUIRED_LINES, min_
         for headsign, entry in station.get("directions", {}).items():
             if entry.get("line") not in table["lines"]:
                 problems.append(f"{code} {headsign}: unknown line")
+            listed = entry.get("platforms", [])
+            if not isinstance(listed, list) or not all(isinstance(item, str) and item for item in listed):
+                problems.append(f"{code} {headsign}: platforms {listed!r}")
             days = [day for day in DAY_TYPES if day in entry]
             if not days:
                 problems.append(f"{code} {headsign}: no day type")

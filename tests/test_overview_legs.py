@@ -86,11 +86,11 @@ def test_the_page_sets_no_colour_and_no_style_for_the_new_rows():
 
 
 PAIRS = {  # copy.js journeyOverview key: the page's constant
-    "walkRow": "JO_WALK_ROW", "walkRowTo": "JO_WALK_ROW_TO", "busToward": "JO_TOWARD", "board": "JO_BOARD",
-    "getOff": "JO_GET_OFF", "stopsAndMin": "JO_STOPS", "stopOneAndMin": "JO_STOP_ONE",
-    "changeAtStation": "JO_CHANGE_STATION", "changeAtStop": "JO_CHANGE_STOP", "changeCodes": "JO_CHANGE_CODES",
-    "transferTimes": "JO_TRANSFER_TIMES", "transferWalkOnly": "JO_TRANSFER_WALK", "transferWaitOnly": "JO_TRANSFER_WAIT",
-    "scheduledAbout": "JO_SCHEDULED_ABOUT", "scheduledAt": "JO_SCHEDULED_AT", "scheduledTime": "JO_SCHEDULED_TIME",
+    "walkRow": "JO_WALK_ROW", "walkRowTo": "JO_WALK_ROW_TO", "busToward": "JO_TOWARD",
+    "loopToward": "JO_LOOP_TOWARD", "clockwise": "JO_CLOCKWISE", "anticlockwise": "JO_ANTICLOCKWISE",
+    "directionPlatform": "JO_DIRECTION_PLATFORM", "platformOnly": "JO_PLATFORM_ONLY", "stopsAndMin": "JO_STOPS", "stopOneAndMin": "JO_STOP_ONE",
+    "scheduledIn": "JO_SCHEDULED_IN", "scheduledInOne": "JO_SCHEDULED_IN_ONE", "scheduledNow": "JO_SCHEDULED_NOW",
+    "scheduledAt": "JO_SCHEDULED_AT",
     "totals": "JO_TOTALS", "transfersMany": "JO_TRANSFERS_MANY", "transfersOne": "JO_TRANSFERS_ONE",
     "transfersNone": "JO_TRANSFERS_NONE", "noRouteFound": "JO_NO_ROUTE_FOUND", "noBusOnly": "JO_NO_BUS_ONLY",
     "noMrtOnly": "JO_NO_MRT_ONLY", "bestAvailable": "JO_BEST_AVAILABLE", "needsRouteService": "JO_NEEDS_ROUTE_SERVICE",
@@ -111,9 +111,11 @@ def test_the_page_constants_are_copy_js_character_for_character():
 
 def test_the_section_4_9_texts_are_exact():
     expected = {
-        "walkRow": "Walk {n}" + ESC + "min", "busToward": "Toward {terminus}", "board": "Board", "getOff": "Get off",
-        "changeAtStation": "Change at {station}", "changeAtStop": "Change at {stop}",
-        "changeCodes": "Change from {a} to {b} at {station}", "scheduledAbout": "About {n}" + ESC + "min, scheduled",
+        "walkRow": "Walk {n}" + ESC + "min", "busToward": "To {terminus}",
+        "loopToward": "{direction} \\u00b7 To {terminus}", "clockwise": "Clockwise", "anticlockwise": "Anticlockwise",
+        "directionPlatform": "{direction} \\u00b7 Platform {x}", "platformOnly": "Platform {x}",
+        "scheduledNow": "Scheduled · Now", "scheduledInOne": "Scheduled · In 1" + ESC + "min",
+        "scheduledIn": "Scheduled · In {n}" + ESC + "min", "scheduledAt": "Scheduled · {time}",
         "noBusOnly": "No bus-only route found. Try another priority.",
         "noMrtOnly": "No MRT or LRT route found. Try another priority.",
         "bestAvailable": "This is the best available for this trip.", "needsRouteService": "Needs the route service.",
@@ -128,8 +130,7 @@ def test_numbers_keep_their_min_and_no_fares_or_street_names_appear_in_the_new_c
     region = INDEX.split("function legIsRail(leg)", 1)[1].split("function syncOverviewArrive()", 1)[0]
     code = "\n".join(row for row in region.split("\n") if not row.strip().startswith("//"))
     assert "fare" not in code.lower() and "street" not in code.lower()
-    for variable in ("JO_WALK_ROW", "JO_STOPS", "JO_STOP_ONE", "JO_SCHEDULED_ABOUT", "JO_TRANSFER_TIMES", "JO_TRANSFER_WALK",
-                    "JO_TRANSFER_WAIT", "JO_SCHEDULED_AT", "JO_TOTALS"):
+    for variable in ("JO_WALK_ROW", "JO_STOPS", "JO_STOP_ONE", "JO_SCHEDULED_IN", "JO_TOTALS"):
         value = re.search(rf'var {variable} = "([^"]*)";', INDEX).group(1)
         assert "} min" not in value and "}" + ESC + "min" in value, variable  # a number never splits from "min"
 
@@ -159,7 +160,7 @@ def test_the_style_guide_shows_every_badge_in_both_themes_and_the_new_rows():
     assert '["NS", "EW", "CG", "NE", "CC", "DT", "TE", "BP", "SK", "PG", "SS"]' in "var SG_LINE_CODES" + program
     for code in CODES + ["ss"]:
         assert code.upper() in program or "LINE_CODES" in program
-    for needle in ("line-badge", "arrive-chip", 'sgLegRow("walk"', 'sgLegRow("rail"', 'sgLegRow("change"', "aria-disabled"):
+    for needle in ("line-badge", "arrive-chip", 'sgLegRow("walk"', 'sgRailLeg("NS"', 'sgBusLeg(', "aria-disabled"):
         assert needle in program, needle
 
 
@@ -192,9 +193,65 @@ def train_first(tmp_path_factory):
     return _run(tmp_path_factory, "train", {"TRANSIT": stub.train_first}, width=390)
 
 
+def _dirs(line, **headsigns):
+    return {"directions": {h: {"line": line, "direction_id": d, "trips": 9, "platforms": p} for h, (d, p) in headsigns.items()}}
+
+
+PLATFORM_TABLE = {  # NS17 has one platform for its direction; EW14 has two platforms serving its direction
+    "schema": 1, "lines": {}, "stations": {
+        "NS17": _dirs("NS", **{"Marina South Pier": (1, ["B"])}), "EW14": _dirs("EW", **{"Tuas Link": (1, ["A", "B"])})},
+    "patterns": {"NS": {"Marina South Pier": ["NS17", "NS22", "NS26"]}, "EW": {"Tuas Link": ["EW14", "EW15", "EW24"]}}}
+CIRCLE_TABLE = {  # the loop words come from the Anticlockwise and Clockwise headsigns and their direction ids
+    "schema": 1, "lines": {}, "stations": {"CC4": _dirs("CC", Anticlockwise=(0, ["A"]), Clockwise=(1, ["B"]))},
+    "patterns": {"CC": {"Anticlockwise": ["CC4", "CC15"]}}}
+CIRCLE_STADIUM_TABLE = {  # a station headsign: "Anticlockwise" and the terminus, and no platform (two serve it)
+    "schema": 1, "lines": {}, "stations": {
+        "CC4": _dirs("CC", Anticlockwise=(0, ["A"]), Clockwise=(1, ["B"]), Stadium=(0, ["A", "B"]))},
+    "patterns": {"CC": {"Stadium": ["CC4", "CC15"]}}}
+
+
+@pytest.fixture(scope="module")
+def platforms(tmp_path_factory):
+    return _run(tmp_path_factory, "platforms", {"TRANSIT": stub.train_transfer}, rail_table=PLATFORM_TABLE, width=360)
+
+
+SAME_LINE_TABLE = {
+    "schema": 1, "lines": {}, "stations": {}, "patterns": {"NS": {"Marina South Pier": ["NS17", "NS22", "NS23", "NS26"]}}}
+
+
+@pytest.fixture(scope="module")
+def same_line(tmp_path_factory):
+    return _run(tmp_path_factory, "same_line", {"TRANSIT": stub.same_line}, rail_table=SAME_LINE_TABLE, width=1280, dark=True)
+
+
+@pytest.fixture(scope="module")
+def later_buses(tmp_path_factory):
+    return _run(tmp_path_factory, "later_buses", {"TRANSIT": stub.later_buses}, width=390)
+
+
+@pytest.fixture(scope="module")
+def circle(tmp_path_factory):
+    return _run(tmp_path_factory, "circle", {"TRANSIT": stub.circle}, rail_table=CIRCLE_TABLE, width=360)
+
+
+@pytest.fixture(scope="module")
+def circle_stadium(tmp_path_factory):
+    return _run(tmp_path_factory, "circle_stadium", {"TRANSIT": stub.circle}, rail_table=CIRCLE_STADIUM_TABLE, width=1280)
+
+
 @pytest.fixture(scope="module")
 def fallback(tmp_path_factory):
     return _run(tmp_path_factory, "fallback", None, width=390, keys="ArrowRight")
+
+
+@pytest.fixture(scope="module")
+def fallback_no_route(tmp_path_factory):
+    return _run(tmp_path_factory, "fallback_none", None, width=390, destPos=[1.20, 103.50], dest="00000")
+
+
+@pytest.fixture(scope="module")
+def onemap_empty(tmp_path_factory):
+    return _run(tmp_path_factory, "onemap_none", {"TRANSIT": stub.mixed}, width=390, destPos=[1.20, 103.50], dest="00000")
 
 
 @pytest.fixture(scope="module")
@@ -211,40 +268,161 @@ def _texts(rows):
     return [row["text"] for row in rows]
 
 
+def _kinds(rows):
+    return [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in rows]
+
+
 def test_the_overview_has_one_row_per_leg_in_order(wide_dark):
     rows = wide_dark["first"]["rows"]
-    kinds = [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in rows]
-    assert kinds == ["origin", "walk", "bus", "change", "rail", "change", "rail", "change", "rail", "walk", "destination"]
+    # a change is a walk row only when OneMap gave a walk: NS26 to EW14 had none, so the two rail legs touch
+    assert _kinds(rows) == ["origin", "walk", "bus", "walk", "rail", "rail", "walk", "rail", "walk", "destination"]
     assert rows[0]["lines"][0] == "From" and rows[0]["lines"][1] == "Your current location"
     assert rows[1]["title"].startswith("Walk ") and "to Origin (01011)" in rows[1]["text"]
     bus = rows[2]
-    assert bus["lines"][0].startswith("Bus 18") and "Board Origin (01011)" in bus["text"]
-    assert "Get off Bef Toh Guan Rd (28059)" in bus["text"] and re.search(r"4 stops · 8" + NB + "min", bus["text"])
+    assert bus["lines"][0] == "Origin (01011)" and bus["lines"][1].startswith("Bus 18")
+    assert re.fullmatch(r"4 stops · 8" + NB + "min", bus["lines"][-2]) and bus["lines"][-1] == "Bef Toh Guan Rd (28059)"
+    assert "Board" not in bus["text"] and "Get off" not in bus["text"] and "Toward" not in bus["text"]
+    assert any(line.startswith("Arriving in") for line in bus["lines"])  # the first bus keeps its live line
 
 
-def test_walk_bus_and_transfer_rows_use_the_section_4_9_words(wide_dark):
+def test_a_change_is_a_plain_walk_row_for_every_pair_of_modes_and_has_no_wait(wide_dark, platforms, same_line):
     rows = wide_dark["first"]["rows"]
-    assert rows[3]["title"] == "Change at Bef Toh Guan Rd"
-    assert rows[3]["lines"][1] == "2" + NB + "min walk · about 2" + NB + "min wait"
-    assert rows[5]["title"] == "Change from NS26 to EW14 at Raffles Place"
-    assert rows[5]["lines"][1] == "About 3" + NB + "min wait"
-    assert rows[7]["title"] == "Change at Jurong East"
-    assert rows[7]["lines"][1] == "3" + NB + "min walk · about 3" + NB + "min wait"
-    assert rows[9]["title"].startswith("Walk ") and "to Destination" in rows[9]["text"]
-    assert rows[9]["edit"]["label"] == "Edit destination stop" and rows[10]["edit"]["label"] == "Edit destination"
-    assert "Schedule" not in _texts(rows)[2] and "fare" not in " ".join(_texts(rows)).lower()
+    texts = " ".join(_texts(rows) + _texts(platforms["first"]["rows"]) + _texts(same_line["first"]["rows"]))
+    assert "Change" not in texts and "wait" not in texts and "about" not in texts.lower().replace("scheduled", "")
+    # bus to rail: "Walk 2 min" and "130 m to Bishan MRT Station (NS17)"
+    assert re.fullmatch(r"Walk \d+" + NB + "min", rows[3]["title"])
+    assert rows[3]["lines"][1] == "130" + NB + "m to Bishan MRT Station (NS17)"
+    assert "step-node--walk" in rows[3]["node"] and not rows[3]["leg"]
+    # rail to bus or LRT: the walk names the next station and its own code
+    assert re.fullmatch(r"Walk \d+" + NB + "min", rows[6]["title"])
+    assert rows[6]["lines"][1].endswith("m to Bukit Panjang LRT Station (BP6)")
+    # rail to rail with a walk (NS26 to EW14): the same row, naming the next leg's own code
+    walk = platforms["first"]["rows"][3]
+    assert _kinds(platforms["first"]["rows"]) == ["origin", "walk", "rail", "walk", "rail", "walk", "destination"]
+    assert re.fullmatch(r"Walk \d+" + NB + "min", walk["title"])
+    assert walk["lines"][1] == "90" + NB + "m to Raffles Place MRT Station (EW14)"
+    assert platforms["first"]["rows"][2]["lines"][-1] == "Raffles Place MRT Station (NS26)"  # the end marker: its own code
+    assert platforms["first"]["rows"][4]["lines"][0] == "Raffles Place MRT Station (EW14)"  # the next start marker
+    # rail to rail on the same line: also a walk row
+    assert _kinds(same_line["first"]["rows"]) == ["origin", "walk", "rail", "walk", "rail", "walk", "destination"]
 
 
-def test_a_train_row_has_its_badge_name_direction_stops_and_a_schedule_line(wide_dark):
+def test_a_change_with_no_walk_from_onemap_has_no_row(wide_dark):
     rows = wide_dark["first"]["rows"]
-    ns, ew, lrt = rows[4], rows[6], rows[8]
-    assert ns["badge"]["text"] == "NS" and ns["badge"]["name"] == "North-South Line"
-    assert ns["lines"][1] == "Toward Marina South Pier" and "Board Bishan MRT Station (NS17)" in ns["text"]
-    assert "Get off Raffles Place MRT Station (NS26)" in ns["text"] and re.search(r"6 stops · 12" + NB + "min", ns["text"])
-    assert re.search(r"About \d{1,2}:\d\d" + NB + "(AM|PM)", ns["text"])  # a later leg: its schedule line
-    assert ew["badge"]["text"] == "EW" and ew["badge"]["name"] == "East-West Line" and "Toward Tuas Link" in ew["text"]
-    assert lrt["badge"]["text"] == "BP" and lrt["badge"]["name"] == "Bukit Panjang LRT"
+    assert _kinds(rows)[4:6] == ["rail", "rail"]  # NS then EW at Raffles Place, no walk leg between them
+
+
+def test_two_rail_legs_on_different_lines_switch_colour_and_on_the_same_line_share_it(platforms, same_line):
+    different = platforms["first"]["rows"]
+    ns, walk, ew = different[2], different[3], different[4]
+    assert ns["leg"]["barBg"] == ns["badge"]["bg"] and ew["leg"]["barBg"] == ew["badge"]["bg"]
+    assert ns["leg"]["barBg"] != ew["leg"]["barBg"]  # NS red, EW green: the colour switches at the interchange
+    for leg, row in ((ns["leg"], ns), (ew["leg"], ew)):
+        assert row["badge"]["bg"] in leg["startRing"] and row["badge"]["bg"] in leg["endRing"]
+    assert ns["leg"]["startRing"] != ew["leg"]["startRing"]
+    assert not walk["leg"] and "step-node--walk" in walk["node"]  # the walk row between is neutral, never a line colour
+    assert walk["node"].count("rail") == 0
+    same = [row for row in same_line["first"]["rows"] if row["leg"]]
+    assert len(same) == 2 and same[0]["leg"]["barBg"] == same[1]["leg"]["barBg"] == same[0]["badge"]["bg"]
+    assert same[0]["leg"]["startRing"] == same[1]["leg"]["endRing"]
+
+
+def test_the_end_marker_uses_the_start_icon_and_both_markers_have_a_ring_in_the_line_colour(wide_dark):
+    legs = [row for row in wide_dark["first"]["rows"] if row["leg"]]
+    rails = [row for row in legs if row["badge"] and row["badge"]["text"] in ("NS", "EW", "BP")]
+    assert len(rails) == 3
+    for row in rails:
+        info = row["leg"]
+        assert info["startIcon"] == info["endIcon"] and "<svg" in info["startIcon"]  # the same train icon at both ends
+        assert row["badge"]["bg"] in info["startRing"] and row["badge"]["bg"] in info["endRing"]
+        assert info["startBg"] == info["endBg"] and info["startColor"] == info["endColor"]
+        assert row["lines"][0].endswith(")") and row["lines"][-1].endswith(")")  # the name and code on both
+
+
+def test_a_bus_leg_has_the_same_shape_with_bus_icons_and_neutral_rings(wide_dark):
+    rows = wide_dark["first"]["rows"]
+    bus, rail = rows[2], rows[4]
+    info = bus["leg"]
+    assert bus["markers"] == ["step-node step-node--bus", "step-node step-node--bus-end"] and bus["bar"]
+    assert info["startIcon"] == info["endIcon"] and info["startIcon"] != rail["leg"]["startIcon"]  # a bus icon, not the train
+    assert bus["badge"]["text"].replace(" ", "") == "Bus18" and "line-badge--" not in bus["badge"]["cls"]
+    assert info["startRing"] == info["endRing"] and info["barBg"] != rail["leg"]["barBg"]
+    for token in (row["badge"]["bg"] for row in rows if row["badge"] and row is not bus):
+        assert token not in info["startRing"] and token != info["barBg"]  # no line colour on a bus leg
+    assert info["barBg"] == info["startBg"]  # the plain primary connector colour
+    assert bus["lines"][0] == "Origin (01011)" and bus["lines"][-1] == "Bef Toh Guan Rd (28059)"
+
+
+def test_the_first_bus_only_note_appears_once_under_the_first_later_buss_schedule_line(later_buses):
+    rows = later_buses["first"]["rows"]
+    note = "Live tracking covers your first bus only."
+    holders = [row for row in rows if note in row["lines"]]
+    assert len(holders) == 1 and note not in " ".join(r["text"] for r in rows if r is not holders[0])
+    lines = holders[0]["lines"]
+    assert holders[0]["badge"]["text"].replace(" ", "") == "Bus36"  # the first later bus, not the train or the third leg
+    assert lines.index(note) == lines.index([l for l in lines if l.startswith("Scheduled")][0]) + 1
+    assert later_buses["first"]["rows"][2]["lines"][-1] != note
+
+
+def test_a_train_row_has_two_markers_the_line_row_the_schedule_and_the_ride(wide_dark):
+    rows = wide_dark["first"]["rows"]
+    ns, ew, lrt = rows[4], rows[5], rows[7]
+    assert ns["badge"]["text"] == "NS" and ns["badge"]["name"] == "To Marina South Pier"
+    # start station, line row, schedule, ride, end station: nothing else
+    assert len(ns["lines"]) == 5, ns["lines"]
+    assert ns["lines"][0] == "Bishan MRT Station (NS17)" and ns["lines"][1] == "NS To Marina South Pier"
+    assert re.fullmatch(r"Scheduled · \d{1,2}:\d\d" + NB + "(AM|PM)", ns["lines"][2])  # a later leg
+    assert re.fullmatch(r"6 stops · 12" + NB + "min", ns["lines"][3])
+    assert ns["lines"][4] == "Raffles Place MRT Station (NS26)"
+    assert "Board" not in ns["text"] and "Get off" not in ns["text"] and "About" not in ns["text"]
+    assert "Platform" not in ns["text"] and "Exit" not in ns["text"]  # the test table has no platforms
+    assert ns["markers"] == ["step-node step-node--rail", "step-node step-node--rail-end"] and ns["bar"]
+    assert ew["badge"]["text"] == "EW" and ew["badge"]["name"] == "To Tuas Link" and "Toward" not in ew["text"]
+    assert lrt["badge"]["text"] == "BP"
     assert "Live tracking covers your first bus only." not in ns["text"] + ew["text"] + lrt["text"]
+
+
+DOT = "\u00b7"
+
+
+def test_a_platform_shows_on_the_line_row_only_when_one_platform_serves_the_direction(platforms):
+    rows = platforms["first"]["rows"]
+    kinds = [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in rows]
+    assert kinds == ["origin", "walk", "rail", "walk", "rail", "walk", "destination"], kinds
+    assert rows[2]["lines"][1] == f"NS To Marina South Pier {DOT} Platform B"
+    assert rows[4]["lines"][1] == "EW To Tuas Link"  # two platforms serve it: nothing is shown
+    assert "Platform" not in rows[4]["text"] and "Exit" not in " ".join(row["text"] for row in rows)
+
+
+def test_a_circle_line_ride_says_clockwise_or_anticlockwise_then_the_terminus_when_known(circle, circle_stadium):
+    plain = circle["first"]["rows"][2]
+    assert plain["lines"][1] == f"CC Anticlockwise {DOT} Platform A"  # no terminus is known for the loop headsign
+    assert "To " not in plain["lines"][1]
+    stadium = circle_stadium["first"]["rows"][2]
+    assert stadium["lines"][1] == f"CC Anticlockwise {DOT} To Stadium"  # two platforms serve it: no platform
+    for result in (circle, circle_stadium):
+        row = result["first"]["rows"][2]
+        assert re.fullmatch(r"Scheduled · (In \d+" + NB + "min|In 1" + NB + "min|Now)", row["lines"][2]), row["lines"]
+        assert row["lines"][0] == "Promenade MRT Station (CC4)" and row["lines"][4] == "Bishan MRT Station (CC15)"
+
+
+@pytest.mark.parametrize("fixture", ["narrow", "wide_dark"])
+def test_the_leg_markers_bar_and_end_label_fit_at_360_and_1280_in_both_themes(fixture, request):
+    result = request.getfixturevalue(fixture)["first"]
+    legs = [row for row in result["rows"] if row["leg"]]
+    assert len(legs) == 4  # a bus and three train legs
+    for row in legs:
+        info = row["leg"]
+        assert info["start"]["y"] < info["end"]["y"] and info["end"]["y"] - info["start"]["y"] > info["start"]["h"]
+        assert info["bar"]["y"] <= info["start"]["y"] + info["start"]["h"] / 2 + 1
+        assert info["bar"]["y"] + info["bar"]["h"] >= info["end"]["y"] + info["end"]["h"] / 2 - 1
+        assert info["bar"]["w"] >= 3 and abs(info["bar"]["x"] + info["bar"]["w"] / 2 - (info["start"]["x"] + info["start"]["w"] / 2)) < 1.5
+        assert info["endText"] and "(" in info["endText"]  # a text label with the code: not colour alone
+        assert info["endColor"] != info["endBg"]
+        assert row["right"] <= result["innerWidth"]
+    for row in legs[1:]:
+        assert row["leg"]["barBg"] == row["badge"]["bg"]  # a rail leg's bar takes its line token colour
+    assert result["scrollWidth"] <= result["innerWidth"]
 
 
 def test_the_totals_line_counts_minutes_transfers_and_walking(wide_dark):
@@ -255,11 +433,11 @@ def test_the_totals_line_counts_minutes_transfers_and_walking(wide_dark):
 @pytest.mark.parametrize("fixture", ["wide_dark", "narrow"])
 def test_badges_show_the_code_and_the_name_in_the_line_colours(fixture, request):
     result = request.getfixturevalue(fixture)["first"]
-    badges = [row["badge"] for row in result["rows"] if row["badge"]]
-    assert [b["text"] for b in badges] == ["NS", "EW", "BP"]
+    badges = [row["badge"] for row in result["rows"] if row["badge"] and "line-badge--" in row["badge"]["cls"]]
+    assert [b["text"] for b in badges] == ["NS", "EW", "BP"]  # the bus number badge is neutral and has its own test
     for badge in badges:
         code = badge["text"].lower()
-        assert f"line-badge--{code}" in badge["cls"] and badge["name"]
+        assert f"line-badge--{code}" in badge["cls"]
         assert badge["bg"] == _rgb(FILLS[code]) and badge["color"] == _rgb(INKS[code]), badge
         assert badge["box"]["h"] >= 22 and badge["box"]["w"] >= 30
 
@@ -311,8 +489,8 @@ def test_fewest_transfers_says_best_available_when_it_changes_nothing(best_avail
 def test_a_train_first_route_is_shown_and_start_journey_is_on(train_first):
     first = train_first["first"]
     rows = first["rows"]
-    assert rows[2]["badge"]["text"] == "NS" and rows[2]["badge"]["name"] == "North-South Line"
-    assert re.search(r"About \d+" + NB + "min, scheduled", rows[2]["text"])  # the first leg, a train: not "Arriving in"
+    assert rows[2]["badge"]["text"] == "NS" and rows[2]["badge"]["name"] == "To Marina South Pier"
+    assert re.search(r"Scheduled · (In \d+" + NB + "min|In 1" + NB + "min|Now)", rows[2]["text"])  # a train: not "Arriving in"
     assert "Arriving in" not in rows[2]["text"]
     assert first["startDisabled"] is False  # the live pages for a train exist now (part 2)
     assert first["arrivalRequests"] == 0  # no bus poll and no bus lookup for a train
@@ -328,7 +506,20 @@ def test_the_bus_planner_fallback_shows_its_note_and_disables_the_chips_it_canno
     assert first["startDisabled"] is False
     kinds = [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in first["rows"]]
     assert kinds == ["origin", "walk", "bus", "walk", "destination"]
-    assert first["rows"][2]["lines"][0].startswith("Bus 18") and first["totals"]
+    assert first["rows"][2]["lines"][1].startswith("Bus 18") and first["totals"]
+
+
+def test_the_bus_planner_finding_nothing_shows_the_static_sentence_and_the_fallback_note(fallback_no_route):
+    first = fallback_no_route["first"]
+    assert first["noRoute"] == "No direct or 1-transfer bus connection available for this trip."
+    assert first["fallbackNote"] == "Showing bus routes only. The route service is unavailable."
+    assert first["timelineVisible"] is False and first["startDisabled"] is True
+
+
+def test_onemap_working_but_finding_nothing_says_no_route_found(onemap_empty):
+    first = onemap_empty["first"]
+    assert first["noRoute"] == "No route found for this trip."
+    assert first["fallbackNote"] is None
 
 
 def test_arrow_keys_move_between_enabled_chips_and_refetch(fallback):
@@ -343,5 +534,5 @@ def test_the_plan_describes_the_overview_the_badges_and_the_chips():
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
     for text in ("**Journey overview.**", "**Line badges.**", "**Priority chips.**", "`--line-<code>-ink`",
                  "Needs the route service.",
-                 "The page always sends `priority`", "Change from {a} to {b} at {station}"):
+                 "The page always sends `priority`", "a plain walk row"):
         assert text in plan, text

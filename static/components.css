@@ -3244,8 +3244,105 @@ body.is-screen-journey main.wrap {
   font-weight: 700;
 }
 
-.step-node--walk,
-.step-node--change {
+/* A transit leg (rail or bus): two markers joined by a bar. Both markers carry the leg's icon and a ring. A rail leg's ring and
+   bar take its own line token colour (a change of line changes colour); a bus leg's stay neutral. The bar sits under the
+   markers and over the plain connector, so the next step still joins up. Stop names and codes are text beside each marker. */
+.journey-step--leg {
+  --leg-ring: var(--color-line-strong);
+  --leg-bar: var(--color-primary);
+  grid-template-columns: var(--step-node) minmax(0, 1fr);
+  row-gap: var(--space-3);
+}
+
+.journey-step--rail-ns {
+  --leg-ring: var(--line-ns);
+  --leg-bar: var(--line-ns);
+}
+
+.journey-step--rail-ew {
+  --leg-ring: var(--line-ew);
+  --leg-bar: var(--line-ew);
+}
+
+.journey-step--rail-cg {
+  --leg-ring: var(--line-cg);
+  --leg-bar: var(--line-cg);
+}
+
+.journey-step--rail-ne {
+  --leg-ring: var(--line-ne);
+  --leg-bar: var(--line-ne);
+}
+
+.journey-step--rail-cc {
+  --leg-ring: var(--line-cc);
+  --leg-bar: var(--line-cc);
+}
+
+.journey-step--rail-dt {
+  --leg-ring: var(--line-dt);
+  --leg-bar: var(--line-dt);
+}
+
+.journey-step--rail-te {
+  --leg-ring: var(--line-te);
+  --leg-bar: var(--line-te);
+}
+
+.journey-step--rail-bp {
+  --leg-ring: var(--line-bp);
+  --leg-bar: var(--line-bp);
+}
+
+.journey-step--rail-sk {
+  --leg-ring: var(--line-sk);
+  --leg-bar: var(--line-sk);
+}
+
+.journey-step--rail-pg {
+  --leg-ring: var(--line-pg);
+  --leg-bar: var(--line-pg);
+}
+
+.journey-step--rail-ss {
+  --leg-ring: var(--line-ss);
+  --leg-bar: var(--line-ss);
+}
+
+.journey-step__bar {
+  position: absolute;
+  top: calc(var(--step-pad) + var(--step-node) / 2);
+  bottom: calc(var(--step-pad) + var(--step-node) / 2);
+  left: calc(var(--step-node) / 2 - 2px);
+  width: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--leg-bar);
+}
+
+.journey-step--leg .step-node {
+  box-shadow: 0 0 0 3px var(--leg-ring);
+}
+
+.journey-step--leg .journey-step__line {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.journey-step--leg .journey-step__line .line-badge,
+.journey-step--leg .journey-step__line .pill {
+  flex: none;
+}
+
+.journey-step--leg .journey-step__line span:not(.line-badge):not(.pill):not(.visually-hidden) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.journey-step--leg .journey-step__body--end {
+  align-self: center;
+}
+
+.step-node--walk {
   background: var(--color-secondary);
   color: var(--color-ink);
 }

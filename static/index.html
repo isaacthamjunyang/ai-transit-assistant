@@ -2637,7 +2637,6 @@
     });
 
     var TRAIN_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"13\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><rect x=\"8.5\" y=\"6\" width=\"7\" height=\"4\" rx=\"1\" fill=\"currentColor\"></rect><circle cx=\"9.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><circle cx=\"14.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><path d=\"M8 21l2-5M16 21l-2-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
-    var CHANGE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var BUS_TILE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"5\" y=\"3\" width=\"14\" height=\"15\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><path d=\"M5 11h14M8 18v2M16 18v2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><circle cx=\"8.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle><circle cx=\"15.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle></svg>";
     var WALK_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"1.8\" fill=\"currentColor\"></circle><path d=\"M10 21l2-6 2.5 2.5V21M8 12l2.5-4.5h3l2 3.5 2.5 1M12.5 7.5L11 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var NOTE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 11v6M12 7.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
@@ -5272,20 +5271,18 @@
     // Mirrors of copy.js journeyOverview (plan_edits_9 4.9) and lineNames. Tests pin the two together.
     var JO_WALK_ROW = "Walk {n}\u00a0min";
     var JO_WALK_ROW_TO = "{distance} to {place}";
-    var JO_TOWARD = "Toward {terminus}";
-    var JO_BOARD = "Board";
-    var JO_GET_OFF = "Get off";
+    var JO_TOWARD = "To {terminus}";
+    var JO_LOOP_TOWARD = "{direction} \u00b7 To {terminus}";
+    var JO_CLOCKWISE = "Clockwise";
+    var JO_ANTICLOCKWISE = "Anticlockwise";
+    var JO_DIRECTION_PLATFORM = "{direction} \u00b7 Platform {x}";
+    var JO_PLATFORM_ONLY = "Platform {x}";
     var JO_STOPS = "{k} stops · {m}\u00a0min";
     var JO_STOP_ONE = "1 stop · {m}\u00a0min";
-    var JO_CHANGE_STATION = "Change at {station}";
-    var JO_CHANGE_STOP = "Change at {stop}";
-    var JO_CHANGE_CODES = "Change from {a} to {b} at {station}";
-    var JO_TRANSFER_TIMES = "{w}\u00a0min walk · about {t}\u00a0min wait";
-    var JO_TRANSFER_WALK = "{w}\u00a0min walk";
-    var JO_TRANSFER_WAIT = "About {t}\u00a0min wait";
-    var JO_SCHEDULED_ABOUT = "About {n}\u00a0min, scheduled";
-    var JO_SCHEDULED_AT = "About {time} · every about {h}\u00a0min";
-    var JO_SCHEDULED_TIME = "About {time}";
+    var JO_SCHEDULED_IN = "Scheduled · In {n}\u00a0min";
+    var JO_SCHEDULED_IN_ONE = "Scheduled · In 1\u00a0min";
+    var JO_SCHEDULED_NOW = "Scheduled · Now";
+    var JO_SCHEDULED_AT = "Scheduled · {time}";
     var JO_TOTALS = "{n}\u00a0min · {t} · {w}\u00a0min walking";
     var JO_TRANSFERS_MANY = "{t} transfers";
     var JO_TRANSFERS_ONE = "1 transfer";
@@ -5464,7 +5461,7 @@
       node.className = "step-node step-node--" + kind;
       node.setAttribute("aria-hidden", "true");
       node.innerHTML = kind === "origin" ? PIN_SVG : kind === "destination" ? FLAG_SVG : kind === "done" ? CATCH_YES_SVG
-        : kind === "walk" ? WALK_SVG : kind === "rail" ? TRAIN_SVG : kind === "change" ? CHANGE_SVG : BUS_TILE_SVG;
+        : kind === "walk" ? WALK_SVG : kind === "rail" ? TRAIN_SVG : BUS_TILE_SVG;
       var body = document.createElement("div");
       body.className = "journey-step__body";
       lines.forEach(function (line) {
@@ -5691,16 +5688,96 @@
       return badge;
     }
 
-    // Badge and the line's name side by side: the code and the name are both text, so colour is never the only signal.
-    function lineHead(leg) {
+    // "To Jurong East"; on a loop line "Anticlockwise · To HarbourFront" (just "Anticlockwise" when no terminus is known);
+    // then " · Platform A" only when the server found exactly one platform. Nothing else, and nothing is guessed.
+    function railDirectionText(leg) {
+      var way = leg.circle_direction === "clockwise" ? JO_CLOCKWISE : leg.circle_direction === "anticlockwise" ? JO_ANTICLOCKWISE : "";
+      var terminus = leg.terminus || (way ? "" : leg.headsign || "");
+      var text = way && terminus ? fillText(JO_LOOP_TOWARD, { direction: way, terminus: terminus })
+        : way || (terminus ? fillText(JO_TOWARD, { terminus: terminus }) : "");
+      if (leg.platform) {
+        return text ? fillText(JO_DIRECTION_PLATFORM, { direction: text, x: leg.platform }) : fillText(JO_PLATFORM_ONLY, { x: leg.platform });
+      }
+      return text;
+    }
+
+    // The badge (its code is text on the line token colour) and the direction side by side: colour is never the only signal.
+    function lineRow(leg) {
       var code = String(leg.line_code || "").toUpperCase();
       var line = document.createElement("p");
       line.className = "journey-step__line";
       line.appendChild(lineBadge(code));
-      var name = document.createElement("span");
-      name.textContent = LINE_NAMES[code] || leg.line_name || code;
-      line.appendChild(name);
+      var text = railDirectionText(leg);
+      if (text) {
+        line.appendChild(document.createTextNode(" "));  // a space for a screen reader; the flex gap spaces the eye
+        var way = document.createElement("span");
+        way.textContent = text;
+        line.appendChild(way);
+      }
       return line;
+    }
+
+    // The bus number as a neutral badge ("Bus" is there for a screen reader), "To {terminus}" and the live pill.
+    function busRow(leg, live) {
+      var line = document.createElement("p");
+      line.className = "journey-step__line";
+      var badge = document.createElement("span");
+      badge.className = "line-badge";
+      var word = document.createElement("span");
+      word.className = "visually-hidden";
+      word.textContent = "Bus ";
+      badge.appendChild(word);
+      badge.appendChild(document.createTextNode(leg.service_no));
+      line.appendChild(badge);
+      if (leg.headsign) {
+        line.appendChild(document.createTextNode(" "));
+        var way = document.createElement("span");
+        way.textContent = fillText(JO_TOWARD, { terminus: leg.headsign });
+        line.appendChild(way);
+      }
+      if (live) {
+        line.appendChild(livePill(live.monitored && !displayFrozen ? "live" : "schedule"));
+      }
+      return line;
+    }
+
+    // One transit leg, rail or bus, in one shape: a start marker with the stop and its code, the line row (the badge and the
+    // direction), the schedule or live line, an optional note and the ride line, then an end marker with the stop and its
+    // code. Both markers carry the leg's own icon and a ring. A rail leg's ring and bar use its own line token colour, so a
+    // change of line changes colour; a bus leg's stay neutral.
+    function legItem(leg, whenText, row, noteText, whenClass) {
+      var rail = legIsRail(leg);
+      var code = String(leg.line_code || "").toLowerCase();
+      var item = document.createElement("li");
+      item.className = "journey-step journey-step--" + (rail ? "rail" : "bus") + " journey-step--leg"
+        + (rail && LINE_BADGE_CODES.indexOf(code.toUpperCase()) !== -1 ? " journey-step--rail-" + code : "");
+      var bar = document.createElement("span");
+      bar.className = "journey-step__bar";
+      bar.setAttribute("aria-hidden", "true");
+      var kind = rail ? "rail" : "bus";
+      var startNode = document.createElement("span");
+      startNode.className = "step-node step-node--" + kind;
+      startNode.setAttribute("aria-hidden", "true");
+      startNode.innerHTML = rail ? TRAIN_SVG : BUS_TILE_SVG;
+      var endNode = document.createElement("span");
+      endNode.className = "step-node step-node--" + kind + "-end";
+      endNode.setAttribute("aria-hidden", "true");
+      endNode.innerHTML = rail ? TRAIN_SVG : BUS_TILE_SVG;
+      var top = document.createElement("div");
+      top.className = "journey-step__body";
+      [stepLine(stopLabel(leg.boarding_stop_name, leg.boarding_stop_code), "journey-step__title"), row, stepLine(whenText, whenClass),
+        stepLine(noteText), stepLine(legStopsLine(leg))].forEach(function (line) {
+        if (line) {
+          top.appendChild(line);
+        }
+      });
+      var bottom = document.createElement("div");
+      bottom.className = "journey-step__body journey-step__body--end";
+      bottom.appendChild(stepLine(stopLabel(leg.alighting_stop_name, leg.alighting_stop_code), "journey-step__title"));
+      [bar, startNode, top, endNode, bottom].forEach(function (part) {
+        item.appendChild(part);
+      });
+      return item;
     }
 
     function legStopsLine(leg) {
@@ -5716,78 +5793,75 @@
     function scheduleLine(leg) {
       var time = leg.depart ? leaveClockText(leg.depart, Date.now()) : "";
       var headway = typeof leg.published_headway_minutes === "number" ? leg.published_headway_minutes : null;
-      if (time && headway !== null) {
-        return fillText(JO_SCHEDULED_AT, { time: time, h: headway });
-      }
       if (time) {
-        return fillText(JO_SCHEDULED_TIME, { time: time });
+        return fillText(JO_SCHEDULED_AT, { time: time });
       }
-      return headway !== null ? SCHEDULE_HEADWAY.replace("{minutes}", headway) : "";
+      return headway !== null ? SCHEDULE_HEADWAY.replace("{minutes}", headway) : "";  // the headway only when it is all we know
+    }
+
+    // The first train: "Scheduled · In 4 min", "Scheduled · In 1 min" or "Scheduled · Now".
+    function scheduledInLine(leg) {
+      if (!leg.depart) {
+        return "";
+      }
+      var minutes = Math.round((new Date(leg.depart).getTime() - Date.now()) / 60000);
+      if (!isFinite(minutes)) {
+        return "";
+      }
+      return minutes <= 0 ? JO_SCHEDULED_NOW : minutes === 1 ? JO_SCHEDULED_IN_ONE : fillText(JO_SCHEDULED_IN, { n: minutes });
     }
 
     // One row for a bus or train leg. position 0 is the first transit leg: a bus shows its live line, a train
-    // "About N min, scheduled". Later legs show the schedule line. No fares and no street names.
-    function transitRow(leg, position, live) {
-      var rail = legIsRail(leg);
-      var lines = [rail ? lineHead(leg) : serviceLine(leg, live)];
-      if (leg.headsign) {
-        lines.push(stepLine(fillText(JO_TOWARD, { terminus: leg.headsign })));
+    // "Scheduled · In N min". Later legs show the schedule line. showNote puts "Live tracking covers your first bus only."
+    // under the schedule line (the caller passes it for the first later bus only). No fares and no street names.
+    function transitRow(leg, position, live, showNote) {
+      if (legIsRail(leg)) {
+        return legItem(leg, position === 0 ? scheduledInLine(leg) : scheduleLine(leg), lineRow(leg), "", "");
       }
-      lines.push(stepLine(JO_BOARD + " " + stopLabel(leg.boarding_stop_name, leg.boarding_stop_code)));
-      lines.push(stepLine(JO_GET_OFF + " " + stopLabel(leg.alighting_stop_name, leg.alighting_stop_code)));
-      lines.push(stepLine(legStopsLine(leg)));
+      var when = "";
+      var whenClass = "";
       if (position === 0) {
-        if (rail && leg.depart) {
-          var minutes = Math.max(1, Math.round((new Date(leg.depart).getTime() - Date.now()) / 60000));
-          lines.push(stepLine(fillText(JO_SCHEDULED_ABOUT, { n: minutes })));
-        } else if (live && live.monitored && !displayFrozen && live.arrival_time) {
-          var when = countdownLabel(live.arrival_time);
-          lines.push(stepLine(/min/.test(when) ? "Arriving in " + when : when, "journey-step__arriving"));
+        if (live && live.monitored && !displayFrozen && live.arrival_time) {
+          var arriving = countdownLabel(live.arrival_time);
+          when = /min/.test(arriving) ? "Arriving in " + arriving : arriving;
+          whenClass = "journey-step__arriving";
         }
       } else {
-        lines.push(stepLine(scheduleLine(leg)));
-        if (!rail) {
-          lines.push(stepLine(FIRST_BUS_ONLY_NOTE));
-        }
+        when = scheduleLine(leg);
       }
-      return stepItem(rail ? "rail" : "bus", null, lines, null);
+      return legItem(leg, when, busRow(leg, live), position !== 0 && showNote ? FIRST_BUS_ONLY_NOTE : "", whenClass);
     }
 
-    // The change between two transit legs: where, how long the walk is and how long the wait is.
-    function transferRow(previous, next, walks, fallbackMetres) {
-      var station = stationName(previous.alighting_stop_name || previous.alighting_stop_code);
-      var sameStation = station.toLowerCase() === stationName(next.boarding_stop_name || next.boarding_stop_code).toLowerCase();
-      var title;
-      if (legIsRail(previous) && legIsRail(next) && sameStation && previous.alighting_stop_code !== next.boarding_stop_code) {
-        title = fillText(JO_CHANGE_CODES, { a: previous.alighting_stop_code, b: next.boarding_stop_code, station: station });
-      } else if (legIsRail(previous) || legIsRail(next)) {
-        title = fillText(JO_CHANGE_STATION, { station: station });
-      } else {
-        title = fillText(JO_CHANGE_STOP, { stop: previous.alighting_stop_name || previous.alighting_stop_code });
-      }
+    // The change between two transit legs is a plain walk row: "Walk {n} min" and "{distance} to {stop} ({code})", whatever
+    // the two modes. No wait time. With no walk from OneMap there is no row (the bus planner's own transfer distance is
+    // used when it has one and OneMap gave none).
+    function changeWalkRow(next, walks, fallbackMetres) {
       var metres = 0;
-      var seconds = 0;
       walks.forEach(function (walk) {
         metres += walk.distance_m || 0;
-        seconds += walk.duration_s || 0;
       });
       if (!walks.length && typeof fallbackMetres === "number" && fallbackMetres > 0) {
         metres = fallbackMetres;
       }
-      var walkMin = metres > 0 ? walkMinutes(metres) : 0;
-      var waitMin = 0;
-      if (previous.arrive && next.depart) {
-        waitMin = Math.round((new Date(next.depart).getTime() - new Date(previous.arrive).getTime()) / 60000 - seconds / 60);
+      if (!walks.length && !(metres > 0)) {
+        return null;
       }
-      var detail = "";
-      if (walkMin > 0 && waitMin > 0) {
-        detail = fillText(JO_TRANSFER_TIMES, { w: walkMin, t: waitMin });
-      } else if (walkMin > 0) {
-        detail = fillText(JO_TRANSFER_WALK, { w: walkMin });
-      } else if (waitMin > 0) {
-        detail = fillText(JO_TRANSFER_WAIT, { t: waitMin });
+      return stepItem("walk", fillText(JO_WALK_ROW, { n: walkMinutes(metres) }), [
+        stepLine(fillText(JO_WALK_ROW_TO, {
+          distance: formatDistance(metres),
+          place: stopLabel(next.boarding_stop_name, next.boarding_stop_code)
+        }))
+      ], null);
+    }
+
+    // True for the first transit leg after the first that is a bus: the one that carries the "first bus only" note.
+    function firstLaterBus(transit) {
+      for (var i = 1; i < transit.length; i += 1) {
+        if (!legIsRail(transit[i])) {
+          return transit[i];
+        }
       }
-      return stepItem("change", title, [stepLine(detail)], null);
+      return null;
     }
 
     // The walk from the last stop to the place. Its Edit link is the old "Edit destination stop" control.
@@ -5857,6 +5931,7 @@
       }
       var previous = null;
       var between = [];
+      var noteLeg = firstLaterBus(transit);
       legs.forEach(function (leg) {
         if (legIsWalk(leg)) {
           if (previous) {
@@ -5865,11 +5940,14 @@
           return;
         }
         if (previous) {
-          list.appendChild(transferRow(previous, leg, between, pendingItinerary ? 0 : option.transfer_distance_m));
+          var change = changeWalkRow(leg, between, pendingItinerary ? 0 : option.transfer_distance_m);
+          if (change) {
+            list.appendChild(change);
+          }
           between = [];
         }
         var position = transit.indexOf(leg);
-        list.appendChild(transitRow(leg, position, position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null));
+        list.appendChild(transitRow(leg, position, position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null, leg === noteLeg));
         previous = leg;
       });
       var finalRow = finalWalkRow(between, confirmedDestinationStop);
@@ -8793,13 +8871,8 @@
       var legs = pendingItinerary && pendingItinerary.legs ? pendingItinerary.legs : (activeRoutePlan && activeRoutePlan.legs) || [];
       var transit = legs.filter(function (leg) { return !legIsWalk(leg); });
       var first = state.leg || transit[0];
-      var firstLines = [lineHead(first)];
-      if (first.headsign) {
-        firstLines.push(stepLine(fillText(JO_TOWARD, { terminus: first.headsign })));
-      }
-      firstLines.push(stepLine(JO_BOARD + " " + stopLabel(first.boarding_stop_name, first.boarding_stop_code)));
-      firstLines.push(stepLine(ON_BOARD_TEXT));
-      list.appendChild(stepItem("rail", null, firstLines, null));
+      list.appendChild(legItem(first, ON_BOARD_TEXT, lineRow(first), "", ""));
+      var noteLeg = firstLaterBus(transit);
       var previous = first;
       var between = [];
       var seen = false;
@@ -8812,9 +8885,12 @@
           between.push(leg);
           return;
         }
-        list.appendChild(transferRow(previous, leg, between, 0));
+        var change = changeWalkRow(leg, between, 0);
+        if (change) {
+          list.appendChild(change);
+        }
         between = [];
-        list.appendChild(transitRow(leg, Math.max(1, transit.indexOf(leg)), null));
+        list.appendChild(transitRow(leg, Math.max(1, transit.indexOf(leg)), null, leg === noteLeg));
         previous = leg;
       });
       var finalRow = finalWalkRow(between, confirmedDestinationStop);

@@ -341,6 +341,36 @@ def rail_direction(table: dict | None, line_code: str, from_station: str, to_sta
     return headsign, direction_id if isinstance(direction_id, int) else 0
 
 
+def rail_platform(table: dict | None, station_code: str, headsign: str | None) -> str | None:
+    """The platform trains of this direction leave this station from, or None. Only when exactly one platform serves
+    the direction: a branch terminus or an interchange with two platforms for it, or an old table, gives None."""
+    if not isinstance(table, dict) or not headsign:
+        return None
+    station = (table.get("stations") or {}).get(str(station_code).strip()) or {}
+    entry = (station.get("directions") or {}).get(headsign) or {}
+    platforms = entry.get("platforms")
+    if isinstance(platforms, list) and len(platforms) == 1 and isinstance(platforms[0], str) and platforms[0].strip():
+        return platforms[0].strip()
+    return None
+
+
+CIRCLE_WORDS = {"clockwise": "Clockwise", "anticlockwise": "Anticlockwise"}
+
+
+def rail_circle_direction(table: dict | None, line_code: str, direction_id: int | None) -> str | None:
+    """"clockwise" or "anticlockwise" for a ride on a loop line (the GTFS headsigns Clockwise and Anticlockwise, as on
+    the Circle Line), taken from the direction id those headsigns carry; None for any other line or when unknown."""
+    if not isinstance(table, dict) or not isinstance(direction_id, int) or isinstance(direction_id, bool):
+        return None
+    found = set()
+    for station in (table.get("stations") or {}).values():
+        for headsign, entry in (station.get("directions") or {}).items():
+            word = headsign.strip().casefold()
+            if word in CIRCLE_WORDS and entry.get("line") == line_code and entry.get("direction_id") == direction_id:
+                found.add(word)
+    return found.pop() if len(found) == 1 else None
+
+
 def _in_order(codes: list[str], first: str, second: str) -> bool:
     starts = [index for index, code in enumerate(codes) if code == first]
     ends = [index for index, code in enumerate(codes) if code == second]

@@ -246,11 +246,11 @@ def test_yes_shows_the_on_your_way_overview_with_the_remaining_legs_and_schedule
     assert way["top"] == "onway" and way["shown"] is True and way["monitoring"] is False
     rows = way["rows"]
     kinds = [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in rows]
-    assert kinds == ["rail", "change", "rail", "walk", "destination"], kinds
+    assert kinds == ["rail", "walk", "rail", "walk", "destination"], kinds
     first = rows[0]
-    assert first["badge"] == "NS" and "On board" in first["text"] and "Toward Marina South Pier" in first["text"]
-    assert "Change from NS26 to EW14 at Raffles Place" in rows[1]["text"]
-    assert rows[2]["badge"] == "EW" and re.search(r"About \d{1,2}:\d{2}", rows[2]["text"].replace(NB, " "))
+    assert first["badge"] == "NS" and "On board" in first["text"] and "To Marina South Pier" in first["text"]
+    assert "to Raffles Place MRT Station (EW14)" in rows[1]["text"] and "Change" not in rows[1]["text"]  # a walk row
+    assert rows[2]["badge"] == "EW" and re.search(r"Scheduled · \d{1,2}:\d{2}", rows[2]["text"].replace(NB, " "))
     assert "Edit" not in rows[3]["text"] and way["scrollWidth"] <= way["innerWidth"]
 
 

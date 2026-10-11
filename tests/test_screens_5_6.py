@@ -33,7 +33,8 @@ def test_overview_order_and_edit_routes():
     origin = _between(main, 'stepItem("origin"', "));")
     assert "], null)" in origin + ")"
     assert "Edit boarding stop" not in html and "Edit bus service" not in html and "Edit transfer stop" not in html
-    assert 'stepItem(rail ? "rail" : "bus", null, lines, null)' in render
+    assert 'return legItem(leg, position === 0 ? scheduledInLine(leg) : scheduleLine(leg), lineRow(leg), "", "");' in render
+    assert "return legItem(leg, when, busRow(leg, live)," in render
     assert 'label: "Edit destination stop", action: function () { backToScreen("stops"); }' in render
     assert 'label: "Edit destination", action: function () { backToScreen("results"); }' in render
     assert "formatDistance(toBoard)" in main
@@ -45,8 +46,8 @@ def test_overview_order_and_edit_routes():
 def test_transfer_variant_adds_a_transfer_stop_and_a_schedule_only_second_bus():
     html = _page()
     render = _between(html, "function legIsRail(leg)", "function syncOverviewArrive()")
-    assert "list.appendChild(transferRow(previous, leg, between," in render  # a change row between two transit legs
-    assert "function transferRow(" in render and "JO_CHANGE_STOP" in render
+    assert "var change = changeWalkRow(leg, between," in render  # a plain walk row between two transit legs
+    assert "function changeWalkRow(" in render and "transferRow" not in render and "JO_CHANGE" not in render
     assert "position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null" in render  # only the first bus is live
     assert 'typeof leg.published_headway_minutes === "number"' in render
     copy = COPY.read_text(encoding="utf-8")

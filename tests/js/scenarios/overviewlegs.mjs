@@ -16,6 +16,22 @@ const READ = `(function () {
       badge: badge ? { text: badge.textContent, cls: badge.className, bg: cs.backgroundColor, color: cs.color,
         box: box(badge), name: badge.nextElementSibling ? text(badge.nextElementSibling) : "" } : null,
       edit: edit ? { label: edit.getAttribute("aria-label"), box: box(edit) } : null,
+      markers: Array.prototype.map.call(li.querySelectorAll(".step-node"), function (n) { return n.className; })
+        .filter(function (c) { return c.indexOf("--rail") !== -1 || c.indexOf("--bus") !== -1; }),
+      bar: !!li.querySelector(".journey-step__bar"),
+      leg: li.querySelector(".journey-step__bar") ? (function () {
+        var nodes = li.querySelectorAll(".step-node");
+        var bar = li.querySelector(".journey-step__bar");
+        return {
+          barBg: getComputedStyle(bar).backgroundColor, bar: box(bar),
+          start: box(nodes[0]), end: box(nodes[1]),
+          startIcon: nodes[0].innerHTML, endIcon: nodes[1].innerHTML,
+          startRing: getComputedStyle(nodes[0]).boxShadow, endRing: getComputedStyle(nodes[1]).boxShadow,
+          startBg: getComputedStyle(nodes[0]).backgroundColor, endBg: getComputedStyle(nodes[1]).backgroundColor,
+          startColor: getComputedStyle(nodes[0]).color, endColor: getComputedStyle(nodes[1]).color,
+          endText: text(li.querySelector(".journey-step__body--end")), li: box(li)
+        };
+      })() : null,
       right: box(li).right
     };
   });
