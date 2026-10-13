@@ -442,6 +442,7 @@ def test_home_page_still_loads_from_cache(tmp_path: Path, monkeypatch):
         "/format-distance.js",
         "/place-icons.js",
         "/walk-speed.js",
+        "/saved-places.js",
         "/sw.js",
         "/api/stops/nearby",
         "/api/arrivals",

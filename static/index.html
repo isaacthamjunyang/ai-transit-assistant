@@ -154,10 +154,17 @@
           </div>
         </div>
         <p id="destination-required" class="field-help home-only" aria-live="polite"><svg class="icon field-help__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7.5v5.5M12 16.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span class="field-help__text"></span></p>
-        <div class="quick-picks home-only" id="quick-picks">
+        <div class="quick-picks home-only" id="quick-picks" role="group" aria-label="Saved places">
           <button type="button" class="quick-pick">NUS</button>
           <button type="button" class="quick-pick">Orchard Road</button>
           <button type="button" class="quick-pick">Changi Airport</button>
+          <button type="button" class="quick-pick quick-pick--add" data-saved-action="add" aria-label="Add a saved place">+</button>
+        </div>
+        <div class="saved-places home-only" id="saved-places">
+          <p class="saved-places__note" id="saved-places-count" hidden></p>
+          <p class="saved-places__note">Saved on this phone only.</p>
+          <p class="saved-places__note saved-places__note--warn" id="saved-places-storage" role="status" hidden>Can't save on this device.</p>
+          <div class="saved-panel" id="saved-panel" role="group" hidden></div>
         </div>
         <hr class="hairline home-only">
         <section id="location-status" class="info-row home-only" role="status">
@@ -318,6 +325,7 @@
           <p class="overview-summary__cell"><span class="overview-summary__label">Transfers</span><span id="summary-transfers" class="overview-summary__value"></span></p>
           <p class="overview-summary__cell"><span class="overview-summary__label">Walking</span><span id="summary-walking" class="overview-summary__value"></span></p>
         </div>
+        <p id="overview-traffic-note" class="overview-note" hidden>Bus times can vary with traffic.</p>
         <ol id="overview-skeleton" class="journey-steps journey-steps--skeleton" aria-hidden="true" hidden>
           <li class="journey-step"><span class="step-node step-node--skeleton"></span><span class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></span></li>
           <li class="journey-step"><span class="step-node step-node--skeleton"></span><span class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></span></li>
@@ -360,11 +368,10 @@
         </div>
         <ol id="overview-timeline" class="journey-steps"></ol>
       </div>
-      <div class="arrive-box">
+      <div class="arrive-box" role="group" aria-label="Arrive by">
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div class="arrive-box__copy">
-          <p class="arrive-box__label">Arrive by</p>
-          <p id="overview-arrive-value" class="arrive-box__value"></p>
+          <p id="overview-arrive-value" class="arrive-box__value" hidden></p>
           <p id="overview-arrive-estimate" class="arrive-box__estimate" hidden></p>
           <p id="overview-arrive-note" class="arrive-box__meta" hidden></p>
           <p id="overview-arrive-status" class="badge arrive-box__status" hidden></p>
@@ -392,11 +399,10 @@
       </div>
       <p id="on-way-privacy" class="note" aria-live="off" hidden>Your position stays on this phone. It is used only for the Get off alert and is never sent, stored or logged.</p>
       <p id="on-way-open-note" class="note" aria-live="off" hidden>Works while this page is open.</p>
-      <div class="arrive-box">
+      <div class="arrive-box" role="group" aria-label="Arrive by">
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div class="arrive-box__copy">
-          <p class="arrive-box__label">Arrive by</p>
-          <p id="on-way-arrive-value" class="arrive-box__value"></p>
+          <p id="on-way-arrive-value" class="arrive-box__value" hidden></p>
           <p id="on-way-arrive-estimate" class="arrive-box__estimate" hidden></p>
         </div>
       </div>
@@ -408,11 +414,10 @@
         <p id="new-journey-reason" class="overview-reason"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span>Switching because your current bus is unlikely to be caught.</span></p>
         <ol id="new-journey-timeline" class="journey-steps"></ol>
       </div>
-      <div class="arrive-box">
+      <div class="arrive-box" role="group" aria-label="Arrive by">
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div class="arrive-box__copy">
-          <p class="arrive-box__label">Arrive by</p>
-          <p id="new-journey-arrive-value" class="arrive-box__value"></p>
+          <p id="new-journey-arrive-value" class="arrive-box__value" hidden></p>
           <p id="new-journey-arrive-estimate" class="arrive-box__estimate" hidden></p>
         </div>
       </div>
@@ -724,6 +729,7 @@
   <script src="format-distance.js"></script>
   <script src="place-icons.js"></script>
   <script src="walk-speed.js"></script>
+  <script src="saved-places.js"></script>
   <script>
     var AI_EXPLANATION_ENABLED = true;
     (function applyAiExplanationFlag() {
@@ -2618,6 +2624,10 @@
         setDestinationStatus("Enter a destination.");
         return;
       }
+      if (savedSelection && query === savedSelection.name) {
+        openSavedPlace(savedSelection);
+        return;
+      }
       if (destinationSearchInFlight) {
         return;
       }
@@ -3705,8 +3715,85 @@
       return sentence;
     }
 
+    // The Arrive by card (overview, on your way, new journey). Main line: "Arrive by: {the app's estimate}" in the usual
+    // clock ("(tomorrow)" for a next-day time). Under it, muted, the gap to the target worked out from the displayed clock
+    // minutes ("12 minutes before target", "1 hr 5 min after target", "On target time"); no target, no second line.
+    var ARRIVE_LINE = "Arrive by: {time}";
+    var ARRIVE_GAP_MINUTES = "{n}\u00a0mins";
+    var ARRIVE_GAP_MINUTE_ONE = "1\u00a0min";
+    var ARRIVE_GAP_HR_MINS = "{h}\u00a0hr {m}\u00a0mins";
+    var ARRIVE_GAP_HR_MIN_ONE = "{h}\u00a0hr 1\u00a0min";
+    var ARRIVE_GAP_BEFORE = "{amount} before target";
+    var ARRIVE_GAP_AFTER = "{amount} after target";
+    var ARRIVE_ON_TARGET = "On target time";
+    var overviewEstimateIso = null;
+
+    // Whole minutes since the epoch of a "YYYY-MM-DDTHH:MM" Singapore clock reading (the date carries midnight).
+    function clockMinutes(stamp) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(stamp));
+      if (!m) {
+        return null;
+      }
+      return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / 60000 + Number(m[4]) * 60 + Number(m[5]);
+    }
+
+    function arriveGapText(iso) {
+      var value = arriveByInput && arriveByInput.value;
+      var target = value ? clockMinutes(value) : null;
+      var estimate = iso ? clockMinutes(singaporeStamp(new Date(iso))) : null;
+      if (target === null || estimate === null) {
+        return "";
+      }
+      var gap = target - estimate;
+      if (gap === 0) {
+        return ARRIVE_ON_TARGET;
+      }
+      var n = Math.abs(gap);
+      var amount;
+      if (n >= 60) {
+        var hours = String(Math.floor(n / 60));
+        var rest = n % 60;
+        amount = rest === 0
+          ? JO_DURATION_HR.replace("{h}", hours)
+          : rest === 1
+            ? ARRIVE_GAP_HR_MIN_ONE.replace("{h}", hours)
+            : ARRIVE_GAP_HR_MINS.replace("{h}", hours).replace("{m}", String(rest));
+      } else {
+        amount = n === 1 ? ARRIVE_GAP_MINUTE_ONE : ARRIVE_GAP_MINUTES.replace("{n}", String(n));
+      }
+      return (gap > 0 ? ARRIVE_GAP_BEFORE : ARRIVE_GAP_AFTER).replace("{amount}", amount);
+    }
+
+    // The pill's state: On track, Risk of delay, or N/A (also when there is no check). The gap line follows it.
+    function arriveTone() {
+      var hasTarget = !!(arriveByInput && arriveByInput.value);
+      var label = hasTarget && journeyComparison ? journeyComparison.textContent : "";
+      return /On track/.test(label) ? "track" : /Risk/.test(label) ? "risk" : "na";
+    }
+
+    // prefix: "overview", "on-way" or "new-journey". iso: the estimated arrival, or null for no estimate.
+    function renderArriveCard(prefix, iso) {
+      var main = document.getElementById(prefix + "-arrive-value");
+      var gap = document.getElementById(prefix + "-arrive-estimate");
+      if (!main || !gap) {
+        return;
+      }
+      var line = iso ? ARRIVE_LINE.replace("{time}", formatClock(iso, true)) : "";
+      main.textContent = line;
+      main.hidden = !line;
+      var gapText = line ? arriveGapText(iso) : "";
+      gap.textContent = gapText;
+      gap.hidden = !gapText;
+      // the gap line takes the colour of the pill state (never colour alone: the words say before or after target)
+      var tone = arriveTone();
+      ["track", "risk", "na"].forEach(function (name) {
+        gap.classList.toggle("arrive-box__estimate--" + name, name === tone);
+      });
+    }
+
     function renderArrivalViews(estimate) {
       lastTileEstimate = estimate && estimate.estimated_arrival && estimate.arrival_low && estimate.arrival_high ? estimate : null;
+      overviewEstimateIso = lastTileEstimate ? lastTileEstimate.estimated_arrival : null;
       var overview = document.getElementById("journey-arrival-estimate");
       var live = document.getElementById("live-arrival-estimate");
       var hasTarget = !!(arriveByInput && arriveByInput.value);
@@ -3970,13 +4057,7 @@
             display.appendChild(time);
           }
         }
-        var overviewValue = document.getElementById("overview-arrive-value");
-        if (overviewValue) {
-          overviewValue.replaceChildren();
-          display.childNodes.forEach(function (node) {
-            overviewValue.appendChild(node.cloneNode(true));
-          });
-        }
+        renderArriveCard("overview", overviewEstimateIso);
       }
       if (typeof syncSearchReadiness === "function") {
         syncSearchReadiness();
@@ -5171,11 +5252,451 @@
       if (!chip || !this.contains(chip)) {
         return;
       }
+      if (chip.hasAttribute("data-saved-action")) {
+        savedPlaceAction(chip);
+        return;
+      }
       destinationInput.value = chip.textContent;
       syncDestinationClear();
       syncSearchReadiness();
       destinationInput.focus();
     });
+    // ---- Saved places (static/saved-places.js keeps them on this phone only) -------------------------------------
+    // A saved place is a name the user typed, its address and its point. The row shows names only; the point is used
+    // when a place is tapped, exactly as if it had been picked from the search results. Nothing here is sent anywhere
+    // except that tap (which loads the destination stops like any picked result) and the add panel's own search, which
+    // is the ordinary destination search with what the user typed.
+    var SP = {
+      starters: ["NUS", "Orchard Road", "Changi Airport"],
+      note: "Saved on this phone only.",
+      add: "+", addLabel: "Add a saved place",
+      count: "{n} of {max} saved",
+      chipLabel: "{name}, saved place", chipLabelAddress: "{name}, saved place, {address}",
+      menuLabel: "Rename {name}",
+      editToggle: "Edit", editToggleLabel: "Edit saved places", doneToggle: "Done",
+      doneToggleLabel: "Done editing saved places", deleteMark: "×", deleteMarkLabel: "Delete {name}",
+      addTitle: "Add a saved place", searchLabel: "Search for the place", searchPlaceholder: "Search for a place",
+      searchAction: "Search", pickHint: "Pick a place from the results, then name it.",
+      nameLabel: "Your name for this place", nameHint: "Up to {max} characters",
+      save: "Save", cancel: "Cancel", editTitle: "Edit name",
+      deleteConfirm: "Delete {name}?", deleteYes: "Delete",
+      errorName: "Enter a name for this place.", errorLong: "Use {max} characters or fewer.",
+      errorDuplicate: "That place is already saved.", errorFull: "You can save up to {max} places.",
+      errorPick: "Pick a place from the results first.", storageUnavailable: "Can't save on this device."
+    };
+    var savedSelection = null;
+    var savedEditMode = false;
+    var savedStorageNoted = false;
+    var savedPanelState = null;
+    var savedPicked = null;
+    var savedSearchGeneration = 0;
+
+    function spFill(template, values) {
+      return template.replace(/\{(\w+)\}/g, function (all, key) {
+        return Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : all;
+      });
+    }
+
+    function spEl(tag, className, text) {
+      var node = document.createElement(tag);
+      if (className) {
+        node.className = className;
+      }
+      if (text !== undefined && text !== null) {
+        node.textContent = text;
+      }
+      return node;
+    }
+
+    function spButton(className, text, action, id, label) {
+      var button = spEl("button", className, text);
+      button.type = "button";
+      if (action) {
+        button.setAttribute("data-saved-action", action);
+      }
+      if (id) {
+        button.setAttribute("data-saved-id", id);
+      }
+      if (label) {
+        button.setAttribute("aria-label", label);
+      }
+      return button;
+    }
+
+    function savedPlaceById(id) {
+      return SavedPlaces.list().filter(function (place) { return place.id === id; })[0] || null;
+    }
+
+    // The row: the saved places side by side in the order added (most recent last), then "+" (not at five), then the Edit
+    // / Done toggle (only when something is saved). A saved chip is one button: the name, with a green outline. In edit
+    // mode the same chip opens the rename panel and a small "×" badge sits on its upper right corner (a 44 px hit area
+    // that stays inside the row gap, so it never covers a neighbour); nothing moves between the two modes. With
+    // nothing saved the three starter names stand in, neutral; they are never stored and have no delete control.
+    function renderSavedPlaces() {
+      var row = document.getElementById("quick-picks");
+      var list = SavedPlaces.list();
+      row.replaceChildren();
+      if (!list.length) {
+        SP.starters.forEach(function (name) {
+          row.appendChild(spButton("quick-pick", name, "", "", ""));
+        });
+      }
+      list.forEach(function (place) {
+        var wrap = spEl("span", "saved-chip");
+        var selected = !!(savedSelection && savedSelection.id === place.id);
+        var label = savedEditMode
+          ? spFill(SP.menuLabel, { name: place.name })
+          : place.address
+            ? spFill(SP.chipLabelAddress, { name: place.name, address: place.address })
+            : spFill(SP.chipLabel, { name: place.name });
+        var main = spButton("quick-pick saved-chip__main" + (selected ? " is-selected" : ""),
+          "", savedEditMode ? "rename" : "open", place.id, label);
+        main.appendChild(spEl("span", "saved-chip__name", place.name));
+        if (!savedEditMode) {
+          main.setAttribute("aria-pressed", selected ? "true" : "false");
+        }
+        wrap.appendChild(main);
+        if (savedEditMode) {
+          var badge = spButton("saved-chip__badge", "", "delete", place.id, spFill(SP.deleteMarkLabel, { name: place.name }));
+          badge.appendChild(spEl("span", "saved-chip__badge-mark", SP.deleteMark));
+          wrap.appendChild(badge);
+        }
+        row.appendChild(wrap);
+      });
+      if (list.length < SavedPlaces.MAX) {
+        row.appendChild(spButton("quick-pick quick-pick--add", SP.add, "add", "", SP.addLabel));
+      }
+      if (list.length) {
+        var toggle = spButton("quick-pick saved-edit-toggle", savedEditMode ? SP.doneToggle : SP.editToggle,
+          "toggle-edit", "", savedEditMode ? SP.doneToggleLabel : SP.editToggleLabel);
+        toggle.setAttribute("aria-pressed", savedEditMode ? "true" : "false");
+        row.appendChild(toggle);
+      }
+      var count = document.getElementById("saved-places-count");
+      var full = list.length >= SavedPlaces.MAX;
+      count.textContent = full ? spFill(SP.count, { n: list.length, max: SavedPlaces.MAX }) : "";
+      count.hidden = !full;
+    }
+
+    // A tap on a saved place: the same step a search result goes to (the destination stops), with the stored point. Like
+    // Find my route, it waits for an arrive-by choice and shows the same prompt when there is none.
+    function selectSavedPlace(place) {
+      savedSelection = place;
+      closeSavedPanel();
+      destinationInput.value = place.name;
+      syncDestinationClear();
+      if (!arriveByPicked) {
+        searchAttempted = true;
+        syncSearchReadiness();
+        document.getElementById("arrive-by-field").focus();
+        return;
+      }
+      openSavedPlace(place);
+    }
+
+    function openSavedPlace(place) {
+      searchAttempted = true;
+      syncSearchReadiness();
+      pendingDestination = {
+        id: place.id,
+        label: place.name,
+        address: place.address,
+        label_display: place.name,
+        address_display: place.address,
+        latitude: place.latitude,
+        longitude: place.longitude
+      };
+      confirmPendingDestination();
+    }
+
+    function savedPlaceAction(button) {
+      var action = button.getAttribute("data-saved-action");
+      var id = button.getAttribute("data-saved-id");
+      if (action === "open") {
+        var place = savedPlaceById(id);
+        if (place && !savedEditMode) {
+          selectSavedPlace(place);
+        }
+      } else if (action === "rename") {  // the chip itself, in edit mode
+        openEditPanel(id);
+      } else if (action === "delete") {
+        openDeletePanel(id);
+      } else if (action === "add") {
+        openAddPanel();
+      } else if (action === "toggle-edit") {
+        setSavedEditMode(!savedEditMode);
+        focusSaved('[data-saved-action="toggle-edit"]');
+      }
+    }
+
+    function setSavedEditMode(on) {
+      savedEditMode = on;
+      if (!on && savedPanelState && savedPanelState.kind === "delete") {
+        savedPanelState = null;
+        var panel = document.getElementById("saved-panel");
+        panel.replaceChildren();
+        panel.hidden = true;
+      }
+      renderSavedPlaces();
+    }
+
+    function focusSaved(selector) {
+      var target = document.querySelector("#quick-picks " + selector);
+      if (target) {
+        target.focus();
+      }
+    }
+
+    // Escape leaves edit mode (and drops a delete question) from anywhere in the saved-places area.
+    function savedEscape(event) {
+      if (event.key !== "Escape" || !(savedEditMode || savedPanelState)) {
+        return;
+      }
+      savedEditMode = false;
+      closeSavedPanel();
+      focusSaved('[data-saved-action="add"], [data-saved-action="open"]');
+    }
+    document.getElementById("quick-picks").addEventListener("keydown", savedEscape);
+    document.getElementById("saved-places").addEventListener("keydown", savedEscape);
+
+    function closeSavedPanel() {
+      var panel = document.getElementById("saved-panel");
+      savedSearchGeneration += 1;
+      savedPanelState = null;
+      savedPicked = null;
+      panel.replaceChildren();
+      panel.hidden = true;
+      renderSavedPlaces();
+    }
+
+    function showSavedPanel(state, nodes, focusNode) {
+      var panel = document.getElementById("saved-panel");
+      savedPanelState = state;
+      panel.replaceChildren();
+      nodes.forEach(function (node) { panel.appendChild(node); });
+      panel.setAttribute("aria-label", state.title);
+      panel.hidden = false;
+      renderSavedPlaces();
+      if (focusNode) {
+        focusNode.focus();
+      }
+    }
+
+    function spField(id, labelText, value, maxLength, hint) {
+      var wrap = spEl("div", "field saved-panel__field");
+      var label = spEl("label", "saved-panel__label", labelText);
+      label.setAttribute("for", id);
+      var shell = spEl("div", "field__shell");
+      var input = spEl("input", "field__control");
+      input.id = id;
+      input.type = "text";
+      input.autocomplete = "off";
+      if (maxLength) {
+        input.maxLength = maxLength;
+      }
+      input.value = value || "";
+      shell.appendChild(input);
+      wrap.appendChild(label);
+      wrap.appendChild(shell);
+      if (hint) {
+        wrap.appendChild(spEl("p", "saved-places__note", hint));
+      }
+      return { wrap: wrap, input: input };
+    }
+
+    function spErrorText(code) {
+      if (code === "name") {
+        return SP.errorName;
+      }
+      if (code === "long") {
+        return spFill(SP.errorLong, { max: SavedPlaces.NAME_MAX });
+      }
+      if (code === "duplicate") {
+        return SP.errorDuplicate;
+      }
+      if (code === "full") {
+        return spFill(SP.errorFull, { max: SavedPlaces.MAX });
+      }
+      return SP.errorPick;
+    }
+
+    function noteSavedStorage(stored) {
+      if (stored || savedStorageNoted) {
+        return;
+      }
+      savedStorageNoted = true;  // said once
+      var line = document.getElementById("saved-places-storage");
+      line.textContent = SP.storageUnavailable;
+      line.hidden = false;
+    }
+
+    function openEditPanel(id) {
+      var place = savedPlaceById(id);
+      if (!place) {
+        return;
+      }
+      var field = spField("saved-edit-name", SP.nameLabel, place.name, SavedPlaces.NAME_MAX,
+        spFill(SP.nameHint, { max: SavedPlaces.NAME_MAX }));
+      var error = spEl("p", "saved-panel__error");
+      error.setAttribute("role", "alert");
+      error.hidden = true;
+      var save = spButton("primary", SP.save, "save", id);
+      var cancel = spButton("secondary", SP.cancel, "cancel", id);
+      var actions = spEl("div", "saved-panel__actions");
+      actions.appendChild(save);
+      actions.appendChild(cancel);
+      var nodes = [spEl("h3", "saved-panel__title", SP.editTitle)];
+      if (place.address) {
+        nodes.push(spEl("p", "saved-places__note", place.address));
+      }
+      nodes.push(field.wrap, error, actions);
+      save.addEventListener("click", function () {
+        var result = SavedPlaces.rename(id, field.input.value);
+        if (!result.ok) {
+          error.textContent = spErrorText(result.error);
+          error.hidden = false;
+          field.input.focus();
+          return;
+        }
+        noteSavedStorage(result.stored);
+        closeSavedPanel();
+      });
+      cancel.addEventListener("click", closeSavedPanel);
+      showSavedPanel({ kind: "edit", id: id, title: SP.editTitle }, nodes, field.input);
+    }
+
+    function openDeletePanel(id) {
+      var place = savedPlaceById(id);
+      if (!place) {
+        return;
+      }
+      var yes = spButton("primary", SP.deleteYes, "confirm-delete", id);
+      var no = spButton("secondary", SP.cancel, "keep", id);
+      var actions = spEl("div", "saved-panel__actions");
+      actions.appendChild(yes);
+      actions.appendChild(no);
+      var title = spFill(SP.deleteConfirm, { name: place.name });
+      yes.addEventListener("click", function () {
+        var result = SavedPlaces.remove(id);
+        noteSavedStorage(result.stored);
+        if (savedSelection && savedSelection.id === id) {
+          savedSelection = null;
+        }
+        savedEditMode = false;  // edit mode ends after a delete
+        closeSavedPanel();
+        focusSaved('[data-saved-action="add"], [data-saved-action="open"]');
+      });
+      no.addEventListener("click", closeSavedPanel);
+      showSavedPanel({ kind: "delete", id: id, title: title }, [spEl("h3", "saved-panel__title", title), actions], no);
+    }
+
+    function openAddPanel() {
+      var search = spField("saved-search", SP.searchLabel, "", 0, "");
+      search.input.placeholder = SP.searchPlaceholder;
+      var searchButton = spButton("secondary", SP.searchAction, "", "");
+      searchButton.type = "submit";
+      var form = spEl("form", "saved-panel__search");
+      form.setAttribute("novalidate", "");
+      form.appendChild(search.wrap);
+      form.appendChild(searchButton);
+      var status = spEl("p", "saved-places__note", SP.pickHint);
+      status.setAttribute("aria-live", "polite");
+      var results = spEl("ul", "saved-panel__results");
+      var picked = spEl("p", "saved-panel__picked");
+      picked.hidden = true;
+      var name = spField("saved-name", SP.nameLabel, "", SavedPlaces.NAME_MAX,
+        spFill(SP.nameHint, { max: SavedPlaces.NAME_MAX }));
+      name.wrap.hidden = true;
+      var error = spEl("p", "saved-panel__error");
+      error.setAttribute("role", "alert");
+      error.hidden = true;
+      var save = spButton("primary", SP.save, "", "");
+      var cancel = spButton("secondary", SP.cancel, "", "");
+      var actions = spEl("div", "saved-panel__actions");
+      actions.appendChild(save);
+      actions.appendChild(cancel);
+      savedPicked = null;
+      function showPicked() {
+        picked.textContent = savedPicked.name + (savedPicked.address ? " · " + savedPicked.address : "");
+        picked.hidden = false;
+        name.wrap.hidden = false;
+      }
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var query = search.input.value.trim();
+        if (!query) {
+          return;
+        }
+        var generation = ++savedSearchGeneration;
+        status.textContent = "Searching…";
+        results.replaceChildren();
+        fetch("/api/destinations?q=" + encodeURIComponent(query))
+          .then(function (response) { return response.ok ? response.json() : null; })
+          .then(function (body) {
+            if (generation !== savedSearchGeneration) {
+              return;
+            }
+            if (!body || body.status !== "ok" || !Array.isArray(body.results)) {
+              status.textContent = "Destination search unavailable.";
+              return;
+            }
+            if (!body.results.length) {
+              status.textContent = "No matches found. Try a building, road, or postal code.";
+              return;
+            }
+            status.textContent = SP.pickHint;
+            body.results.slice(0, 5).forEach(function (result) {
+              var item = spEl("li", "saved-panel__result");
+              var title = result.label_display || result.label || "";
+              var address = result.address_display || result.address || "";
+              var choose = spButton("quick-pick saved-panel__choose", title + (address ? " · " + address : ""), "", "");
+              choose.addEventListener("click", function () {
+                savedPicked = {
+                  name: title, address: address, latitude: Number(result.latitude), longitude: Number(result.longitude)
+                };
+                error.hidden = true;
+                showPicked();
+                name.input.focus();
+              });
+              item.appendChild(choose);
+              results.appendChild(item);
+            });
+          })
+          .catch(function () {
+            if (generation === savedSearchGeneration) {
+              status.textContent = "Destination search unavailable.";
+            }
+          });
+      });
+      save.addEventListener("click", function () {
+        if (!savedPicked) {
+          error.textContent = SP.errorPick;
+          error.hidden = false;
+          search.input.focus();
+          return;
+        }
+        var result = SavedPlaces.add({
+          name: name.input.value, address: savedPicked.address,
+          latitude: savedPicked.latitude, longitude: savedPicked.longitude
+        });
+        if (!result.ok) {
+          error.textContent = spErrorText(result.error === "invalid" ? "pick" : result.error);
+          error.hidden = false;
+          name.input.focus();
+          return;
+        }
+        noteSavedStorage(result.stored);
+        closeSavedPanel();
+      });
+      cancel.addEventListener("click", closeSavedPanel);
+      showSavedPanel({ kind: "add", id: "", title: SP.addTitle },
+        [spEl("h3", "saved-panel__title", SP.addTitle), form, status, results, picked, name.wrap, error, actions],
+        search.input);
+    }
+
+    renderSavedPlaces();
+
+
     // The two muted lines at the bottom of the menu: fetched once, the first time the menu opens.
     var MENU_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     var menuDataRequested = false;
@@ -5332,6 +5853,10 @@
       document.getElementById("destination-clear").hidden = destinationInput.value.length === 0;
     }
     destinationInput.addEventListener("input", function () {
+      if (savedSelection) {  // typing in the search box clears a chosen saved place
+        savedSelection = null;
+        renderSavedPlaces();
+      }
       syncDestinationClear();
       syncSearchReadiness();
     });
@@ -5442,6 +5967,7 @@
       document.getElementById("start-journey").disabled = state !== "ready";
       if (state !== "ready") {
         document.getElementById("overview-summary").hidden = true;
+        document.getElementById("overview-traffic-note").hidden = true;
       }
     }
 
@@ -6188,12 +6714,16 @@
       return transfers === 0 ? "ok" : transfers <= 2 ? "mid" : "high";
     }
 
-    function renderOverviewSummary(data) {
+    // hasBus: the route has a bus leg, so the bus minutes shown carry an assumed traffic factor and the muted line shows.
+    function renderOverviewSummary(data, hasBus) {
       var box = document.getElementById("overview-summary");
+      var note = document.getElementById("overview-traffic-note");
       if (!data) {
         box.hidden = true;
+        note.hidden = true;
         return;
       }
+      note.hidden = !hasBus;
       var time = formatDuration(data.minutes);
       var walk = formatDuration(data.walking);
       var count = data.transfers === 0 ? JO_TRANSFERS_NONE : data.transfers === 1 ? JO_TRANSFERS_ONE : fillText(JO_TRANSFERS_MANY, { t: data.transfers });
@@ -6261,7 +6791,7 @@
       list.appendChild(stepItem("destination", "Destination", [
         stepLine(destinationDisplayName())
       ], { label: "Edit destination", action: function () { backToScreen("results"); } }));
-      renderOverviewSummary(overviewSummaryData(transit, toBoard));
+      renderOverviewSummary(overviewSummaryData(transit, toBoard), transit.some(function (leg) { return !legIsRail(leg); }));
       syncArriveBySummary();
       syncOverviewArrive();
     }
@@ -6341,18 +6871,7 @@
     }
 
     function syncOverviewArrive() {
-      var pairs = [
-        ["journey-arrival-estimate", "overview-arrive-estimate"]
-      ];
-      pairs.forEach(function (pair) {
-        var from = document.getElementById(pair[0]);
-        var to = document.getElementById(pair[1]);
-        if (!from || !to) {
-          return;
-        }
-        to.textContent = from.textContent;
-        to.hidden = !from.textContent || from.hidden;
-      });
+      renderArriveCard("overview", overviewEstimateIso);
       var hasTarget = !!(arriveByInput && arriveByInput.value);
       var estimate = document.getElementById("overview-arrive-estimate");
       var note = document.getElementById("overview-arrive-note");
@@ -8717,10 +9236,7 @@
         ], null));
       }
       list.appendChild(stepItem("destination", "Destination", [stepLine(destinationDisplayName())], null));
-      document.getElementById("new-journey-arrive-value").textContent = document.getElementById("overview-arrive-value").textContent;
-      var estimate = document.getElementById("new-journey-arrive-estimate");
-      estimate.textContent = row.estimated_arrival ? "Estimated destination arrival about " + formatClock(row.estimated_arrival, true) : "";
-      estimate.hidden = !row.estimated_arrival;
+      renderArriveCard("new-journey", row.estimated_arrival || null);
     }
 
     function leaveNewJourneyScreen(toPageA) {
@@ -9299,14 +9815,13 @@
 
     // Yes: tracking for this leg is over and the overview shows "on your way" (the same layout for a bus and a train).
     function answerCaught() {
-      var hasTarget = !!(arriveByInput && arriveByInput.value);
       var plan = activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan : null;
       var planned = plannedLegOf(plan);
       onWayState = {
         train: isTrain(),
         service: selectedService,
         stop: selectedBoardingStop,
-        estimate: lastTileEstimate ? estimateSentence(lastTileEstimate, hasTarget) : "",
+        estimateIso: lastTileEstimate ? lastTileEstimate.estimated_arrival : null,
         boardedAt: Date.now(),
         steps: buildOnWaySteps(planned, plan),
         alerted: {},
@@ -9355,10 +9870,7 @@
       var text = onWayNextText(state, statuses);
       next.textContent = text;
       next.hidden = !text;
-      document.getElementById("on-way-arrive-value").textContent = document.getElementById("overview-arrive-value").textContent;
-      var estimate = document.getElementById("on-way-arrive-estimate");
-      estimate.textContent = state.estimate;
-      estimate.hidden = !state.estimate;
+      renderArriveCard("on-way", state.estimateIso);
       syncOnWayLines();
     }
 

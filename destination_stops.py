@@ -8,6 +8,7 @@ import math
 import re
 from datetime import datetime, timedelta, timezone
 
+from bus_traffic import bus_ride_minutes
 from catch_heuristic import headway_seconds
 from config import WALK_SPEED_DEFAULT_MPS
 from lta_static import StopAndRouteCache
@@ -361,7 +362,8 @@ def _arrival_terms(
     )
     board = walk_minutes(link["user_m"], walk_speed_m_s)
     wait = (headway / 2) / 60
-    ride = (link["route_km"] / BUS_SPEED_KM_H) * 60
+    # the bus starts after the walk and the wait; its minutes carry the traffic factor of that time
+    ride = bus_ride_minutes((link["route_km"] / BUS_SPEED_KM_H) * 60, now + timedelta(minutes=board + wait))
     end = walk_minutes(place_m, walk_speed_m_s)
     return {
         "board_walk_minutes": board,

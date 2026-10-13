@@ -158,6 +158,11 @@ def place_icons_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "place-icons.js", media_type="text/javascript")
 
 
+@app.get("/saved-places.js")
+def saved_places_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "saved-places.js", media_type="text/javascript")
+
+
 @app.get("/api/data-status", response_model=None)
 def data_status_endpoint() -> dict:
     """How current the static data is: the last holiday year and the bus data date. No input, no coordinates."""

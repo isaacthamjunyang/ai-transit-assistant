@@ -76,18 +76,21 @@ def dark(tmp_path_factory):
 def test_the_arrival_sentences_show_the_point_time_only(light):
     seen = light["estimate"]
     for variant in ("without", "with"):
-        for place in ("overview", "box", "live"):
+        # the arrive-by box has its own two-line wording (tests/test_arrive_card.py): the point time only here too
+        assert re.fullmatch(r"Arrive by: \d{1,2}:\d\d\s(AM|PM)( \(tomorrow\))?", seen[variant]["box"]), seen[variant]
+        for place in ("overview", "live"):
             text = seen[variant][place]
             assert re.fullmatch(r"(Arrive about|Estimated destination arrival about) \d{1,2}:\d\d (AM|PM)( \(tomorrow\))?", text), text
     assert seen["with"]["overview"].startswith("Arrive about ") and seen["without"]["overview"].startswith("Estimated destination")
-    assert seen["with"]["box"] == seen["with"]["overview"]  # the arrive-by box mirrors the one sentence
+    # the box shows the same time as the one sentence
+    assert seen["with"]["box"].split("Arrive by: ")[1] == seen["with"]["overview"].split("Arrive about ")[1]
 
 
 # ---- the order at the top of the card -----------------------------------------------------------------------
 
 
 def test_the_html_order_is_title_select_summary_then_the_rows():
-    card = INDEX.split('id="overview-card"', 1)[1].split('<div class="arrive-box">', 1)[0]
+    card = INDEX.split('id="overview-card"', 1)[1].split('<div class="arrive-box"', 1)[0]
     ids = ["overview-title", "priority-select", "overview-summary", "overview-skeleton", "overview-timeline"]
     positions = [card.index(f'id="{name}"') for name in ids]
     assert positions == sorted(positions)

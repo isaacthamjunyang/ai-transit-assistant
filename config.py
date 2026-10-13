@@ -1,8 +1,15 @@
 """Named constants shared with the page. main.py writes them into the served page."""
 
-from datetime import date
+from datetime import date, time
 
 BUS_SPEED_KM_H = 18  # the existing ride-speed constant, defined here once
+
+# Bus traffic. These are documented assumptions, not measured traffic data: a bus leg that starts inside a weekday
+# peak window takes BUS_PEAK_FACTOR times its scheduled minutes. The window is chosen by the leg's start time (SGT),
+# start inclusive, end exclusive. Weekends and PUBLIC_HOLIDAYS use 1.0. Applied only to bus ride minutes, through
+# bus_traffic.bus_ride_minutes (never rail, walking, waiting or the live arrival at the boarding stop).
+BUS_PEAK_FACTOR = 1.25
+BUS_PEAK_WINDOWS = ((time(7, 0), time(9, 0)), (time(17, 0), time(20, 0)))  # weekdays only
 
 # The colour band of the probability ring is decided in Python from the point.
 RING_BAND_OK_FROM = 50

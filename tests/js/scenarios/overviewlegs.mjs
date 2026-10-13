@@ -100,7 +100,7 @@ export default async function (h) {
         arriveByInput.value = pair[0];
         renderArrivalViews(data);
         seen[pair[1]] = { overview: document.getElementById("journey-arrival-estimate").textContent,
-          box: document.getElementById("overview-arrive-estimate").textContent, live: document.getElementById("live-arrival-estimate").textContent };
+          box: document.getElementById("overview-arrive-value").textContent, live: document.getElementById("live-arrival-estimate").textContent };
       });
       arriveByInput.value = "";
       return seen;

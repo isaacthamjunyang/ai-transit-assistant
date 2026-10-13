@@ -728,6 +728,55 @@
       return "<div class=\"arrive-block\"><div class=\"info-row__head\"><span class=\"icon-tile\" aria-hidden=\"true\"><svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></span><span class=\"info-row__title\">" + copy.home.arriveBy + "</span></div><button type=\"button\" class=\"select-field\" aria-expanded=\"" + (open ? "true" : "false") + "\"><span>" + label + "</span>" + downSvg + "</button>" + panel + "</div>";
     }
 
+    // Saved places on Home: the saved chips side by side with a green outline (the name only), "+" (not at five) and, when
+    // something is saved, the Edit / Done toggle. "+" has a dashed green outline and green text, Edit a red outline and
+    // red text, and Done the neutral chip style. In edit mode a small "x" badge sits on each chip's upper right corner and
+    // the chip itself renames. Starters stay neutral. selected: the index of the chip with the selected outer ring.
+
+    function sgSavedRow(names, editing, selected) {
+      var sp = copy.home.savedPlaces;
+      var chips = names.length ? names.map(function (name, index) {
+        var label = editing ? sp.menuLabel : sp.chipLabel;
+        var chosen = index === selected;
+        return "<span class=\"saved-chip\"><button type=\"button\" class=\"quick-pick saved-chip__main" + (chosen ? " is-selected" : "") + "\" aria-label=\"" + label.replace("{name}", name) + "\"" + (!editing ? " aria-pressed=\"" + (chosen ? "true" : "false") + "\"" : "") + "><span class=\"saved-chip__name\">" + name + "</span></button>"
+          + (editing ? "<button type=\"button\" class=\"saved-chip__badge\" aria-label=\"" + sp.deleteMarkLabel.replace("{name}", name) + "\"><span class=\"saved-chip__badge-mark\">" + sp.deleteMark + "</span></button>" : "")
+          + "</span>";
+      }) : copy.home.quickPicks.map(function (name) {
+        return "<button type=\"button\" class=\"quick-pick\">" + name + "</button>";
+      });
+      if (names.length < 5) {
+        chips.push("<button type=\"button\" class=\"quick-pick quick-pick--add\" aria-label=\"" + sp.addLabel + "\">" + sp.add + "</button>");
+      }
+      if (names.length) {
+        chips.push("<button type=\"button\" class=\"quick-pick saved-edit-toggle\" aria-pressed=\"" + (editing ? "true" : "false") + "\" aria-label=\"" + (editing ? sp.doneToggleLabel : sp.editToggleLabel) + "\">" + (editing ? sp.doneToggle : sp.editToggle) + "</button>");
+      }
+      var count = names.length >= 5 ? "<p class=\"saved-places__note\">" + sp.count.replace("{n}", "5").replace("{max}", "5") + "</p>" : "";
+      return "<div class=\"quick-picks\">" + chips.join("") + "</div><div class=\"saved-places\">" + count
+        + "<p class=\"saved-places__note\">" + sp.note + "</p></div>";
+    }
+
+    function sgSavedField(label, value, hint) {
+      return "<div class=\"field saved-panel__field\"><label class=\"saved-panel__label\">" + label + "</label><div class=\"field__shell\">"
+        + "<input class=\"field__control\" type=\"text\" value=\"" + value + "\" aria-label=\"" + label + "\"></div>"
+        + (hint ? "<p class=\"saved-places__note\">" + hint + "</p>" : "") + "</div>";
+    }
+
+    function sgSavedPanel(kind) {
+      var sp = copy.home.savedPlaces;
+      if (kind === "delete") {
+        var question = sp.deleteConfirm.replace("{name}", "Home");
+        return "<div class=\"saved-panel\" role=\"group\" aria-label=\"" + question + "\"><h3 class=\"saved-panel__title\">" + question + "</h3>"
+          + "<div class=\"saved-panel__actions\"><button type=\"button\" class=\"primary\">" + sp.deleteYes + "</button><button type=\"button\" class=\"secondary\">" + sp.cancel + "</button></div></div>";
+      }
+      return "<div class=\"saved-panel\" role=\"group\" aria-label=\"" + sp.addTitle + "\"><h3 class=\"saved-panel__title\">" + sp.addTitle + "</h3>"
+        + "<div class=\"saved-panel__search\">" + sgSavedField(sp.searchLabel, "NUS", "") + "<button type=\"button\" class=\"secondary\">" + sp.searchAction + "</button></div>"
+        + "<ul class=\"saved-panel__results\"><li><button type=\"button\" class=\"quick-pick saved-panel__choose\">National University of Singapore · 21 Lower Kent Ridge Road</button></li></ul>"
+        + "<p class=\"saved-panel__picked\">National University of Singapore · 21 Lower Kent Ridge Road</p>"
+        + sgSavedField(sp.nameLabel, "School", sp.nameHint.replace("{max}", "24"))
+        + "<p class=\"saved-panel__error\">" + sp.errorDuplicate + "</p>"
+        + "<div class=\"saved-panel__actions\"><button type=\"button\" class=\"primary\">" + sp.save + "</button><button type=\"button\" class=\"secondary\">" + sp.cancel + "</button></div></div>";
+    }
+
     function screenSample() {
       var longAddress = "25 Lower Kent Ridge Road, Singapore 119081. This longer address continues past the second line so the ellipsis can be checked.";
       var tiles = [
@@ -746,7 +795,17 @@
       return "<div class=\"card screen-sample\">" +
         "<div class=\"hero\">" + heroArt + "<p class=\"hero__copy\"><span class=\"hero__line\">" + copy.home.heroLeave + "</span><span class=\"hero__line\">" + copy.home.heroCatch + "</span></p></div>" +
         "<p class=\"hero-support\">" + copy.home.heroSupport + "</p>" +
-        "<button type=\"button\" class=\"quick-pick\">" + copy.home.quickPicks[0] + "</button>" +
+        "<p class=\"note\">Saved places: nothing saved (the starters, never stored)</p>" + sgSavedRow([]) +
+        "<p class=\"note\">Saved places: one saved (\"+\" dashed green, Edit red)</p>" + sgSavedRow(["Home"]) +
+        "<p class=\"note\">Saved places: one selected (a blue outer ring with a gap, apart from the green outline)</p>" +
+        sgSavedRow(["Home", "School"], false, 0) +
+        "<p class=\"note\">Saved places: five saved (a long name ends in an ellipsis; no + and a count)</p>" +
+        sgSavedRow(["Home", "School", "Gym", "Mum’s flat in Bedok North", "Office"]) +
+        "<p class=\"note\">Saved places: edit mode (a \u00d7 badge on each chip's upper right corner; the chip itself renames; Done is neutral and leaves)</p>" +
+        sgSavedRow(["Home", "School", "Gym", "Mum\u2019s flat in Bedok North", "Office"], true) +
+        "<p class=\"note\">Saved places: add panel (picked place, your own name, duplicate message)</p>" + sgSavedPanel("add") +
+        "<p class=\"note\">Saved places: delete confirmation</p>" + sgSavedPanel("delete") +
+        "<p class=\"saved-places__note saved-places__note--warn\">" + copy.home.savedPlaces.storageUnavailable + "</p>" +
         guideLocation("waiting", copy.home.locationGetting) +
         guideLocation("found", "Tanjong Rhu") +
         guideLocation("found", copy.home.locationFound) +
@@ -1037,19 +1096,27 @@
         + "<ul class=\"ride-apps__list\">" + links + "</ul><p class=\"overview-note ride-apps__note\">" + ra.note + "</p></div>";
     }
 
-    function sgArriveBox() {
-      return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
-        + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.custom + " · 6:30\u00a0PM</p>"
-        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateTarget.replace("{point}", "6:18\u00a0PM") + "</p>"
-        + "<p class=\"badge badge--track arrive-box__status\">" + copy.arriveBy.onTrack + "</p></div>"
+    // The Arrive by card: the main line is the app's estimate ("Arrive by: {time}", heading size); under it, muted, the
+    // gap to the target in words; then the check pill. A next-day time carries "(tomorrow)". With no target there is
+    // only the main line.
+    function sgArriveGap(direction, amount) {
+      return copy.arriveBy[direction === "before" ? "gapBefore" : "gapAfter"].replace("{amount}", amount);
+    }
+
+    // No visible label: the card is a group named "Arrive by". The gap line takes the pill's state colour (track, risk,
+    // or the muted N/A), and always says before or after target in words.
+    function sgArriveBox(time, gap, pill) {
+      var tone = pill && pill[0] === "badge--track" ? "track" : pill && pill[0] === "badge--risk" ? "risk" : "na";
+      return "<div class=\"arrive-box\" role=\"group\" aria-label=\"" + copy.home.arriveBy + "\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
+        + "<div class=\"arrive-box__copy\">"
+        + "<p class=\"arrive-box__value\">" + copy.arriveBy.arriveLine.replace("{time}", time) + "</p>"
+        + (gap ? "<p class=\"arrive-box__estimate arrive-box__estimate--" + tone + "\">" + gap + "</p>" : "")
+        + (pill ? "<p class=\"badge " + pill[0] + " arrive-box__status\">" + pill[1] + "</p>" : "") + "</div>"
         + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
     }
 
     function sgArriveBoxNoTarget() {
-      return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
-        + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.noTarget + "</p>"
-        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateOnly.replace("{point}", "6:24\u00a0PM") + "</p></div>"
-        + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
+      return sgArriveBox("6:24\u00a0PM", "", null);
     }
 
     function sgBusCard(state, refreshClass, refreshDisabled) {
@@ -1085,8 +1152,14 @@
       return ""
         + "<h4>Journey timeline, direct</h4>" + sgTimeline(false)
         + "<h4>Journey timeline, with a transfer</h4>" + sgTimeline(true)
-        + "<h4>Arrive-by box with the estimate</h4>" + sgArriveBox()
-        + "<h4>Arrive-by box, No target (estimate only)</h4>" + sgArriveBoxNoTarget()
+        + "<h4>Arrive-by box: before the target (12 mins), On track pill and the gap in the pill's green</h4>" + sgArriveBox("6:18\u00a0PM", sgArriveGap("before", copy.arriveBy.gapMinutes.replace("{n}", "12")), ["badge--track", copy.arriveBy.onTrack])
+        + "<h4>Arrive-by box: after the target (1 min, singular), Risk pill and the gap in the pill's amber</h4>" + sgArriveBox("6:31\u00a0PM", sgArriveGap("after", copy.arriveBy.gapMinuteOne), ["badge--risk", copy.arriveBy.risk])
+        + "<h4>Arrive-by box: on target time</h4>" + sgArriveBox("6:30\u00a0PM", copy.arriveBy.gapOnTarget, ["badge--track", copy.arriveBy.onTrack])
+        + "<h4>Arrive-by box: an hour or more (1 hr 5 mins before target)</h4>" + sgArriveBox("5:25\u00a0PM", sgArriveGap("before", copy.arriveBy.gapHrMins.replace("{h}", "1").replace("{m}", "5")), ["badge--track", copy.arriveBy.onTrack])
+        + "<h4>Arrive-by box: an hour and 1 min (the minute is singular)</h4>" + sgArriveBox("5:29\u00a0PM", sgArriveGap("before", copy.arriveBy.gapHrMinOne.replace("{h}", "1")), ["badge--track", copy.arriveBy.onTrack])
+        + "<h4>Arrive-by box: across midnight (estimate 11:55 PM, target 12:05 AM tomorrow)</h4>" + sgArriveBox("11:55\u00a0PM", sgArriveGap("before", copy.arriveBy.gapMinutes.replace("{n}", "10")), ["badge--track", copy.arriveBy.onTrack])
+        + "<h4>Arrive-by box: a next-day estimate carries (tomorrow); 2 hr after the target</h4>" + sgArriveBox("2:30\u00a0AM " + copy.arriveBy.tomorrow, sgArriveGap("after", jo.durationHr.replace("{h}", "2")), ["badge--risk", copy.arriveBy.risk])
+        + "<h4>Arrive-by box, No target (the main line only, no label)</h4>" + sgArriveBoxNoTarget()
         + "<h4>Screen 5: planning (loading)</h4>" + sgOverviewState("loading")
         + "<h4>Screen 5: no location</h4>" + sgOverviewState("no-location")
         + "<h4>Screen 5: no route</h4>" + sgOverviewState("no-route")
@@ -1291,6 +1364,7 @@
         + "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + jo.title + "</h4>"
         + "<div class=\"overview-priority\">" + sgSelect("fastest", []) + "</div>"
         + sgSummary(63, 3, 12)
+        + "<p class=\"overview-note\">" + jo.trafficNote + "</p>"
         + "<ol class=\"journey-steps\">" + rows.join("") + "</ol></div>"
         + "<h4>Summary card: green with no transfer, amber for one or two, red for three or more; hours from 60 min</h4>"
         + "<div class=\"card overview-card\">" + [[59, 0, 4], [60, 1, 6], [65, 2, 9], [120, 3, 12], [185, 4, 61]].map(function (v) {

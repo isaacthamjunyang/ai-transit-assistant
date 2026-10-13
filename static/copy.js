@@ -133,6 +133,20 @@ var copy = {
     naMessage: "Destination ride duration unavailable; cannot verify target arrival time.",
     estimateTarget: "Arrive about {point}",
     estimateOnly: "Estimated destination arrival about {point}",
+    /* proposed, needs approval: the Arrive by card (overview, on your way, new journey). The main line is the app's
+       estimate (the 12-hour SGT clock, a no-break space before AM or PM, "(tomorrow)" for a next-day time). The muted
+       line under it is the gap to the target, worked out from the displayed clock minutes: gapBefore or gapAfter with
+       an amount ("{n} mins", "1 min"; from 60 minutes gapHrMins, gapHrMinOne, or journeyOverview durationHr when the
+       minutes are 0), or gapOnTarget when the minutes are the same. Only this card says "mins". With no target there is only the main line. The one-line sentences
+       above stay on the live page. */
+    arriveLine: "Arrive by: {time}",
+    gapMinutes: "{n}\u00a0mins",
+    gapMinuteOne: "1\u00a0min",
+    gapHrMins: "{h}\u00a0hr {m}\u00a0mins",
+    gapHrMinOne: "{h}\u00a0hr 1\u00a0min",
+    gapBefore: "{amount} before target",
+    gapAfter: "{amount} after target",
+    gapOnTarget: "On target time",
     late: "about {minutes} min late",
     missLabel: "If you miss it",
     missWithLate: "Next Bus {service} in {minutes} min · reach destination about {point} ({late})",
@@ -206,6 +220,42 @@ var copy = {
     heading: "Where do you want to go?",
     placeholder: "e.g. Marina Bay Sands, NUS, Orchard Road",
     quickPicks: QUICK_PICKS,
+    /* proposed, needs approval: saved places on Home (up to {max}, named by the user, kept on this phone only; see
+       static/saved-places.js). The three quickPicks names above are the starters shown only while nothing is saved. */
+    savedPlaces: {
+      note: "Saved on this phone only.",
+      add: "+",
+      addLabel: "Add a saved place",
+      count: "{n} of {max} saved",
+      chipLabel: "{name}, saved place",
+      chipLabelAddress: "{name}, saved place, {address}",
+      menuLabel: "Rename {name}",  /* the chip's name for assistive technology while editing */
+      editToggle: "Edit",
+      editToggleLabel: "Edit saved places",
+      doneToggle: "Done",
+      doneToggleLabel: "Done editing saved places",
+      deleteMark: "\u00d7",
+      deleteMarkLabel: "Delete {name}",
+      addTitle: "Add a saved place",
+      searchLabel: "Search for the place",
+      searchPlaceholder: "Search for a place",
+      searchAction: "Search",
+      pickHint: "Pick a place from the results, then name it.",
+      nameLabel: "Your name for this place",
+      nameHint: "Up to {max} characters",
+      save: "Save",
+      cancel: "Cancel",
+      editTitle: "Edit name",
+      editAction: "Edit name",
+      deleteConfirm: "Delete {name}?",
+      deleteYes: "Delete",
+      errorName: "Enter a name for this place.",
+      errorLong: "Use {max} characters or fewer.",
+      errorDuplicate: "That place is already saved.",
+      errorFull: "You can save up to {max} places.",
+      errorPick: "Pick a place from the results first.",
+      storageUnavailable: "Can't save on this device."
+    },
     locationTitle: "Your location",
     locationGetting: "Using your current location…",
     arriveBy: "Arrive by",
@@ -340,7 +390,10 @@ var copy = {
     noBusClosed: "Bus services have stopped for now. Try another priority.",
     noMrtClosed: "MRT and LRT services have stopped for now. Try another priority.",
     needsRouteService: "Needs the route service.",
-    fallbackNote: "Showing bus routes only. The route service is unavailable."
+    fallbackNote: "Showing bus routes only. The route service is unavailable.",
+    /* proposed, needs approval: one muted line under the summary card when the route has a bus leg. The bus minutes
+       shown already include an assumed traffic factor (config.BUS_PEAK_FACTOR); no figure is put on screen. */
+    trafficNote: "Bus times can vary with traffic."
   },
   /* proposed, needs approval: the ride-app card under an empty plan answer (no service, no route, walk only). The links go
      to each operator's own site with no trip data: no operator documents a prefilled link we could confirm. The distance

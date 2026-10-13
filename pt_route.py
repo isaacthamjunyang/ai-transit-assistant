@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 import onemap
+from bus_traffic import bus_ride_minutes
 from nearby import haversine_m
 from onemap import DestinationUnavailable, OneMapSession, _AuthRejected, format_place_name
 from service_hours import CIRCLE_WORDS, rail_circle_direction, rail_direction, rail_platform
@@ -465,7 +466,7 @@ def _leg(raw: object, lta_cache, index, rail_table=None) -> dict | None:
     ridden = max(len(stops) - 1, 1)
     minutes = base["duration_s"] / 60
     if mode == "BUS":
-        return {**base, **_bus_fields(raw, origin, target, stops, ridden, minutes, lta_cache, index)}
+        return {**base, **_bus_fields(raw, origin, target, stops, ridden, bus_ride_minutes(minutes, start), lta_cache, index)}
     if mode in RAIL_MODES:
         line = str(raw.get("routeShortName") or raw.get("route") or "").strip()
         board, alight = str(origin.get("stopCode", "")), str(target.get("stopCode", ""))

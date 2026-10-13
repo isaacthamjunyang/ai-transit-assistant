@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 import pt_route
+from bus_traffic import bus_ride_minutes
 from config import BUS_SPEED_KM_H, WALK_SPEED_DEFAULT_MPS
 from destination_stops import _service_record
 from journey import (
@@ -144,7 +145,7 @@ def plan_multi_leg(
     primary_mode = {PRIORITY_BUS_ONLY: MODE_BUS, PRIORITY_MRT_ONLY: MODE_RAIL}.get(priority, MODE_TRANSIT)
     if arrive_by is not None:
         km = haversine_m(origin.latitude, origin.longitude, target_lat, target_lon) / 1000
-        estimate = max(20.0, km / BUS_SPEED_KM_H * 60 * 1.2 + 10)
+        estimate = max(20.0, bus_ride_minutes(km / BUS_SPEED_KM_H * 60, depart) * 1.2 + 10)
         first = pt_route.search_arrive_by(router, origin, destination, arrive_by, estimate_minutes=estimate,
                                           earliest=depart, mode=primary_mode, budget=budget, **args)
     else:
@@ -365,6 +366,10 @@ def _assess(cache, rail_table, itinerary: dict, moment: datetime, user_lat: floa
     end_m = final["distance_m"] if final else 0.0
     ride_end = _as_sgt(datetime.fromisoformat(final["depart"] if final else itinerary["arrive"]))
     ride = (ride_end - boards).total_seconds() / 60
+    for leg in transit:  # a bus leg takes longer in the peak; OneMap's own times are for a free road
+        if leg["kind"] == KIND_BUS and isinstance(leg.get("duration_s"), (int, float)):
+            scheduled = leg["duration_s"] / 60
+            ride += bus_ride_minutes(scheduled, _as_sgt(datetime.fromisoformat(leg["depart"]))) - scheduled
     if ahead:
         wait = 0.0
     minutes = walk_minutes(walk_m, speed) + wait + ride + walk_minutes(end_m, speed)

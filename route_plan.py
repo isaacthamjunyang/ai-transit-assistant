@@ -6,6 +6,7 @@ Uses cached BusRoutes, BusStops, and BusServices only.
 import math
 from datetime import datetime, timedelta, timezone
 
+from bus_traffic import bus_ride_minutes
 from catch_heuristic import headway_seconds
 from config import WALK_SPEED_DEFAULT_MPS
 from destination_stops import (
@@ -508,6 +509,7 @@ def _leg(service: str, direction: int, boarding: dict, alighting: dict, between:
         "direction": direction,
         "alighting_stop_code": alighting["code"],
         "route_km": route_km,
+        # the scheduled minutes; _attach_duration applies the traffic factor of the leg's start (bus_traffic)
         "ride_minutes": None if route_km is None else (route_km / BUS_SPEED_KM_H) * 60,
         "stops": [_stop_point(hop) for hop in between],
     }
@@ -561,6 +563,13 @@ def _attach_duration(
         now,
     )
     candidate["wait_minutes"] = (headway / 2) / 60
+    # each bus leg takes the traffic factor of the time it starts: the first after the walk and the wait, the next
+    # after the ride before it and the transfer allowance (the same function every other caller uses)
+    start = now + timedelta(minutes=walk_origin + candidate["wait_minutes"])
+    for leg in candidate["legs"]:
+        leg["ride_minutes"] = bus_ride_minutes(leg["ride_minutes"], start)
+        start += timedelta(minutes=leg["ride_minutes"] + TRANSFER_PENALTY_MINUTES)
+    rides = [leg["ride_minutes"] for leg in candidate["legs"]]
     candidate["generalized_time_minutes"] = (
         walk_origin
         + (headway / 2) / 60

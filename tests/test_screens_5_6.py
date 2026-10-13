@@ -70,11 +70,11 @@ def test_bottom_button_runs_the_existing_select_and_start_action():
 def test_arrive_by_box_mirrors_the_shared_display_and_opens_the_sheet():
     html = _page()
     summary = _between(html, "function syncArriveBySummary()", "function renderJourney")
-    assert 'getElementById("overview-arrive-value")' in summary
-    assert "cloneNode(true)" in summary
+    assert 'renderArriveCard("overview", overviewEstimateIso)' in summary  # "Arrive by: {time}" and the gap
     assert 'getElementById("overview-arrive-edit").addEventListener("click", openArriveSheet)' in html
     mirror = _between(html, "function syncOverviewArrive()", "// Screen 6")
-    assert '"journey-arrival-estimate", "overview-arrive-estimate"' in mirror
+    assert 'getElementById("overview-arrive-estimate")' in mirror
+    assert 'renderArriveCard("overview", overviewEstimateIso)' in mirror
     assert "journeyComparison" in mirror
     assert '["route", "journey", "overview"]' in html
 
