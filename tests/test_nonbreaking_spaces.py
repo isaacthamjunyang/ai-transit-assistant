@@ -66,10 +66,10 @@ def test_copy_js_page_and_tile_strings_hold_the_no_break_spaces():
 
 
 def test_every_page_clock_joins_the_time_and_am_pm_with_a_no_break_space():
-    # formatClock, formatRange, leaveClockText and the 12-hour clock of formatTime
+    # formatClock, leaveClockText and the 12-hour clock of formatTime (the arrival range is no longer drawn)
     assert 'parts.hm + "' + ESC + '" + parts.suffix' in INDEX
     assert INDEX.count('parts.hm + " " + parts.suffix') == 0
-    assert 'low.hm + "–" + high.hm + "' + ESC + '" + low.suffix' in INDEX
+    assert "function formatRange" not in INDEX
     assert 'hour12 + ":" + minute + "' + ESC + '" + suffix' in INDEX
     assert not re.search(r'\.hm \+ " " \+', INDEX) and 'minute + " " + suffix' not in INDEX
 
@@ -83,8 +83,6 @@ def test_the_page_clock_and_range_run_with_the_no_break_space():
     clock = between(INDEX, "function formatClock(iso, withTomorrow) {", "// Only the late wording")
     program = parts + clock + (
         'console.log(JSON.stringify([formatClock("2026-10-05T22:03:30+08:00", false),'
-        ' formatRange("2026-10-05T18:21:00+08:00", "2026-10-05T18:31:00+08:00"),'
-        ' formatRange("2026-10-05T23:55:00+08:00", "2026-10-06T00:10:00+08:00"),'
         ' leaveClockText("2026-10-05T22:03:30+08:00", Date.parse("2026-10-05T21:00:00+08:00"))]));'
     )
     program = "function leaveClockText(iso, nowMs) { var p = singaporeParts(new Date(iso)); return p.hm + \"" + ESC + "\" + p.suffix; }\n" + program
@@ -92,5 +90,4 @@ def test_the_page_clock_and_range_run_with_the_no_break_space():
     assert done.returncode == 0, done.stderr[-500:]
     import json
 
-    assert json.loads(done.stdout) == [
-        "10:03" + NB + "PM", "6:21–6:31" + NB + "PM", "11:55" + NB + "PM–12:10" + NB + "AM", "10:03" + NB + "PM"]
+    assert json.loads(done.stdout) == ["10:03" + NB + "PM", "10:03" + NB + "PM"]

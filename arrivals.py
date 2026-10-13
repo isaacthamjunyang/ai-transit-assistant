@@ -18,6 +18,7 @@ from config import WALK_SPEED_DEFAULT_MPS
 from journey import leave_by_for_buses
 from leave_now import leave_now_notice, notification_time_iso
 from lta_static import BASE_URL, REQUEST_TIMEOUT_SECONDS, StopAndRouteCache, read_account_key
+from service_hours import live_is_recent, service_runs_at
 
 SGT = timezone(timedelta(hours=8))
 BUS_POSITIONS = ("NextBus", "NextBus2", "NextBus3")
@@ -280,6 +281,81 @@ def peek_arrivals(stop_code: str, service_no: str, account_key: str | None = Non
         result = _fetch(owned, key, stop_code, service_no, moment)
     _peek_handoff[(stop_code, service_no)] = (time.monotonic(), copy.deepcopy(result))
     return result
+
+
+# Later bus legs of a journey (not the first transit leg): one BusArrival call per stop, ServiceNo omitted so every wanted
+# service at the stop shares it, kept LATER_TTL_SECONDS per stop. It is a raw lookup like peek_arrivals: the same parser, no
+# probability, no leave-by, no reroute, no notification, no logging. Only a stop code and service numbers arrive here, never
+# a position. It is refused in Demo Mode and never made for more than LATER_MAX_SERVICES services.
+LATER_TTL_SECONDS = 60
+LATER_MAX_SERVICES = 3
+LATER_MAX_ENTRIES = 32
+_later_cache: dict[str, tuple[float, str, dict]] = {}
+
+
+def clear_later_arrivals() -> None:
+    _later_cache.clear()
+
+
+def peek_later(
+    stop_code: str,
+    services: list[str],
+    static_cache: StopAndRouteCache | None = None,
+    client: httpx.Client | None = None,
+    account_key: str | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Next buses for several services at one stop. Returns {"stop_code", "fetched_at", "services": {no: [bus, ...]}}.
+
+    A bus is kept when it is monitored and the lookup is recent (live), or when the schedule says the service runs at its
+    arrival time: the same service-hours check the reroute uses."""
+    if demo.demo_enabled():
+        raise ArrivalUnavailable("Live arrival data is unavailable in Demo Mode.")
+    wanted = []
+    for service in services:
+        text = str(service).strip()
+        if text and text not in wanted:
+            wanted.append(text)
+    wanted = wanted[:LATER_MAX_SERVICES]
+    if not wanted:
+        raise ArrivalUnavailable("Live arrival data is unavailable: no service.")
+    moment = now if now is not None else datetime.now(SGT)
+    stop = str(stop_code).strip()
+    entry = _later_cache.get(stop)
+    if entry is not None and time.monotonic() - entry[0] < LATER_TTL_SECONDS:
+        _stored_at, fetched_at, payload = entry
+    else:
+        key = read_account_key() if account_key is None else account_key.strip()
+        if not key:
+            raise ArrivalUnavailable("Live arrival data is unavailable: LTA_ACCOUNT_KEY is missing.")
+        if client is None:
+            with httpx.Client(timeout=REQUEST_TIMEOUT_SECONDS) as owned:
+                payload = _fetch_stop_payload(owned, key, stop)
+        else:
+            payload = _fetch_stop_payload(client, key, stop)
+        fetched_at = _as_sgt_iso(moment)
+        if len(_later_cache) >= LATER_MAX_ENTRIES:
+            _later_cache.pop(min(_later_cache, key=lambda name: _later_cache[name][0]), None)
+        _later_cache[stop] = (time.monotonic(), fetched_at, payload)
+    results: dict[str, list[dict]] = {}
+    for service in wanted:
+        kept = []
+        for bus in _buses_from_payload(payload, service):
+            arrival = _parse_iso(bus["arrival_time"])
+            live = bus["monitored"] and live_is_recent(fetched_at, moment)
+            if arrival is not None and static_cache is not None and not service_runs_at(
+                    static_cache, service, stop, arrival, live=live):
+                continue
+            kept.append({"arrival_time": bus["arrival_time"], "monitored": bus["monitored"] is True})
+        results[service] = kept
+    return {"status": "ok", "stop_code": stop, "fetched_at": fetched_at, "services": results}
+
+
+def _parse_iso(value) -> datetime | None:
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def _take_peek(stop_code: str, service_no: str) -> dict | None:

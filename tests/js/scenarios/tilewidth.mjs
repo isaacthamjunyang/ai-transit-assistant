@@ -13,7 +13,6 @@ const MEASURE = `(function () {
   var value = document.getElementById("tile-leave-by");
   var tile = document.getElementById("tile-leave");
   var arrival = document.getElementById("tile-arrival");
-  var range = document.getElementById("tile-arrival-range");
   var span = value.querySelector(".leave-tile__nowrap");
   return {
     text: value.textContent,
@@ -22,7 +21,7 @@ const MEASURE = `(function () {
     valueLines: lines(value), fontPx: parseFloat(getComputedStyle(value).fontSize),
     tileScroll: tile.scrollWidth, tileClient: tile.clientWidth,
     tileRight: Math.round(tile.getBoundingClientRect().right), viewport: document.documentElement.clientWidth,
-    arrivalLines: lines(arrival), rangeText: range.textContent, rangeLines: lines(range),
+    arrivalLines: lines(arrival), rangeGone: document.getElementById("tile-arrival-range") === null,
     pageScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     clipped: span.getBoundingClientRect().right > value.getBoundingClientRect().right + 0.5
   };

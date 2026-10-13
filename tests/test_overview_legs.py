@@ -1,4 +1,4 @@
-"""The journey overview with one row per leg, the line badges and the priority chips (plan_edits_9 4.1, 4.2, 4.4, 4.9).
+"""The journey overview with one row per leg, the line badges and the priority select (plan_edits_9 4.1, 4.2, 4.4, 4.9).
 
 The static tests read the page, copy.js, theme.css and the style guide. The browser tests drive the real page in headless
 Edge against the real app with a stubbed OneMap (tests/onemap_stub.py): no OneMap or LTA call is made."""
@@ -79,7 +79,7 @@ def test_the_page_sets_no_colour_and_no_style_for_the_new_rows():
     region = INDEX.split("function legIsRail(leg)", 1)[1].split("function syncOverviewArrive()", 1)[0]
     assert ".style." not in region and "style=" not in region and "setAttribute(\"style\"" not in region
     assert not re.search(r"#[0-9A-Fa-f]{6}\b|rgb\(|hsl\(", region)
-    assert "line-badge--" in region and "classList.toggle(\"is-selected\"" in region
+    assert "line-badge--" in region and "option.disabled = priorityDisabled(option.value)" in region
 
 
 # ---- strings: copy.js and the page say the same ----------------------------------------------------------------------
@@ -91,9 +91,12 @@ PAIRS = {  # copy.js journeyOverview key: the page's constant
     "directionPlatform": "JO_DIRECTION_PLATFORM", "platformOnly": "JO_PLATFORM_ONLY", "stopsAndMin": "JO_STOPS", "stopOneAndMin": "JO_STOP_ONE",
     "scheduledIn": "JO_SCHEDULED_IN", "scheduledInOne": "JO_SCHEDULED_IN_ONE", "scheduledNow": "JO_SCHEDULED_NOW",
     "scheduledAt": "JO_SCHEDULED_AT",
-    "totals": "JO_TOTALS", "transfersMany": "JO_TRANSFERS_MANY", "transfersOne": "JO_TRANSFERS_ONE",
+    "summaryAria": "JO_SUMMARY_ARIA", "durationMin": "JO_DURATION_MIN", "durationHr": "JO_DURATION_HR",
+    "durationHrMin": "JO_DURATION_HR_MIN", "transfersMany": "JO_TRANSFERS_MANY", "transfersOne": "JO_TRANSFERS_ONE",
     "transfersNone": "JO_TRANSFERS_NONE", "noRouteFound": "JO_NO_ROUTE_FOUND", "noBusOnly": "JO_NO_BUS_ONLY",
-    "noMrtOnly": "JO_NO_MRT_ONLY", "bestAvailable": "JO_BEST_AVAILABLE", "needsRouteService": "JO_NEEDS_ROUTE_SERVICE",
+    "noMrtOnly": "JO_NO_MRT_ONLY", "needsRouteService": "JO_NEEDS_ROUTE_SERVICE",
+    "noService": "JO_NO_SERVICE_STATIC", "noServiceAny": "JO_NO_SERVICE_ANY", "noBusClosed": "JO_NO_BUS_CLOSED",
+    "noMrtClosed": "JO_NO_MRT_CLOSED",
     "fallbackNote": "JO_FALLBACK_NOTE",
 }
 
@@ -118,7 +121,7 @@ def test_the_section_4_9_texts_are_exact():
         "scheduledIn": "Scheduled · In {n}" + ESC + "min", "scheduledAt": "Scheduled · {time}",
         "noBusOnly": "No bus-only route found. Try another priority.",
         "noMrtOnly": "No MRT or LRT route found. Try another priority.",
-        "bestAvailable": "This is the best available for this trip.", "needsRouteService": "Needs the route service.",
+        "needsRouteService": "Needs the route service.",
         "noRouteFound": "No route found for this trip.",
         "fallbackNote": "Showing bus routes only. The route service is unavailable.",
     }
@@ -130,7 +133,7 @@ def test_numbers_keep_their_min_and_no_fares_or_street_names_appear_in_the_new_c
     region = INDEX.split("function legIsRail(leg)", 1)[1].split("function syncOverviewArrive()", 1)[0]
     code = "\n".join(row for row in region.split("\n") if not row.strip().startswith("//"))
     assert "fare" not in code.lower() and "street" not in code.lower()
-    for variable in ("JO_WALK_ROW", "JO_STOPS", "JO_STOP_ONE", "JO_SCHEDULED_IN", "JO_TOTALS"):
+    for variable in ("JO_WALK_ROW", "JO_STOPS", "JO_STOP_ONE", "JO_SCHEDULED_IN", "JO_DURATION_MIN", "JO_DURATION_HR_MIN"):
         value = re.search(rf'var {variable} = "([^"]*)";', INDEX).group(1)
         assert "} min" not in value and "}" + ESC + "min" in value, variable  # a number never splits from "min"
 
@@ -143,13 +146,19 @@ def test_the_page_always_sends_the_priority_and_does_not_remember_it():
     assert "localStorage" not in INDEX.split("var PRIORITY_IDS", 1)[1].split("function syncOverviewArrive()", 1)[0]
 
 
-def test_the_chips_are_a_radio_group_that_reuses_the_arrive_by_chip_style():
+def test_the_priority_is_a_native_select_with_a_label_and_the_five_options():
     block = INDEX.split('id="overview-priority"', 1)[1].split('<ol id="overview-skeleton"', 1)[0]
-    assert 'role="radiogroup" aria-label="Priority"' in block and block.count('role="radio"') == 5
-    assert block.count('class="arrive-chip"') + block.count('class="arrive-chip is-selected"') == 5 and 'aria-checked="true" tabindex="0" data-priority="fastest"' in block
-    for label in ("Fastest", "Fewest transfers", "Least walking", "Bus only", "MRT only"):
-        assert f">{label}</button>" in block
-    assert block.index("Fastest") < block.index("Fewest transfers") < block.index("Least walking") < block.index("Bus only")
+    assert "<label" not in block and "overview-priority__label" not in INDEX  # no visible label: the select has its aria-label
+    assert '<select id="priority-select" class="priority-select" aria-label="Priority">' in block
+    options = re.findall(r'<option value="(\w+)"[^>]*>([^<]+)</option>', block)
+    assert options == [("fastest", "Fastest"), ("fewest_transfers", "Fewest transfers"), ("least_walking", "Least walking"),
+                       ("bus_only", "Bus only"), ("mrt_only", "MRT only")]
+    assert 'value="fastest" selected' in block
+    assert "role=\"radio\"" not in block and "arrive-chip" not in block and "tabindex" not in block  # native, in the tab order
+    code = INDEX.split("function syncPrioritySelect()", 1)[1].split("// The fallback note", 1)[0]
+    assert "option.disabled = priorityDisabled(option.value)" in code
+    assert 'getElementById("priority-select").addEventListener("change"' in code
+    assert "syncPriorityChips" not in INDEX and "arrow" not in code.lower()
 
 
 def test_the_style_guide_shows_every_badge_in_both_themes_and_the_new_rows():
@@ -160,7 +169,7 @@ def test_the_style_guide_shows_every_badge_in_both_themes_and_the_new_rows():
     assert '["NS", "EW", "CG", "NE", "CC", "DT", "TE", "BP", "SK", "PG", "SS"]' in "var SG_LINE_CODES" + program
     for code in CODES + ["ss"]:
         assert code.upper() in program or "LINE_CODES" in program
-    for needle in ("line-badge", "arrive-chip", 'sgLegRow("walk"', 'sgRailLeg("NS"', 'sgBusLeg(', "aria-disabled"):
+    for needle in ("line-badge", "priority-select", 'sgLegRow("walk"', 'sgRailLeg("NS"', 'sgBusLeg(', " disabled"):
         assert needle in program, needle
 
 
@@ -180,7 +189,7 @@ def _run(tmp_path_factory, name, table=None, rail_table=TABLE, **config):
 
 @pytest.fixture(scope="module")
 def narrow(tmp_path_factory):
-    return _run(tmp_path_factory, "narrow", ALL, width=360, height=800, click="bus_only")
+    return _run(tmp_path_factory, "narrow", ALL, width=360, height=800, choose="bus_only")
 
 
 @pytest.fixture(scope="module")
@@ -241,7 +250,7 @@ def circle_stadium(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def fallback(tmp_path_factory):
-    return _run(tmp_path_factory, "fallback", None, width=390, keys="ArrowRight")
+    return _run(tmp_path_factory, "fallback", None, width=390, choose="fewest_transfers")
 
 
 @pytest.fixture(scope="module")
@@ -255,13 +264,8 @@ def onemap_empty(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def empty_chip(tmp_path_factory):
-    return _run(tmp_path_factory, "empty", {"TRANSIT": stub.mixed}, width=390, click="mrt_only")
-
-
-@pytest.fixture(scope="module")
-def best_available(tmp_path_factory):
-    return _run(tmp_path_factory, "best", {"TRANSIT": stub.mixed}, width=390, keys="ArrowRight")
+def empty_priority(tmp_path_factory):
+    return _run(tmp_path_factory, "empty", {"TRANSIT": stub.mixed}, width=390, choose="mrt_only")
 
 
 def _texts(rows):
@@ -345,7 +349,7 @@ def test_a_bus_leg_has_the_same_shape_with_bus_icons_and_neutral_rings(wide_dark
     info = bus["leg"]
     assert bus["markers"] == ["step-node step-node--bus", "step-node step-node--bus-end"] and bus["bar"]
     assert info["startIcon"] == info["endIcon"] and info["startIcon"] != rail["leg"]["startIcon"]  # a bus icon, not the train
-    assert bus["badge"]["text"].replace(" ", "") == "Bus18" and "line-badge--" not in bus["badge"]["cls"]
+    assert bus["badge"]["text"].replace(" ", "") == "Bus18" and bus["badge"]["cls"].endswith("line-badge--bus")  # neutral: its own outline, no line colour
     assert info["startRing"] == info["endRing"] and info["barBg"] != rail["leg"]["barBg"]
     for token in (row["badge"]["bg"] for row in rows if row["badge"] and row is not bus):
         assert token not in info["startRing"] and token != info["barBg"]  # no line colour on a bus leg
@@ -353,15 +357,11 @@ def test_a_bus_leg_has_the_same_shape_with_bus_icons_and_neutral_rings(wide_dark
     assert bus["lines"][0] == "Origin (01011)" and bus["lines"][-1] == "Bef Toh Guan Rd (28059)"
 
 
-def test_the_first_bus_only_note_appears_once_under_the_first_later_buss_schedule_line(later_buses):
+def test_the_first_bus_only_text_is_gone_from_every_row(later_buses):
     rows = later_buses["first"]["rows"]
-    note = "Live tracking covers your first bus only."
-    holders = [row for row in rows if note in row["lines"]]
-    assert len(holders) == 1 and note not in " ".join(r["text"] for r in rows if r is not holders[0])
-    lines = holders[0]["lines"]
-    assert holders[0]["badge"]["text"].replace(" ", "") == "Bus36"  # the first later bus, not the train or the third leg
-    assert lines.index(note) == lines.index([l for l in lines if l.startswith("Scheduled")][0]) + 1
-    assert later_buses["first"]["rows"][2]["lines"][-1] != note
+    assert "first bus only" not in " ".join(row["text"] for row in rows)
+    assert all("Scheduled" in row["text"] or "Arriving" in row["text"] or row["badge"] is None for row in rows
+               if "journey-step--bus" in row["cls"] or "journey-step--rail" in row["cls"])
 
 
 def test_a_train_row_has_two_markers_the_line_row_the_schedule_and_the_ride(wide_dark):
@@ -371,7 +371,7 @@ def test_a_train_row_has_two_markers_the_line_row_the_schedule_and_the_ride(wide
     # start station, line row, schedule, ride, end station: nothing else
     assert len(ns["lines"]) == 5, ns["lines"]
     assert ns["lines"][0] == "Bishan MRT Station (NS17)" and ns["lines"][1] == "NS To Marina South Pier"
-    assert re.fullmatch(r"Scheduled · \d{1,2}:\d\d" + NB + "(AM|PM)", ns["lines"][2])  # a later leg
+    assert re.fullmatch(r"Scheduled · \d{1,2}:\d\d" + NB + "(AM|PM)( [(]tomorrow[)])?", ns["lines"][2])  # a later leg
     assert re.fullmatch(r"6 stops · 12" + NB + "min", ns["lines"][3])
     assert ns["lines"][4] == "Raffles Place MRT Station (NS26)"
     assert "Board" not in ns["text"] and "Get off" not in ns["text"] and "About" not in ns["text"]
@@ -379,7 +379,7 @@ def test_a_train_row_has_two_markers_the_line_row_the_schedule_and_the_ride(wide
     assert ns["markers"] == ["step-node step-node--rail", "step-node step-node--rail-end"] and ns["bar"]
     assert ew["badge"]["text"] == "EW" and ew["badge"]["name"] == "To Tuas Link" and "Toward" not in ew["text"]
     assert lrt["badge"]["text"] == "BP"
-    assert "Live tracking covers your first bus only." not in ns["text"] + ew["text"] + lrt["text"]
+    assert "first bus only" not in ns["text"] + ew["text"] + lrt["text"]
 
 
 DOT = "\u00b7"
@@ -425,15 +425,20 @@ def test_the_leg_markers_bar_and_end_label_fit_at_360_and_1280_in_both_themes(fi
     assert result["scrollWidth"] <= result["innerWidth"]
 
 
-def test_the_totals_line_counts_minutes_transfers_and_walking(wide_dark):
-    totals = wide_dark["first"]["totals"]
-    assert re.fullmatch(rf"\d+{NB}min · 3 transfers · \d+{NB}min walking", totals), totals
+def test_the_summary_card_has_three_labelled_cells_and_reads_as_one_sentence(wide_dark):
+    summary = wide_dark["first"]["summary"]
+    assert summary["labels"] == ["Total time", "Transfers", "Walking"] and summary["role"] == "group"
+    assert re.fullmatch(rf"1{NB}hr \d{{1,2}}{NB}min", summary["values"][0]) and summary["values"][1] == "3"  # about 63 min; the stub's clock moves it by a minute
+    assert re.fullmatch(rf"\d+{NB}min", summary["values"][2])
+    assert summary["aria"] == f"Total time {summary['values'][0]}, 3 transfers, walking {summary['values'][2]}"
+    assert "overview-summary--high" in summary["cls"]  # three transfers: red
 
 
 @pytest.mark.parametrize("fixture", ["wide_dark", "narrow"])
 def test_badges_show_the_code_and_the_name_in_the_line_colours(fixture, request):
     result = request.getfixturevalue(fixture)["first"]
-    badges = [row["badge"] for row in result["rows"] if row["badge"] and "line-badge--" in row["badge"]["cls"]]
+    badges = [row["badge"] for row in result["rows"] if row["badge"] and "line-badge--" in row["badge"]["cls"]
+              and "line-badge--bus" not in row["badge"]["cls"]]
     assert [b["text"] for b in badges] == ["NS", "EW", "BP"]  # the bus number badge is neutral and has its own test
     for badge in badges:
         code = badge["text"].lower()
@@ -442,48 +447,49 @@ def test_badges_show_the_code_and_the_name_in_the_line_colours(fixture, request)
         assert badge["box"]["h"] >= 22 and badge["box"]["w"] >= 30
 
 
-def test_the_priority_chips_start_on_fastest_with_radio_semantics(wide_dark):
-    chips = wide_dark["first"]["chips"]
-    assert [c["text"] for c in chips] == ["Fastest", "Fewest transfers", "Least walking", "Bus only", "MRT only"]
-    assert [c["checked"] for c in chips] == ["true", "false", "false", "false", "false"]
-    assert [c["tab"] for c in chips] == [0, -1, -1, -1, -1] and chips[0]["selected"] is True
-    assert all(c["disabled"] is None for c in chips) and wide_dark["first"]["groupLabel"] == "Priority"
+def test_the_priority_select_starts_on_fastest(wide_dark):
+    select = wide_dark["first"]["select"]
+    assert select["tag"] == "SELECT" and select["value"] == "fastest" and select["text"] == "Fastest"
+    assert [o["text"] for o in select["options"]] == ["Fastest", "Fewest transfers", "Least walking", "Bus only", "MRT only"]
+    assert all(o["disabled"] is False for o in select["options"]) and select["disabled"] is False
+    assert select["label"] is None and select["aria"] == "Priority" and select["tabIndex"] == 0
+    assert wide_dark["first"]["visibleLabels"] == 0
     assert wide_dark["first"]["planRequests"][0].count("priority=fastest") == 1
-    assert wide_dark["first"]["fallbackNote"] is None
+    assert wide_dark["first"]["fallbackNote"] is None and wide_dark["first"]["chipsLeft"] == 0
 
 
-def test_the_overview_fits_360_and_1280_without_sideways_scroll_and_chips_are_44_px(narrow, wide_dark):
+def test_the_overview_fits_360_and_1280_without_sideways_scroll_and_the_select_is_44_px(narrow, wide_dark):
     for result in (narrow["first"], wide_dark["first"]):
         assert result["scrollWidth"] <= result["innerWidth"]
         assert all(row["right"] <= result["innerWidth"] + 1 for row in result["rows"])
-        assert all(chip["box"]["h"] >= 44 for chip in result["chips"])
+        assert result["select"]["box"]["h"] >= 44 and result["select"]["box"]["right"] <= result["innerWidth"]
     assert narrow["first"]["innerWidth"] == 360 and wide_dark["first"]["innerWidth"] == 1280
 
 
-def test_tapping_a_chip_selects_it_and_refetches_with_that_priority(narrow):
-    after = narrow["afterClick"]
+def test_changing_the_select_refetches_with_that_priority_and_shifts_nothing(narrow):
+    after = narrow["afterChoose"]
     assert after["planRequests"][-1].count("priority=bus_only") == 1 and len(after["planRequests"]) == 2
-    assert [c["checked"] for c in after["chips"]] == ["false", "false", "false", "true", "false"]
-    assert [c["tab"] for c in after["chips"]] == [-1, -1, -1, 0, -1] and after["chips"][3]["selected"] is True
+    assert after["select"]["value"] == "bus_only" and after["select"]["text"] == "Bus only"
     kinds = [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in after["rows"]]
     assert kinds == ["origin", "walk", "bus", "walk", "destination"] or "rail" not in kinds
-    assert after["chips"][3]["box"]["w"] == narrow["first"]["chips"][3]["box"]["w"]  # selecting changes no size
+    first = narrow["first"]["select"]["box"]
+    assert after["select"]["box"]["h"] == first["h"] and after["select"]["box"]["w"] == first["w"]  # same size
+    assert after["select"]["box"]["y"] == first["y"] and after["order"]["select"] == narrow["first"]["order"]["select"]  # same place
 
 
-def test_an_empty_chip_says_so_and_the_chips_stay(empty_chip):
-    after = empty_chip["afterClick"]
+def test_an_empty_priority_says_so_and_the_select_stays(empty_priority):
+    after = empty_priority["afterChoose"]
     assert after["noRoute"] == "No MRT or LRT route found. Try another priority."
     assert after["timelineVisible"] is False and after["startDisabled"] is True
-    assert [c["checked"] for c in after["chips"]] == ["false", "false", "false", "false", "true"]
-    assert all(c["disabled"] is None for c in after["chips"])
+    assert after["select"]["value"] == "mrt_only" and all(o["disabled"] is False for o in after["select"]["options"])
     assert after["noService"] is False
 
 
-def test_fewest_transfers_says_best_available_when_it_changes_nothing(best_available):
-    after = best_available["afterKey"]
-    assert after["chips"][1]["checked"] == "true" and after["chips"][1]["focused"] is True  # ArrowRight moved the focus too
-    assert after["planRequests"][-1].count("priority=fewest_transfers") == 1
-    assert after["priorityNote"] == "This is the best available for this trip."
+def test_no_best_available_line_is_ever_shown(wide_dark, narrow, fallback):
+    for run in (wide_dark["first"], narrow["afterChoose"], fallback["first"]):
+        assert run["priorityNote"] in (None, "Needs the route service.")
+    assert "best available" not in INDEX.lower() and "best available" not in COPY.lower()
+    assert "bestAvailable" not in COPY and "JO_BEST_AVAILABLE" not in INDEX and "best_available" not in INDEX
 
 
 def test_a_train_first_route_is_shown_and_start_journey_is_on(train_first):
@@ -496,17 +502,16 @@ def test_a_train_first_route_is_shown_and_start_journey_is_on(train_first):
     assert first["arrivalRequests"] == 0  # no bus poll and no bus lookup for a train
 
 
-def test_the_bus_planner_fallback_shows_its_note_and_disables_the_chips_it_cannot_do(fallback):
+def test_the_bus_planner_fallback_shows_its_note_and_disables_the_options_it_cannot_do(fallback):
     first = fallback["first"]
     assert first["fallbackNote"] == "Showing bus routes only. The route service is unavailable."
     assert first["priorityNote"] == "Needs the route service."
-    disabled = {c["id"]: c["disabled"] for c in first["chips"]}
-    assert disabled == {"priority-fastest": None, "priority-fewest_transfers": None, "priority-least_walking": "true",
-                        "priority-bus_only": None, "priority-mrt_only": "true"}
+    disabled = {o["value"]: o["disabled"] for o in first["select"]["options"]}
+    assert disabled == {"fastest": False, "fewest_transfers": False, "least_walking": True, "bus_only": False, "mrt_only": True}
     assert first["startDisabled"] is False
     kinds = [re.search(r"journey-step--(\w+)", row["cls"]).group(1) for row in first["rows"]]
     assert kinds == ["origin", "walk", "bus", "walk", "destination"]
-    assert first["rows"][2]["lines"][1].startswith("Bus 18") and first["totals"]
+    assert first["rows"][2]["lines"][1].startswith("Bus 18") and first["summary"]
 
 
 def test_the_bus_planner_finding_nothing_shows_the_static_sentence_and_the_fallback_note(fallback_no_route):
@@ -522,17 +527,17 @@ def test_onemap_working_but_finding_nothing_says_no_route_found(onemap_empty):
     assert first["fallbackNote"] is None
 
 
-def test_arrow_keys_move_between_enabled_chips_and_refetch(fallback):
-    after = fallback["afterKey"]
-    assert after["chips"][1]["checked"] == "true" and after["chips"][1]["focused"] is True
+def test_under_the_fallback_a_change_to_an_enabled_option_refetches_and_a_disabled_one_cannot_be_picked(fallback):
+    after = fallback["afterChoose"]
+    assert after["select"]["value"] == "fewest_transfers"
     assert after["planRequests"][-1].count("priority=fewest_transfers") == 1
-    least = after["chips"][2]
-    assert least["disabled"] == "true" and least["checked"] == "false"
+    disabled = {o["value"]: o["disabled"] for o in after["select"]["options"]}
+    assert disabled["least_walking"] is True and disabled["mrt_only"] is True and after["priorityNote"] == "Needs the route service."
 
 
-def test_the_plan_describes_the_overview_the_badges_and_the_chips():
+def test_the_plan_describes_the_overview_the_badges_and_the_select():
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
-    for text in ("**Journey overview.**", "**Line badges.**", "**Priority chips.**", "`--line-<code>-ink`",
+    for text in ("**Journey overview.**", "**Line badges.**", "**Priority select.**", "`--line-<code>-ink`",
                  "Needs the route service.",
                  "The page always sends `priority`", "a plain walk row"):
         assert text in plan, text

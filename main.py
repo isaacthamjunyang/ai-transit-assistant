@@ -16,7 +16,7 @@ import re
 import httpx
 
 import access_log_filter
-from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals, rescore_latest
+from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals, peek_later, rescore_latest
 import demo
 from config import PAGE_CONSTANTS, WALK_SPEED_DEFAULT_MPS
 from explain import (
@@ -84,7 +84,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Bus Catch Assistant", lifespan=lifespan)
+app = FastAPI(title="Beat the Bus and MRT", lifespan=lifespan)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 INDEX_PATH = STATIC_DIR / "index.html"
@@ -1129,6 +1129,7 @@ def destination_stops(
         service_no=service,
         walk_speed_m_s=speed,
         arrive_by=parsed_arrive_by,
+        rail_table=getattr(app.state, "rail_table", None),
     )
     return {**listed, **response_fields(speed, speed_source)}
 
@@ -1254,8 +1255,15 @@ def journey_plan(
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
     priority: Annotated[str | None, Query()] = None,
+    end_lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
+    end_lon: Annotated[float | None, Query(ge=-180, le=180)] = None,
 ) -> dict | JSONResponse:
-    """The app picks the boarding stop and the route. Static data only, unless `priority` asks for OneMap routing."""
+    """The app picks the boarding stop and the route. Static data only, unless `priority` asks for OneMap routing.
+
+    end_lat and end_lon (together) are the chosen destination stop or station: OneMap routes to that point and the walk
+    to dest_lat and dest_lon is added; the bus planner fallback ignores them and uses the place."""
+    if (end_lat is None) != (end_lon is None) or (end_lat is not None and not (math.isfinite(end_lat) and math.isfinite(end_lon))):
+        return JSONResponse(status_code=422, content={"detail": "end_lat and end_lon go together and must be finite."})
     if priority is not None and pt_plan.valid_priority(priority) is None:
         return JSONResponse(status_code=422, content={"detail": pt_plan.PRIORITY_MESSAGE})
     speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
@@ -1291,7 +1299,7 @@ def journey_plan(
         planned = _priority_plan(
             cache, route=False, priority=priority, user_lat=user_lat, user_lon=user_lon,
             destination_stop_code=destination, dest_lat=dest_lat, dest_lon=dest_lon, arrive_by=parsed_arrive_by,
-            walk_speed_m_s=speed)
+            walk_speed_m_s=speed, end_lat=end_lat, end_lon=end_lon)
         return {**planned, **response_fields(speed, speed_source)}
     planned = plan_journey(
         cache,
@@ -1362,6 +1370,23 @@ def arrivals_peek(
     }
 
 
+@app.get("/api/arrivals/later", response_model=None)
+def arrivals_later(
+    stop_code: Annotated[str, Query(min_length=1)],
+    services: Annotated[str, Query(min_length=1)],
+) -> dict | JSONResponse:
+    """Next buses of later legs at one stop: a stop code and service numbers in, arrival times out. No position, no
+    probability, no logging, no reroute, no notification. Refused in Demo Mode; kept 60 s per stop."""
+    stop = stop_code.strip()
+    wanted = [item.strip() for item in services.split(",") if item.strip()]
+    if not stop or not wanted:
+        return JSONResponse(status_code=422, content={"detail": "stop_code and services are required."})
+    try:
+        return peek_later(stop, wanted, static_cache=getattr(app.state, "lta_static", None))
+    except ArrivalUnavailable:
+        return JSONResponse(status_code=503, content={"status": "unavailable"})
+
+
 @app.get("/api/route-plan", response_model=None)
 def route_plan(
     boarding_stop_code: Annotated[str, Query(min_length=1)],
@@ -1375,9 +1400,13 @@ def route_plan(
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
     priority: Annotated[str | None, Query()] = None,
+    end_lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
+    end_lon: Annotated[float | None, Query(ge=-180, le=180)] = None,
 ) -> dict | JSONResponse:
     if priority is not None and pt_plan.valid_priority(priority) is None:
         return JSONResponse(status_code=422, content={"detail": pt_plan.PRIORITY_MESSAGE})
+    if (end_lat is None) != (end_lon is None) or (end_lat is not None and not (math.isfinite(end_lat) and math.isfinite(end_lon))):
+        return JSONResponse(status_code=422, content={"detail": "end_lat and end_lon go together and must be finite."})
     speed, speed_source = _walk_speed(walk_speed, walk_speed_source)
     coordinates = (user_lat, user_lon, dest_lat, dest_lon)
     if any(not math.isfinite(value) for value in coordinates):
@@ -1414,7 +1443,7 @@ def route_plan(
         planned = _priority_plan(
             cache, route=True, priority=priority, origin_stop_code=origin, alternates=alternates,
             user_lat=user_lat, user_lon=user_lon, destination_stop_code=destination, dest_lat=dest_lat,
-            dest_lon=dest_lon, arrive_by=parsed_arrive_by, walk_speed_m_s=speed, now=moment)
+            dest_lon=dest_lon, arrive_by=parsed_arrive_by, walk_speed_m_s=speed, now=moment, end_lat=end_lat, end_lon=end_lon)
         if planned.get("planner") == "static" and planned.get("route_status") != pt_plan.PRIORITY_UNAVAILABLE:
             options = planned.get("options") or []
             minutes = [option.get("generalized_time_minutes") for option in options]

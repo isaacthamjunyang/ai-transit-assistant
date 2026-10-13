@@ -69,8 +69,7 @@ def test_yes_ends_tracking_for_every_route_and_shows_the_overview():
         assert needle in stop
     way = _between(html, "function renderOnWay()", "function answerMissed()")
     assert '"done"' in way and "ON_BOARD_TEXT" in way
-    assert "FIRST_BUS_ONLY_NOTE" in way and "SCHEDULE_HEADWAY" in way
-    assert 'var FIRST_BUS_ONLY_NOTE = "Live tracking covers your first bus only.";' in html
+    assert "scheduleLine(leg)" in way and "FIRST_BUS_ONLY_NOTE" not in html  # the headway comes through scheduleLine
     assert "I'm On Board" not in html
 
 

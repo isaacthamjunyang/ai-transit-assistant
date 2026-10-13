@@ -129,11 +129,10 @@ var copy = {
     onTrack: "Arrive-by check: On track",
     onTrackMessage: "Estimated destination arrival is at or before your requested time.",
     risk: "Arrive-by check: Risk of delay",
-    riskMessage: "Rough check: may miss arrive-by time.",
     na: "Arrive-by check: N/A",
     naMessage: "Destination ride duration unavailable; cannot verify target arrival time.",
-    estimateTarget: "Arrive about {point} ({range})",
-    estimateOnly: "Estimated destination arrival about {point} ({range})",
+    estimateTarget: "Arrive about {point}",
+    estimateOnly: "Estimated destination arrival about {point}",
     late: "about {minutes} min late",
     missLabel: "If you miss it",
     missWithLate: "Next Bus {service} in {minutes} min · reach destination about {point} ({late})",
@@ -201,7 +200,6 @@ var copy = {
     noHistoricalReliabilityYet: "no historical reliability yet"
   },
   home: {
-    subtitle: "AI-powered bus guidance in Singapore",
     heroLeave: "Know when to leave.",
     heroCatch: "Catch your bus.",
     heroSupport: "Get real-time bus information, catch probability and personalised leave-by time.",
@@ -213,7 +211,7 @@ var copy = {
     arriveBy: "Arrive by",
     selectTime: "Select time",
     findRoute: "Find my route",
-    homeLabel: "Bus Catch Assistant, go to home",
+    homeLabel: "Beat the Bus and MRT, go to home",
     required: "Required",
     requiredDestination: "Enter a destination to continue.",
     requiredArrive: "Choose when you need to arrive, or select No target.",
@@ -230,9 +228,13 @@ var copy = {
     leave: "Leave"
   },
   destinationStops: {
-    title: "Nearby destination bus stops",
+    title: "Nearby destination MRT stations / bus stops",
     infoLabel: "About these stops",
-    info: "Bus stops within 600 m of your destination. Stops with a direct bus from near you come first, nearest first. Best option is the shortest walk among them.",
+    info: "Bus stops and MRT or LRT stations within 600 m of your destination, nearest walk first. If no station is that close, the nearest one within 1.5 km is shown. The first one is chosen for you.",
+    /* proposed, needs approval: the text on every row of the list, so the type is never told by colour alone */
+    busStop: "Bus stop",
+    mrtStation: "MRT station",
+    lrtStation: "LRT station",
     bestOption: "Best option",
     selectStop: "Select destination stop",
     range: "Range: {distance}",
@@ -246,11 +248,14 @@ var copy = {
   confirmDestination: {
     selectedDestination: "Selected destination",
     destinationStop: "Destination bus stop",
+    /* proposed, needs approval: the same card when the chosen destination is a station */
+    destinationStation: "Destination station",
+    editStation: "Edit destination station",
     edit: "Edit",
     editDestination: "Edit destination",
     editStop: "Edit destination bus stop",
-    info: "We'll find the best nearby boarding stops, check live bus arrivals and calculate your catch probability and leave-by time.",
-    action: "Confirm and find buses"
+    info: "We'll find the best route from here by bus and MRT and work out your leave-by time.",
+    action: "Confirm"
   },
   journeyOverview: {
     title: "Your journey",
@@ -279,15 +284,13 @@ var copy = {
     needLocation: "Location unavailable. Destination stops need your current location.",
     tryAgain: "Try again",
     noRoute: "No direct or 1-transfer bus connection available for this trip.",
+    /* the bus planner's sentence (the static fallback, and the destination stop list); the OneMap planner's are the
+       noServiceAny, noBusClosed and noMrtClosed lines below */
     noService: "No buses are running to this destination at this time.",
     editDestinationAction: "Edit destination",
     editArriveByAction: "Edit arrive-by time",
     unavailable: "Nearby stops are unavailable.",
-    reasonTargetMet: "Chosen for you: it should get you there by your arrive-by time.",
-    reasonTargetMissed: "No route meets your arrive-by time. This one should get you there earliest.",
-    reasonNoTarget: "Chosen for you: the quickest option we found.",
     /* proposed: shown on the second bus of a transfer route; the headway line is omitted when it is not available */
-    firstBusOnly: "Live tracking covers your first bus only.",
     headway: "Schedule: about every {minutes} min.",
     /* proposed, needs approval (plan_edits_9 4.9): one row per leg. {n} {m} {k} {w} {t} are whole numbers. */
     walkRow: "Walk {n}\u00a0min",
@@ -306,7 +309,19 @@ var copy = {
     scheduledInOne: "Scheduled · In 1\u00a0min",
     scheduledNow: "Scheduled · Now",
     scheduledAt: "Scheduled · {time}",
-    totals: "{n}\u00a0min · {t} · {w}\u00a0min walking",
+    /* proposed, needs approval: a later bus leg with a live next-bus time; the first bus says "Arriving soon" for "Due" */
+    liveIn: "Live · In {n}\u00a0min",
+    liveArrivingSoon: "Live · Arriving soon",
+    liveNow: "Live · Now",
+    arrivingSoon: "Arriving soon",
+    /* proposed, needs approval: the summary card under the priority select (three labelled cells) and its durations */
+    summaryTime: "Total time",
+    summaryTransfers: "Transfers",
+    summaryWalking: "Walking",
+    summaryAria: "Total time {time}, {transfers}, walking {walk}",
+    durationMin: "{n}\u00a0min",
+    durationHr: "{h}\u00a0hr",
+    durationHrMin: "{h}\u00a0hr {m}\u00a0min",
     transfersMany: "{t} transfers",
     transfersOne: "1 transfer",
     transfersNone: "No transfers",
@@ -320,9 +335,28 @@ var copy = {
     noRouteFound: "No route found for this trip.",
     noBusOnly: "No bus-only route found. Try another priority.",
     noMrtOnly: "No MRT or LRT route found. Try another priority.",
-    bestAvailable: "This is the best available for this trip.",
+    /* proposed, needs approval: nothing runs (the OneMap planner), by priority */
+    noServiceAny: "No bus or MRT services are running to this destination at this time.",
+    noBusClosed: "Bus services have stopped for now. Try another priority.",
+    noMrtClosed: "MRT and LRT services have stopped for now. Try another priority.",
     needsRouteService: "Needs the route service.",
     fallbackNote: "Showing bus routes only. The route service is unavailable."
+  },
+  /* proposed, needs approval: the ride-app card under an empty plan answer (no service, no route, walk only). The links go
+     to each operator's own site with no trip data: no operator documents a prefilled link we could confirm. The distance
+     is worked out on the phone from coordinates already there; it is a straight line, and says so. No money figures, no times.
+     Mirrored by hand in index.html (#ride-apps). */
+  rideApps: {
+    heading: "No transit right now. Open a ride app:",
+    distance: "About {km} km in a straight line",
+    note: "These links open each app's own site. Your trip is not sent.",
+    apps: [
+      { name: "Grab", url: "https://www.grab.com/sg/download/" },
+      { name: "Gojek", url: "https://gojek.com/sg/about" },
+      { name: "CDG Zig", url: "https://www.cdgtaxi.com.sg/" },
+      { name: "TADA", url: "https://tada.global" },
+      { name: "Ryde", url: "https://rydesharing.com/" }
+    ]
   },
   /* proposed, needs approval (plan_edits_9 4.6, 4.8): the words of the live pages for a train first leg that the server
      does not send. Mirrored by hand in index.html (TRAIN_PAGE). */
@@ -350,6 +384,7 @@ var copy = {
     toward: "Toward {terminus}",
     leftOnly: "The {line} train has left.",
     trainTitle: "{line} train",
+    tileLabel: "{line} train, {time}",
     about: "about {time}",
     left: "The {line} train has left. The next one is at about {time}.",
     notLive: "Train times are scheduled, not live."
@@ -483,6 +518,8 @@ var copy = {
   catchPrompt: {
     seeArrivals: "See bus arrival times",
     thenBus: "Then Bus {service} at {stop}",
+    /* proposed, needs approval: the same line when the next leg is a train */
+    thenTrain: "Then {line} at {station}",
     question: "Did you catch the bus?",
     yes: "Yes, I caught it",
     no: "No, I missed it",
@@ -492,12 +529,26 @@ var copy = {
     onWayTitle: "On your way",
     boarded: "On board"
   },
+  /* proposed, needs approval: every string in onWay. Mirrored by hand in index.html (ON_WAY_TEXT). The Next line and the Get off
+     alert on the On your way screen. The position the alert uses is read and compared on the phone only. */
+  onWay: {
+    nextGetOff: "Next: Get off at {place}",
+    nextWalk: "Next: Walk {n}\u00a0min to {place}",
+    nextBoardBus: "Next: Board Bus {service} at {place}",
+    nextBoardTrain: "Next: Board the {line} train at {place}",
+    getOffBus: "Get off next stop: {place}",
+    getOffTrain: "Get off at {station}",
+    dismiss: "Dismiss",
+    done: "Done",
+    privacy: "Your position stays on this phone. It is used only for the Get off alert and is never sent, stored or logged.",
+    openNote: "Works while this page is open."
+  },
   liveMap: {
     fullRoute: "Full route",
     nearMe: "Near me"
   },
   leaveNowBanner: {
-    app: "Bus Catch Assistant",
+    app: "Beat the Bus and MRT",
     now: "now",
     viewDetails: "View details",
     dismiss: "Dismiss"

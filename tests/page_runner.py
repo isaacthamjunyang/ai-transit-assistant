@@ -66,7 +66,8 @@ def _free_port() -> int:
 
 @contextmanager
 def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str = "warning", lta_status: int = 200,
-                reroute_stub: bool = False, onemap=None, rail_table: dict | None = None):
+                reroute_stub: bool = False, onemap=None, rail_table: dict | None = None,
+                lta_services: dict | None = None, lta_log: list | None = None):
     """The real FastAPI app on a local port, with the fake cache and a fake LTA.
 
     eta_minutes is one number (one bus) or a list (NextBus, NextBus2, NextBus3). With reroute_stub the reroute
@@ -122,14 +123,21 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
         if "onemap.gov.sg" in str(url):  # nothing else may reach OneMap from a test
             return httpx.Response(503, json={})
         if "/v3/BusArrival" in str(url):
+            if lta_log is not None:
+                lta_log.append(dict(kwargs.get("params") or {}))  # the query only: never a key, never a header
             if lta_status != 200:
                 return httpx.Response(lta_status, json={})
-            service = {"ServiceNo": "18"}
-            for name, minutes in zip(("NextBus", "NextBus2", "NextBus3"), etas):
-                eta = (datetime.now(SGT) + timedelta(minutes=minutes)).replace(microsecond=0).isoformat()
-                service[name] = {"EstimatedArrival": eta, "Monitored": 1, "Latitude": "", "Longitude": "",
-                                 "OriginCode": "", "DestinationCode": ""}
-            return httpx.Response(200, json={"Services": [service]})
+
+            def shaped(number, minutes_list):
+                item = {"ServiceNo": number}
+                for name, minutes in zip(("NextBus", "NextBus2", "NextBus3"), minutes_list):
+                    eta = (datetime.now(SGT) + timedelta(minutes=minutes)).replace(microsecond=0).isoformat()
+                    item[name] = {"EstimatedArrival": eta, "Monitored": 1, "Latitude": "", "Longitude": "",
+                                  "OriginCode": "", "DestinationCode": ""}
+                return item
+
+            services = [shaped("18", etas)] + [shaped(number, minutes) for number, minutes in (lta_services or {}).items()]
+            return httpx.Response(200, json={"Services": services})
         return real_get(self, url, *args, **kwargs)
 
     patches.setattr(httpx.Client, "get", fake_get)
@@ -149,6 +157,7 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
         demo.reset_to_live()
         arrivals._peek_handoff.clear()  # a peek the overview made and no Start ever used must not reach the next test
         arrivals.clear_remembered_arrivals()
+        arrivals.clear_later_arrivals()
 
 
 def _wait_until_serving(server, base: str, limit_s: float = 30.0) -> None:

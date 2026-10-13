@@ -108,6 +108,48 @@
   --map-line-ss-casing: none;
   --map-line-bus: var(--color-primary);
   --map-land-standin: var(--color-paper); /* the land the line contrast is measured on */
+  /* Rings of the destination list and map (plan: destination stops): a station takes its line's colour for the ring,
+     a tint of it for the tile, and a casing ring only where the colour alone is under 3:1 against the card; a bus
+     stop takes the neutral ring. Measured in tests/test_destination_candidates.py. */
+  --ring-ns: var(--line-ns);
+  --ring-ns-casing: transparent;
+  --ring-ns-tint: color-mix(in srgb, var(--ring-ns) 18%, var(--color-card));
+  --ring-ew: var(--line-ew);
+  --ring-ew-casing: transparent;
+  --ring-ew-tint: color-mix(in srgb, var(--ring-ew) 18%, var(--color-card));
+  --ring-cg: var(--line-cg);
+  --ring-cg-casing: transparent;
+  --ring-cg-tint: color-mix(in srgb, var(--ring-cg) 18%, var(--color-card));
+  --ring-ne: var(--line-ne);
+  --ring-ne-casing: transparent;
+  --ring-ne-tint: color-mix(in srgb, var(--ring-ne) 18%, var(--color-card));
+  --ring-cc: var(--line-cc);
+  --ring-cc-casing: var(--color-ink);
+  --ring-cc-tint: color-mix(in srgb, var(--ring-cc) 18%, var(--color-card));
+  --ring-dt: var(--line-dt);
+  --ring-dt-casing: transparent;
+  --ring-dt-tint: color-mix(in srgb, var(--ring-dt) 18%, var(--color-card));
+  --ring-te: var(--line-te);
+  --ring-te-casing: transparent;
+  --ring-te-tint: color-mix(in srgb, var(--ring-te) 18%, var(--color-card));
+  --ring-bp: var(--line-bp);
+  --ring-bp-casing: transparent;
+  --ring-bp-tint: color-mix(in srgb, var(--ring-bp) 18%, var(--color-card));
+  --ring-sk: var(--line-sk);
+  --ring-sk-casing: transparent;
+  --ring-sk-tint: color-mix(in srgb, var(--ring-sk) 18%, var(--color-card));
+  --ring-pg: var(--line-pg);
+  --ring-pg-casing: transparent;
+  --ring-pg-tint: color-mix(in srgb, var(--ring-pg) 18%, var(--color-card));
+  --ring-ss: var(--color-ink);
+  --ring-ss-casing: transparent;
+  --ring-ss-tint: color-mix(in srgb, var(--ring-ss) 18%, var(--color-card));
+  --ring-neutral: var(--color-line-strong); /* 3:1 or more on the card in both themes */
+  --ring-neutral-tint: var(--tint-neutral);
+  /* The journey overview's start pin and end flag, on the icon tile (--color-secondary). Distinct from the status
+     tokens (on track, warning, stale). Measured in tests/test_overview_select.py. */
+  --marker-start: #C4122F; /* 5.2:1 on the tile */
+  --marker-end: #1E8E3E; /* 3.6:1 on the tile */
   --step-node-destination: #1C3A7A; /* white flag 10.9:1 */
 }
 
@@ -229,6 +271,48 @@
     --map-line-ss-casing: none;
     --map-line-bus: var(--color-primary);
     --map-land-standin: var(--color-card); /* the land the line contrast is measured on */
+    /* Rings of the destination list and map (plan: destination stops): a station takes its line's colour for the ring,
+       a tint of it for the tile, and a casing ring only where the colour alone is under 3:1 against the card; a bus
+       stop takes the neutral ring. Measured in tests/test_destination_candidates.py. */
+    --ring-ns: var(--line-ns);
+    --ring-ns-casing: transparent;
+    --ring-ns-tint: color-mix(in srgb, var(--ring-ns) 18%, var(--color-card));
+    --ring-ew: var(--line-ew);
+    --ring-ew-casing: transparent;
+    --ring-ew-tint: color-mix(in srgb, var(--ring-ew) 18%, var(--color-card));
+    --ring-cg: var(--line-cg);
+    --ring-cg-casing: transparent;
+    --ring-cg-tint: color-mix(in srgb, var(--ring-cg) 18%, var(--color-card));
+    --ring-ne: var(--line-ne);
+    --ring-ne-casing: #FFFFFF;
+    --ring-ne-tint: color-mix(in srgb, var(--ring-ne) 18%, var(--color-card));
+    --ring-cc: var(--line-cc);
+    --ring-cc-casing: transparent;
+    --ring-cc-tint: color-mix(in srgb, var(--ring-cc) 18%, var(--color-card));
+    --ring-dt: var(--line-dt);
+    --ring-dt-casing: #FFFFFF;
+    --ring-dt-tint: color-mix(in srgb, var(--ring-dt) 18%, var(--color-card));
+    --ring-te: var(--line-te);
+    --ring-te-casing: #FFFFFF;
+    --ring-te-tint: color-mix(in srgb, var(--ring-te) 18%, var(--color-card));
+    --ring-bp: var(--line-bp);
+    --ring-bp-casing: transparent;
+    --ring-bp-tint: color-mix(in srgb, var(--ring-bp) 18%, var(--color-card));
+    --ring-sk: var(--line-sk);
+    --ring-sk-casing: transparent;
+    --ring-sk-tint: color-mix(in srgb, var(--ring-sk) 18%, var(--color-card));
+    --ring-pg: var(--line-pg);
+    --ring-pg-casing: transparent;
+    --ring-pg-tint: color-mix(in srgb, var(--ring-pg) 18%, var(--color-card));
+    --ring-ss: var(--color-ink);
+    --ring-ss-casing: transparent;
+    --ring-ss-tint: color-mix(in srgb, var(--ring-ss) 18%, var(--color-card));
+    --ring-neutral: var(--color-line-strong); /* 3:1 or more on the card in both themes */
+    --ring-neutral-tint: var(--tint-neutral);
+    /* The journey overview's start pin and end flag, on the icon tile (--color-secondary). Distinct from the status
+       tokens (on track, warning, stale). Measured in tests/test_overview_select.py. */
+    --marker-start: #FF6B7A; /* 4.8:1 on the tile */
+    --marker-end: #3DDC84; /* 7.4:1 on the tile */
     --step-node-destination: #2A4D99; /* derived; white flag 8.0:1 */
   }
 }
@@ -318,6 +402,48 @@
   --map-line-ss-casing: none;
   --map-line-bus: var(--color-primary);
   --map-land-standin: var(--color-paper); /* the land the line contrast is measured on */
+  /* Rings of the destination list and map (plan: destination stops): a station takes its line's colour for the ring,
+     a tint of it for the tile, and a casing ring only where the colour alone is under 3:1 against the card; a bus
+     stop takes the neutral ring. Measured in tests/test_destination_candidates.py. */
+  --ring-ns: var(--line-ns);
+  --ring-ns-casing: transparent;
+  --ring-ns-tint: color-mix(in srgb, var(--ring-ns) 18%, var(--color-card));
+  --ring-ew: var(--line-ew);
+  --ring-ew-casing: transparent;
+  --ring-ew-tint: color-mix(in srgb, var(--ring-ew) 18%, var(--color-card));
+  --ring-cg: var(--line-cg);
+  --ring-cg-casing: transparent;
+  --ring-cg-tint: color-mix(in srgb, var(--ring-cg) 18%, var(--color-card));
+  --ring-ne: var(--line-ne);
+  --ring-ne-casing: transparent;
+  --ring-ne-tint: color-mix(in srgb, var(--ring-ne) 18%, var(--color-card));
+  --ring-cc: var(--line-cc);
+  --ring-cc-casing: var(--color-ink);
+  --ring-cc-tint: color-mix(in srgb, var(--ring-cc) 18%, var(--color-card));
+  --ring-dt: var(--line-dt);
+  --ring-dt-casing: transparent;
+  --ring-dt-tint: color-mix(in srgb, var(--ring-dt) 18%, var(--color-card));
+  --ring-te: var(--line-te);
+  --ring-te-casing: transparent;
+  --ring-te-tint: color-mix(in srgb, var(--ring-te) 18%, var(--color-card));
+  --ring-bp: var(--line-bp);
+  --ring-bp-casing: transparent;
+  --ring-bp-tint: color-mix(in srgb, var(--ring-bp) 18%, var(--color-card));
+  --ring-sk: var(--line-sk);
+  --ring-sk-casing: transparent;
+  --ring-sk-tint: color-mix(in srgb, var(--ring-sk) 18%, var(--color-card));
+  --ring-pg: var(--line-pg);
+  --ring-pg-casing: transparent;
+  --ring-pg-tint: color-mix(in srgb, var(--ring-pg) 18%, var(--color-card));
+  --ring-ss: var(--color-ink);
+  --ring-ss-casing: transparent;
+  --ring-ss-tint: color-mix(in srgb, var(--ring-ss) 18%, var(--color-card));
+  --ring-neutral: var(--color-line-strong); /* 3:1 or more on the card in both themes */
+  --ring-neutral-tint: var(--tint-neutral);
+  /* The journey overview's start pin and end flag, on the icon tile (--color-secondary). Distinct from the status
+     tokens (on track, warning, stale). Measured in tests/test_overview_select.py. */
+  --marker-start: #C4122F; /* 5.2:1 on the tile */
+  --marker-end: #1E8E3E; /* 3.6:1 on the tile */
   --step-node-destination: #1C3A7A; /* white flag 10.9:1 */
 }
 
@@ -406,5 +532,47 @@
   --map-line-ss-casing: none;
   --map-line-bus: var(--color-primary);
   --map-land-standin: var(--color-card); /* the land the line contrast is measured on */
+  /* Rings of the destination list and map (plan: destination stops): a station takes its line's colour for the ring,
+     a tint of it for the tile, and a casing ring only where the colour alone is under 3:1 against the card; a bus
+     stop takes the neutral ring. Measured in tests/test_destination_candidates.py. */
+  --ring-ns: var(--line-ns);
+  --ring-ns-casing: transparent;
+  --ring-ns-tint: color-mix(in srgb, var(--ring-ns) 18%, var(--color-card));
+  --ring-ew: var(--line-ew);
+  --ring-ew-casing: transparent;
+  --ring-ew-tint: color-mix(in srgb, var(--ring-ew) 18%, var(--color-card));
+  --ring-cg: var(--line-cg);
+  --ring-cg-casing: transparent;
+  --ring-cg-tint: color-mix(in srgb, var(--ring-cg) 18%, var(--color-card));
+  --ring-ne: var(--line-ne);
+  --ring-ne-casing: #FFFFFF;
+  --ring-ne-tint: color-mix(in srgb, var(--ring-ne) 18%, var(--color-card));
+  --ring-cc: var(--line-cc);
+  --ring-cc-casing: transparent;
+  --ring-cc-tint: color-mix(in srgb, var(--ring-cc) 18%, var(--color-card));
+  --ring-dt: var(--line-dt);
+  --ring-dt-casing: #FFFFFF;
+  --ring-dt-tint: color-mix(in srgb, var(--ring-dt) 18%, var(--color-card));
+  --ring-te: var(--line-te);
+  --ring-te-casing: #FFFFFF;
+  --ring-te-tint: color-mix(in srgb, var(--ring-te) 18%, var(--color-card));
+  --ring-bp: var(--line-bp);
+  --ring-bp-casing: transparent;
+  --ring-bp-tint: color-mix(in srgb, var(--ring-bp) 18%, var(--color-card));
+  --ring-sk: var(--line-sk);
+  --ring-sk-casing: transparent;
+  --ring-sk-tint: color-mix(in srgb, var(--ring-sk) 18%, var(--color-card));
+  --ring-pg: var(--line-pg);
+  --ring-pg-casing: transparent;
+  --ring-pg-tint: color-mix(in srgb, var(--ring-pg) 18%, var(--color-card));
+  --ring-ss: var(--color-ink);
+  --ring-ss-casing: transparent;
+  --ring-ss-tint: color-mix(in srgb, var(--ring-ss) 18%, var(--color-card));
+  --ring-neutral: var(--color-line-strong); /* 3:1 or more on the card in both themes */
+  --ring-neutral-tint: var(--tint-neutral);
+  /* The journey overview's start pin and end flag, on the icon tile (--color-secondary). Distinct from the status
+     tokens (on track, warning, stale). Measured in tests/test_overview_select.py. */
+  --marker-start: #FF6B7A; /* 4.8:1 on the tile */
+  --marker-end: #3DDC84; /* 7.4:1 on the tile */
   --step-node-destination: #2A4D99; /* derived; white flag 8.0:1 */
 }

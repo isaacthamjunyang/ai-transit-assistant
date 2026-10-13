@@ -39,7 +39,7 @@ def _slot() -> str:
 def test_leave_now_banner_mirrors_the_notification_card():
     html = _page()
     banner = _between(html, 'id="leave-now-banner"', "</section>")
-    for needle in ("bus-tile--small", "Bus Catch Assistant", "now", 'id="leave-now-title"', 'id="leave-now-body"',
+    for needle in ("bus-tile--small", "Beat the Bus and MRT", "now", 'id="leave-now-title"', 'id="leave-now-body"',
                    'id="leave-now-details"', "View details", 'id="leave-now-dismiss"', "Dismiss"):
         assert needle in banner, needle
     assert banner.index("leave-now-banner__head") < banner.index('id="leave-now-title"') < banner.index('id="leave-now-body"')

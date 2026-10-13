@@ -255,7 +255,7 @@ def test_bus_59_at_00_55_is_dropped_because_it_is_after_its_last_bus():
     assert [leg["route"] for leg in legs] == ["143", "59"]
     result = plan(server, fixture="late", now=now)
     assert result["route_status"] == "no_service" and result["option"] is None
-    assert result["message"] == pt_plan.NO_SERVICE_MESSAGE == "No buses are running to this destination at this time."
+    assert result["message"] == pt_plan.NO_SERVICE_MESSAGE == "No bus or MRT services are running to this destination at this time."
     assert result["dropped"]["hours"] == 1 and result["calls"] == 1
 
 
@@ -452,19 +452,20 @@ def test_a_pool_without_trains_is_no_mrt_route_and_a_pool_with_trains_is_no_bus_
     assert wrong_bus["message"] == pt_plan.NO_BUS_ONLY_MESSAGE
 
 
-def test_a_chip_with_nothing_running_is_no_service_not_a_chip_message():
+def test_a_chip_with_nothing_running_is_no_service_with_its_own_mode_named():
     result = plan(Server({"BUS": [ok("night")]}), fixture="night", priority="bus_only",
                   now=datetime(2026, 10, 12, 1, 0, tzinfo=SGT))
-    assert result["route_status"] == "no_service" and result["message"] == pt_plan.NO_SERVICE_MESSAGE
+    assert result["route_status"] == "no_service"
+    # never the old bus-only sentence: the chip's own (or its stopped-for-now one when the bus hours say so)
+    assert result["message"] == (pt_plan.NO_BUS_CLOSED_MESSAGE if result["stopped"] else pt_plan.NO_BUS_ONLY_MESSAGE)
 
 
-def test_fewest_and_least_walking_say_when_they_make_no_difference():
+def test_fewest_and_least_walking_say_nothing_when_they_make_no_difference():
     single = Server(default=ok("mrt_only"))
     for priority in ("fewest_transfers", "least_walking"):
         result = plan(single, fixture="mrt_only", priority=priority)
-        assert result["best_available"] is True and result["message"] == "This is the best available for this trip."
-    assert plan(Server(default=ok("mrt_only")), fixture="mrt_only")["best_available"] is False
-    assert plan(Server(default=ok("mrt_only")), fixture="mrt_only")["message"] == ""
+        assert "best_available" not in result and result["message"] == ""  # no "best available" line any more
+    assert "best_available" not in plan(Server(default=ok("mrt_only")), fixture="mrt_only")
 
 
 def test_the_ninety_minute_budget_is_kept():

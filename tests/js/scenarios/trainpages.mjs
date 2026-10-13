@@ -16,7 +16,7 @@ const A = `(function () {
     tileDepartsLabel: text("tile-arrival-label"), tileDeparts: text("tile-arrival"), tileRange: shown("tile-arrival-range"),
     miss: shown("if-you-miss") ? text("if-you-miss-body") : null, missLabelShown: shown("if-you-miss") && !document.querySelector("#if-you-miss .miss-row__label").hidden,
     ai: shown("ai-explanation") ? text("ai-explanation-text") : null,
-    bar: shown("see-arrivals-bar") ? text("see-arrivals-bar") : null, catchBar: shown("catch-bar"),
+    bar: shown("see-arrivals-bar") ? text("see-arrivals-bar") : null, catchBar: shown("catch-bar"), barTitle: text("catch-bar-title"),
     unlikelyBanner: shown("unlikely-banner"), catchWarning: shown("catch-warning"), pageC: document.body.classList.contains("is-page-c"),
     walkRow: text("walk-open"), scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth,
     hero: hero ? { monitored: hero.monitored, quality: hero.probability && hero.probability.data_quality, atStop: hero.probability && hero.probability.at_stop,
@@ -69,6 +69,7 @@ const END = `(function () {
     buttons: Array.prototype.map.call(missed.querySelectorAll("button"), text),
     switchButtons: document.querySelectorAll(".reroute-switch, #reroute-switch, [data-switch]").length,
     planNew: shown("train-missed-plan-new"), pageCShown: shown("page-c"), catchBar: shown("catch-bar"), seeBar: shown("see-arrivals-bar"),
+    barTitle: text(document.getElementById("catch-bar-title")),
     arrivalCard: shown("arrival-card"), tiles: shown("leave-tiles"), monitoring: monitoringActive,
     requests: __requests.filter(function (u) { return u.indexOf("/api/reroute-options") === 0; }).length,
     scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth
@@ -78,7 +79,9 @@ const END = `(function () {
 const ONWAY = `(function () {
   function text(el) { return el ? el.textContent.replace(/[ \\t\\r\\n]+/g, " ").trim() : null; }
   var rows = Array.prototype.map.call(document.querySelectorAll("#on-way-timeline > li"), function (li) {
-    return { cls: li.className, text: text(li), badge: li.querySelector(".line-badge") ? li.querySelector(".line-badge").textContent : null };
+    var node = li.querySelector(".step-node");
+    return { cls: li.className, text: text(li), badge: li.querySelector(".line-badge") ? li.querySelector(".line-badge").textContent : null,
+      iconColor: node ? getComputedStyle(node).color : null, iconBg: node ? getComputedStyle(node).backgroundColor : null };
   });
   return { top: screenStack[screenStack.length - 1], shown: !document.getElementById("on-way").hidden, rows: rows,
     monitoring: monitoringActive, scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth };
@@ -143,7 +146,7 @@ export default async function (h) {
   out.requests = await h.eval(`__requests.filter(function (u) { return /^\\/api\\/(arrivals|rescore|journey|reroute|reroute-options|explain)/.test(u); })`);
   out.allRequests = await h.eval("__requests.slice()");
 
-  if (c.answer === "no") {
+  if (c.answer === "no" && !c.bus) {
     // the train has gone 60 s ago: the next departures are projected from the headway
     await h.eval(`activeRoutePlan.legs[0].depart = new Date(Date.now() - 60000).toISOString(); requestArrivals(monitorGeneration); true`);
     await h.until("lastSuccess && lastSuccess.left_text", 10000, "the left text");
@@ -155,6 +158,13 @@ export default async function (h) {
     await h.eval("document.getElementById('train-missed-plan-new').click(); true");
     await h.sleep(400);
     out.afterPlanNew = await h.eval("({ top: screenStack[screenStack.length - 1], monitoring: monitoringActive, shown: !document.getElementById('train-missed').hidden })");
+  }
+  if (c.answer === "no" && c.bus) {
+    // a bus: the missed card is Page C; the question bar's words stay the bus words
+    await h.eval("document.getElementById('catch-no').click(); true");
+    await h.until("document.body.classList.contains('is-page-c') || missedMode", 10000, "the missed bus card");
+    await h.sleep(500);
+    out.busMissed = await h.eval("({ barTitle: document.getElementById('catch-bar-title').textContent, isTrain: isTrain(), pageC: document.body.classList.contains('is-page-c') })");
   }
   if (c.answer === "yes") {
     await h.eval("document.getElementById('catch-yes').click(); true");

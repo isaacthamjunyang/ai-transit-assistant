@@ -58,7 +58,7 @@ from route_plan import (
     _catalog,
     suggest_alternate_boarding,
 )
-from service_hours import NO_SERVICE, rail_runs_at, service_runs_at
+from service_hours import NO_SERVICE, bus_closed_at, rail_closed_at, rail_runs_at, service_runs_at
 from walk_speed import walk_minutes
 
 SGT = timezone(timedelta(hours=8))
@@ -79,9 +79,11 @@ TOP_ORIGIN_RADIUS_M = 1000.0
 NO_ROUTE_MESSAGE = "No route found for this trip."
 NO_BUS_ONLY_MESSAGE = "No bus-only route found. Try another priority."
 NO_MRT_ONLY_MESSAGE = "No MRT or LRT route found. Try another priority."
-BEST_AVAILABLE_MESSAGE = "This is the best available for this trip."
 NEEDS_ROUTE_SERVICE_MESSAGE = "Needs the route service."
-NO_SERVICE_MESSAGE = "No buses are running to this destination at this time."
+NO_BUS_CLOSED_MESSAGE = "Bus services have stopped for now. Try another priority."
+NO_MRT_CLOSED_MESSAGE = "MRT and LRT services have stopped for now. Try another priority."
+# the OneMap planner's no-service sentence; the static (bus only) planner keeps the old bus-only one on the page
+NO_SERVICE_MESSAGE = "No bus or MRT services are running to this destination at this time."
 PRIORITY_UNAVAILABLE = "priority_unavailable"
 STATIC_PRIORITIES = (PRIORITY_FASTEST, PRIORITY_FEWEST_TRANSFERS, PRIORITY_BUS_ONLY)  # what the fallback can do
 
@@ -107,6 +109,8 @@ def plan_multi_leg(
     dest_lon: float,
     destination_name: str = "",
     destination_stop_code: str = "",
+    end_lat: float | None = None,
+    end_lon: float | None = None,
     origin_stop_code: str | None = None,
     arrive_by: datetime | None = None,
     priority: str = DEFAULT_PRIORITY,
@@ -117,7 +121,10 @@ def plan_multi_leg(
     password: str = "",
     clock: float | None = None,
 ) -> dict:
-    """Plan with OneMap. Raises RouteUnavailable when OneMap cannot be used; plan_with_fallback catches it."""
+    """Plan with OneMap. Raises RouteUnavailable when OneMap cannot be used; plan_with_fallback catches it.
+
+    dest_lat and dest_lon are the place. With end_lat and end_lon (the chosen destination stop or station) OneMap routes to
+    that point, so the ride ends at the stop the user chose, and the walk from there to the place is added as the last leg."""
     if priority not in PRIORITIES:
         raise ValueError("unknown priority")
     moment = _as_sgt(now if now is not None else datetime.now(SGT))
@@ -125,7 +132,9 @@ def plan_multi_leg(
               else pt_route.nearest_origin_place(cache, user_lat, user_lon, _stations(rail_table), TOP_ORIGIN_RADIUS_M))
     if origin is None:
         return _failure(NO_FEASIBLE_ROUTE, priority, calls=0)
-    destination = pt_route.destination_place(destination_name, dest_lat, dest_lon)
+    ends_at_stop = end_lat is not None and end_lon is not None
+    target_lat, target_lon = (end_lat, end_lon) if ends_at_stop else (dest_lat, dest_lon)
+    destination = pt_route.destination_place(destination_name, target_lat, target_lon)
     depart = moment + timedelta(minutes=walk_minutes(haversine_m(user_lat, user_lon, origin.latitude, origin.longitude),
                                                      walk_speed_m_s))
     budget = CallBudget.extended() if (arrive_by is not None or priority == PRIORITY_FEWEST_TRANSFERS) \
@@ -134,7 +143,7 @@ def plan_multi_leg(
             "token": token, "email": email, "password": password, "now": clock}
     primary_mode = {PRIORITY_BUS_ONLY: MODE_BUS, PRIORITY_MRT_ONLY: MODE_RAIL}.get(priority, MODE_TRANSIT)
     if arrive_by is not None:
-        km = haversine_m(origin.latitude, origin.longitude, dest_lat, dest_lon) / 1000
+        km = haversine_m(origin.latitude, origin.longitude, target_lat, target_lon) / 1000
         estimate = max(20.0, km / BUS_SPEED_KM_H * 60 * 1.2 + 10)
         first = pt_route.search_arrive_by(router, origin, destination, arrive_by, estimate_minutes=estimate,
                                           earliest=depart, mode=primary_mode, budget=budget, **args)
@@ -142,17 +151,23 @@ def plan_multi_leg(
         first = router.route(origin, destination, depart, primary_mode, budget=budget, **args)
     pool = list(first["itineraries"])
     status = first["status"]
+    if ends_at_stop:
+        pool = [_end_at_place(item, dest_lat, dest_lon, walk_speed_m_s, destination_name) for item in pool]
     if priority == PRIORITY_FEWEST_TRANSFERS and arrive_by is None and pool and min(i["transfers"] for i in pool) > 0:
         for mode in (MODE_BUS, MODE_RAIL):  # a direct bus or train may exist that the mixed search did not return
             try:
                 extra = router.route(origin, destination, depart, mode, budget=budget, **args)
             except (BudgetExhausted, RouteUnavailable, RouteRejected):
                 break
-            pool = _merge(pool, extra["itineraries"])
+            pool = _merge(pool, [_end_at_place(item, dest_lat, dest_lon, walk_speed_m_s, destination_name)
+                                 if ends_at_stop else item for item in extra["itineraries"]])
     calls = budget.used
     dropped = {"hours": 0, "budget": 0, **first.get("dropped", {})}
+    # a chip (Bus only, MRT only) says "stopped for now" only when its own service is known to be closed at the travel time
+    travel = _as_sgt(arrive_by) if arrive_by is not None else depart
+    stopped = _chip_closed(priority, cache, rail_table, travel)
     if not pool:
-        return _empty(status, priority, calls, dropped)
+        return _empty(status, priority, calls, dropped, stopped)
     ahead = arrive_by is not None  # planning ahead: the user leaves in time for the departure, so the wait is theirs
     assessed = [_assess(cache, rail_table, item, moment, user_lat, user_lon, walk_speed_m_s, ahead) for item in pool]
     closed = sum(1 for a in assessed if not a["runs"])
@@ -162,8 +177,8 @@ def plan_multi_leg(
     usable = [a for a in usable if _fits_priority(a, priority)]
     if not usable:
         if closed and not over:
-            return _failure(NO_SERVICE, priority, calls, reason=NO_SERVICE, message=NO_SERVICE_MESSAGE, dropped=dropped)
-        return _failure(NO_FEASIBLE_ROUTE, priority, calls, message=_chip_message(priority), dropped=dropped)
+            return _failure(NO_SERVICE, priority, calls, reason=NO_SERVICE, dropped=dropped, stopped=stopped)
+        return _failure(NO_FEASIBLE_ROUTE, priority, calls, dropped=dropped, stopped=stopped)
     ranked = sorted(usable, key=_rank_key(priority))
     fastest = min(usable, key=_rank_key(PRIORITY_FASTEST))
     reason, chosen = NO_TARGET, ranked[0]
@@ -177,9 +192,6 @@ def plan_multi_leg(
             reason, chosen = TARGET_MISSED, fastest
             warning = _late_warning(ranked, target)
     message = ""
-    best_available = False
-    if priority in (PRIORITY_FEWEST_TRANSFERS, PRIORITY_LEAST_WALKING) and chosen is fastest:
-        best_available, message = True, BEST_AVAILABLE_MESSAGE
     options = [_option(cache, a, moment, walk_speed_m_s) for a in ([chosen] + [a for a in ranked if a is not chosen])[:MAX_OPTIONS]]
     best = options[0]
     return {
@@ -190,7 +202,6 @@ def plan_multi_leg(
         "planner": "onemap",
         "priority": priority,
         "fallback_note": False,
-        "best_available": best_available,
         "calls": calls,
         "candidate_stop_count": 1,
         "option": best["option"],
@@ -296,6 +307,35 @@ def _merge(pool: list[dict], extra: list[dict]) -> list[dict]:
     return pool + [item for item in extra if _signature(item) not in seen]
 
 
+END_AT_PLACE_MIN_M = 5.0
+
+
+def _end_at_place(itinerary: dict, place_lat: float, place_lon: float, speed: float, name: str = "") -> dict:
+    """The itinerary OneMap gave for the chosen stop, ending with the walk from that stop to the place: any walk OneMap
+    added after the last ride (to the stop's own point) is replaced by the straight-line walk to the place, so the end
+    walk, the totals and the arrival all describe the real last stretch. Nothing is added when the stop is the place."""
+    legs = list(itinerary["legs"])
+    while len(legs) > 1 and legs[-1]["kind"] == KIND_WALK:
+        legs.pop()
+    last = legs[-1]
+    stops = last.get("stops") or []
+    point = stops[-1] if stops else {}
+    if not isinstance(point.get("latitude"), (int, float)) or not isinstance(point.get("longitude"), (int, float)):
+        return itinerary
+    metres = haversine_m(float(point["latitude"]), float(point["longitude"]), place_lat, place_lon)
+    if metres < END_AT_PLACE_MIN_M:
+        return {**itinerary, "legs": legs}
+    seconds = metres / speed
+    arrive = _as_sgt(datetime.fromisoformat(last["arrive"]))
+    end = arrive + timedelta(seconds=seconds)
+    walk = {
+        "depart": arrive.isoformat(), "arrive": end.isoformat(), "duration_s": round(seconds, 1), "distance_m": round(metres, 1),
+        "path": [[float(point["latitude"]), float(point["longitude"])], [place_lat, place_lon]], "kind": KIND_WALK,
+        "from_name": last.get("alighting_stop_name", ""), "to_name": name or "Destination",
+    }
+    return {**itinerary, "legs": legs + [walk], "arrive": end.isoformat(), "walk_m": (itinerary.get("walk_m") or 0) + metres}
+
+
 def _signature(itinerary: dict) -> tuple:
     return (itinerary["depart"], tuple(
         (leg["kind"], leg.get("service_no") or leg.get("line_code"), leg["boarding_stop_code"], leg["alighting_stop_code"])
@@ -376,8 +416,27 @@ def _late_warning(ranked: list[dict], target: datetime) -> dict | None:
     return {"earliest_arrival": _as_sgt_iso(earliest), "target": _as_sgt_iso(target)}
 
 
-def _chip_message(priority: str) -> str:
-    return {PRIORITY_BUS_ONLY: NO_BUS_ONLY_MESSAGE, PRIORITY_MRT_ONLY: NO_MRT_ONLY_MESSAGE}.get(priority, NO_ROUTE_MESSAGE)
+def _is_chip(priority: str) -> bool:
+    return priority in (PRIORITY_BUS_ONLY, PRIORITY_MRT_ONLY)
+
+
+def _chip_closed(priority: str, cache, rail_table, when: datetime) -> bool:
+    """True when the priority's own mode is known to be closed at `when` (always False for the other priorities)."""
+    if priority == PRIORITY_MRT_ONLY:
+        return rail_closed_at(rail_table, when)
+    if priority == PRIORITY_BUS_ONLY:
+        return bus_closed_at(cache, when)
+    return False
+
+
+def _empty_message(priority: str, route_status: str, stopped: bool) -> str:
+    """The sentence for an empty answer. A chip names its own mode (and says "stopped for now" when it is closed); the
+    other priorities say no bus or MRT is running when nothing runs, and keep "No route found" for no route."""
+    if priority == PRIORITY_MRT_ONLY:
+        return NO_MRT_CLOSED_MESSAGE if stopped else NO_MRT_ONLY_MESSAGE
+    if priority == PRIORITY_BUS_ONLY:
+        return NO_BUS_CLOSED_MESSAGE if stopped else NO_BUS_ONLY_MESSAGE
+    return NO_SERVICE_MESSAGE if route_status == NO_SERVICE else NO_ROUTE_MESSAGE
 
 
 def _stations(rail_table: dict | None) -> list[dict]:
@@ -393,22 +452,24 @@ def _stations(rail_table: dict | None) -> list[dict]:
 
 
 def _failure(route_status: str, priority: str, calls: int, reason: str | None = None, message: str | None = None,
-             dropped: dict | None = None) -> dict:
-    text = _chip_message(priority) if message is None else message
+             dropped: dict | None = None, stopped: bool = False) -> dict:
+    text = _empty_message(priority, route_status, stopped) if message is None else message
     return {
         "status": "ok", "route_status": route_status, "reason": reason or (NO_SERVICE if route_status == NO_SERVICE else NO_ROUTE),
-        "message": text, "planner": "onemap", "priority": priority, "fallback_note": False, "best_available": False,
+        "message": text, "stopped": bool(stopped) and _is_chip(priority), "planner": "onemap", "priority": priority,
+        "fallback_note": False,
         "calls": calls, "candidate_stop_count": 1, "option": None, "itinerary": None, "options": [], "itineraries": [],
         "boarding_stop": None, "journey": None, "planning_warning": None,
         "dropped": dropped if dropped is not None else {"hours": 0, "budget": 0},
     }
 
 
-def _empty(status: str, priority: str, calls: int, dropped: dict) -> dict:
-    """Nothing came back. A walk-only answer means nothing is running; 404 or an empty plan means no route."""
+def _empty(status: str, priority: str, calls: int, dropped: dict, stopped: bool = False) -> dict:
+    """Nothing came back. A walk-only answer means nothing is running (or the trip is too short); 404 or an empty plan
+    means no route. `stopped` is the chip's own mode being closed at the travel time (from the timetables, not OneMap)."""
     if status == pt_route.STATUS_NO_TRANSIT:
-        return _failure(NO_SERVICE, priority, calls, reason=NO_SERVICE, message=NO_SERVICE_MESSAGE, dropped=dropped)
-    return _failure(NO_FEASIBLE_ROUTE, priority, calls, dropped=dropped)
+        return _failure(NO_SERVICE, priority, calls, reason=NO_SERVICE, dropped=dropped, stopped=stopped)
+    return _failure(NO_FEASIBLE_ROUTE, priority, calls, dropped=dropped, stopped=stopped)
 
 
 def _option(cache, assessed: dict, moment: datetime, speed: float) -> dict:
@@ -525,8 +586,8 @@ def route_plan_body(planned: dict) -> dict:
         "arrive_by_state": None if not best else ("existing" if best["transfers"] == 0 else "na"),
         "options": options, "option_count": len(options),
     }
-    for key in ("planner", "priority", "fallback_note", "best_available", "calls", "itinerary", "itineraries",
-                "planning_warning", "reason"):
+    for key in ("planner", "priority", "fallback_note", "calls", "itinerary", "itineraries",
+                "planning_warning", "reason", "stopped"):
         body[key] = planned.get(key)
     return body
 

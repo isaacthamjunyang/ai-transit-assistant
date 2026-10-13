@@ -130,6 +130,19 @@ def service_runs_at(
     return any(known)
 
 
+def bus_closed_at(cache, when: datetime) -> bool:
+    """True only when the cached hours are readable and none of them has a bus running at `when` (Singapore time).
+    Unknown hours are not closed. It does not touch the missing-hours counter."""
+    moment = _as_sgt(when)
+    known = False
+    for row in getattr(cache, "routes", None) or []:
+        verdict = _row_verdict(row, moment)
+        if verdict is True:
+            return False
+        known = known or verdict is not None
+    return known
+
+
 def live_is_recent(fetched_at, now: datetime) -> bool:
     """True when the live lookup is known and at most LIVE_MAX_AGE_SECONDS old. Unknown age is not recent."""
     if not isinstance(fetched_at, str):
@@ -301,6 +314,20 @@ def rail_runs_at(table: dict | None, station_code: str, direction: str | int | N
         _missing_rail_hours["count"] += 1
         return True
     return any(known)
+
+
+def rail_closed_at(table: dict | None, when: datetime) -> bool:
+    """True only when the rail table has readable hours and no station in it has a train leaving at `when`."""
+    moment = _as_sgt(when)
+    known = False
+    stations = table.get("stations") if isinstance(table, dict) else None
+    for station in (stations or {}).values():
+        for row in ((station or {}).get("directions") or {}).values():
+            verdict = _rail_row_verdict(row, moment)
+            if verdict is True:
+                return False
+            known = known or verdict is not None
+    return known
 
 
 def rail_headway_seconds(table: dict | None, station_code: str, direction: str | int | None, when: datetime) -> int:

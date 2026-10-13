@@ -5,6 +5,7 @@ OneMap, or OpenAI, and it does not score a catch probability.
 """
 
 import math
+import re
 from datetime import datetime, timedelta, timezone
 
 from catch_heuristic import headway_seconds
@@ -16,6 +17,9 @@ from walk_speed import walk_minutes
 
 SGT = timezone(timedelta(hours=8))
 DESTINATION_RADIUS_M = 600
+STATION_FALLBACK_M = 1500  # no station within 600 m: the single nearest one within this distance is offered
+STATION_MERGE_M = 200  # two station groups with one name this close are one place (Bukit Panjang MRT and LRT)
+LINE_ORDER = ("NS", "EW", "CG", "NE", "CC", "DT", "TE", "BP", "SK", "PG", "SS")
 WALK_SPEED_M_S = WALK_SPEED_DEFAULT_MPS
 from config import BUS_SPEED_KM_H  # noqa: E402,F401  (defined once in config)
 
@@ -31,8 +35,10 @@ def list_destination_stops(
     now: datetime | None = None,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
     arrive_by: datetime | None = None,
+    rail_table: dict | None = None,
 ) -> dict:
-    """Stops within 600 m of the place, split into reachable and unreachable.
+    """Stops within 600 m of the place, split into reachable and unreachable, and `candidates`: the same bus stops and the
+    MRT and LRT stations in one list, nearest walk first (see station_cards).
 
     A service that does not run when the user would board it does not connect a stop (service_hours). The boarding
     time is now plus the walk, or works back from the arrive-by time. When the boarding stop and the service are both
@@ -81,13 +87,111 @@ def list_destination_stops(
         reachable.append((place_m, card))
     reachable.sort(key=lambda item: (item[0], item[1]["stop_code"]))
     unreachable.sort(key=lambda item: (item[0], item[1]["stop_code"]))
+    shown_buses = reachable + unreachable[:3]
+    for _, card in shown_buses:
+        card["kind"] = "bus"
+    stations = station_cards(rail_table, dest_lat, dest_lon, walk_speed_m_s)
+    candidates = sorted(shown_buses + stations, key=lambda item: (item[0], item[1]["kind"] != "bus", item[1]["stop_code"]))
     return {
         "status": "ok",
         "destination": {"lat": dest_lat, "lon": dest_lon},
         "reachable_stops": [card for _, card in reachable],
         "unreachable_stops": [card for _, card in unreachable[:3]],
+        "candidates": [card for _, card in candidates],
         "no_service": bool(any_closed and not reachable),
     }
+
+
+# ---- MRT and LRT stations ---------------------------------------------------------------------------------------
+
+
+def _line_of(code: str) -> str:
+    match = re.match(r"[A-Z]+", code)
+    return match.group(0) if match else ""
+
+
+def _code_order(code: str) -> tuple:
+    line = _line_of(code)
+    number = re.search(r"\d+", code)
+    return (LINE_ORDER.index(line) if line in LINE_ORDER else len(LINE_ORDER), int(number.group(0)) if number else 0, code)
+
+
+_station_memo: dict[int, tuple[dict, list[dict]]] = {}
+
+
+def station_places(table: dict | None) -> list[dict]:
+    """Stations of the rail timetable as places: one per physical station (the codes that share an interchange group,
+    and one name within STATION_MERGE_M, are one place), each with its name, point, line codes and line names. Static data."""
+    if not isinstance(table, dict):
+        return []
+    held = _station_memo.get(id(table))
+    if held is not None and held[0] is table:
+        return held[1]
+    stations = table.get("stations") or {}
+    lines = table.get("lines") or {}
+    groups: dict[str, list[str]] = {}
+    for code, station in stations.items():
+        if not isinstance(station, dict) or not isinstance(station.get("latitude"), (int, float)) \
+                or not isinstance(station.get("longitude"), (int, float)):
+            continue
+        groups.setdefault(station.get("interchange") or code, []).append(code)
+    places: list[dict] = []
+    for key, codes in groups.items():
+        anchor = stations.get(key) or stations[min(codes, key=_code_order)]
+        places.append({"codes": codes, "name": str(anchor.get("name") or key), "lat": float(anchor["latitude"]),
+                       "lon": float(anchor["longitude"])})
+    merged: list[dict] = []
+    for place in sorted(places, key=lambda item: min(_code_order(code) for code in item["codes"])):
+        twin = next((other for other in merged if other["name"].casefold() == place["name"].casefold()
+                     and haversine_m(other["lat"], other["lon"], place["lat"], place["lon"]) <= STATION_MERGE_M), None)
+        if twin is None:
+            merged.append(place)
+        else:
+            twin["codes"] = twin["codes"] + place["codes"]
+    result = []
+    for place in merged:
+        codes = sorted(set(place["codes"]), key=_code_order)
+        found = []
+        for code in codes:
+            line = _line_of(code)
+            if line and line in lines and line not in [item["code"] for item in found]:
+                found.append({"code": line, "name": str(lines[line].get("name") or line), "mode": str(lines[line].get("mode") or "")})
+        if not found:
+            continue
+        result.append({"codes": codes, "name": place["name"], "lat": place["lat"], "lon": place["lon"], "lines": found,
+                       "mode": "MRT" if any(item["mode"] != "TRAM" for item in found) else "LRT"})
+    _station_memo.clear()
+    _station_memo[id(table)] = (table, result)
+    return result
+
+
+def station_cards(table: dict | None, dest_lat: float, dest_lon: float,
+                  walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS) -> list[tuple[float, dict]]:
+    """(distance, card) of every station within 600 m of the place; when none is that close, the one nearest station
+    within 1.5 km (its card says beyond_radius). A station card has the fields of a bus stop card, plus kind, mode, codes
+    and lines. No reachability: a station never says "no direct bus"."""
+    found = []
+    for place in station_places(table):
+        metres = haversine_m(dest_lat, dest_lon, place["lat"], place["lon"])
+        found.append((metres, place))
+    near = [item for item in found if item[0] <= DESTINATION_RADIUS_M + 1e-6]
+    beyond = False
+    if not near and found:
+        nearest = min(found, key=lambda item: (item[0], item[1]["codes"][0]))
+        if nearest[0] <= STATION_FALLBACK_M + 1e-6:
+            near, beyond = [nearest], True
+    cards = []
+    for metres, place in near:
+        distance_m = int(metres + 0.5)
+        cards.append((metres, {
+            "kind": "station", "stop_code": place["codes"][0], "stop_name": place["name"], "road_name": "",
+            "lat": place["lat"], "lon": place["lon"], "distance_m": distance_m,
+            "walk_minutes": walk_minutes(distance_m, walk_speed_m_s, "display"),
+            "station_mode": place["mode"], "station_codes": list(place["codes"]), "lines": [dict(item) for item in place["lines"]],
+            "beyond_radius": beyond, "is_reachable": None, "connecting_services": [], "arrival_terms": None,
+            "rough_journey_minutes": None,
+        }))
+    return cards
 
 
 def _link_runs(

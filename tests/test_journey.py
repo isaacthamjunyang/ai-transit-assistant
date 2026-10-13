@@ -104,7 +104,7 @@ def test_numeric_ride_compares_arrive_by_without_a_probability():
     assert late["ride_minutes"] == ride_minutes
     assert late["ride_label"] == f"Ride time: ~{ride_minutes} min"
     assert late["comparison_label"] == "Arrive-by check: Risk of delay"
-    assert late["comparison_note"] == "Rough check: may miss arrive-by time."
+    assert late["comparison_note"] == ""  # the badge says it; no second sentence
     assert late["estimated_arrival"] is not None
     assert "probability" not in late
     early = _journey(_usable_cache(), arrive_by=NOW + timedelta(minutes=30))
@@ -176,7 +176,7 @@ def test_transfer_past_the_arrive_by_time_is_a_risk_of_delay():
     minutes = _transfer_minutes(user)
     body = _transfer_journey(NOW + timedelta(minutes=minutes - 1), 4, 6, user)
     assert body["comparison_label"] == "Arrive-by check: Risk of delay"
-    assert body["comparison_note"] == "Rough check: may miss arrive-by time."
+    assert body["comparison_note"] == ""
     assert body["ride_minutes"] == minutes
 
 
@@ -353,7 +353,7 @@ def test_journey_endpoint_stays_on_the_local_cache(tmp_path, monkeypatch):
     body = response.json()
     assert body["ride_minutes"] is not None
     assert body["comparison_label"] == "Arrive-by check: Risk of delay"
-    assert body["comparison_note"] == "Rough check: may miss arrive-by time."
+    assert body["comparison_note"] == ""
     assert body["leave_by"] is not None
     assert "AccountKey" not in response.text
     assert "probability" not in body

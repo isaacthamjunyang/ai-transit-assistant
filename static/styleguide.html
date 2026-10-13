@@ -25,8 +25,7 @@
         </svg>
       </span>
       <div>
-        <h1 class="app-header__title">Bus Catch Assistant</h1>
-        <p class="app-header__subtitle" data-copy="home.subtitle">AI-powered bus guidance in Singapore</p>
+        <h1 class="app-header__title">Beat the Bus and MRT</h1>
       </div>
     </div>
     <button type="button" class="icon-button" id="menu-open" aria-expanded="false" aria-controls="menu-sheet">
@@ -281,7 +280,6 @@
         <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <span data-copy="arriveBy.risk"></span>
       </p>
-      <p data-copy="arriveBy.riskMessage"></p>
       <p class="badge badge--na">
         <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <span data-copy="arriveBy.na"></span>
@@ -293,8 +291,8 @@
     <section class="stack" aria-labelledby="arrive-panel-heading">
       <h2 id="arrive-panel-heading">Arrive-by estimate, miss line, and picker</h2>
       <div class="place-row-samples theme-sample-light">
-        <p>Arrive about 6:24 PM (6:21–6:31 PM)</p>
-        <p>Estimated destination arrival about 6:24 PM (6:21–6:31 PM)</p>
+        <p>Arrive about 6:24 PM</p>
+        <p>Estimated destination arrival about 6:24 PM</p>
         <div class="miss-row">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           <div>
@@ -326,8 +324,8 @@
         <p class="field-error" data-copy="arriveBy.tooFar"></p>
       </div>
       <div class="place-row-samples theme-sample-dark">
-        <p>Arrive about 6:24 PM (6:21–6:31 PM)</p>
-        <p>Estimated destination arrival about 6:24 PM (6:21–6:31 PM)</p>
+        <p>Arrive about 6:24 PM</p>
+        <p>Estimated destination arrival about 6:24 PM</p>
         <div class="miss-row">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           <div>
@@ -591,10 +589,14 @@
       <div class="place-row-samples theme-sample-light">
         <h3>Light</h3>
         <div id="legs-sample-light" class="stack"></div>
+        <h3>On your way: per-leg layout, the Next line and the Get off alert</h3>
+        <div id="on-way-sample-light" class="stack"></div>
       </div>
       <div class="place-row-samples theme-sample-dark">
         <h3>Dark</h3>
         <div id="legs-sample-dark" class="stack"></div>
+        <h3>On your way: per-leg layout, the Next line and the Get off alert</h3>
+        <div id="on-way-sample-dark" class="stack"></div>
       </div>
     </section>
 
@@ -801,6 +803,7 @@
     var DOWN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 9l6 6 6-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var stopsCopy = copy.destinationStops;
     var confirmCopy = copy.confirmDestination;
+    var DEST_TRAIN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"13\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><rect x=\"8.5\" y=\"6\" width=\"7\" height=\"4\" rx=\"1\" fill=\"currentColor\"></rect><circle cx=\"9.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><circle cx=\"14.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><path d=\"M8 21l2-5M16 21l-2-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
 
     function walkLine(minutes, metres) {
       return stopsCopy.walk.replace("{minutes}", minutes).replace("{distance}", metres + "\u00a0m");
@@ -811,8 +814,13 @@
       var pressed = options.state === "is-selected" ? "true" : "false";
       return "<li><button type=\"button\" class=\"" + classes + "\" aria-pressed=\"" + pressed + "\">"
         + "<span class=\"dest-stop-row__radio\" aria-hidden=\"true\"></span>"
-        + "<span class=\"bus-tile\" aria-hidden=\"true\">" + BUS_SVG + "</span>"
+        + "<span class=\"bus-tile dest-tile " + (options.station ? "dest-tile--station dest-tile--" + options.station.lines[0].toLowerCase() : "dest-tile--bus") + "\" aria-hidden=\"true\">"
+        + (options.station ? DEST_TRAIN_ICON : BUS_SVG) + "</span>"
         + "<span class=\"dest-stop-row__body\"><span class=\"dest-stop-row__name\">" + name + "</span>"
+        + "<span class=\"dest-stop-row__kind\">" + (options.station ? (options.station.mode === "LRT" ? stopsCopy.lrtStation : stopsCopy.mrtStation) : stopsCopy.busStop) + "</span>"
+        + (options.station ? "<span class=\"dest-stop-row__lines\">" + options.station.lines.map(function (code) {
+          return "<span class=\"dest-stop-row__line\"><span class=\"line-badge line-badge--" + code.toLowerCase() + "\">" + code + "</span> <span>" + copy.lineNames[code] + "</span></span>";
+        }).join("") + "</span>" : "")
         + "<span class=\"dest-stop-row__meta\">" + WALK_ICON + walkLine(minutes, metres) + "</span>"
         + (options.unreachable ? "<span class=\"dest-stop-row__meta dest-stop-row__note\">" + INFO_ICON + copy.noDirectBus + "</span>" : "")
         + "</span>"
@@ -831,6 +839,15 @@
         + "<span class=\"map-stop is-selected\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right is-selected\">Selected stop</span></span>"
         + "<span class=\"map-stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right is-label-hidden\">Hidden label</span></span>"
         + "</div>"
+        + "<h4>Destination markers: a bus stop has the bus icon in a grey ring, a station the train icon in its first line's ring and a label that says MRT or LRT</h4>"
+        + "<div class=\"dest-map sample-map\"><div class=\"sample-map__strip\">"
+        + [["bus", "", "Opp Blk 5", false], ["bus", "", "Bus stop (selected)", true], ["station", "ns", "Bishan MRT", false],
+          ["station", "cc", "Promenade MRT", false], ["station", "cc", "Promenade MRT (selected)", true], ["station", "bp", "Segar LRT", false],
+          ["station", "dt", "Bayfront MRT", false], ["station", "te", "Caldecott MRT", false]].map(function (m) {
+          var cls = "map-stop map-stop--dest " + (m[0] === "bus" ? "map-stop--bus" : "map-stop--station map-stop--ring-" + m[1]) + (m[3] ? " is-selected" : "");
+          return "<span class=\"" + cls + "\"><span class=\"map-stop__dot\">" + (m[0] === "bus" ? BUS_SVG : DEST_TRAIN_ICON) + "</span><span class=\"map-stop__label map-stop-label is-right" + (m[3] ? " is-selected" : "") + "\">" + m[2] + "</span></span>";
+        }).join("")
+        + "</div></div>"
         + "<button type=\"button\" class=\"map-locate map-dest-only sample-map__locate\" aria-label=\"" + stopsCopy.locate + "\">" + CROSSHAIR_ICON + "</button>"
         + "</div>"
         + "<h4>Range chip and attribution</h4>"
@@ -852,6 +869,10 @@
         + "<p class=\"info-popover\" role=\"note\">" + stopsCopy.info + "</p>"
         + "<ul class=\"destination-stop-list\">"
         + destRow("Marina Bay Sands", 3, 250, { best: true })
+        + destRow("Bayfront", 5, 410, { station: { mode: "MRT", lines: ["DT"] } })
+        + destRow("Dhoby Ghaut", 6, 450, { station: { mode: "MRT", lines: ["NS", "NE", "CC"] } })
+        + destRow("Bukit Panjang (selected)", 7, 520, { state: "is-selected", station: { mode: "LRT", lines: ["BP"] } })
+        + destRow("Promenade", 8, 590, { station: { mode: "MRT", lines: ["CC", "DT"] } })
         + destRow("Bayfront MRT (hover)", 6, 450, { state: "is-hover" })
         + destRow("The Float @ Marina Bay (focus)", 8, 600, { state: "is-focus" })
         + destRow("Marina Bay Sands (selected)", 3, 250, { state: "is-selected", best: true })
@@ -880,7 +901,18 @@
         + "</div>"
         + "<div class=\"info-box\">" + INFO_ICON + "<p>" + confirmCopy.info + "</p></div>"
         + "<button type=\"button\" class=\"primary primary--icon\"><span>" + confirmCopy.action + "</span>" + ARROW_ICON + "</button>"
-        + "</div>";
+        + "</div>"
+        + "<h4>Confirm card for a station: the train icon in its first line's ring, every line's badge, and the station text in the info box</h4>"
+        + "<div class=\"confirm-screen\"><div class=\"card summary-card\">"
+        + "<div class=\"summary-section\"><div class=\"summary-head\"><h5 class=\"summary-head__title\">" + confirmCopy.destinationStation + "</h5>"
+        + "<button type=\"button\" class=\"link-button\" aria-label=\"" + confirmCopy.editStation + "\">" + confirmCopy.edit + "</button></div>"
+        + "<div class=\"summary-item summary-item--stop\"><span class=\"bus-tile bus-tile--large dest-tile dest-tile--station dest-tile--ns\" aria-hidden=\"true\">" + DEST_TRAIN_ICON + "</span>"
+        + "<span class=\"summary-item__copy\"><span class=\"summary-item__title summary-item__title--link\">Dhoby Ghaut</span>"
+        + "<span class=\"dest-stop-row__lines\">" + ["NS", "NE", "CC"].map(function (code) {
+          return "<span class=\"dest-stop-row__line\"><span class=\"line-badge line-badge--" + code.toLowerCase() + "\">" + code + "</span> <span>" + copy.lineNames[code] + "</span></span>";
+        }).join("") + "</span>"
+        + "<span class=\"summary-item__meta\">" + walkLine(2, 120) + "</span></span></div></div></div>"
+        + "<div class=\"info-box\">" + INFO_ICON + "<p>" + confirmCopy.info + "</p></div></div>";
     }
 
     var ALERT_ICON = "<svg class=\"icon field-help__icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 7.5v5.5M12 16.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
@@ -915,7 +947,7 @@
 
     document.getElementById("dest-sample-light").innerHTML = homeGateSample() + destSample();
     document.getElementById("dest-sample-dark").innerHTML = homeGateSample() + destSample();
-    var FLAG_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var FLAG_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var PIN_FILL_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z\" fill=\"currentColor\"></path><circle cx=\"12\" cy=\"11\" r=\"2.5\" class=\"step-node__hole\"></circle></svg>";
     var REFRESH_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var TARGET_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2.5\" fill=\"currentColor\"></circle></svg>";
@@ -949,13 +981,32 @@
       ];
       if (withTransfer) {
         items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza (09048)"), sgDetail(jo.walk.replace("{minutes}", "2"))], ""));
-        items.push(sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "106") + "</span></p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.headway.replace("{minutes}", "12")), sgDetail(jo.firstBusOnly)], ""));
+        items.push(sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "106") + "</span></p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.headway.replace("{minutes}", "12"))], ""));
       }
       items.push(sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands"), sgDetail(jo.walkToDestination.replace("{minutes}", "3"))], jo.editDestinationStop));
       items.push(sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], jo.editDestination));
       return "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + jo.title + "</h4>"
-        + sgReason(withTransfer ? jo.reasonTargetMissed : jo.reasonNoTarget)
         + "<ol class=\"journey-steps\">" + items.join("") + "</ol></div>";
+    }
+
+    // A whole duration: "{n} min" under an hour, "{h} hr {m} min" from an hour, "{h} hr" on the hour.
+    function sgDuration(total) {
+      if (total < 60) {
+        return jo.durationMin.replace("{n}", total);
+      }
+      return total % 60 === 0 ? jo.durationHr.replace("{h}", total / 60)
+        : jo.durationHrMin.replace("{h}", Math.floor(total / 60)).replace("{m}", total % 60);
+    }
+
+    // The summary card: three labelled cells; the bar and tint follow the transfers (0 green, 1 or 2 amber, 3 or more red).
+    function sgSummary(minutes, transfers, walking) {
+      var tone = transfers === 0 ? "ok" : transfers <= 2 ? "mid" : "high";
+      var count = transfers === 0 ? jo.transfersNone : transfers === 1 ? jo.transfersOne : jo.transfersMany.replace("{t}", transfers);
+      var aria = jo.summaryAria.replace("{time}", sgDuration(minutes)).replace("{transfers}", count).replace("{walk}", sgDuration(walking));
+      return "<div class=\"overview-summary overview-summary--" + tone + "\" role=\"group\" aria-label=\"" + aria + "\">"
+        + "<p class=\"overview-summary__cell\"><span class=\"overview-summary__label\">" + jo.summaryTime + "</span><span class=\"overview-summary__value\">" + sgDuration(minutes) + "</span></p>"
+        + "<p class=\"overview-summary__cell\"><span class=\"overview-summary__label\">" + jo.summaryTransfers + "</span><span class=\"overview-summary__value\">" + transfers + "</span></p>"
+        + "<p class=\"overview-summary__cell\"><span class=\"overview-summary__label\">" + jo.summaryWalking + "</span><span class=\"overview-summary__value\">" + sgDuration(walking) + "</span></p></div>";
     }
 
     function sgReason(text) {
@@ -970,15 +1021,26 @@
       } else if (kind === "no-location") {
         body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + jo.needLocation + "</p><button type=\"button\" class=\"secondary\">" + jo.tryAgain + "</button></div>";
       } else {
-        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + (kind === "no-service" ? jo.noService : jo.noRoute) + "</p><div class=\"overview-state__actions\"><button type=\"button\" class=\"secondary\">" + jo.editDestinationAction + "</button><button type=\"button\" class=\"secondary\">" + jo.editArriveByAction + "</button></div></div>";
+        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + (kind === "no-service" ? jo.noServiceAny : kind === "no-bus-closed" ? jo.noBusClosed : kind === "no-mrt-closed" ? jo.noMrtClosed : kind === "no-service-static" ? jo.noService : jo.noRoute) + "</p><div class=\"overview-state__actions\"><button type=\"button\" class=\"secondary\">" + jo.editDestinationAction + "</button><button type=\"button\" class=\"secondary\">" + jo.editArriveByAction + "</button></div></div>";
       }
       return "<div class=\"card overview-card\" aria-busy=\"" + (kind === "loading" ? "true" : "false") + "\"><h4 class=\"overview-title\">" + jo.title + "</h4>" + body + "</div>";
+    }
+
+    // The ride-app card under an empty answer: plain operator links, a straight-line figure when the phone has both points.
+    function sgRideApps(withDistance) {
+      var ra = copy.rideApps;
+      var links = ra.apps.map(function (app) {
+        return "<li><a class=\"secondary ride-apps__link\" href=\"" + app.url + "\" target=\"_blank\" rel=\"noopener noreferrer\">" + app.name + "</a></li>";
+      }).join("");
+      return "<div class=\"ride-apps\"><h3 class=\"ride-apps__heading\">" + ra.heading + "</h3>"
+        + (withDistance ? "<p class=\"ride-apps__distance\">" + ra.distance.replace("{km}", "4.2") + "</p>" : "")
+        + "<ul class=\"ride-apps__list\">" + links + "</ul><p class=\"overview-note ride-apps__note\">" + ra.note + "</p></div>";
     }
 
     function sgArriveBox() {
       return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
         + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.custom + " · 6:30\u00a0PM</p>"
-        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateTarget.replace("{point}", "6:18\u00a0PM").replace("{range}", "6:14–6:24\u00a0PM") + "</p>"
+        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateTarget.replace("{point}", "6:18\u00a0PM") + "</p>"
         + "<p class=\"badge badge--track arrive-box__status\">" + copy.arriveBy.onTrack + "</p></div>"
         + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
     }
@@ -986,7 +1048,7 @@
     function sgArriveBoxNoTarget() {
       return "<div class=\"arrive-box\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
         + "<div class=\"arrive-box__copy\"><p class=\"arrive-box__label\">" + copy.home.arriveBy + "</p><p class=\"arrive-box__value\">" + copy.arriveBy.noTarget + "</p>"
-        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateOnly.replace("{point}", "6:24\u00a0PM").replace("{range}", "6:21–6:31\u00a0PM") + "</p></div>"
+        + "<p class=\"arrive-box__estimate\">" + copy.arriveBy.estimateOnly.replace("{point}", "6:24\u00a0PM") + "</p></div>"
         + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
     }
 
@@ -1028,7 +1090,12 @@
         + "<h4>Screen 5: planning (loading)</h4>" + sgOverviewState("loading")
         + "<h4>Screen 5: no location</h4>" + sgOverviewState("no-location")
         + "<h4>Screen 5: no route</h4>" + sgOverviewState("no-route")
-        + "<h4>Screen 5: no bus running at this time</h4>" + sgOverviewState("no-service")
+        + "<h4>Screen 5: nothing running (Fastest, Fewest transfers, Least walking)</h4>" + sgOverviewState("no-service")
+        + "<h4>Screen 5: Bus only, bus services stopped for now</h4>" + sgOverviewState("no-bus-closed")
+        + "<h4>Screen 5: MRT only, MRT and LRT services stopped for now</h4>" + sgOverviewState("no-mrt-closed")
+        + "<h4>Screen 5: the bus planner (static fallback) keeps its bus-only sentence</h4>" + sgOverviewState("no-service-static")
+        + "<h4>Screen 5: ride-app card under an empty answer, with the distance line</h4><div class=\"card overview-card\">" + sgRideApps(true) + "</div>"
+        + "<h4>Screen 5: ride-app card, no distance (a point is missing)</h4><div class=\"card overview-card\">" + sgRideApps(false) + "</div>"
         + "<h4>Start journey, with the motion privacy line above it</h4><p class=\"note\" aria-live=\"off\">" + jo.motionPrivacy + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
         + "<h4>Start journey, motion sensor off or denied</h4><p class=\"note\" aria-live=\"off\">" + jo.motionOff + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
         + "<h4>Bus card: LIVE, refresh idle</h4><div class=\"card live-card\">" + sgBusCard("live", "", false) + "</div>"
@@ -1093,20 +1160,19 @@
     }
 
     function sgBusLeg(service, startName, toText, pill, whenText, whenClass, noteText, rideText, endName) {
-      return sgLeg("bus", "", startName, "<p class=\"journey-step__line\"><span class=\"line-badge\"><span class=\"visually-hidden\">Bus </span>" + service
+      return sgLeg("bus", "", startName, "<p class=\"journey-step__line\"><span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>" + service
         + "</span> <span>" + toText + "</span>" + (pill ? sgPill(pill) : "") + "</p>",
         whenText ? sgDetail(whenText, whenClass) : "", noteText, rideText, endName);
     }
 
-    function sgChips(selected, disabled) {
+    // The priority select under its label, with the options the bus planner fallback cannot do disabled.
+    function sgSelect(selected, disabled) {
       var labels = [["fastest", jo.priorityFastest], ["fewest_transfers", jo.priorityFewest], ["least_walking", jo.priorityLeastWalk],
         ["bus_only", jo.priorityBus], ["mrt_only", jo.priorityMrt]];
-      return "<div class=\"arrive-chips\" role=\"radiogroup\" aria-label=\"" + jo.priorityLabel + "\">" + labels.map(function (pair) {
-        var on = pair[0] === selected;
-        var off = disabled.indexOf(pair[0]) !== -1;
-        return "<button type=\"button\" class=\"arrive-chip" + (on ? " is-selected" : "") + "\" role=\"radio\" aria-checked=\"" + on + "\""
-          + (off ? " aria-disabled=\"true\"" : "") + ">" + pair[1] + "</button>";
-      }).join("") + "</div>";
+      return "<select class=\"priority-select\" aria-label=\"" + jo.priorityLabel + "\">"
+        + labels.map(function (pair) {
+          return "<option value=\"" + pair[0] + "\"" + (pair[0] === selected ? " selected" : "") + (disabled.indexOf(pair[0]) !== -1 ? " disabled" : "") + ">" + pair[1] + "</option>";
+        }).join("") + "</select>";
     }
 
     // The route lines of the map (plan 4.3): walk dashed, bus solid, train solid, LRT dotted, a casing only where the colour
@@ -1133,14 +1199,26 @@
         + "<p class=\"catch-card__caption catch-card__not-live\">" + tp.notLive + "</p></div>" + tiles
         + "<div class=\"miss-row\"><div><p>" + copy.train.trainMiss.replace("{time}", "8:54 AM") + "</p></div></div>"
         + "<div class=\"catch-bar catch-bar--single\"><button type=\"button\" class=\"primary\"><span>" + tp.seeTimes + "</span></button></div>";
-      var pageB = "<div class=\"card live-card\"><p class=\"bus-card__title\"><span>" + sgBadge("NS") + "<span>" + line + "</span></span>" + sgPill("schedule") + "</p>"
-        + "<p class=\"bus-card__to\">" + sgFill(tp.toward, { terminus: "Marina South Pier" }) + "</p><p class=\"live-then\">" + sgFill(tp.departsAt, { time: "8:50 AM" }) + "</p>"
-        + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"bus-tiles bus-tiles--3\">"
-        + ["8:50", "8:54", "8:58"].map(function (time, index) {
-          return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + sgFill(tp.about, { time: time + " AM" })
-            + "</span><span class=\"bus-tile-card__service\">" + line + "</span></li>";
-        }).join("") + "</ul><div class=\"status-grid\"><p class=\"status-cell\"><span>" + tp.scheduled + "</span></p><p class=\"status-cell\"><span>" + sgFill(tp.every, { n: 4 }) + "</span></p></div>"
-        + "<div class=\"catch-bar\"><p class=\"catch-bar__title\">" + tp.question + "</p></div></div>";
+      // Page B card header: the tile, then the badge and the name on one row (a wrapped name stays under the name), the pill and
+      // the direction under it, the refresh button top right. Tiles show the time only; the aria-label names the line and time.
+      var refresh = "<button type=\"button\" class=\"refresh-button\" aria-label=\"Refresh live arrivals\">" + REFRESH_ICON + "</button>";
+      var pageBCard = function (code, name, terminus, wide) {
+        return "<div class=\"card live-card\"><div class=\"bus-card\"><span class=\"bus-tile bus-tile--hero\" aria-hidden=\"true\">" + SG_TRAIN_ICON + "</span>"
+          + "<div class=\"bus-card__copy\"><p class=\"bus-card__title bus-card__title--train\"><span class=\"bus-card__line\"><span class=\"bus-card__badge\">"
+          + sgBadge(code) + "</span><span class=\"bus-card__line-name\">" + name + "</span></span>" + sgPill("schedule") + "</p>"
+          + "<p class=\"bus-card__to\">" + sgFill(tp.toward, { terminus: terminus }) + "</p></div>" + refresh + "</div>"
+          + "<p class=\"live-then\">" + sgFill(tp.departsAt, { time: "8:50 AM" }) + "</p>"
+          + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"bus-tiles bus-tiles--3\">"
+          + ["8:50", "8:54", "8:58"].map(function (time, index) {
+            return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\" aria-label=\"" + sgFill(tp.tileLabel, { line: name, time: time + " AM" })
+              + "\"><span class=\"bus-tile-card__minutes\">" + time + "\u00a0AM</span></li>";
+          }).join("") + "</ul><div class=\"status-grid\"><p class=\"status-cell\"><span>" + tp.scheduled + "</span></p><p class=\"status-cell\"><span>"
+          + sgFill(tp.every, { n: 4 }) + "</span></p></div>"
+          + (wide ? "<div class=\"catch-bar\"><p class=\"catch-bar__title\">" + tp.question + "</p></div>" : "") + "</div>";
+      };
+      var pageB = pageBCard("NS", line, "Marina South Pier", true)
+        + "<h4>Page B header: a long line name wraps under the name, not under the badge</h4>" + pageBCard("TE", "Thomson-East Coast Line", "Woodlands North", false)
+        + "<h4>Page B header: a short line name stays on the badge row</h4>" + pageBCard("CC", "Circle Line", "HarbourFront", false);
       var missed = "<div class=\"card train-missed\"><p class=\"train-missed__left\">" + sgFill(tp.left, { line: line, time: "8:54 AM" }) + "</p>"
         + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"train-rows\">"
         + ["8:54", "8:58", "9:02"].map(function (time) { return "<li class=\"train-rows__item\">" + sgFill(tp.about, { time: time + " AM" }) + "</li>"; }).join("")
@@ -1168,11 +1246,12 @@
           sgFill(jo.stopsAndMin, { k: 3, m: 6 }), "Segar LRT Station (BP11)"),
         sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "110" + nb + "m", place: "Opp Segar Rd (45011)" }))], ""),
         sgBusLeg("106", "Opp Segar Rd (45011)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "",
-          sgFill(jo.scheduledAt, { time: "9:24" + nb + "AM" }), "", jo.firstBusOnly, sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Bef Marina Bay Stn (03029)"),
+          sgFill(jo.liveIn, { n: 6 }), "", "", sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Bef Marina Bay Stn (03029)"),
+        sgBusLeg("77", "Bef Marina Bay Stn (03029)", sgFill(jo.busToward, { terminus: "Tanjong Pagar" }), "",
+          sgFill(jo.scheduledAt, { time: "9:41" + nb + "AM" }), "", "", sgFill(jo.stopsAndMin, { k: 4, m: 8 }), "Tanjong Pagar Stn (07013)"),
         sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "150" + nb + "m", place: "Marina Bay Sands" }))], jo.editDestinationStop),
         sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], jo.editDestination)
       ];
-      var totals = sgFill(jo.totals, { n: 63, t: sgFill(jo.transfersMany, { t: 3 }), w: 12 });
       var firstTrain = [
         sgRailLeg("DT", "Bayfront MRT Station (DT16)", sgFill(jo.trainToward, { terminus: "Expo" }), sgFill(jo.scheduledIn, { n: 5 }),
           sgFill(jo.stopsAndMin, { k: 3, m: 7 }), "Chinatown MRT Station (DT19)")
@@ -1187,6 +1266,18 @@
         sgRailLeg("EW", "Outram Park MRT Station (EW16)", sgFill(jo.trainToward, { terminus: "Pasir Ris" }),
           sgFill(jo.scheduledAt, { time: "9:06" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 2, m: 4 }), "Tiong Bahru MRT Station (EW17)")
       ];
+      var busLabels = [
+        sgBusLeg("36", "Opp Stamford Pr Sch (04119)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "live",
+          jo.arrivingSoon, "journey-step__arriving", "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd (28059)"),
+        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          sgFill(jo.liveIn, { n: 4 }), "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)"),
+        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          jo.liveArrivingSoon, "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)"),
+        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          jo.liveNow, "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)"),
+        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          sgFill(jo.scheduledAt, { time: "9:30" + nb + "AM" }), "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)")
+      ];
       var trainWords = [
         sgRailLeg("CC", "Promenade MRT Station (CC4)", sgFill(jo.directionPlatform, { direction: sgFill(jo.loopToward, { direction: jo.anticlockwise, terminus: "HarbourFront" }), x: "A" }),
           jo.scheduledInOne, sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Botanic Gardens MRT Station (CC19)"),
@@ -1196,27 +1287,96 @@
       return "<h4>Map route lines on the land stand-in (a casing only where the plan says)</h4><div class=\"stack\">" + sgMapLines() + "</div>"
         + "<h4>Line badges: the code and the name are both text (NS, EW, CG, NE, CC, DT, TE, BP, SK, PG, SS)</h4>"
         + "<div class=\"card\">" + SG_LINE_CODES.map(sgLineHead).join("") + "</div>"
-        + "<h4>Journey overview: one row per leg, chips under the reason line</h4>"
-        + "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + jo.title + "</h4>" + sgReason(jo.reasonNoTarget)
-        + "<div class=\"overview-priority\">" + sgChips("fastest", []) + "</div>"
-        + "<ol class=\"journey-steps\">" + rows.join("") + "</ol><p class=\"overview-totals\">" + totals + "</p></div>"
-        + "<h4>Priority chips: Least walking selected</h4><div class=\"overview-priority\">" + sgChips("least_walking", []) + "</div>"
-        + "<h4>Priority chips: the bus planner is the fallback (two chips disabled, both notes)</h4><div class=\"overview-priority\">"
-        + sgChips("fastest", ["least_walking", "mrt_only"]) + "<p class=\"overview-note\">" + jo.fallbackNote + "</p><p class=\"overview-note\">" + jo.needsRouteService + "</p></div>"
-        + "<h4>Priority chips: nothing for MRT only, and the best-available line</h4><div class=\"overview-priority\">" + sgChips("mrt_only", [])
-        + "<p class=\"overview-note\">" + jo.bestAvailable + "</p></div>"
+        + "<h4>Journey overview: the title, the priority select, the summary card, then one row per leg</h4>"
+        + "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + jo.title + "</h4>"
+        + "<div class=\"overview-priority\">" + sgSelect("fastest", []) + "</div>"
+        + sgSummary(63, 3, 12)
+        + "<ol class=\"journey-steps\">" + rows.join("") + "</ol></div>"
+        + "<h4>Summary card: green with no transfer, amber for one or two, red for three or more; hours from 60 min</h4>"
+        + "<div class=\"card overview-card\">" + [[59, 0, 4], [60, 1, 6], [65, 2, 9], [120, 3, 12], [185, 4, 61]].map(function (v) {
+          return sgSummary(v[0], v[1], v[2]);
+        }).join("") + "</div>"
+        + "<h4>Priority select: Least walking selected</h4><div class=\"overview-priority\">" + sgSelect("least_walking", []) + "</div>"
+        + "<h4>Priority select: the bus planner is the fallback (two options disabled, both notes)</h4><div class=\"overview-priority\">"
+        + sgSelect("fastest", ["least_walking", "mrt_only"]) + "<p class=\"overview-note\">" + jo.fallbackNote + "</p><p class=\"overview-note\">" + jo.needsRouteService + "</p></div>"
+        + "<h4>Priority select: nothing for MRT only (the banner below says so)</h4><div class=\"overview-priority\">" + sgSelect("mrt_only", []) + "</div>"
         + "<div class=\"card overview-card\"><p class=\"banner banner--caution\">" + jo.noMrtOnly + "</p></div>"
         + "<h4>Train leg row: a first leg says \"Scheduled \u00b7 In N min\"; Start journey is on</h4>"
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + firstTrain.join("") + "</ol></div>"
         + "<h4>A change is a plain neutral walk row; a different line switches the colour, the same line keeps it</h4>"
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + interchange.join("") + "</ol></div>"
+        + "<h4>Bus legs: the first bus says Arriving soon; a later bus says Live (In n min, Arriving soon, Now) or Scheduled</h4>"
+        + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + busLabels.join("") + "</ol></div>"
+        + "<h4>Live page line under the bus card: Live (In n min, Arriving soon, Now), Scheduled, and a train next leg</h4>"
+        + "<div class=\"card live-card\">" + [jo.liveIn.replace("{n}", "4"), jo.liveArrivingSoon, jo.liveNow, sgFill(jo.scheduledAt, { time: "9:30" + nb + "AM" })].map(function (when) {
+          return "<p class=\"live-then\">" + cp.thenBus.replace("{service}", "36").replace("{stop}", "Opp Toh Guan Rd (03011)") + " <span class=\"live-then__when\">" + when + "</span></p>";
+        }).join("") + "<p class=\"live-then\">" + cp.thenTrain.replace("{line}", "North-South Line").replace("{station}", "Bishan MRT Station (NS17)")
+        + " <span class=\"live-then__when\">" + sgFill(jo.scheduledAt, { time: "9:41" + nb + "AM" }) + "</span></p></div>"
         + "<h4>Train leg row: a loop line adds Clockwise or Anticlockwise, \"In 1 min\", \"Now\", and a platform only when one is known</h4>"
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + trainWords.join("") + "</ol></div>"
         + trainPagesSample();
     }
 
+    // On your way (every route, one layout): the "Next:" line under the title, a ticked leg and walk (the tick style, a green ring
+    // and bar, a visually hidden "Done"), the leg being ridden ("On board"), a leg still to board, the Get off banner (an icon and
+    // a text label, dismissible), and the two muted lines. The words are copy.onWay.
+    function onWayLegsSample() {
+      var ow = copy.onWay;
+      var nb = "\u00a0";
+      var tick = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 12.5l4.5 4.5L19 7.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+      var bell = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 17h12l-1.5-2V11a4.5 4.5 0 0 0-9 0v4L6 17zM10 20h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+      var doneLeg = function (kind, ringCode, startName, rowHtml, rideText, endName) {
+        return "<li class=\"journey-step journey-step--" + kind + " journey-step--leg journey-step--leg-done" + (ringCode ? " journey-step--rail-" + ringCode.toLowerCase() : "") + "\">"
+          + "<span class=\"journey-step__bar\" aria-hidden=\"true\"></span>"
+          + "<span class=\"step-node step-node--done\" aria-hidden=\"true\">" + tick + "</span>"
+          + "<div class=\"journey-step__body\"><span class=\"visually-hidden\">" + ow.done + "</span><p class=\"journey-step__title\">" + startName + "</p>" + rowHtml + sgDetail(rideText) + "</div>"
+          + "<span class=\"step-node step-node--done\" aria-hidden=\"true\">" + tick + "</span>"
+          + "<div class=\"journey-step__body journey-step__body--end\"><p class=\"journey-step__title\">" + endName + "</p></div></li>";
+      };
+      var doneWalk = "<li class=\"journey-step journey-step--done\"><span class=\"step-node step-node--done\" aria-hidden=\"true\">" + tick + "</span>"
+        + "<div class=\"journey-step__body\"><p class=\"journey-step__title\">" + sgFill(jo.walkRow, { n: 2 }) + "</p>"
+        + sgDetail(sgFill(jo.walkRowTo, { distance: "120" + nb + "m", place: "Buona Vista MRT Station (EW21)" })) + "</li>";
+      var rows = [
+        doneLeg("bus", "", "Opp Stamford Pr Sch (04119)",
+          "<p class=\"journey-step__line\"><span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>36</span> <span>" + sgFill(jo.busToward, { terminus: "Marina Bay Sands" }) + "</span></p>",
+          sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd (28059)"),
+        doneWalk,
+        sgRailLeg("CC", "Buona Vista MRT Station (CC22)", sgFill(jo.loopToward, { direction: jo.anticlockwise, terminus: "HarbourFront" }),
+          copy.catchPrompt.boarded, sgFill(jo.stopsAndMin, { k: 3, m: 6 }), "Haw Par Villa MRT Station (CC25)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "100" + nb + "m", place: "Outram Park MRT Station (EW16)" }))], ""),
+        sgRailLeg("EW", "Outram Park MRT Station (EW16)", sgFill(jo.trainToward, { terminus: "Pasir Ris" }),
+          sgFill(jo.scheduledAt, { time: "9:06" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 2, m: 4 }), "Tiong Bahru MRT Station (EW17)"),
+        sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], "")
+      ];
+      var banner = function (text) {
+        return "<div class=\"banner banner--info alert-row on-way-alert\" role=\"status\"><span class=\"alert-row__icon\" aria-hidden=\"true\">" + bell + "</span>"
+          + "<div class=\"alert-row__copy\"><p class=\"alert-row__title\">" + text + "</p><button type=\"button\" class=\"secondary\">" + ow.dismiss + "</button></div></div>";
+      };
+      var nextLine = function (text) {
+        return "<p class=\"on-way-next\">" + text + "</p>";
+      };
+      var card = function (next, list) {
+        return "<div class=\"card overview-card\"><h4 class=\"overview-title\">" + copy.catchPrompt.onWayTitle + "</h4>" + nextLine(next)
+          + "<ol class=\"journey-steps\">" + list.join("") + "</ol></div>";
+      };
+      return "<h4>Get off banner: a train, then a bus (an icon and a text label, with Dismiss)</h4>"
+        + banner(sgFill(ow.getOffTrain, { station: "Haw Par Villa MRT Station (CC25)" }))
+        + banner(sgFill(ow.getOffBus, { place: "Bef Toh Guan Rd (28059)" }))
+        + "<h4>On your way: ticked leg and walk, the leg being ridden, legs to come</h4>"
+        + card(sgFill(ow.nextGetOff, { place: "Haw Par Villa MRT Station (CC25)" }), rows)
+        + "<h4>The Next line: a walk, and a leg to board (a bus and a train)</h4>"
+        + "<div class=\"card overview-card\">" + nextLine(sgFill(ow.nextWalk, { n: 2, place: "Outram Park MRT Station (EW16)" }))
+        + nextLine(sgFill(ow.nextBoardBus, { service: "36", place: "Opp Toh Guan Rd (03011)" }))
+        + nextLine(sgFill(ow.nextBoardTrain, { line: "East-West Line", place: "Outram Park MRT Station (EW16)" })) + "</div>"
+        + "<h4>The two muted lines under the card</h4>"
+        + "<p class=\"note\">" + ow.privacy + "</p><p class=\"note\">" + ow.openNote + "</p>"
+        + "<button type=\"button\" class=\"primary\">" + copy.catchPrompt.planNew + "</button>";
+    }
+
     document.getElementById("legs-sample-light").innerHTML = legsSample();
     document.getElementById("legs-sample-dark").innerHTML = legsSample();
+    document.getElementById("on-way-sample-light").innerHTML = onWayLegsSample();
+    document.getElementById("on-way-sample-dark").innerHTML = onWayLegsSample();
     document.getElementById("live-sample-light").innerHTML = liveSample();
     document.getElementById("live-sample-dark").innerHTML = liveSample();
     var lc = copy.liveCatch;
@@ -1714,16 +1874,18 @@
     }
 
     function sgOnWay(transfer) {
+      var nb = "\u00a0";
       var items = [
-        sgDoneStep(jo.boardingStop, [sgDetail("Opp Stamford Pr Sch (04119)")]),
-        sgDoneStep(jo.busService, [sgDetail(jo.bus.replace("{service}", "36"), "journey-step__service"), sgDetail(cp.boarded)])
+        sgBusLeg("36", "Opp Stamford Pr Sch (04119)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "", cp.boarded, "",
+          "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), transfer ? "Orchard Stn/Lucky Plaza (09048)" : "Marina Bay Sands (03029)")
       ];
       if (transfer) {
-        items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza (09048)")], ""));
-        items.push(sgStep("bus", jo.busService, [sgDetail(jo.bus.replace("{service}", "106"), "journey-step__service"), sgDetail(jo.headway.replace("{minutes}", "12")), sgDetail(jo.firstBusOnly)], ""));
+        items.push(sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "130" + nb + "m", place: "Orchard Stn/Lucky Plaza (09049)" }))], ""));
+        items.push(sgBusLeg("106", "Orchard Stn/Lucky Plaza (09049)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "",
+          sgFill(jo.scheduledAt, { time: "9:12" + nb + "AM" }), "", "", sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Marina Bay Sands (03029)"));
       }
-      items.push(sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands")], ""));
-      items.push(sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], ""));
+      items.push(sgLegRow("walk", sgFill(jo.walkRow, { n: 3 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "180" + nb + "m", place: "Marina Bay Sands" }))], ""));
+      items.push(sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], ""));
       return '<div class="card overview-card"><h4 class="overview-title">' + cp.onWayTitle + '</h4><ol class="journey-steps">' + items.join("") + '</ol></div>'
         + sgArriveBoxNoTarget() + '<button type="button" class="primary">' + cp.planNew + '</button>';
     }
@@ -1832,7 +1994,7 @@
         : '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["4 min", "12 min", "24 min"]);
       var pill = kind === "no-service" ? "unavailable" : "live";
       return sgPageAlerts(kind === "uncertain" || kind === "stale" ? "" : "")
-        + '<div class="card live-card">' + sgBusCard(pill, "", false) + '<p class="live-then">' + cp.thenBus.replace("{service}", "106").replace("{stop}", "Orchard Stn (02049)") + '</p>' + tiles + sgMap(false) + sgStatus(kind === "no-service" ? "unavailable" : kind === "uncertain" ? "uncertain" : "live") + '</div>'
+        + '<div class="card live-card">' + sgBusCard(pill, "", false) + '<p class="live-then">' + cp.thenBus.replace("{service}", "106").replace("{stop}", "Orchard Stn (02049)") + ' <span class="live-then__when">' + jo.liveIn.replace("{n}", "4") + '</span></p>' + tiles + sgMap(false) + sgStatus(kind === "no-service" ? "unavailable" : kind === "uncertain" ? "uncertain" : "live") + '</div>'
         + (kind === "no-service" ? "" : sgQuestionBar());
     }
 

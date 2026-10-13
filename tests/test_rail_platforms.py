@@ -173,6 +173,6 @@ def test_no_exit_text_in_copy_js_the_rail_row_code_or_the_style_guide_rail_rows(
     rail = page.split("function railDirectionText(leg)", 1)[1].split("// One row for a bus or train leg", 1)[0]
     assert not re.search(r"exit", rail, re.IGNORECASE)
     guide = (ROOT / "static" / "styleguide.html").read_text(encoding="utf-8")
-    rows = guide.split("function sgRailLeg", 1)[1].split("function sgChips", 1)[0]
+    rows = guide.split("function sgRailLeg", 1)[1].split("function sgSelect", 1)[0]
     sample = guide.split("function legsSample()", 1)[1].split("document.getElementById(\"legs-sample-light\")", 1)[0]
     assert not re.search(r"exit", rows + sample, re.IGNORECASE)

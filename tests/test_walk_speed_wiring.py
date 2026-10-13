@@ -65,7 +65,8 @@ def test_no_new_timers_or_background_apis_in_the_page_wiring():
     assert "serviceWorker" not in BLOCK and "fetch(" not in BLOCK
     assert INDEX.count("watchPosition(") == 1  # the estimator owns the one watch; the one more is Page W's fallback
     assert INDEX.count("setInterval(") == 3  # the existing display tick and poll timer, as before
-    assert INDEX.count("getCurrentPosition(") == 3  # the load fix, the per-poll fix and the fresh fix at Start journey
+    # the load fix, the per-poll fix, the fresh fix at Start journey, and the On your way screen's own read (Get off alert)
+    assert INDEX.count("getCurrentPosition(") == 4
 
 
 def test_the_dead_journey_watch_is_gone():

@@ -432,7 +432,7 @@ def test_home_page_still_loads_from_cache(tmp_path: Path, monkeypatch):
         response = client.get("/")
         spec = client.get("/openapi.json")
     assert response.status_code == 200
-    assert "Bus Catch Assistant" in response.text
+    assert "Beat the Bus and MRT" in response.text and "Bus Catch Assistant" not in response.text
     assert "Orchard Stn/Tang Plaza" not in response.text
     assert set(spec.json()["paths"]) == {
         "/",
@@ -451,6 +451,7 @@ def test_home_page_still_loads_from_cache(tmp_path: Path, monkeypatch):
         "/api/journey",
         "/api/journey-plan",
         "/api/arrivals/peek",
+        "/api/arrivals/later",
         "/api/route-plan",
         "/api/reroute-options",
         "/api/rescore",

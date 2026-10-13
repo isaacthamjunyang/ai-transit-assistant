@@ -33,8 +33,8 @@ def test_overview_order_and_edit_routes():
     origin = _between(main, 'stepItem("origin"', "));")
     assert "], null)" in origin + ")"
     assert "Edit boarding stop" not in html and "Edit bus service" not in html and "Edit transfer stop" not in html
-    assert 'return legItem(leg, position === 0 ? scheduledInLine(leg) : scheduleLine(leg), lineRow(leg), "", "");' in render
-    assert "return legItem(leg, when, busRow(leg, live)," in render
+    assert 'return legItem(leg, position === 0 ? scheduledInLine(leg) : scheduleLine(leg), lineRow(leg), "");' in render
+    assert "return legItem(leg, when, busRow(leg, live), whenClass);" in render
     assert 'label: "Edit destination stop", action: function () { backToScreen("stops"); }' in render
     assert 'label: "Edit destination", action: function () { backToScreen("results"); }' in render
     assert "formatDistance(toBoard)" in main
@@ -52,9 +52,9 @@ def test_transfer_variant_adds_a_transfer_stop_and_a_schedule_only_second_bus():
     assert 'typeof leg.published_headway_minutes === "number"' in render
     copy = COPY.read_text(encoding="utf-8")
     assert "/* proposed, needs approval */" in copy
-    assert 'firstBusOnly: "Live tracking covers your first bus only."' in copy
+    assert "firstBusOnly" not in copy
     assert 'headway: "Schedule: about every {minutes} min."' in copy
-    assert "FIRST_BUS_ONLY_NOTE" in render and "SCHEDULE_HEADWAY" in render
+    assert "FIRST_BUS_ONLY_NOTE" not in render and "SCHEDULE_HEADWAY" in render
 
 
 def test_bottom_button_runs_the_existing_select_and_start_action():

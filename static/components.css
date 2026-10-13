@@ -179,7 +179,6 @@ a {
   color: var(--color-secondary-ink);
 }
 
-.app-header__subtitle,
 .field__hint,
 .hint,
 .note,
@@ -2175,6 +2174,156 @@ body.is-screen-stops main.wrap {
   color: var(--color-muted);
 }
 
+/* Destination list: the tile of a row. A bus stop has the bus icon in the neutral ring; a station has the train icon, a tint of its
+   first line's colour and a ring in that colour (and a casing ring only where the colour alone is under 3:1). The ring sits
+   outside the tile, so it does not change the row's size, and the row's own selected outline is further out, with a gap. */
+.dest-tile {
+  --tile-ring: var(--ring-neutral);
+  --tile-casing: transparent;
+  --tile-fill: var(--ring-neutral-tint);
+  background: var(--tile-fill);
+  color: var(--color-ink);
+  box-shadow: 0 0 0 2px var(--tile-ring), 0 0 0 4px var(--tile-casing);
+}
+
+.dest-stop-row .dest-tile {
+  margin: 4px;
+}
+
+.dest-stop-row__kind {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.dest-stop-row__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dest-stop-row__line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.dest-stop-row__line .line-badge {
+  flex: none;
+}
+
+.line-badge--bus {
+  border: 2px solid var(--ring-neutral);
+}
+
+.map-stop--dest.map-stop--bus,
+.map-stop--dest.map-stop--station {
+  --tile-ring: var(--ring-neutral);
+  --tile-casing: transparent;
+  --tile-fill: var(--ring-neutral-tint);
+}
+
+.dest-tile--ns,
+.map-stop--dest.map-stop--ring-ns {
+  --tile-ring: var(--ring-ns);
+  --tile-casing: var(--ring-ns-casing);
+  --tile-fill: var(--ring-ns-tint);
+}
+
+.dest-tile--ew,
+.map-stop--dest.map-stop--ring-ew {
+  --tile-ring: var(--ring-ew);
+  --tile-casing: var(--ring-ew-casing);
+  --tile-fill: var(--ring-ew-tint);
+}
+
+.dest-tile--cg,
+.map-stop--dest.map-stop--ring-cg {
+  --tile-ring: var(--ring-cg);
+  --tile-casing: var(--ring-cg-casing);
+  --tile-fill: var(--ring-cg-tint);
+}
+
+.dest-tile--ne,
+.map-stop--dest.map-stop--ring-ne {
+  --tile-ring: var(--ring-ne);
+  --tile-casing: var(--ring-ne-casing);
+  --tile-fill: var(--ring-ne-tint);
+}
+
+.dest-tile--cc,
+.map-stop--dest.map-stop--ring-cc {
+  --tile-ring: var(--ring-cc);
+  --tile-casing: var(--ring-cc-casing);
+  --tile-fill: var(--ring-cc-tint);
+}
+
+.dest-tile--dt,
+.map-stop--dest.map-stop--ring-dt {
+  --tile-ring: var(--ring-dt);
+  --tile-casing: var(--ring-dt-casing);
+  --tile-fill: var(--ring-dt-tint);
+}
+
+.dest-tile--te,
+.map-stop--dest.map-stop--ring-te {
+  --tile-ring: var(--ring-te);
+  --tile-casing: var(--ring-te-casing);
+  --tile-fill: var(--ring-te-tint);
+}
+
+.dest-tile--bp,
+.map-stop--dest.map-stop--ring-bp {
+  --tile-ring: var(--ring-bp);
+  --tile-casing: var(--ring-bp-casing);
+  --tile-fill: var(--ring-bp-tint);
+}
+
+.dest-tile--sk,
+.map-stop--dest.map-stop--ring-sk {
+  --tile-ring: var(--ring-sk);
+  --tile-casing: var(--ring-sk-casing);
+  --tile-fill: var(--ring-sk-tint);
+}
+
+.dest-tile--pg,
+.map-stop--dest.map-stop--ring-pg {
+  --tile-ring: var(--ring-pg);
+  --tile-casing: var(--ring-pg-casing);
+  --tile-fill: var(--ring-pg-tint);
+}
+
+.dest-tile--ss,
+.map-stop--dest.map-stop--ring-ss {
+  --tile-ring: var(--ring-ss);
+  --tile-casing: var(--ring-ss-casing);
+  --tile-fill: var(--ring-ss-tint);
+}
+
+/* Destination map markers: the same rule as the rows. The ring is the dot's border; the casing is a thin ring outside it. */
+.map-stop--dest.map-stop--bus .map-stop__dot,
+.map-stop--dest.map-stop--station .map-stop__dot {
+  background: var(--tile-fill);
+  color: var(--color-ink);
+  border: 3px solid var(--tile-ring);
+}
+
+.map-stop--dest.map-stop--station .map-stop__dot {
+  box-shadow: 0 0 0 2px var(--tile-casing), var(--shadow-card);
+}
+
+.map-stop--dest.map-stop--station.is-selected .map-stop__dot {
+  box-shadow:
+    0 0 0 2px var(--tile-casing),
+    0 0 0 calc(2px + var(--map-selected-width)) var(--map-selected-ring),
+    0 0 0 calc(2px + var(--map-selected-width) + var(--map-selected-halo-width)) var(--map-selected-halo),
+    var(--shadow-card);
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -2471,10 +2620,6 @@ body.is-screen-home .hero {
   font-weight: 700;
 }
 
-.app-header__text .app-header__subtitle {
-  display: block;
-}
-
 /* Screen 1: required arrive-by and the find-route gate. */
 
 .required-tag {
@@ -2629,7 +2774,7 @@ body.is-screen-home .hero {
 
 .step-node--origin {
   background: var(--color-secondary);
-  color: var(--color-ink);
+  color: var(--marker-start);
 }
 
 .step-node__hole {
@@ -2637,8 +2782,8 @@ body.is-screen-home .hero {
 }
 
 .step-node--destination {
-  background: var(--step-node-destination);
-  color: var(--color-primary-ink);
+  background: var(--color-secondary);
+  color: var(--marker-end);
 }
 
 .journey-step__body {
@@ -2911,7 +3056,9 @@ body:not(.is-screen-live) #arrival-card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  min-height: var(--tap-min);
   padding: calc(var(--space-2) + var(--space-1)) var(--space-1);
   background: var(--color-card);
   color: var(--color-ink);
@@ -3248,7 +3395,7 @@ body.is-screen-journey main.wrap {
    bar take its own line token colour (a change of line changes colour); a bus leg's stay neutral. The bar sits under the
    markers and over the plain connector, so the next step still joins up. Stop names and codes are text beside each marker. */
 .journey-step--leg {
-  --leg-ring: var(--color-line-strong);
+  --leg-ring: var(--ring-neutral);
   --leg-bar: var(--color-primary);
   grid-template-columns: var(--step-node) minmax(0, 1fr);
   row-gap: var(--space-3);
@@ -3347,8 +3494,8 @@ body.is-screen-journey main.wrap {
   color: var(--color-ink);
 }
 
-/* The priority chips reuse .arrive-chips and .arrive-chip. A selected chip keeps its size (its outline is a shadow) and a
-   disabled one is told by a dashed border and muted text as well as by aria-disabled, so it is not colour alone. */
+/* The priority is a native select under a visible label. It is 44 px high whatever is chosen, so changing it shifts nothing, and a
+   disabled option is greyed by the browser and explained by the note under the select (so it is not colour alone). */
 .overview-priority {
   display: flex;
   flex-direction: column;
@@ -3356,10 +3503,25 @@ body.is-screen-journey main.wrap {
   margin: 0 0 var(--space-2);
 }
 
-.arrive-chip[aria-disabled="true"] {
+.priority-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  background: var(--color-card);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-control);
+  font: inherit;
+}
+
+.priority-select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.priority-select option:disabled {
   color: var(--color-muted);
-  border-style: dashed;
-  cursor: not-allowed;
 }
 
 .overview-note {
@@ -3369,13 +3531,55 @@ body.is-screen-journey main.wrap {
   line-height: 1.4;
 }
 
-.overview-totals {
-  margin: var(--space-2) 0 0;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--color-line);
+/* The summary card under the select: three labelled cells (total time, transfers, walking). Its left bar and tint follow the number of
+   transfers with the status tokens (0 green, 1 or 2 amber, 3 or more red). The labels and numbers always show, so the colour is
+   never the only signal. */
+.overview-summary {
+  --summary-accent: var(--status-live);
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  box-sizing: border-box;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--summary-accent) 9%, var(--color-card));
+  border: 1px solid var(--color-line);
+  border-left: 6px solid var(--summary-accent);
+  border-radius: var(--radius-card);
   color: var(--color-ink);
-  font-size: 0.9375rem;
-  font-weight: 500;
+}
+
+.overview-summary--mid {
+  --summary-accent: var(--status-uncertain);
+}
+
+.overview-summary--high {
+  --summary-accent: var(--status-unavailable);
+}
+
+.overview-summary__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.overview-summary__label {
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+  font-weight: 600;
+}
+
+.overview-summary__value {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.summary-item .dest-tile {
+  margin: 4px;
 }
 
 /* Style guide: the route lines of the map as SVG, on the land stand-in. A casing token of "none" draws no casing. */
@@ -3548,8 +3752,52 @@ body.is-screen-journey main.wrap {
   color: var(--color-muted);
 }
 
-.bus-card__title .line-badge {
-  margin-right: var(--space-2);
+/* A train card: the badge and the line name on one row (the badge centred on the first line, a wrapped name staying under the
+   name, never under the badge), then the pill and the direction under the name, all left-aligned. The refresh button stays
+   top right. */
+.bus-card__title--train {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.bus-card__line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bus-card__badge {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 1.2em;
+}
+
+.bus-card__line-name {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+/* On a narrow phone the name column is what is left beside the icon tile and the refresh button: a smaller tile and name
+   keep a short name on one line and break a long one at its spaces and hyphens. */
+@media (max-width: 400px) {
+  .bus-card__title--train {
+    font-size: 1.25rem;
+  }
+
+  .bus-card:has(.bus-card__title--train) .bus-tile--hero {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .bus-card:has(.bus-card__title--train) .bus-tile--hero .icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
 }
 
 .overview-state__actions {
@@ -3560,6 +3808,64 @@ body.is-screen-journey main.wrap {
 
 .overview-state__actions .secondary {
   flex: 1 1 10rem;
+}
+
+/* The ride-app card under an empty plan answer: a heading, an optional distance line, one text link per
+   operator (44 px high) and a muted note. It appears with the answer and replaces nothing, so nothing moves. */
+.ride-apps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+
+.ride-apps[hidden],
+.ride-apps [hidden] {
+  display: none;
+}
+
+.ride-apps__heading {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ride-apps__distance {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.9375rem;
+}
+
+.ride-apps__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ride-apps__list li {
+  flex: 1 1 8rem;
+  display: flex;
+}
+
+.ride-apps__link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-min);
+  color: var(--color-link);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.ride-apps__link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .journey-steps--skeleton .journey-step::before {
@@ -4673,6 +4979,27 @@ body.has-catch-bar {
   color: var(--status-live);
 }
 
+/* On your way: a leg whose planned end has passed keeps the tick style. Its ring and bar take the success token, and the tick
+   and a visually hidden word say it, so colour is never the only signal. */
+.journey-step--leg-done {
+  --leg-ring: var(--status-live);
+  --leg-bar: var(--status-live);
+}
+
+/* The "Next: ..." line under the title of the On your way card. */
+.on-way-next {
+  margin: 0 0 var(--space-2);
+  color: var(--color-ink);
+  font-size: var(--type-body);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.on-way-alert .secondary {
+  align-self: flex-start;
+}
+
 body.is-bus-missed #arrival-card,
 body.is-bus-missed #pace-slot,
 body.is-bus-missed #leave-tiles,
@@ -4725,6 +5052,10 @@ body.is-page-b #ai-explanation {
 
 .catch-bar.catch-bar--single {
   padding-top: var(--space-2);
+}
+
+.live-then__when {
+  display: block;
 }
 
 .live-then {

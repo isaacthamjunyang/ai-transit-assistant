@@ -106,7 +106,9 @@ def test_the_leave_by_tile_and_the_card_in_every_state_in_the_real_page(tmp_path
     assert by_unc["card"].endswith("Your location is uncertain, so leave a little earlier than that to be safe.")
     assert now["tile"] == "Leave now" and now["detail"].startswith("The bus is ") and "the walk takes about" in now["detail"]
     assert now["cautionHidden"] is True and " Leave now so you have 10 minutes to reach your stop and catch the bus arriving at " in now["card"]
-    assert now["card"].endswith(" AM.") or now["card"].endswith(" PM.")
+    # the clock reads "12:04 AM (tomorrow)." in the last minutes before midnight
+    tail = now["card"].replace(chr(0xA0), " ")
+    assert tail.endswith((" AM.", " PM.", " AM (tomorrow).", " PM (tomorrow)."))
     assert now_unc["cautionHidden"] is False and now_unc["tile"] == "Leave now"
     assert now_unc["card"].endswith("Your location is uncertain, so the walking time may be off.")
     assert "and walking at your usual speed of 4.0 km/h. Leave now" in states["nowRemembered"]["card"]

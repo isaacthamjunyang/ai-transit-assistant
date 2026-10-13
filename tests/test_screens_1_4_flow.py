@@ -61,7 +61,7 @@ def test_no_target_counts_but_an_untouched_field_or_past_custom_time_does_not():
 
 def test_header_button_resets_the_journey_and_keeps_the_fields():
     html = _page()
-    assert '<button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Bus Catch Assistant, go to home"' in html
+    assert '<button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Beat the Bus and MRT, go to home"' in html
     exit_fn = _between(html, "function exitJourney(keepFields)", "function goHome()")
     assert "if (!keepFields) {\n        arriveByInput.value = \"\";" in exit_fn
     assert "if (!keepFields) {\n        destinationInput.value = \"\";" in exit_fn

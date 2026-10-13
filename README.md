@@ -1,6 +1,6 @@
 # ai-transit-assistant
 
-AI-powered Singapore bus catch assistant for the AI Lodge Hackathon. The app is meant to help someone decide whether they can catch a bus and when to leave.
+Beat the Bus and MRT, a Singapore bus and MRT assistant for the AI Lodge Hackathon. The app is meant to help someone decide whether they can catch a bus and when to leave.
 
 This repository is being built one step at a time. The page asks for your location, shows nearby boarding stops, and can monitor live arrivals for one stop and one service. When your location is available, each bus card also shows a catch probability computed in Python. You can also search for a destination place, choose a destination bus stop, and see a journey form with ride time, an arrive-by check, and a leave-by clock. While that journey is open, the page can send a leave-now browser notification. An AI Explanation card states the numbers Python already computed.
 
@@ -41,7 +41,7 @@ With the virtual environment activated:
 uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser. You should see the Bus Catch Assistant home page.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser. You should see the Beat the Bus and MRT home page.
 
 On startup the server looks for `cache/bus_stops.json`, `cache/bus_routes.json`, and `cache/bus_services.json`.
 

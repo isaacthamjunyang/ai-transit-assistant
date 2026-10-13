@@ -23,5 +23,5 @@ def test_the_leave_by_value_is_one_line_and_not_clipped(report, width, state):
     assert m["valueScroll"] <= m["valueClient"], m  # nothing spills sideways (even with " (tomorrow)")
     assert m["tileScroll"] <= m["tileClient"] and m["tileRight"] <= m["viewport"], m
     assert m["clipped"] is False and m["pageScroll"] is False, m
-    assert m["arrivalLines"] == 1 and m["rangeLines"] == 1, m  # the estimated arrival time and its range too
+    assert m["arrivalLines"] == 1 and m["rangeGone"] is True, m  # the estimated arrival time on one line, and no range under it
     assert (m["text"] == "Leave now") == (state == "now"), m  # a time or "Leave now", never both

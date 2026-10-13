@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bus Catch Assistant</title>
+  <title>Beat the Bus and MRT</title>
   <script src="theme-boot.js"></script>
   <!-- Leaflet 1.9.4 from the unpkg CDN. OpenStreetMap tiles need no API key. -->
   <link
@@ -18,7 +18,7 @@
 <body class="is-screen-home">
   <header class="app-header">
     <h1 class="app-header__heading">
-      <button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Bus Catch Assistant, go to home" aria-current="page">
+      <button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Beat the Bus and MRT, go to home" aria-current="page">
         <span class="app-header__logo" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24" focusable="false">
             <rect x="3" y="7" width="18" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
@@ -27,8 +27,7 @@
           </svg>
         </span>
         <span class="app-header__text">
-          <span class="app-header__title">Bus Catch Assistant</span>
-          <span class="app-header__subtitle">AI-powered bus guidance in Singapore</span>
+          <span class="app-header__title">Beat the Bus and MRT</span>
         </span>
       </button>
     </h1>
@@ -233,12 +232,12 @@
       </div>
       <div class="dest-sheet">
         <div class="dest-sheet__head">
-          <h2 id="dest-stops-title" class="dest-sheet__title">Nearby destination bus stops</h2>
+          <h2 id="dest-stops-title" class="dest-sheet__title">Nearby destination MRT stations / bus stops</h2>
           <button type="button" class="info-button" id="dest-stops-info" aria-label="About these stops" aria-expanded="false" aria-controls="dest-stops-note">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           </button>
         </div>
-        <p id="dest-stops-note" class="info-popover" role="note" hidden>Bus stops within 600 m of your destination. Stops with a direct bus from near you come first, nearest first. Best option is the shortest walk among them.</p>
+        <p id="dest-stops-note" class="info-popover" role="note" hidden>Bus stops and MRT or LRT stations within 600 m of your destination, nearest walk first. If no station is that close, the nearest one within 1.5 km is shown. The first one is chosen for you.</p>
         <p id="destination-stop-status" class="note" role="status" hidden></p>
         <ul id="reachable-stops" class="destination-stop-list"></ul>
         <h3 id="other-destination-stops" hidden>Other stops within 600m (No direct service)</h3>
@@ -269,15 +268,16 @@
         <hr class="hairline">
         <div class="summary-section">
           <div class="summary-head">
-            <h3 class="summary-head__title">Destination bus stop</h3>
+            <h3 class="summary-head__title" id="confirm-stop-heading">Destination bus stop</h3>
             <button type="button" class="link-button" id="edit-destination-stop" aria-label="Edit destination bus stop">Edit</button>
           </div>
           <div class="summary-item summary-item--stop">
-            <span class="bus-tile bus-tile--large" aria-hidden="true">
+            <span id="confirm-stop-tile" class="bus-tile bus-tile--large" aria-hidden="true">
               <svg class="icon" viewBox="0 0 24 24" focusable="false"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M5 11h14M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8.5" cy="14.5" r="1" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1" fill="currentColor"></circle></svg>
             </span>
             <span class="summary-item__copy">
               <span id="confirm-stop-name" class="summary-item__title summary-item__title--link"></span>
+              <span id="confirm-stop-lines" class="dest-stop-row__lines" hidden></span>
               <span id="confirm-stop-walk" class="summary-item__meta"></span>
             </span>
           </div>
@@ -287,10 +287,10 @@
       </div>
       <div class="info-box">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-        <p>We'll find the best nearby boarding stops, check live bus arrivals and calculate your catch probability and leave-by time.</p>
+        <p id="confirm-info-text">We'll find the best route from here by bus and MRT and work out your leave-by time.</p>
       </div>
       <button type="button" id="confirm-destination-stop" class="primary primary--icon">
-        <span>Confirm and find buses</span>
+        <span>Confirm</span>
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
       </button>
     </section>
@@ -302,17 +302,21 @@
       </div>
       <div class="card overview-card" id="overview-card" aria-busy="false">
         <h2 id="overview-title" class="overview-title">Your journey</h2>
-        <p id="overview-reason" class="overview-reason" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span id="overview-reason-text"></span></p>
         <div id="overview-priority" class="overview-priority">
-          <div class="arrive-chips" role="radiogroup" aria-label="Priority">
-            <button type="button" class="arrive-chip is-selected" id="priority-fastest" role="radio" aria-checked="true" tabindex="0" data-priority="fastest">Fastest</button>
-            <button type="button" class="arrive-chip" id="priority-fewest_transfers" role="radio" aria-checked="false" tabindex="-1" data-priority="fewest_transfers">Fewest transfers</button>
-            <button type="button" class="arrive-chip" id="priority-least_walking" role="radio" aria-checked="false" tabindex="-1" data-priority="least_walking">Least walking</button>
-            <button type="button" class="arrive-chip" id="priority-bus_only" role="radio" aria-checked="false" tabindex="-1" data-priority="bus_only">Bus only</button>
-            <button type="button" class="arrive-chip" id="priority-mrt_only" role="radio" aria-checked="false" tabindex="-1" data-priority="mrt_only">MRT only</button>
-          </div>
+          <select id="priority-select" class="priority-select" aria-label="Priority">
+            <option value="fastest" selected>Fastest</option>
+            <option value="fewest_transfers">Fewest transfers</option>
+            <option value="least_walking">Least walking</option>
+            <option value="bus_only">Bus only</option>
+            <option value="mrt_only">MRT only</option>
+          </select>
           <p id="overview-fallback-note" class="overview-note" hidden></p>
           <p id="overview-priority-note" class="overview-note" hidden></p>
+        </div>
+        <div id="overview-summary" class="overview-summary" role="group" aria-label="" hidden>
+          <p class="overview-summary__cell"><span class="overview-summary__label">Total time</span><span id="summary-time" class="overview-summary__value"></span></p>
+          <p class="overview-summary__cell"><span class="overview-summary__label">Transfers</span><span id="summary-transfers" class="overview-summary__value"></span></p>
+          <p class="overview-summary__cell"><span class="overview-summary__label">Walking</span><span id="summary-walking" class="overview-summary__value"></span></p>
         </div>
         <ol id="overview-skeleton" class="journey-steps journey-steps--skeleton" aria-hidden="true" hidden>
           <li class="journey-step"><span class="step-node step-node--skeleton"></span><span class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></span></li>
@@ -333,7 +337,7 @@
           </div>
         </div>
         <div id="overview-no-service" class="overview-state" hidden>
-          <p class="banner banner--caution">No buses are running to this destination at this time.</p>
+          <p id="overview-no-service-text" class="banner banner--caution">No bus or MRT services are running to this destination at this time.</p>
           <div class="overview-state__actions">
             <button type="button" class="secondary" id="overview-edit-destination-service">Edit destination</button>
             <button type="button" class="secondary" id="overview-edit-time-service">Edit arrive-by time</button>
@@ -342,8 +346,19 @@
         <div id="overview-unavailable" class="overview-state" hidden>
           <p class="banner banner--denied">Nearby stops are unavailable.</p>
         </div>
+        <div id="ride-apps" class="ride-apps" hidden>
+          <h3 class="ride-apps__heading">No transit right now. Open a ride app:</h3>
+          <p id="ride-apps-distance" class="ride-apps__distance" hidden></p>
+          <ul class="ride-apps__list">
+            <li><a class="secondary ride-apps__link" href="https://www.grab.com/sg/download/" target="_blank" rel="noopener noreferrer">Grab</a></li>
+            <li><a class="secondary ride-apps__link" href="https://gojek.com/sg/about" target="_blank" rel="noopener noreferrer">Gojek</a></li>
+            <li><a class="secondary ride-apps__link" href="https://www.cdgtaxi.com.sg/" target="_blank" rel="noopener noreferrer">CDG Zig</a></li>
+            <li><a class="secondary ride-apps__link" href="https://tada.global" target="_blank" rel="noopener noreferrer">TADA</a></li>
+            <li><a class="secondary ride-apps__link" href="https://rydesharing.com/" target="_blank" rel="noopener noreferrer">Ryde</a></li>
+          </ul>
+          <p class="overview-note ride-apps__note">These links open each app's own site. Your trip is not sent.</p>
+        </div>
         <ol id="overview-timeline" class="journey-steps"></ol>
-        <p id="overview-totals" class="overview-totals" hidden></p>
       </div>
       <div class="arrive-box">
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
@@ -363,10 +378,20 @@
       </button>
     </section>
     <section id="on-way" class="overview-screen" aria-labelledby="on-way-title" hidden>
+      <div id="on-way-alert" class="banner banner--info alert-row on-way-alert" role="status" hidden>
+        <span class="alert-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 17h12l-1.5-2V11a4.5 4.5 0 0 0-9 0v4L6 17zM10 20h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <div class="alert-row__copy">
+          <p id="on-way-alert-text" class="alert-row__title"></p>
+          <button type="button" id="on-way-alert-dismiss" class="secondary">Dismiss</button>
+        </div>
+      </div>
       <div class="card overview-card">
         <h2 id="on-way-title" class="overview-title">On your way</h2>
+        <p id="on-way-next" class="on-way-next" aria-live="off" hidden></p>
         <ol id="on-way-timeline" class="journey-steps"></ol>
       </div>
+      <p id="on-way-privacy" class="note" aria-live="off" hidden>Your position stays on this phone. It is used only for the Get off alert and is never sent, stored or logged.</p>
+      <p id="on-way-open-note" class="note" aria-live="off" hidden>Works while this page is open.</p>
       <div class="arrive-box">
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div class="arrive-box__copy">
@@ -441,7 +466,7 @@
       <section id="leave-now-banner" class="alert-occupant is-suppressed card leave-now-banner" aria-labelledby="leave-now-title" hidden>
         <div class="leave-now-banner__head">
           <span class="bus-tile bus-tile--small" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M5 11h14M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8.5" cy="14.5" r="1" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1" fill="currentColor"></circle></svg></span>
-          <span class="leave-now-banner__app">Bus Catch Assistant</span>
+          <span class="leave-now-banner__app">Beat the Bus and MRT</span>
           <span class="leave-now-banner__time">now</span>
         </div>
         <h3 id="leave-now-title" class="leave-now-banner__title"></h3>
@@ -559,7 +584,6 @@
         <div>
           <p id="tile-arrival-label" class="leave-tile__label">Estimated destination arrival</p>
           <p id="tile-arrival" class="leave-tile__value">—</p>
-          <p id="tile-arrival-range" class="leave-tile__meta" hidden></p>
         </div>
       </div>
       <p id="tile-row" class="leave-tiles__row" hidden><span id="tile-status" class="badge" hidden></span><span id="tile-note" hidden></span></p>
@@ -736,10 +760,19 @@
     var TRACKING_STOPPED_TEXT = "Tracking stopped";
     var trackingStopped = false;
     var THEN_BUS_TEXT = "Then Bus {service} at {stop}";
+    var DEST_BUS_LABEL = "Bus stop";
+    var DEST_MRT_LABEL = "MRT station";
+    var DEST_LRT_LABEL = "LRT station";
+    var DEST_STATION_HEADING = "Destination station";
+    var DEST_STATION_EDIT = "Edit destination station";
+    var DEST_BUS_HEADING = "Destination bus stop";
+    var DEST_BUS_EDIT = "Edit destination bus stop";
+    var confirmBusTileHtml = null;
+    var THEN_TRAIN_TEXT = "Then {line} at {station}";
     var IF_CATCH_PREFIX = "If you catch this bus: ";
     var END_MAX_TEXT = "Tracking stopped after 60 minutes.";
     var ON_BOARD_TEXT = "On board";
-    var FIRST_BUS_ONLY_NOTE = "Live tracking covers your first bus only.";
+    var CATCH_QUESTION_BUS = "Did you catch the bus?";
     var NO_BETTER_STANDARD = "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the 15% improvement threshold.";
     var selectedBoardingStop = null;
     var selectedDestination = null;
@@ -1308,6 +1341,7 @@
       }, 1000);
       updateStepRail();
       syncPaceEstimator();
+      maybeLookupLater();
     }
 
     function armPollTimer(generation) {
@@ -1317,6 +1351,7 @@
       pollTimer = setInterval(function () {
         refreshLocationFix(generation);
         requestArrivals(generation);
+        maybeLookupLater();
       }, POLL_MS);
     }
 
@@ -2652,15 +2687,54 @@
         .replace(/"/g, "&quot;");
     }
 
+    // A station is the train icon in a ring of its first line's colour; a bus stop is the bus icon in a grey ring. Both carry
+    // a text label (a station's says MRT or LRT), so the type is never told by colour alone.
+    function destKind(stop) {
+      return stop && stop.kind === "station" ? "station" : "bus";
+    }
+
+    function destRingCode(stop) {
+      var first = stop && stop.lines && stop.lines[0] ? String(stop.lines[0].code).toUpperCase() : "";
+      return LINE_BADGE_CODES.indexOf(first) !== -1 ? first.toLowerCase() : "";
+    }
+
+    function destKindLabel(stop) {
+      return destKind(stop) === "station" ? (stop.station_mode === "LRT" ? DEST_LRT_LABEL : DEST_MRT_LABEL) : DEST_BUS_LABEL;
+    }
+
+    // One entry per line of a station: its badge (the code as text on the line's colour) and the line's name.
+    function stationLineEntries(stop) {
+      return (stop.lines || []).map(function (line) {
+        var entry = document.createElement("span");
+        entry.className = "dest-stop-row__line";
+        entry.appendChild(lineBadge(line.code));
+        entry.appendChild(document.createTextNode(" "));
+        var lineName = document.createElement("span");
+        lineName.textContent = LINE_NAMES[String(line.code).toUpperCase()] || line.name || line.code;
+        entry.appendChild(lineName);
+        return entry;
+      });
+    }
+
     function destStopIcon(stop, selected) {
-      return mapStopIcon(stop.stop_name, selected, "map-stop--dest");
+      var station = destKind(stop) === "station";
+      var ring = station ? destRingCode(stop) : "";
+      var name = station ? stop.stop_name + " " + (stop.station_mode === "LRT" ? "LRT" : "MRT") : stop.stop_name;
+      return L.divIcon({
+        className: "map-stop map-stop--dest " + (station ? "map-stop--station" + (ring ? " map-stop--ring-" + ring : "") : "map-stop--bus")
+          + (selected ? " is-selected" : ""),
+        html: "<span class=\"map-stop__dot\">" + (station ? TRAIN_SVG : BUS_TILE_SVG) + "</span>"
+          + "<span class=\"map-stop__label map-stop-label is-right" + (selected ? " is-selected" : "") + "\">" + escapeHtml(name) + "</span>",
+        iconSize: selected ? [40, 40] : [32, 32],
+        iconAnchor: selected ? [20, 20] : [16, 16]
+      });
     }
 
     function destMarkerOffset(stop, selected) {
       if (selected) {
         return 1000;
       }
-      return stop.is_reachable ? 400 : 300;
+      return stop.is_reachable || destKind(stop) === "station" ? 400 : 300;
     }
 
     function destinationWalkText(stop) {
@@ -2858,8 +2932,12 @@
         distance_m: stop.distance_m,
         walk_minutes: stop.walk_minutes,
         is_reachable: stop.is_reachable,
-        connecting_services: stop.connecting_services.slice(),
-        rough_journey_minutes: stop.rough_journey_minutes
+        connecting_services: (stop.connecting_services || []).slice(),
+        rough_journey_minutes: stop.rough_journey_minutes,
+        kind: destKind(stop),
+        station_mode: stop.station_mode || "",
+        station_codes: (stop.station_codes || []).slice(),
+        lines: (stop.lines || []).map(function (line) { return { code: line.code, name: line.name }; })
       };
     }
 
@@ -2907,8 +2985,25 @@
       var addressEl = document.getElementById("confirm-place-address");
       addressEl.textContent = address;
       addressEl.hidden = address === "";
+      var stationChosen = destKind(selectedDestinationStop) === "station";
+      document.getElementById("confirm-stop-heading").textContent = stationChosen ? DEST_STATION_HEADING : DEST_BUS_HEADING;
+      document.getElementById("edit-destination-stop").setAttribute("aria-label", stationChosen ? DEST_STATION_EDIT : DEST_BUS_EDIT);
       document.getElementById("confirm-stop-name").textContent = selectedDestinationStop.stop_name;
       document.getElementById("confirm-stop-walk").textContent = destinationWalkText(selectedDestinationStop);
+      // A station shows the train icon in the ring of its first line and every line's badge, as in the list; a bus stop keeps the bus tile.
+      var tile = document.getElementById("confirm-stop-tile");
+      if (confirmBusTileHtml === null) {
+        confirmBusTileHtml = tile.innerHTML;
+      }
+      var ring = stationChosen ? destRingCode(selectedDestinationStop) : "";
+      tile.className = "bus-tile bus-tile--large" + (stationChosen ? " dest-tile dest-tile--station" + (ring ? " dest-tile--" + ring : "") : "");
+      tile.innerHTML = stationChosen ? TRAIN_SVG : confirmBusTileHtml;
+      var linesBox = document.getElementById("confirm-stop-lines");
+      linesBox.replaceChildren();
+      (stationChosen ? stationLineEntries(selectedDestinationStop) : []).forEach(function (entry) {
+        linesBox.appendChild(entry);
+      });
+      linesBox.hidden = !linesBox.childNodes.length;
       pushScreen("confirm");
     }
 
@@ -2917,28 +3012,43 @@
       item.setAttribute("data-stop-code", stop.stop_code);
       var row = document.createElement("button");
       row.type = "button";
-      row.className = "dest-stop-row" + (stop.is_reachable ? "" : " is-unreachable");
+      var station = destKind(stop) === "station";
+      row.className = "dest-stop-row" + (station || stop.is_reachable ? "" : " is-unreachable");
       row.setAttribute("data-stop-code", stop.stop_code);
+      row.setAttribute("data-kind", station ? "station" : "bus");
       row.setAttribute("aria-pressed", "false");
       var radio = document.createElement("span");
       radio.className = "dest-stop-row__radio";
       radio.setAttribute("aria-hidden", "true");
       var tile = document.createElement("span");
-      tile.className = "bus-tile";
+      var ring = station ? destRingCode(stop) : "";
+      tile.className = "bus-tile dest-tile " + (station ? "dest-tile--station" + (ring ? " dest-tile--" + ring : "") : "dest-tile--bus");
       tile.setAttribute("aria-hidden", "true");
-      tile.innerHTML = BUS_TILE_SVG;
+      tile.innerHTML = station ? TRAIN_SVG : BUS_TILE_SVG;
       var body = document.createElement("span");
       body.className = "dest-stop-row__body";
       var name = document.createElement("span");
       name.className = "dest-stop-row__name";
       name.textContent = stop.stop_name;
+      var kind = document.createElement("span");
+      kind.className = "dest-stop-row__kind";
+      kind.textContent = destKindLabel(stop);
       var walk = document.createElement("span");
       walk.className = "dest-stop-row__meta";
       walk.innerHTML = WALK_SVG;
       walk.appendChild(document.createTextNode(destinationWalkText(stop)));
       body.appendChild(name);
+      body.appendChild(kind);
+      if (station && stop.lines && stop.lines.length) {
+        var lines = document.createElement("span");
+        lines.className = "dest-stop-row__lines";
+        stationLineEntries(stop).forEach(function (entry) {
+          lines.appendChild(entry);
+        });
+        body.appendChild(lines);
+      }
       body.appendChild(walk);
-      if (!stop.is_reachable) {
+      if (!station && !stop.is_reachable) {
         var reach = document.createElement("span");
         reach.className = "dest-stop-row__meta dest-stop-row__note";
         reach.innerHTML = NOTE_SVG;
@@ -3009,24 +3119,22 @@
       reachableStopList.replaceChildren();
       unreachableStopList.replaceChildren();
       showDestinationPin();
-      var bestCode = bestDestinationStopCode(body.reachable_stops);
-      body.reachable_stops.forEach(function (stop) {
+      // One list: bus stops and stations together, nearest walk first. The first row is chosen for you and says Best option.
+      var all = Array.isArray(body.candidates) ? body.candidates : body.reachable_stops.concat(body.unreachable_stops);
+      var bestCode = Array.isArray(body.candidates) ? (all[0] ? all[0].stop_code : "") : bestDestinationStopCode(body.reachable_stops);
+      all.forEach(function (stop) {
         destinationStopsByCode[stop.stop_code] = stop;
         destStopOrder.push(stop.stop_code);
         renderDestinationStopCard(stop, reachableStopList, stop.stop_code === bestCode);
         addDestinationWalkLine(stop);
         addDestinationMarker(stop);
       });
-      body.unreachable_stops.forEach(function (stop) {
-        destinationStopsByCode[stop.stop_code] = stop;
-        destStopOrder.push(stop.stop_code);
-        renderDestinationStopCard(stop, reachableStopList, false);
-        addDestinationWalkLine(stop);
-        addDestinationMarker(stop);
-      });
-      if (body.no_service) {
+      if (Array.isArray(body.candidates) && all.length) {
+        selectDestinationStop(all[0]);
+      }
+      if (body.no_service && !all.some(function (stop) { return destKind(stop) === "station"; })) {
         setDestinationStopStatus("No buses are running to this destination at this time.", "caution");
-      } else if (body.reachable_stops.length + body.unreachable_stops.length === 0) {
+      } else if (all.length === 0) {
         setDestinationStopStatus("No destination stops were found within 600 m.", "caution");
       } else {
         setDestinationStopStatus("");
@@ -3581,31 +3689,17 @@
       return text;
     }
 
-    function formatRange(lowIso, highIso) {
-      var low = singaporeParts(new Date(lowIso));
-      var high = singaporeParts(new Date(highIso));
-      if (low.suffix === high.suffix) {
-        return low.hm + "–" + high.hm + "\u00a0" + low.suffix;
-      }
-      return low.hm + "\u00a0" + low.suffix + "–" + high.hm + "\u00a0" + high.suffix;
-    }
-
     // Only the late wording survives, inside "If you miss it". There is no spare or on-target line.
     function latePhrase(minutes) {
       return minutes < 0 ? "about " + Math.abs(minutes) + " min late" : "";
     }
 
+    // The point time only. The range (arrival_low, arrival_high) stays in the data and is never drawn.
     function estimateSentence(estimate, withTarget) {
       var point = formatClock(estimate.estimated_arrival, false);
-      var range = formatRange(estimate.arrival_low, estimate.arrival_high);
-      var sentence = withTarget
-        ? "Arrive about " + point + " (" + range + ")"
-        : "Estimated destination arrival about " + point + " (" + range + ")";
+      var sentence = withTarget ? "Arrive about " + point : "Estimated destination arrival about " + point;
       var today = singaporeParts(new Date()).key;
-      var pointDay = singaporeParts(new Date(estimate.estimated_arrival)).key;
-      var lowDay = singaporeParts(new Date(estimate.arrival_low)).key;
-      var highDay = singaporeParts(new Date(estimate.arrival_high)).key;
-      if (pointDay !== today || lowDay !== today || highDay !== today) {
+      if (singaporeParts(new Date(estimate.estimated_arrival)).key !== today) {
         sentence += " (tomorrow)";
       }
       return sentence;
@@ -4888,7 +4982,7 @@
       }
       if (name === "journey") {
         planPriority = "fastest";
-        syncPriorityChips();
+        syncPrioritySelect();
         planJourney();
       }
       if (name === "arrivals") {
@@ -4901,6 +4995,7 @@
         leaveWalkPage();
       }
       syncTrainWords();
+      syncOnWay();
       syncLocateButton();
       syncPageCClasses();
       syncCatchBar();
@@ -5262,11 +5357,15 @@
     var plannedArriveBy = null;
     var overviewPeek = null;
     var overviewPeekRequested = false;
-    var PLAN_REASON_TEXT = {
-      target_met: "Chosen for you: it should get you there by your arrive-by time.",
-      target_missed: "No route meets your arrive-by time. This one should get you there earliest.",
-      no_target: "Chosen for you: the quickest option we found."
-    };
+    // Live next-bus times for later bus legs (see maybeLookupLater). Display only: nothing here feeds a probability, ring,
+    // reroute, leave-now or notification.
+    var LATER_MIN_MS = 60000;
+    var LATER_CAP = 3;
+    var LATER_HOLD_MS = 90000;  // the last answer is kept this long, so a label does not flicker back between lookups
+    var laterCache = {};
+    var laterAt = {};
+    var laterPending = {};
+    var laterGeneration = 0;
     var SCHEDULE_HEADWAY = "Schedule: about every {minutes} min.";
     // Mirrors of copy.js journeyOverview (plan_edits_9 4.9) and lineNames. Tests pin the two together.
     var JO_WALK_ROW = "Walk {n}\u00a0min";
@@ -5283,7 +5382,14 @@
     var JO_SCHEDULED_IN_ONE = "Scheduled · In 1\u00a0min";
     var JO_SCHEDULED_NOW = "Scheduled · Now";
     var JO_SCHEDULED_AT = "Scheduled · {time}";
-    var JO_TOTALS = "{n}\u00a0min · {t} · {w}\u00a0min walking";
+    var JO_LIVE_IN = "Live · In {n}\u00a0min";
+    var JO_LIVE_ARRIVING_SOON = "Live · Arriving soon";
+    var JO_LIVE_NOW = "Live · Now";
+    var JO_ARRIVING_SOON = "Arriving soon";
+    var JO_SUMMARY_ARIA = "Total time {time}, {transfers}, walking {walk}";
+    var JO_DURATION_MIN = "{n}\u00a0min";
+    var JO_DURATION_HR = "{h}\u00a0hr";
+    var JO_DURATION_HR_MIN = "{h}\u00a0hr {m}\u00a0min";
     var JO_TRANSFERS_MANY = "{t} transfers";
     var JO_TRANSFERS_ONE = "1 transfer";
     var JO_TRANSFERS_NONE = "No transfers";
@@ -5291,9 +5397,13 @@
     var JO_NO_ROUTE_FOUND = "No route found for this trip.";
     var JO_NO_BUS_ONLY = "No bus-only route found. Try another priority.";
     var JO_NO_MRT_ONLY = "No MRT or LRT route found. Try another priority.";
-    var JO_BEST_AVAILABLE = "This is the best available for this trip.";
+    var JO_NO_SERVICE_STATIC = "No buses are running to this destination at this time.";
+    var JO_NO_SERVICE_ANY = "No bus or MRT services are running to this destination at this time.";
+    var JO_NO_BUS_CLOSED = "Bus services have stopped for now. Try another priority.";
+    var JO_NO_MRT_CLOSED = "MRT and LRT services have stopped for now. Try another priority.";
     var JO_NEEDS_ROUTE_SERVICE = "Needs the route service.";
     var JO_FALLBACK_NOTE = "Showing bus routes only. The route service is unavailable.";
+    var JO_RIDE_DISTANCE = "About {km} km in a straight line";
     var LINE_NAMES = {
       NS: "North-South Line", EW: "East-West Line", CG: "Changi Airport Branch", NE: "North-East Line",
       CC: "Circle Line", DT: "Downtown Line", TE: "Thomson-East Coast Line", BP: "Bukit Panjang LRT",
@@ -5307,7 +5417,7 @@
     var planFallback = false;
     var pendingItinerary = null;
     var overviewJourneyMinutes = null;
-    var FLAG_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var FLAG_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var PIN_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z\" fill=\"currentColor\"></path><circle cx=\"12\" cy=\"11\" r=\"2.5\" class=\"step-node__hole\"></circle></svg>";
 
     function destinationDisplayName() {
@@ -5327,11 +5437,11 @@
       document.getElementById("overview-no-route").hidden = state !== "no-route";
       document.getElementById("overview-no-service").hidden = state !== "no-service";
       document.getElementById("overview-unavailable").hidden = state !== "unavailable";
+      document.getElementById("ride-apps").hidden = true;
       document.getElementById("overview-timeline").hidden = state !== "ready";
       document.getElementById("start-journey").disabled = state !== "ready";
       if (state !== "ready") {
-        document.getElementById("overview-reason").hidden = true;
-        document.getElementById("overview-totals").hidden = true;
+        document.getElementById("overview-summary").hidden = true;
       }
     }
 
@@ -5339,6 +5449,7 @@
       var generation = ++planGeneration;
       overviewPeek = null;
       overviewPeekRequested = false;
+      resetLaterLookups();
       pendingRouteOption = null;
       pendingItinerary = null;
       if (!confirmedDestinationStop || !selectedDestination) {
@@ -5356,6 +5467,10 @@
         + "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code)
         + "&dest_lat=" + encodeURIComponent(selectedDestination.latitude)
         + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude);
+      // The planner ends at the chosen stop or station (its own point); the walk from there to the place is added by the server.
+      if (typeof confirmedDestinationStop.lat === "number" && typeof confirmedDestinationStop.lon === "number") {
+        url += "&end_lat=" + encodeURIComponent(confirmedDestinationStop.lat) + "&end_lon=" + encodeURIComponent(confirmedDestinationStop.lon);
+      }
       if (arriveByInput.value) {
         url += "&arrive_by=" + encodeURIComponent(arriveByInput.value);
       }
@@ -5376,15 +5491,18 @@
           }
           renderPlanningWarning(body.planning_warning);
           planFallback = body.fallback_note === true;
-          syncPriorityChips();
+          syncPrioritySelect();
           showPlanNotes(body);
           if (body.route_status === "no_service") {
+            document.getElementById("overview-no-service-text").textContent = noServiceText(body);
             setOverviewState("no-service");
+            showRideApps(body);
             return;
           }
           if (body.route_status !== "ok" || !body.option) {
             document.getElementById("overview-no-route-text").textContent = noRouteText(body);
             setOverviewState("no-route");
+            showRideApps(body);
             return;
           }
           pendingRouteOption = body.option;
@@ -5400,9 +5518,6 @@
             distance_m: stop.distance_m,
             services: legIsRail(first) ? [] : [first.service_no]
           };
-          var reason = document.getElementById("overview-reason");
-          document.getElementById("overview-reason-text").textContent = PLAN_REASON_TEXT[body.reason] || "";
-          reason.hidden = !PLAN_REASON_TEXT[body.reason];
           if (body.journey) {
             renderJourney(body.journey);
           }
@@ -5417,6 +5532,23 @@
             setOverviewState("unavailable");
           }
         });
+    }
+
+    // The ride-app card under an empty answer (no service, no feasible route, walk only). Plain links to each operator's own
+    // site: nothing about the trip is put in them, and this function makes no request. The distance, a straight line, is worked
+    // out here from coordinates already on the phone and goes nowhere.
+    function showRideApps(body) {
+      var empty = body.route_status === "no_service" || body.route_status === "no_feasible_route";
+      var line = document.getElementById("ride-apps-distance");
+      var text = "";
+      if (empty && typeof userLat === "number" && typeof userLon === "number" && selectedDestination
+        && typeof selectedDestination.latitude === "number" && typeof selectedDestination.longitude === "number") {
+        var km = haversineMetres(userLat, userLon, selectedDestination.latitude, selectedDestination.longitude) / 1000;
+        text = JO_RIDE_DISTANCE.replace("{km}", Math.max(0.1, Math.round(km * 10) / 10).toFixed(1));
+      }
+      line.textContent = text;
+      line.hidden = !text;
+      document.getElementById("ride-apps").hidden = !empty;
     }
 
     // At most one live lookup per overview open; none in Demo Mode. No monitoring, no scoring.
@@ -5452,6 +5584,140 @@
         return null;
       }
       return overviewPeek.buses[0];
+    }
+
+    function resetLaterLookups() {
+      laterGeneration += 1;
+      laterCache = {};
+      laterAt = {};
+      laterPending = {};
+    }
+
+    // The transit leg the user is on. The app tracks only the first one, so this is 0.
+    function laterActiveIndex() {
+      return 0;
+    }
+
+    // The later bus legs worth a lookup right now. None before the journey is started, after Yes or No ends tracking, in
+    // Demo Mode, while the page is hidden, or off the overview and live pages. A leg is looked up only once the user is on
+    // the leg before it; the app tracks the first transit leg only, so that is the leg right after the first. A rail leg is
+    // never looked up (it stays scheduled). At most LATER_CAP legs.
+    function laterLegsNow() {
+      if (!monitoringActive || trackingStopped || demoModeOn() || document.visibilityState === "hidden") {
+        return [];
+      }
+      var top = screenStack[screenStack.length - 1];
+      if (top !== "journey" && top !== "live" && top !== "arrivals") {  // the overview, and the live pages A and B
+        return [];
+      }
+      var legs = pendingItinerary && pendingItinerary.legs ? pendingItinerary.legs
+        : pendingRouteOption && pendingRouteOption.legs ? pendingRouteOption.legs : [];
+      var transit = legs.filter(function (leg) { return !legIsWalk(leg); });
+      var activeIndex = laterActiveIndex();
+      return transit.slice(1, Math.min(transit.length - 1, activeIndex + 1) + 1).filter(function (leg) {
+        return !legIsRail(leg) && leg.boarding_stop_code && leg.service_no;
+      }).slice(0, LATER_CAP);
+    }
+
+    // One lookup per boarding stop (legs at the same stop share it), at most once per LATER_MIN_MS, called from the existing
+    // poll tick and once when monitoring starts. Only a stop code and the service numbers are sent. A failure changes
+    // nothing: the row keeps its scheduled line and no error is shown.
+    function maybeLookupLater() {
+      var byStop = {};
+      laterLegsNow().forEach(function (leg) {
+        var list = byStop[leg.boarding_stop_code] || (byStop[leg.boarding_stop_code] = []);
+        if (list.indexOf(leg.service_no) === -1) {
+          list.push(leg.service_no);
+        }
+      });
+      Object.keys(byStop).forEach(function (stop) {
+        if (laterPending[stop] || (laterAt[stop] && Date.now() - laterAt[stop] < LATER_MIN_MS)) {
+          return;
+        }
+        laterAt[stop] = Date.now();
+        laterPending[stop] = true;
+        var generation = laterGeneration;
+        fetch("/api/arrivals/later?stop_code=" + encodeURIComponent(stop) + "&services=" + encodeURIComponent(byStop[stop].join(",")))
+          .then(function (response) {
+            return response.ok ? response.json() : null;
+          })
+          .then(function (body) {
+            if (generation !== laterGeneration) {
+              return;
+            }
+            laterPending[stop] = false;
+            if (!body || body.status !== "ok" || !body.services || typeof body.services !== "object") {
+              return;
+            }
+            laterCache[stop] = { fetched_at: body.fetched_at, services: body.services };
+            if (screenStack[screenStack.length - 1] === "journey") {
+              renderJourneyOverview();
+            }
+          })
+          .catch(function () {
+            if (generation === laterGeneration) {
+              laterPending[stop] = false;
+            }
+          });
+      });
+    }
+
+    // The first monitored bus of a later leg from its stop's latest answer, kept for LATER_HOLD_MS; else null. A newer answer
+    // with no monitored bus replaces the old one at once, so the label never claims more than the latest answer says.
+    function laterLiveFor(leg) {
+      var entry = laterCache[leg.boarding_stop_code];
+      var buses = entry && entry.services ? entry.services[leg.service_no] : null;
+      var age = entry ? Date.now() - new Date(entry.fetched_at).getTime() : NaN;
+      if (!Array.isArray(buses) || !isFinite(age) || age > LATER_HOLD_MS) {
+        return null;  // no answer in 90 s: the scheduled line, no error text
+      }
+      for (var i = 0; i < buses.length; i += 1) {
+        var seconds = (new Date(buses[i].arrival_time).getTime() - Date.now()) / 1000;
+        if (buses[i].monitored === true && isFinite(seconds) && seconds > -60) {
+          return buses[i];
+        }
+      }
+      return null;
+    }
+
+    // "Live · In 4 min", "Live · Arriving soon" (30 s or less, the old "Due") or "Live · Now" (reached).
+    function laterLiveText(iso) {
+      var seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
+      if (seconds <= 0) {
+        return JO_LIVE_NOW;
+      }
+      return seconds <= 30 ? JO_LIVE_ARRIVING_SOON : fillText(JO_LIVE_IN, { n: Math.max(1, Math.round(seconds / 60)) });
+    }
+
+    // The leg after the tracked one, as the itinerary describes it (it has the time), else as the route plan does.
+    function laterNextLeg(second) {
+      var legs = pendingItinerary && pendingItinerary.legs ? pendingItinerary.legs : [];
+      var match = legs.filter(function (leg) { return !legIsWalk(leg); })[1];
+      return match && match.boarding_stop_code === second.boarding_stop_code ? match : second;
+    }
+
+    // The live page's "Then ..." line and, under it, the next leg's data type: "Live · In 4 min", "Live · Arriving soon",
+    // "Live · Now" for a bus with a live answer, else "Scheduled · {time}" (a train is always scheduled). Display only.
+    function renderThenLine(then, second) {
+      then.replaceChildren();
+      if (!second) {
+        return;
+      }
+      var next = laterNextLeg(second);
+      var stop = (next.boarding_stop_name || next.boarding_stop_code) + " (" + next.boarding_stop_code + ")";
+      var main = legIsRail(next)
+        ? fillText(THEN_TRAIN_TEXT, { line: LINE_NAMES[String(next.line_code || "").toUpperCase()] || next.line_name || next.line_code, station: stop })
+        : THEN_BUS_TEXT.replace("{service}", next.service_no).replace("{stop}", stop);
+      then.appendChild(document.createTextNode(main));
+      var live = legIsRail(next) ? null : laterLiveFor(next);
+      var when = live ? laterLiveText(live.arrival_time) : scheduleLine(next);
+      if (when) {
+        var line = document.createElement("span");
+        line.className = "live-then__when";
+        line.textContent = when;
+        then.appendChild(document.createTextNode(" "));
+        then.appendChild(line);
+      }
     }
 
     function stepItem(kind, title, lines, edit) {
@@ -5566,6 +5832,7 @@
       toward: "Toward {terminus}",
       leftOnly: "The {line} train has left.",
       trainTitle: "{line} train",
+      tileLabel: "{line} train, {time}",
       about: "about {time}",
       left: "The {line} train has left. The next one is at about {time}.",
       notLive: "Train times are scheduled, not live."
@@ -5637,7 +5904,6 @@
       say("walk-title", TRAIN_PAGE.walkTitle, "Walk to your stop");
       say("next-buses-label", TRAIN_PAGE.nextTrains, "Next 3 buses");
       say("tile-arrival-label", TRAIN_PAGE.departsLabel, "Estimated destination arrival");
-      say("catch-bar-title", TRAIN_PAGE.question, "Did you catch the bus?");
       var see = document.querySelector("#see-arrivals span");
       if (see) {
         see.textContent = on ? TRAIN_PAGE.seeTimes : "See bus arrival times";
@@ -5722,7 +5988,7 @@
       var line = document.createElement("p");
       line.className = "journey-step__line";
       var badge = document.createElement("span");
-      badge.className = "line-badge";
+      badge.className = "line-badge line-badge--bus";
       var word = document.createElement("span");
       word.className = "visually-hidden";
       word.textContent = "Bus ";
@@ -5745,36 +6011,48 @@
     // direction), the schedule or live line, an optional note and the ride line, then an end marker with the stop and its
     // code. Both markers carry the leg's own icon and a ring. A rail leg's ring and bar use its own line token colour, so a
     // change of line changes colour; a bus leg's stay neutral.
-    function legItem(leg, whenText, row, noteText, whenClass) {
+    function legItem(leg, whenText, row, whenClass, done) {
       var rail = legIsRail(leg);
+      var hasEnd = !!leg.alighting_stop_code;
       var code = String(leg.line_code || "").toLowerCase();
       var item = document.createElement("li");
       item.className = "journey-step journey-step--" + (rail ? "rail" : "bus") + " journey-step--leg"
-        + (rail && LINE_BADGE_CODES.indexOf(code.toUpperCase()) !== -1 ? " journey-step--rail-" + code : "");
+        + (rail && LINE_BADGE_CODES.indexOf(code.toUpperCase()) !== -1 ? " journey-step--rail-" + code : "")
+        + (done ? " journey-step--leg-done" : "");
       var bar = document.createElement("span");
       bar.className = "journey-step__bar";
       bar.setAttribute("aria-hidden", "true");
       var kind = rail ? "rail" : "bus";
       var startNode = document.createElement("span");
-      startNode.className = "step-node step-node--" + kind;
+      startNode.className = "step-node step-node--" + (done ? "done" : kind);
       startNode.setAttribute("aria-hidden", "true");
-      startNode.innerHTML = rail ? TRAIN_SVG : BUS_TILE_SVG;
+      startNode.innerHTML = done ? CATCH_YES_SVG : rail ? TRAIN_SVG : BUS_TILE_SVG;
       var endNode = document.createElement("span");
-      endNode.className = "step-node step-node--" + kind + "-end";
+      endNode.className = "step-node step-node--" + (done ? "done" : kind + "-end");
       endNode.setAttribute("aria-hidden", "true");
-      endNode.innerHTML = rail ? TRAIN_SVG : BUS_TILE_SVG;
+      endNode.innerHTML = done ? CATCH_YES_SVG : rail ? TRAIN_SVG : BUS_TILE_SVG;
       var top = document.createElement("div");
       top.className = "journey-step__body";
       [stepLine(stopLabel(leg.boarding_stop_name, leg.boarding_stop_code), "journey-step__title"), row, stepLine(whenText, whenClass),
-        stepLine(noteText), stepLine(legStopsLine(leg))].forEach(function (line) {
+        stepLine(legStopsLine(leg))].forEach(function (line) {
         if (line) {
           top.appendChild(line);
         }
       });
-      var bottom = document.createElement("div");
-      bottom.className = "journey-step__body journey-step__body--end";
-      bottom.appendChild(stepLine(stopLabel(leg.alighting_stop_name, leg.alighting_stop_code), "journey-step__title"));
-      [bar, startNode, top, endNode, bottom].forEach(function (part) {
+      if (done) {
+        var doneWord = document.createElement("span");
+        doneWord.className = "visually-hidden";
+        doneWord.textContent = ON_WAY_TEXT.done;
+        top.insertBefore(doneWord, top.firstChild);
+      }
+      var parts = [startNode, top];
+      if (hasEnd) {
+        var bottom = document.createElement("div");
+        bottom.className = "journey-step__body journey-step__body--end";
+        bottom.appendChild(stepLine(stopLabel(leg.alighting_stop_name, leg.alighting_stop_code), "journey-step__title"));
+        parts = [bar, startNode, top, endNode, bottom];
+      }
+      parts.forEach(function (part) {
         item.appendChild(part);
       });
       return item;
@@ -5811,31 +6089,32 @@
       return minutes <= 0 ? JO_SCHEDULED_NOW : minutes === 1 ? JO_SCHEDULED_IN_ONE : fillText(JO_SCHEDULED_IN, { n: minutes });
     }
 
-    // One row for a bus or train leg. position 0 is the first transit leg: a bus shows its live line, a train
-    // "Scheduled · In N min". Later legs show the schedule line. showNote puts "Live tracking covers your first bus only."
-    // under the schedule line (the caller passes it for the first later bus only). No fares and no street names.
-    function transitRow(leg, position, live, showNote) {
+    // One row for a bus or train leg. position 0 is the first transit leg: a bus shows its live line ("Arriving in N min" or
+    // "Arriving soon"), a train "Scheduled · In N min". A later bus shows "Live · ..." when its stop's lookup has a monitored
+    // bus, else the schedule line; a later train always the schedule line. No fares and no street names.
+    function transitRow(leg, position, live) {
       if (legIsRail(leg)) {
-        return legItem(leg, position === 0 ? scheduledInLine(leg) : scheduleLine(leg), lineRow(leg), "", "");
+        return legItem(leg, position === 0 ? scheduledInLine(leg) : scheduleLine(leg), lineRow(leg), "");
       }
       var when = "";
       var whenClass = "";
       if (position === 0) {
         if (live && live.monitored && !displayFrozen && live.arrival_time) {
           var arriving = countdownLabel(live.arrival_time);
-          when = /min/.test(arriving) ? "Arriving in " + arriving : arriving;
+          when = arriving === "Due" ? JO_ARRIVING_SOON : /min/.test(arriving) ? "Arriving in " + arriving : arriving;
           whenClass = "journey-step__arriving";
         }
       } else {
-        when = scheduleLine(leg);
+        var later = laterLiveFor(leg);
+        when = later ? laterLiveText(later.arrival_time) : scheduleLine(leg);
       }
-      return legItem(leg, when, busRow(leg, live), position !== 0 && showNote ? FIRST_BUS_ONLY_NOTE : "", whenClass);
+      return legItem(leg, when, busRow(leg, live), whenClass);
     }
 
     // The change between two transit legs is a plain walk row: "Walk {n} min" and "{distance} to {stop} ({code})", whatever
     // the two modes. No wait time. With no walk from OneMap there is no row (the bus planner's own transfer distance is
     // used when it has one and OneMap gave none).
-    function changeWalkRow(next, walks, fallbackMetres) {
+    function changeWalkRow(next, walks, fallbackMetres, done) {
       var metres = 0;
       walks.forEach(function (walk) {
         metres += walk.distance_m || 0;
@@ -5846,7 +6125,7 @@
       if (!walks.length && !(metres > 0)) {
         return null;
       }
-      return stepItem("walk", fillText(JO_WALK_ROW, { n: walkMinutes(metres) }), [
+      return stepItem(done ? "done" : "walk", fillText(JO_WALK_ROW, { n: walkMinutes(metres) }), [
         stepLine(fillText(JO_WALK_ROW_TO, {
           distance: formatDistance(metres),
           place: stopLabel(next.boarding_stop_name, next.boarding_stop_code)
@@ -5854,34 +6133,37 @@
       ], null);
     }
 
-    // True for the first transit leg after the first that is a bus: the one that carries the "first bus only" note.
-    function firstLaterBus(transit) {
-      for (var i = 1; i < transit.length; i += 1) {
-        if (!legIsRail(transit[i])) {
-          return transit[i];
-        }
-      }
-      return null;
-    }
-
     // The walk from the last stop to the place. Its Edit link is the old "Edit destination stop" control.
-    function finalWalkRow(walks, destStop) {
+    function finalWalkRow(walks, destStop, done) {
       var metres = 0;
       walks.forEach(function (walk) {
         metres += walk.distance_m || 0;
       });
       var edit = { label: "Edit destination stop", action: function () { backToScreen("stops"); } };
+      var kind = done ? "done" : "walk";
       if (metres > 0) {
-        return stepItem("walk", fillText(JO_WALK_ROW, { n: walkMinutes(metres) }),
+        return stepItem(kind, fillText(JO_WALK_ROW, { n: walkMinutes(metres) }),
           [stepLine(fillText(JO_WALK_ROW_TO, { distance: formatDistance(metres), place: destinationDisplayName() }))], edit);
       }
       if (destStop && typeof destStop.walk_minutes === "number") {
-        return stepItem("walk", fillText(JO_WALK_ROW, { n: destStop.walk_minutes }), [stepLine("To " + destinationDisplayName())], edit);
+        return stepItem(kind, fillText(JO_WALK_ROW, { n: destStop.walk_minutes }), [stepLine("To " + destinationDisplayName())], edit);
       }
-      return destStop ? stepItem("walk", "", [stepLine(destStop.stop_name)], edit) : null;
+      return destStop ? stepItem(kind, "", [stepLine(destStop.stop_name)], edit) : null;
     }
 
-    function overviewTotalsText(transit, toBoardMetres) {
+    // A whole duration: "{n} min" under an hour, "{h} hr {m} min" from an hour, "{h} hr" on the hour.
+    function formatDuration(totalMinutes) {
+      var n = Math.max(0, Math.round(totalMinutes));
+      if (n < 60) {
+        return fillText(JO_DURATION_MIN, { n: n });
+      }
+      var h = Math.floor(n / 60);
+      var m = n % 60;
+      return m === 0 ? fillText(JO_DURATION_HR, { h: h }) : fillText(JO_DURATION_HR_MIN, { h: h, m: m });
+    }
+
+    // The summary card's numbers: total time, transfers, walking (whole minutes), or null when they are not known.
+    function overviewSummaryData(transit, toBoardMetres) {
       var minutes;
       var transfers;
       var walking;
@@ -5896,10 +6178,33 @@
           + (confirmedDestinationStop && typeof confirmedDestinationStop.walk_minutes === "number" ? confirmedDestinationStop.walk_minutes : 0);
       }
       if (typeof minutes !== "number" || typeof walking !== "number") {
-        return "";
+        return null;
       }
-      var count = transfers === 0 ? JO_TRANSFERS_NONE : transfers === 1 ? JO_TRANSFERS_ONE : fillText(JO_TRANSFERS_MANY, { t: transfers });
-      return fillText(JO_TOTALS, { n: minutes, t: count, w: walking });
+      return { minutes: minutes, transfers: transfers, walking: walking };
+    }
+
+    // 0 transfers is green, 1 or 2 amber, 3 or more red (the status tokens), always with the labelled numbers beside it.
+    function summaryTone(transfers) {
+      return transfers === 0 ? "ok" : transfers <= 2 ? "mid" : "high";
+    }
+
+    function renderOverviewSummary(data) {
+      var box = document.getElementById("overview-summary");
+      if (!data) {
+        box.hidden = true;
+        return;
+      }
+      var time = formatDuration(data.minutes);
+      var walk = formatDuration(data.walking);
+      var count = data.transfers === 0 ? JO_TRANSFERS_NONE : data.transfers === 1 ? JO_TRANSFERS_ONE : fillText(JO_TRANSFERS_MANY, { t: data.transfers });
+      document.getElementById("summary-time").textContent = time;
+      document.getElementById("summary-transfers").textContent = String(data.transfers);
+      document.getElementById("summary-walking").textContent = walk;
+      box.setAttribute("aria-label", fillText(JO_SUMMARY_ARIA, { time: time, transfers: count, walk: walk }));
+      ["ok", "mid", "high"].forEach(function (tone) {
+        box.classList.toggle("overview-summary--" + tone, tone === summaryTone(data.transfers));
+      });
+      box.hidden = false;
     }
 
     // One row per leg of the chosen itinerary (OneMap: walk, bus and train legs; the bus planner: its bus legs).
@@ -5931,7 +6236,6 @@
       }
       var previous = null;
       var between = [];
-      var noteLeg = firstLaterBus(transit);
       legs.forEach(function (leg) {
         if (legIsWalk(leg)) {
           if (previous) {
@@ -5947,7 +6251,7 @@
           between = [];
         }
         var position = transit.indexOf(leg);
-        list.appendChild(transitRow(leg, position, position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null, leg === noteLeg));
+        list.appendChild(transitRow(leg, position, position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null));
         previous = leg;
       });
       var finalRow = finalWalkRow(between, confirmedDestinationStop);
@@ -5957,79 +6261,66 @@
       list.appendChild(stepItem("destination", "Destination", [
         stepLine(destinationDisplayName())
       ], { label: "Edit destination", action: function () { backToScreen("results"); } }));
-      var totals = document.getElementById("overview-totals");
-      totals.textContent = overviewTotalsText(transit, toBoard);
-      totals.hidden = !totals.textContent;
+      renderOverviewSummary(overviewSummaryData(transit, toBoard));
       syncArriveBySummary();
       syncOverviewArrive();
     }
 
-    // Priority chips: a radio group. Each journey opens on Fastest; a tap or an arrow key picks one and refetches.
+    // Priority: a native select. Each journey opens on Fastest; changing it refetches. Under the bus planner fallback the options it
+    // cannot do are disabled (and "Needs the route service." says why under the select).
     function priorityDisabled(id) {
       return planFallback && FALLBACK_UNSUPPORTED.indexOf(id) !== -1;
     }
 
-    function syncPriorityChips() {
-      PRIORITY_IDS.forEach(function (id) {
-        var chip = document.getElementById("priority-" + id);
-        if (!chip) {
-          return;
-        }
-        var on = id === planPriority;
-        chip.setAttribute("aria-checked", on ? "true" : "false");
-        chip.classList.toggle("is-selected", on);
-        chip.tabIndex = on ? 0 : -1;
-        if (priorityDisabled(id)) {
-          chip.setAttribute("aria-disabled", "true");
-        } else {
-          chip.removeAttribute("aria-disabled");
-        }
+    function syncPrioritySelect() {
+      var select = document.getElementById("priority-select");
+      if (!select) {
+        return;
+      }
+      Array.prototype.forEach.call(select.options, function (option) {
+        option.disabled = priorityDisabled(option.value);
       });
+      select.value = planPriority;
     }
 
     function selectPriority(id) {
       if (PRIORITY_IDS.indexOf(id) === -1 || id === planPriority || priorityDisabled(id)) {
+        syncPrioritySelect();
         return;
       }
       planPriority = id;
-      syncPriorityChips();
+      syncPrioritySelect();
       planJourney();
     }
 
-    PRIORITY_IDS.forEach(function (id, index) {
-      var chip = document.getElementById("priority-" + id);
-      chip.addEventListener("click", function () {
-        selectPriority(id);
-      });
-      chip.addEventListener("keydown", function (event) {
-        var step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
-          : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
-        if (!step) {
-          return;
-        }
-        event.preventDefault();
-        for (var offset = 1; offset <= PRIORITY_IDS.length; offset += 1) {
-          var next = PRIORITY_IDS[(index + step * offset + PRIORITY_IDS.length * offset) % PRIORITY_IDS.length];
-          if (!priorityDisabled(next)) {
-            document.getElementById("priority-" + next).focus();
-            selectPriority(next);
-            return;
-          }
-        }
-      });
+    document.getElementById("priority-select").addEventListener("change", function () {
+      selectPriority(this.value);
     });
 
-    // The fallback note, the "Needs the route service." line and the "best available" line under the chips.
+    // The fallback note and the "Needs the route service." line under the select.
     function showPlanNotes(body) {
       var fallback = document.getElementById("overview-fallback-note");
       var note = document.getElementById("overview-priority-note");
       fallback.textContent = planFallback ? JO_FALLBACK_NOTE : "";
       fallback.hidden = !planFallback;
-      note.textContent = planFallback ? JO_NEEDS_ROUTE_SERVICE : (body && body.best_available === true ? JO_BEST_AVAILABLE : "");
+      note.textContent = planFallback ? JO_NEEDS_ROUTE_SERVICE : "";
       note.hidden = !note.textContent;
     }
 
-    // What the no-route banner says: the bus planner keeps its own sentence, a chip with nothing has its own.
+    // Bus only and MRT only name their own mode when nothing is found, and say "stopped for now" when the server knows that
+    // mode is closed at the travel time (body.stopped). Null for the other priorities.
+    function chipEmptyText(body) {
+      var priority = typeof body.priority === "string" ? body.priority : planPriority;
+      if (priority === "bus_only") {
+        return body.stopped === true ? JO_NO_BUS_CLOSED : JO_NO_BUS_ONLY;
+      }
+      if (priority === "mrt_only") {
+        return body.stopped === true ? JO_NO_MRT_CLOSED : JO_NO_MRT_ONLY;
+      }
+      return null;
+    }
+
+    // What the no-route banner says: the bus planner keeps its own sentence, a priority with nothing has its own.
     function noRouteText(body) {
       if (body.route_status === "priority_unavailable") {
         return JO_NEEDS_ROUTE_SERVICE;
@@ -6037,7 +6328,16 @@
       if (body.planner !== "onemap") {
         return JO_NO_ROUTE_STATIC;
       }
-      return planPriority === "bus_only" ? JO_NO_BUS_ONLY : planPriority === "mrt_only" ? JO_NO_MRT_ONLY : JO_NO_ROUTE_FOUND;
+      return chipEmptyText(body) || JO_NO_ROUTE_FOUND;
+    }
+
+    // What the no-service banner says: the bus planner (static fallback) keeps its bus-only sentence; the OneMap planner
+    // says bus or MRT, or the chip's own mode.
+    function noServiceText(body) {
+      if (body.planner !== "onemap") {
+        return JO_NO_SERVICE_STATIC;
+      }
+      return chipEmptyText(body) || JO_NO_SERVICE_ANY;
     }
 
     function syncOverviewArrive() {
@@ -6150,7 +6450,8 @@
         && typeof bus.longitude === "number" && isFinite(bus.longitude));
     }
 
-    // The next trains: the planned one and the ones projected from the headway, each "about" a clock time.
+    // The next trains: the planned one and the ones projected from the headway, each a plain clock time. A tile shows the
+    // time only; its aria-label names the line and the time.
     function renderNextTrains(list) {
       var times = lastSuccess && Array.isArray(lastSuccess.next_departures) ? lastSuccess.next_departures.slice(0, 3) : [];
       times.forEach(function (iso, index) {
@@ -6158,12 +6459,9 @@
         tile.className = "bus-tile-card" + (index === 0 ? " is-selected" : "");
         var when = document.createElement("span");
         when.className = "bus-tile-card__minutes";
-        when.textContent = trainAbout(iso);
-        var name = document.createElement("span");
-        name.className = "bus-tile-card__service";
-        name.textContent = trainLineName();
+        when.textContent = formatClock(iso, true);  // the plain time: "8:16 PM", no "about"
+        tile.setAttribute("aria-label", fillText(TRAIN_PAGE.tileLabel, { line: trainLineName(), time: formatClock(iso, true) }));
         tile.appendChild(when);
-        tile.appendChild(name);
         list.appendChild(tile);
       });
       list.className = "bus-tiles bus-tiles--" + times.length;
@@ -6565,10 +6863,16 @@
       var train = isTrain();
       var titleEl = document.getElementById("live-bus-title");
       var destination = destinationDisplayName();
+      titleEl.parentNode.classList.toggle("bus-card__title--train", train);
+      titleEl.classList.toggle("bus-card__line", train);
       if (train) {
         var trainName = document.createElement("span");
+        trainName.className = "bus-card__line-name";
         trainName.textContent = trainLineName();
-        titleEl.replaceChildren(lineBadge(selectedService), trainName);
+        var badgeSlot = document.createElement("span");
+        badgeSlot.className = "bus-card__badge";
+        badgeSlot.appendChild(lineBadge(selectedService));
+        titleEl.replaceChildren(badgeSlot, trainName);
         var heading = trainLeg().headsign;
         document.getElementById("live-bus-to").textContent = heading ? fillText(TRAIN_PAGE.toward, { terminus: heading }) : "";
       } else {
@@ -6581,8 +6885,8 @@
       document.getElementById("live-bus-pill-text").textContent = LIVE_PILL_TEXT[state];
       renderNextBuses(buses, hero);
       var then = document.getElementById("live-then");
-      var second = activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.leg_index === 1 && activeRoutePlan.legs ? activeRoutePlan.legs[1] : null;
-      then.textContent = second ? THEN_BUS_TEXT.replace("{service}", second.service_no).replace("{stop}", (second.boarding_stop_name || second.boarding_stop_code) + " (" + second.boarding_stop_code + ")") : "";
+      var second = activeRoutePlan && (activeRoutePlan.route_type === "one_transfer" || activeRoutePlan.route_type === "multi_leg") && activeRoutePlan.leg_index === 1 && activeRoutePlan.legs && activeRoutePlan.legs.length > 1 ? activeRoutePlan.legs[1] : null;
+      renderThenLine(then, second);
       then.hidden = !second;
       if (train) {
         var departs = trainLeg().depart;
@@ -6807,9 +7111,6 @@
       var trainTile = isTrain();
       var departs = trainTile && !displayFrozen && tileHero && tileHero.arrival_time && !tileHero.is_missed ? tileHero.arrival_time : null;
       document.getElementById("tile-arrival").textContent = departs ? formatClock(departs, true) : estimate ? formatClock(estimate.estimated_arrival, true) : "—";
-      var range = document.getElementById("tile-arrival-range");
-      range.textContent = estimate && !trainTile ? "(" + formatRange(estimate.arrival_low, estimate.arrival_high) + ")" : "";
-      range.hidden = !estimate || trainTile;
       var hasTarget = !!(arriveByInput && arriveByInput.value);
       var label = hasTarget && journeyComparison ? journeyComparison.textContent : "";
       var badgeClass = /On track/.test(label) ? "badge--track" : /Risk/.test(label) ? "badge--risk" : "badge--na";
@@ -8552,6 +8853,8 @@
     // (live, or the last known time while stale or unavailable). No-service, or unavailable with no time, hides it.
     // Page A shows "See bus arrival times" while polling runs. Both hide once tracking has stopped.
     function syncCatchBar() {
+      // set from the tracked first leg on every sync, not only when its kind flips, so no path can leave the other kind
+      document.getElementById("catch-bar-title").textContent = isTrain() ? TRAIN_PAGE.question : CATCH_QUESTION_BUS;
       var question = document.getElementById("catch-bar");
       var arrivals = document.getElementById("see-arrivals-bar");
       var running = monitoringActive && !endedKind && !missedMode;
@@ -8737,6 +9040,7 @@
     // Stops polling, the display tick, notifications and timers. What is on screen stays.
     function stopTracking() {
       monitorGeneration += 1;
+      resetLaterLookups();
       if (pollTimer) {
         clearInterval(pollTimer);
         pollTimer = null;
@@ -8805,23 +9109,211 @@
     function planNewJourney() {
       stopTracking();
       resetTrackingState();
+      if (onWayState) {
+        onWayState.over = true;
+      }
+      syncOnWay();  // the position watch and the tick stop here, before anything else
       onWayState = null;
       goHome();
     }
 
-    // Yes: tracking for this leg is over and the journey overview shows "on your way".
+    // ---- "On your way": every route, bus or train, in the per-leg layout of the journey overview. Progress is schedule
+    // only: a step ticks once its planned end has passed (OneMap's leg times, moved later by how far the actual boarding,
+    // the tap on Yes, came after the planned one; never earlier). The "Get off" alert reads the phone's position in this
+    // block only and compares it here. MIRROR: ON_WAY_TEXT mirrors copy.js onWay (test: tests/test_onway_progress.py).
+    var ON_WAY_TEXT = {
+      nextGetOff: "Next: Get off at {place}",
+      nextWalk: "Next: Walk {n}\u00a0min to {place}",
+      nextBoardBus: "Next: Board Bus {service} at {place}",
+      nextBoardTrain: "Next: Board the {line} train at {place}",
+      getOffBus: "Get off next stop: {place}",
+      getOffTrain: "Get off at {station}",
+      dismiss: "Dismiss",
+      done: "Done",
+      privacy: "Your position stays on this phone. It is used only for the Get off alert and is never sent, stored or logged.",
+      openNote: "Works while this page is open."
+    };
+    var ON_WAY_ALERT_METRES = 400;
+    var ON_WAY_ALERT_LEAD_MS = 120000;
+    var ON_WAY_FIX_MAX_AGE_MS = 60000;
+    var ON_WAY_CAP_MS = 90 * 60000;
+    var ON_WAY_READ_MS = 5000;
+    var onWayTimer = null;
+    var onWayReading = false;
+    var onWayReadBusy = false;
+    var onWayReadAt = 0;
+    var onWayReadGeneration = 0;
+    var onWayFix = null;
+
+    // The same planned leg in the itinerary's copy and the route option's copy (they are separate objects).
+    function sameLeg(a, b) {
+      return !!a && !!b && a.kind === b.kind && a.boarding_stop_code === b.boarding_stop_code && legService(a) === legService(b)
+        && (!a.depart || !b.depart || a.depart === b.depart);
+    }
+
+    function walkTotalMetres(walks, fallbackMetres) {
+      var metres = 0;
+      walks.forEach(function (walk) {
+        metres += walk.distance_m || 0;
+      });
+      return !walks.length && typeof fallbackMetres === "number" && fallbackMetres > 0 ? fallbackMetres : metres;
+    }
+
+    function walkTimes(walks, shift) {
+      var start = NaN;
+      var end = NaN;
+      walks.forEach(function (walk) {
+        var from = new Date(walk.depart).getTime();
+        var to = new Date(walk.arrive).getTime();
+        start = isFinite(from) && !(start <= from) ? from : start;
+        end = isFinite(to) && !(end >= to) ? to : end;
+      });
+      return { startMs: start + shift, endMs: end + shift };
+    }
+
+    // The steps still to come, in display order: the caught leg, then (a walk row and a leg) per later leg, the final walk
+    // and the destination. Times are in epoch ms, NaN when OneMap gave none (such a step never ticks).
+    function buildOnWaySteps(planned, plan) {
+      var fromItinerary = pendingItinerary && pendingItinerary.legs ? pendingItinerary.legs : null;
+      var legs = null;
+      var viaItinerary = false;
+      if (planned && fromItinerary) {
+        for (var i = 0; i < fromItinerary.length && !legs; i += 1) {
+          if (!legIsWalk(fromItinerary[i]) && sameLeg(fromItinerary[i], planned)) {
+            legs = fromItinerary.slice(i);
+            viaItinerary = true;
+          }
+        }
+      }
+      if (!legs) {
+        // no itinerary (or the planned leg was changed by a switch): the route plan's own legs, else a leg of one stop
+        legs = plan && plan.legs ? plan.legs.slice(Math.max(0, plan.leg_index - 1)) : [];
+        if (!legs.length) {
+          var stop = selectedBoardingStop;
+          legs = [{
+            kind: "bus", service_no: selectedService, line_code: selectedService, headsign: null,
+            boarding_stop_code: stop ? stop.stop_code : "", boarding_stop_name: stop ? stop.description || stop.stop_code : "",
+            alighting_stop_code: "", alighting_stop_name: ""
+          }];
+        }
+      }
+      var first = legs[0];
+      var plannedStart = first.depart ? new Date(first.depart).getTime() : NaN;
+      var shift = isFinite(plannedStart) ? Math.max(0, Date.now() - plannedStart) : 0;
+      var transferMetres = !viaItinerary && pendingRouteOption && typeof pendingRouteOption.transfer_distance_m === "number"
+        ? pendingRouteOption.transfer_distance_m : 0;
+      var timed = function (leg) {
+        var from = new Date(leg.depart).getTime();
+        var to = new Date(leg.arrive).getTime();
+        return { type: "transit", leg: leg, startMs: from + shift, endMs: to + shift };
+      };
+      var steps = [timed(first)];
+      var between = [];
+      legs.slice(1).forEach(function (leg) {
+        if (legIsWalk(leg)) {
+          between.push(leg);
+          return;
+        }
+        var metres = walkTotalMetres(between, transferMetres);
+        if (between.length || metres > 0) {
+          var change = walkTimes(between, shift);
+          steps.push({
+            type: "walk", walks: between, next: leg, fallback: transferMetres, minutes: walkMinutes(metres),
+            place: stopLabel(leg.boarding_stop_name, leg.boarding_stop_code), startMs: change.startMs, endMs: change.endMs
+          });
+        }
+        between = [];
+        steps.push(timed(leg));
+      });
+      var finalMetres = walkTotalMetres(between, 0);
+      if (finalWalkRow(between, confirmedDestinationStop)) {
+        var last = walkTimes(between, shift);
+        var minutes = finalMetres > 0 ? walkMinutes(finalMetres)
+          : confirmedDestinationStop && typeof confirmedDestinationStop.walk_minutes === "number" ? confirmedDestinationStop.walk_minutes : null;
+        steps.push({
+          type: "walk", walks: between, final: true, minutes: minutes, place: destinationDisplayName(),
+          startMs: last.startMs, endMs: last.endMs
+        });
+      }
+      steps.push({ type: "destination" });
+      return steps;
+    }
+
+    // The planned end of the whole journey: the latest step end. With no times at all, the 90 minute budget from boarding.
+    function onWayEndMs(state) {
+      var end = NaN;
+      state.steps.forEach(function (step) {
+        if (isFinite(step.endMs) && !(end >= step.endMs)) {
+          end = step.endMs;
+        }
+      });
+      return isFinite(end) ? end : state.boardedAt + ON_WAY_CAP_MS;
+    }
+
+    // "done" once the planned end has passed; the caught leg (and any later leg whose start has passed) is "board" while it
+    // runs; everything else is "pending".
+    function onWayStatuses(state, now) {
+      return state.steps.map(function (step, index) {
+        if (step.type === "destination") {
+          return "pending";
+        }
+        if (isFinite(step.endMs) && now >= step.endMs) {
+          return "done";
+        }
+        if (step.type === "transit" && (index === 0 || (isFinite(step.startMs) && now >= step.startMs))) {
+          return "board";
+        }
+        return "pending";
+      });
+    }
+
+    // "Next: {action} at {place}" for the first step that is not done: get off the leg that is running, walk to the next
+    // stop, or board the next leg.
+    function onWayNextText(state, statuses) {
+      for (var i = 0; i < state.steps.length; i += 1) {
+        var step = state.steps[i];
+        if (statuses[i] === "done" || step.type === "destination") {
+          continue;
+        }
+        if (step.type === "walk") {
+          if (step.minutes === null) {
+            continue;
+          }
+          return fillText(ON_WAY_TEXT.nextWalk, { n: step.minutes, place: step.place });
+        }
+        var leg = step.leg;
+        if (statuses[i] === "board") {
+          return leg.alighting_stop_code ? fillText(ON_WAY_TEXT.nextGetOff, { place: stopLabel(leg.alighting_stop_name, leg.alighting_stop_code) }) : "";
+        }
+        var place = stopLabel(leg.boarding_stop_name, leg.boarding_stop_code);
+        return legIsRail(leg)
+          ? fillText(ON_WAY_TEXT.nextBoardTrain, { line: LINE_NAMES[String(leg.line_code || "").toUpperCase()] || leg.line_name || leg.line_code, place: place })
+          : fillText(ON_WAY_TEXT.nextBoardBus, { service: leg.service_no, place: place });
+      }
+      return "";
+    }
+
+    function plannedLegOf(plan) {
+      return plan ? plan.legs[plan.leg_index - 1] || null : null;
+    }
+
+    // Yes: tracking for this leg is over and the overview shows "on your way" (the same layout for a bus and a train).
     function answerCaught() {
       var hasTarget = !!(arriveByInput && arriveByInput.value);
-      var transfer = !!(activeRoutePlan && activeRoutePlan.route_type === "one_transfer" && activeRoutePlan.legs && activeRoutePlan.legs.length > 1);
+      var plan = activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan : null;
+      var planned = plannedLegOf(plan);
       onWayState = {
         train: isTrain(),
         service: selectedService,
         stop: selectedBoardingStop,
         estimate: lastTileEstimate ? estimateSentence(lastTileEstimate, hasTarget) : "",
-        transfer: transfer,
-        leg: activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan.legs[0] : null,
-        leg2: transfer ? activeRoutePlan.legs[1] : null
+        boardedAt: Date.now(),
+        steps: buildOnWaySteps(planned, plan),
+        alerted: {},
+        over: false,
+        key: ""
       };
+      onWayState.endMs = onWayEndMs(onWayState);
       stopTracking();
       renderOnWay();
       pushScreen("onway");
@@ -8834,74 +9326,219 @@
       if (!state || !list) {
         return;
       }
+      var statuses = onWayStatuses(state, Date.now());
+      state.key = statuses.join("|");
       list.replaceChildren();
-      if (state.train) {
-        renderTrainOnWay(list, state);
-      } else if (state.transfer) {
-        var first = state.leg;
-        list.appendChild(stepItem("done", "Boarding stop", [stepLine((first.boarding_stop_name || first.boarding_stop_code) + " (" + first.boarding_stop_code + ")")], null));
-        list.appendChild(stepItem("done", "Bus service", [stepLine("Bus " + first.service_no, "journey-step__service"), stepLine(ON_BOARD_TEXT)], null));
-        var transferName = (first.alighting_stop_name || first.alighting_stop_code) + " (" + first.alighting_stop_code + ")";
-        list.appendChild(stepItem("stop", "Transfer stop", [stepLine(transferName)], null));
-        var second = state.leg2;
-        var secondLines = [stepLine("Bus " + second.service_no, "journey-step__service")];
-        if (typeof second.published_headway_minutes === "number") {
-          secondLines.push(stepLine(SCHEDULE_HEADWAY.replace("{minutes}", second.published_headway_minutes)));
+      state.steps.forEach(function (step, index) {
+        var done = statuses[index] === "done";
+        if (step.type === "transit") {
+          var leg = step.leg;
+          var when = done ? "" : statuses[index] === "board" ? ON_BOARD_TEXT : scheduleLine(leg);
+          var row = legIsRail(leg) ? lineRow(leg) : busRow(leg, null);
+          list.appendChild(legItem(leg, when, row, "", done));
+        } else if (step.type === "walk" && step.final) {
+          var finalRow = finalWalkRow(step.walks, confirmedDestinationStop, done);
+          var editLink = finalRow ? finalRow.querySelector(".journey-step__edit") : null;
+          if (editLink) {
+            editLink.remove();  // nothing is editable once the journey is under way
+          }
+          if (finalRow) {
+            list.appendChild(finalRow);
+          }
+        } else if (step.type === "walk") {
+          list.appendChild(changeWalkRow(step.next, step.walks, step.fallback, done));
+        } else {
+          list.appendChild(stepItem("destination", "Destination", [stepLine(destinationDisplayName())], null));
         }
-        secondLines.push(stepLine(FIRST_BUS_ONLY_NOTE));
-        list.appendChild(stepItem("bus", "Bus service", secondLines, null));
-      } else {
-        var boardName = state.stop ? (state.stop.description || state.stop.stop_code) + " (" + state.stop.stop_code + ")" : "";
-        list.appendChild(stepItem("done", "Boarding stop", [stepLine(boardName)], null));
-        list.appendChild(stepItem("done", "Bus service", [stepLine("Bus " + state.service, "journey-step__service"), stepLine(ON_BOARD_TEXT)], null));
-      }
-      var destStop = confirmedDestinationStop;
-      if (destStop && !state.train) {
-        list.appendChild(stepItem("stop", "Destination stop", [stepLine(destStop.stop_name)], null));
-      }
-      list.appendChild(stepItem("destination", "Destination", [stepLine(destinationDisplayName())], null));
+      });
+      var next = document.getElementById("on-way-next");
+      var text = onWayNextText(state, statuses);
+      next.textContent = text;
+      next.hidden = !text;
       document.getElementById("on-way-arrive-value").textContent = document.getElementById("overview-arrive-value").textContent;
       var estimate = document.getElementById("on-way-arrive-estimate");
       estimate.textContent = state.estimate;
       estimate.hidden = !state.estimate;
+      syncOnWayLines();
     }
 
-    // Yes for a train: the train just boarded, then the legs still to come with their schedule lines.
-    function renderTrainOnWay(list, state) {
-      var legs = pendingItinerary && pendingItinerary.legs ? pendingItinerary.legs : (activeRoutePlan && activeRoutePlan.legs) || [];
-      var transit = legs.filter(function (leg) { return !legIsWalk(leg); });
-      var first = state.leg || transit[0];
-      list.appendChild(legItem(first, ON_BOARD_TEXT, lineRow(first), "", ""));
-      var noteLeg = firstLaterBus(transit);
-      var previous = first;
-      var between = [];
-      var seen = false;
-      legs.forEach(function (leg) {
-        if (!seen) {
-          seen = leg === first || (legIsRail(leg) && leg.boarding_stop_code === first.boarding_stop_code && leg.depart === first.depart);
-          return;
+    // The leg the user is riding now: the first "board" step that has an alighting stop, or -1.
+    function onWayRidingIndex(state, now) {
+      var statuses = onWayStatuses(state, now);
+      for (var i = 0; i < statuses.length; i += 1) {
+        if (statuses[i] === "board" && state.steps[i].type === "transit" && state.steps[i].leg.alighting_stop_code) {
+          return i;
         }
-        if (legIsWalk(leg)) {
-          between.push(leg);
-          return;
-        }
-        var change = changeWalkRow(leg, between, 0);
-        if (change) {
-          list.appendChild(change);
-        }
-        between = [];
-        list.appendChild(transitRow(leg, Math.max(1, transit.indexOf(leg)), null, leg === noteLeg));
-        previous = leg;
-      });
-      var finalRow = finalWalkRow(between, confirmedDestinationStop);
-      if (finalRow) {
-        var editLink = finalRow.querySelector(".journey-step__edit");
-        if (editLink) {
-          editLink.remove();  // nothing is editable once the journey is under way
-        }
-        list.appendChild(finalRow);
+      }
+      return -1;
+    }
+
+    // A fix counts only when it is accurate enough (the Step 6 limit) and not older than a minute.
+    function onWayUsableFix(now) {
+      if (!onWayFix || now - onWayFix.t > ON_WAY_FIX_MAX_AGE_MS) {
+        return null;
+      }
+      return onWayFix.acc !== null && onWayFix.acc > UNCERTAIN_ACCURACY_M ? null : onWayFix;
+    }
+
+    function hideOnWayAlert() {
+      document.getElementById("on-way-alert").hidden = true;
+    }
+
+    function showOnWayAlert(leg) {
+      var place = stopLabel(leg.alighting_stop_name, leg.alighting_stop_code);
+      var text = legIsRail(leg) ? fillText(ON_WAY_TEXT.getOffTrain, { station: place }) : fillText(ON_WAY_TEXT.getOffBus, { place: place });
+      document.getElementById("on-way-alert-text").textContent = text;
+      document.getElementById("on-way-alert").hidden = false;
+      showLocalNotification(text, { tag: "get-off", body: "" });  // only when the permission was already granted
+    }
+
+    // Once per leg: within 400 m of the alighting stop by the phone's own position, or, with no usable position, when the
+    // planned arrival is 2 minutes away. Runs only while the page is open and visible, never in Demo Mode.
+    function checkOnWayAlert(now) {
+      var state = onWayState;
+      if (!state || state.over || !onWayWanted()) {
+        return;
+      }
+      var index = onWayRidingIndex(state, now);
+      if (index < 0 || state.alerted[index]) {
+        return;
+      }
+      var step = state.steps[index];
+      var stops = legLatLngs(step.leg);
+      var target = stops.length ? stops[stops.length - 1] : null;
+      var fix = onWayUsableFix(now);
+      var near = fix && target
+        ? haversineMetres(fix.lat, fix.lon, target[0], target[1]) <= ON_WAY_ALERT_METRES
+        : isFinite(step.endMs) && step.endMs - now <= ON_WAY_ALERT_LEAD_MS;
+      if (near) {
+        state.alerted[index] = true;
+        showOnWayAlert(step.leg);
       }
     }
+
+    // The progress runs on the On your way screen, on a visible page, before the planned end.
+    function onWayShowing() {
+      return !!onWayState && !onWayState.over && screenStack[screenStack.length - 1] === "onway" && document.visibilityState !== "hidden"
+        && Date.now() < onWayState.endMs;
+    }
+
+    // The position read and the alert run under the same terms, never in Demo Mode, and only when some leg has an alighting
+    // stop to alert for (a Yes with no planned itinerary has none: no position is read).
+    function onWayWanted() {
+      return onWayShowing() && !demoModeOn() && onWayState.steps.some(function (step) {
+        return step.type === "transit" && !!step.leg.alighting_stop_code;
+      });
+    }
+
+    // One read of the phone's position at a time, at most every 5 seconds while this screen is wanted: a plain
+    // getCurrentPosition, not a watch (the walking estimator and Page W own the page's only watches). The result goes to
+    // onWayFix and nowhere else.
+    function readOnWayPosition(now) {
+      var geo = navigator.geolocation;
+      if (onWayReadBusy || !geo || typeof geo.getCurrentPosition !== "function") {
+        return;
+      }
+      onWayReadBusy = true;
+      onWayReadAt = now;
+      var generation = onWayReadGeneration;
+      var settle = function () {
+        onWayReadBusy = false;
+        return generation === onWayReadGeneration && onWayWanted();
+      };
+      try {
+        geo.getCurrentPosition(function (position) {
+          var coords = position && position.coords;
+          if (!settle() || !coords || !isFinite(coords.latitude) || !isFinite(coords.longitude)) {
+            return;
+          }
+          onWayFix = {
+            lat: coords.latitude, lon: coords.longitude,
+            acc: typeof coords.accuracy === "number" && isFinite(coords.accuracy) ? coords.accuracy : null,
+            t: typeof position.timestamp === "number" && isFinite(position.timestamp) ? position.timestamp : Date.now()
+          };
+          checkOnWayAlert(Date.now());
+        }, function () {
+          if (settle()) {
+            onWayFix = null;
+          }
+        }, { enableHighAccuracy: true, maximumAge: ON_WAY_READ_MS, timeout: 10000 });
+      } catch (error) {
+        onWayReadBusy = false;
+      }
+    }
+
+    // Stops reading: a read still in flight is ignored when it answers, and the last position is dropped.
+    function stopOnWayReading() {
+      onWayReadGeneration += 1;
+      onWayReadBusy = false;
+      onWayReadAt = 0;
+      onWayFix = null;
+      onWayReading = false;
+    }
+
+    function syncOnWayLines() {
+      var wanted = onWayWanted();
+      document.getElementById("on-way-open-note").hidden = !wanted;
+      document.getElementById("on-way-privacy").hidden = !(wanted && onWayReading);
+    }
+
+    function onWayTick() {
+      var state = onWayState;
+      if (!state) {
+        syncOnWay();
+        return;
+      }
+      var now = Date.now();
+      if (now >= state.endMs) {
+        state.over = true;
+      }
+      if (onWayStatuses(state, now).join("|") !== state.key) {
+        renderOnWay();
+      }
+      syncOnWay();
+      if (onWayReading && now - onWayReadAt >= ON_WAY_READ_MS) {
+        readOnWayPosition(now);
+      }
+      checkOnWayAlert(now);
+    }
+
+    // Everything that runs on this screen: a one-second tick (rendering, and a position read every 5 seconds). Both stop when
+    // the user leaves, taps Plan a new journey, hides the page or the planned end passes; a page shown again resumes.
+    function syncOnWay() {
+      if (!onWayShowing()) {
+        if (onWayTimer != null) {
+          clearTimeout(onWayTimer);
+          onWayTimer = null;
+        }
+      } else if (onWayTimer == null) {
+        onWayTimer = setTimeout(function () {
+          onWayTimer = null;
+          onWayTick();
+        }, 1000);
+      }
+      if (onWayWanted()) {
+        if (!onWayReading) {
+          onWayReading = true;
+          readOnWayPosition(Date.now());  // the first read at once
+        }
+      } else {
+        if (onWayReading || onWayFix) {
+          stopOnWayReading();
+        }
+        hideOnWayAlert();
+      }
+      syncOnWayLines();
+    }
+
+    document.getElementById("on-way-alert-dismiss").addEventListener("click", hideOnWayAlert);
+    document.addEventListener("visibilitychange", syncOnWay);
+    window.addEventListener("pagehide", function () {
+      if (onWayState) {
+        onWayState.over = true;  // leaving the page ends it for good
+      }
+      syncOnWay();
+    });
 
     // No, for a train: the left text, the next three departures as plain rows (nothing to switch to), Plan a new journey.
     function answerTrainMissed() {

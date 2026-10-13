@@ -181,6 +181,49 @@ def later_buses() -> dict:
         walk(52, 54, 100, origin=bus_c_end)))
 
 
+def bus_chain() -> dict:
+    """Bus 18, then bus 36, then bus 77 (three buses with a walk between each)."""
+    mid1 = stop("BEF TOH GUAN RD", "28059", north(500))
+    b_board = stop("OPP TOH GUAN RD", "03011", north(540))
+    b_alight = stop("CHINATOWN PT", "05012", north(1200))
+    c_board = stop("OPP CHINATOWN PT", "06013", north(1240))
+    c_alight = stop("TANJONG PAGAR STN", "07013", north(1900))
+    return answer(itinerary(
+        walk(0, 1, 40, target=ORIGIN_STOP),
+        ride("BUS", "18", "SBST BUS 18", 6, 14, ORIGIN_STOP, mid1),
+        walk(14, 16, 130, origin=mid1, target=b_board),
+        ride("BUS", "36", "SBST BUS 36", 20, 30, b_board, b_alight),
+        walk(30, 32, 60, origin=b_alight, target=c_board),
+        ride("BUS", "77", "SBST BUS 77", 36, 46, c_board, c_alight),
+        walk(46, 48, 100, origin=c_alight)))
+
+
+def bus_transfer() -> dict:
+    """Bus 18, then bus 36 (a one-transfer route)."""
+    mid = stop("BEF TOH GUAN RD", "28059", north(500))
+    b_board = stop("OPP TOH GUAN RD", "03011", north(540))
+    b_alight = stop("CHINATOWN PT", "05012", north(1900))
+    return answer(itinerary(
+        walk(0, 1, 40, target=ORIGIN_STOP),
+        ride("BUS", "18", "SBST BUS 18", 6, 14, ORIGIN_STOP, mid),
+        walk(14, 16, 130, origin=mid, target=b_board),
+        ride("BUS", "36", "SBST BUS 36", 20, 30, b_board, b_alight),
+        walk(30, 32, 100, origin=b_alight)))
+
+
+def bus_rail() -> dict:
+    """Bus 18, then a train (NS17 to NS26): the next leg is a train."""
+    mid = stop("BEF TOH GUAN RD", "28059", north(500))
+    board = stop("BISHAN MRT STATION", "NS17", north(560))
+    alight = stop("RAFFLES PLACE MRT STATION", "NS26", north(1900))
+    return answer(itinerary(
+        walk(0, 1, 40, target=ORIGIN_STOP),
+        ride("BUS", "18", "SBST BUS 18", 6, 14, ORIGIN_STOP, mid),
+        walk(14, 16, 130, origin=mid, target=board),
+        ride("SUBWAY", "NS", "NORTH SOUTH LINE", 20, 30, board, alight, between=3),
+        walk(30, 32, 100, origin=alight)))
+
+
 def casings() -> dict:
     """Bus 18, then CC, NE, DT and TE: the lines that need a casing in one theme or the other."""
     cc_a, cc_b = stop("PROMENADE MRT STATION", "CC4", north(700)), stop("BISHAN MRT STATION", "CC15", north(900))

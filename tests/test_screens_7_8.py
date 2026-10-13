@@ -75,7 +75,7 @@ def test_tiles_mirror_existing_values():
     assert "formatClock(lastSuccess.leave_by, true)" not in tiles
     assert "leaveTileView(" in tiles and "trackedAction(lastSuccess)" in tiles and "WAIT_ALERT_TEXT" not in tiles
     assert 'action === "switch_route" || action === "do_not_rely"' in tiles
-    assert "formatRange(estimate.arrival_low, estimate.arrival_high)" in tiles
+    assert "formatRange" not in tiles and "arrival_low" not in tiles  # the tile shows the point time, never the range
     assert "journey-spare" not in tiles and "tile-spare" not in tiles  # the spare line is gone
     assert "journeyComparison.textContent" in tiles
     assert "journeyNote.textContent" in tiles

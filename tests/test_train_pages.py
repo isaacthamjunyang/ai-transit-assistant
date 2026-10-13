@@ -151,8 +151,13 @@ def bus_first(tmp_path_factory):
     return _run(tmp_path_factory, "busfirst", stub.bus_only, width=390, height=844, bus=True)
 
 
+@pytest.fixture(scope="module")
+def bus_missed(tmp_path_factory):
+    return _run(tmp_path_factory, "busmissed", stub.bus_only, width=390, height=844, bus=True, answer="no")
+
+
 def _clock(text: str) -> str:
-    return re.sub(r"\d{1,2}:\d{2}" + NB + "[AP]M", "TIME", text)
+    return re.sub(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", "TIME", text)
 
 
 def test_start_journey_is_on_for_a_train_first_route(missed_light):
@@ -185,7 +190,7 @@ def test_page_a_for_a_train(missed_light):
     assert a["ring"] == f"{a['hero']['point']}%"
     assert re.match(r"Departs in \d+ min · ", a["sub"].replace(NB, " "))
     assert a["tileLeaveLabel"] == "Leave by" and a["tileDepartsLabel"] == "Train departs" and a["tileRange"] is False
-    assert re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M", a["tileDeparts"])
+    assert re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", a["tileDeparts"])
     assert a["arrivesLabel"].startswith("Train departs")
     assert a["bar"] == "See train times" and a["catchBar"] is False
     assert a["miss"].startswith("If you miss it, the next train is at about ") and a["missLabelShown"] is False
@@ -213,9 +218,9 @@ def test_page_b_for_a_train(missed_light):
     b = missed_light["pageB"]
     assert b["pageB"] is True and b["card"] is True
     assert b["badge"]["text"] == "NS" and "line-badge--ns" in b["badge"]["cls"] and b["title"].endswith("North-South Line")
-    assert b["to"] == "Toward Marina South Pier" and re.fullmatch(r"Departs \d{1,2}:\d{2}" + NB + "[AP]M", b["then"])
+    assert b["to"] == "Toward Marina South Pier" and re.fullmatch(r"Departs \d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", b["then"])
     assert b["pill"] == "schedule only" and b["label"] == "Next trains"
-    assert len(b["next"]) == 3 and all(re.match(r"about \d{1,2}:\d{2}" + NB + "[AP]M", row) for row in b["next"])
+    assert len(b["next"]) == 3 and all(re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", row) for row in b["next"])  # the plain time only: no line name, no "about"
     assert b["cells"]["live"] == "Scheduled" and b["cells"]["monitored"] == "Every about 4 min"
     assert b["question"] == "Did you catch the train?" and b["seeBar"] is False and b["yes"] and b["no"]
     assert b["scrollWidth"] <= b["innerWidth"]
@@ -229,10 +234,10 @@ def test_a_train_never_makes_a_leave_now_or_five_minute_notification(missed_ligh
 def test_the_missed_train_shows_the_left_text_the_next_three_rows_and_plan_a_new_journey(missed_light):
     m = missed_light["missed"]
     assert m["top"] == "live" and m["missedShown"] is True
-    assert re.fullmatch(r"The North-South Line train has left\. The next one is at about \d{1,2}:\d{2}" + NB + r"[AP]M\.", m["left"])
+    assert re.fullmatch(r"The North-South Line train has left\. The next one is at about \d{1,2}:\d{2}" + NB + r"[AP]M( [(]tomorrow[)])?\.", m["left"])
     assert m["left"] == missed_light["leftText"]
     assert m["heading"] == "Next trains" and len(m["rows"]) == 3
-    assert all(re.fullmatch(r"about \d{1,2}:\d{2}" + NB + "[AP]M", row) for row in m["rows"])
+    assert all(re.fullmatch(r"about \d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", row) for row in m["rows"])
     assert m["rows"][0] in m["left"]
     assert m["buttons"] == ["Plan a new journey"] and m["switchButtons"] == 0 and m["planNew"] is True
     assert m["pageCShown"] is False and m["requests"] == 0  # no options search, nothing to switch to
@@ -252,6 +257,12 @@ def test_yes_shows_the_on_your_way_overview_with_the_remaining_legs_and_schedule
     assert "to Raffles Place MRT Station (EW14)" in rows[1]["text"] and "Change" not in rows[1]["text"]  # a walk row
     assert rows[2]["badge"] == "EW" and re.search(r"Scheduled · \d{1,2}:\d{2}", rows[2]["text"].replace(NB, " "))
     assert "Edit" not in rows[3]["text"] and way["scrollWidth"] <= way["innerWidth"]
+    # the destination flag takes the new green end token (dark theme here) on the icon tile, as in the journey overview
+    import test_map_lines as tml
+    tokens = tml._theme("dark")
+    end = rows[-1]
+    channels = ", ".join(str(int(tml._hex(tokens, "--marker-end")[i:i + 2], 16)) for i in (0, 2, 4))
+    assert end["iconColor"] == f"rgb({channels})" and "Destination" in end["text"]
 
 
 def test_a_train_page_has_no_page_overflow_at_360_and_1280_in_dark(yes_dark, wide_dark):
@@ -260,6 +271,20 @@ def test_a_train_page_has_no_page_overflow_at_360_and_1280_in_dark(yes_dark, wid
     for run in (yes_dark, wide_dark):
         assert run["pageA"]["title"] == "Chance to catch the North-South Line train"
         assert run["pageB"]["badge"]["bg"] == "rgb(214, 40, 33)" and run["pageB"]["badge"]["color"] == "rgb(255, 255, 255)"
+
+
+def test_the_question_bar_says_train_for_a_train_and_bus_for_a_bus_on_pages_a_b_and_the_missed_card(
+        missed_light, yes_dark, bus_first, bus_missed):
+    train_a, train_b, train_missed = missed_light["pageA"], missed_light["pageB"], missed_light["missed"]
+    assert train_a["barTitle"] == "Did you catch the train?"
+    assert train_b["question"] == "Did you catch the train?"
+    assert train_missed["barTitle"] == "Did you catch the train?"
+    assert yes_dark["pageA"]["barTitle"] == "Did you catch the train?"
+    assert yes_dark["pageB"]["question"] == "Did you catch the train?"
+    assert bus_first["pageA"]["barTitle"] == "Did you catch the bus?"
+    assert bus_first["pageB"]["question"] == "Did you catch the bus?"
+    assert bus_missed["pageA"]["barTitle"] == "Did you catch the bus?"
+    assert bus_missed["busMissed"]["barTitle"] == "Did you catch the bus?" and bus_missed["busMissed"]["isTrain"] is False
 
 
 def test_a_bus_first_journey_keeps_every_bus_word_and_request(bus_first):

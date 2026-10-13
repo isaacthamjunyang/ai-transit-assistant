@@ -181,7 +181,7 @@ def test_confirm_opens_the_overview_which_replans_on_every_entry():
     assert "confirmedDestinationStop = copyDestinationStop(selectedDestinationStop)" in confirm
     assert confirm.index("confirmedDestinationStop = copyDestinationStop") < confirm.index('pushScreen("journey")')
     apply = _between(html, "function applyScreen(name)", "function syncHomeButton")
-    assert 'if (name === "journey") {\n        planPriority = "fastest";\n        syncPriorityChips();\n        planJourney();' in apply
+    assert 'if (name === "journey") {\n        planPriority = "fastest";\n        syncPrioritySelect();\n        planJourney();' in apply
     plan = _between(html, "function planJourney()", "function peekOverviewArrivals")
     assert '"/api/journey-plan?user_lat="' in plan
     assert 'setOverviewState("loading")' in plan and 'setOverviewState("no-location")' in plan
@@ -222,25 +222,19 @@ def test_start_runs_select_planned_route_and_the_overview_has_no_pickers():
     start = _between(html, 'getElementById("start-journey").addEventListener("click"', "});")
     assert start.index("selectPlannedRoute(pendingRouteOption") < start.index('pushScreen("live")')
     overview = _between(html, 'id="journey-overview"', "</section>")
-    for picker in ("stop-button", "route-choice", "service-button", 'type="radio"', "<select"):
+    for picker in ("stop-button", "route-choice", "service-button", 'type="radio"'):
         assert picker not in overview
+    assert overview.count("<select") == 1 and 'id="priority-select"' in overview  # the one control: the priority, not a stop, route or service
     for gone in ('id="boarding-stage"', 'id="stop-list"', 'id="service-card"', 'id="continue-boarding"', "Review journey"):
         assert gone not in html
 
 
-def test_reason_strings_are_approved_and_never_promise_arrival():
+def test_the_chosen_for_you_reason_line_is_gone():
     copy = COPY.read_text(encoding="utf-8")
     html = _page()
-    for text in (
-        "Chosen for you: it should get you there by your arrive-by time.",
-        "No route meets your arrive-by time. This one should get you there earliest.",
-        "Chosen for you: the quickest option we found.",
-    ):
-        assert text in copy and text in html
-        for banned in ("definitely", "guarantee", "certain to"):
-            assert banned not in text.lower()
-    # Item 19 of the screens 7-8 pass approved the reason lines and the transfer note.
+    for text in ("Chosen for you", "it should get you there by your arrive-by time", "This one should get you there earliest"):
+        assert text not in copy and text not in html
     for name in ("reasonTargetMet", "reasonTargetMissed", "reasonNoTarget"):
-        before = copy.split(name + ":", 1)[0].splitlines()[-1]
-        assert "proposed" not in before, name
+        assert name not in copy
+    assert 'id="overview-reason"' not in html and "PLAN_REASON_TEXT" not in html
     assert "No direct or 1-transfer bus connection available for this trip." in _between(html, 'id="overview-no-route"', "</div>")

@@ -8,7 +8,7 @@
   } catch (e) { /* storage blocked */ }
   var watchers = {};
   var nextId = 1;
-  var geoState = { current: CONFIG.position || null, getCalls: 0, watchCalls: 0, clearCalls: 0, mode: "ok", options: [], watchOptions: [] };
+  var geoState = { current: CONFIG.position || null, getCalls: 0, watchCalls: 0, clearCalls: 0, mode: "ok", options: [], highs: [], watchOptions: [] };
 
   function position(o) {
     return {
@@ -24,6 +24,7 @@
     getCurrentPosition: function (ok, err, options) {
       geoState.getCalls += 1;
       geoState.options.push({ maximumAge: options && options.maximumAge, timeout: options && options.timeout });
+      geoState.highs.push(!!(options && options.enableHighAccuracy));
       var o = geoState.current;
       if (geoState.mode === "hang") {
         return;  // never answers: the page has to go ahead on its own timer
@@ -168,6 +169,7 @@
   // a page that can be hidden and shown
   var hidden = false;
   Object.defineProperty(document, "hidden", { get: function () { return hidden; }, configurable: true });
+  Object.defineProperty(document, "visibilityState", { get: function () { return hidden ? "hidden" : "visible"; }, configurable: true });
   window.__setHidden = function (value) {
     hidden = !!value;
     document.dispatchEvent(new Event("visibilitychange"));
@@ -179,7 +181,30 @@
   window.fetch = function (input, init) {
     var url = typeof input === "string" ? input : input.url;
     requests.push(url);
+    sent.push({ via: "fetch", url: String(url), body: init && init.body !== undefined ? String(init.body) : "" });
     return realFetch.call(window, input, init);
   };
   window.__requests = requests;
+
+  // Everything the page sends by any route (fetch, sendBeacon, XMLHttpRequest), URL and body, so a test can prove that
+  // a coordinate left the phone by none of them.
+  var sent = [];
+  window.__sent = sent;
+  if (navigator.sendBeacon) {
+    var realBeacon = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = function (url, data) {
+      sent.push({ via: "beacon", url: String(url), body: data === undefined || data === null ? "" : String(data) });
+      return realBeacon(url, data);
+    };
+  }
+  var realOpen = XMLHttpRequest.prototype.open;
+  var realSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function (method, url) {
+    this.__url = String(url);
+    return realOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function (body) {
+    sent.push({ via: "xhr", url: this.__url || "", body: body === undefined || body === null ? "" : String(body) });
+    return realSend.apply(this, arguments);
+  };
 })();

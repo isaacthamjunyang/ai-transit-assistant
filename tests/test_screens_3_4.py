@@ -10,8 +10,8 @@ THEME = ROOT / "static" / "theme.css"
 CSS = ROOT / "static" / "components.css"
 
 STRINGS = (
-    "Nearby destination bus stops",
-    "Bus stops within 600 m of your destination. Stops with a direct bus from near you come first, nearest first. Best option is the shortest walk among them.",
+    "Nearby destination MRT stations / bus stops",
+    "Bus stops and MRT or LRT stations within 600 m of your destination, nearest walk first. If no station is that close, the nearest one within 1.5 km is shown. The first one is chosen for you.",
     "Best option",
     "Centre map on your location",
     "About these stops",
@@ -19,8 +19,8 @@ STRINGS = (
     "Destination bus stop",
     "Edit destination",
     "Edit destination bus stop",
-    "We'll find the best nearby boarding stops, check live bus arrivals and calculate your catch probability and leave-by time.",
-    "Confirm and find buses",
+    "We'll find the best route from here by bus and MRT and work out your leave-by time.",
+    "Confirm",
     "no direct bus from near you — a transfer may still work",
 )
 
@@ -44,15 +44,16 @@ def test_best_option_only_marks_the_shortest_reachable_walk():
     assert "stop.is_reachable" in best
     assert "distance_m" in best
     render = html.split("function renderDestinationStops(body)", 1)[1].split("function loadDestinationStops", 1)[0]
-    assert "bestDestinationStopCode(body.reachable_stops)" in render
-    assert "renderDestinationStopCard(stop, reachableStopList, false)" in render
+    assert "bestDestinationStopCode(body.reachable_stops)" in render  # the old two-list answer
+    assert "all[0] ? all[0].stop_code" in render  # one list, nearest first: the first row is the best option
+    assert "renderDestinationStopCard(stop, reachableStopList, stop.stop_code === bestCode)" in render
 
 
-def test_nothing_is_preselected_and_marker_taps_do_not_navigate():
+def test_the_first_row_is_chosen_and_marker_taps_do_not_navigate():
     html = _page()
     render = html.split("function renderDestinationStops(body)", 1)[1].split("function loadDestinationStops", 1)[0]
-    assert "selectDestinationStop" not in render
-    assert "highlightDestinationStop" not in render
+    assert "selectDestinationStop(all[0])" in render  # the first (nearest) row is the default choice
+    assert "chooseDestinationStop" not in render and "openDestinationConfirm" not in render  # no pan, no navigation
     marker = html.split("function addDestinationMarker(stop)", 1)[1].split("function addDestinationWalkLine", 1)[0]
     assert "openDestinationConfirm" not in marker
     assert "pushScreen" not in marker
@@ -122,7 +123,9 @@ def test_stop_markers_share_one_circle_class_with_a_ring_stack():
     assert '"map-stop "' in icon and "is-selected" in icon
     assert "map-stop-label" in icon
     assert "selected ? [40, 40] : [32, 32]" in icon
-    assert 'mapStopIcon(stop.stop_name, selected, "map-stop--dest")' in html
+    dest = html.split("function destStopIcon(stop, selected)", 1)[1].split("function destMarkerOffset", 1)[0]
+    assert '"map-stop map-stop--dest "' in dest and "map-stop__dot" in dest and "map-stop-label" in dest
+    assert "selected ? [40, 40] : [32, 32]" in dest
     assert 'mapStopIcon(boardingNamesByCode[code] || "", selected, "map-stop--boarding")' in html
     assert "setZIndexOffset(selected ? 1000 : 0)" in html
     dot = _rule(css, ".map-stop__dot")

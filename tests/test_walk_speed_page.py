@@ -190,7 +190,7 @@ def test_yes_on_a_transfer_route_shows_the_overview_and_stops_everything(stop_re
     text = report["onWayText"]
     assert "On board" in text and "Bus 18" in text and "Bus 14" in text
     assert "Schedule: about every 12 min." in text
-    assert "Live tracking covers your first bus only." in text
+    assert "first bus only" not in text
     assert "alert you" not in text
 
 
