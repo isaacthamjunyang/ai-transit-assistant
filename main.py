@@ -16,6 +16,7 @@ import re
 import httpx
 
 import access_log_filter
+from train_alerts import current_alerts
 from arrivals import ArrivalUnavailable, fetch_arrivals, fetch_stop_arrivals, peek_arrivals, peek_later, rescore_latest
 import demo
 from config import PAGE_CONSTANTS, WALK_SPEED_DEFAULT_MPS
@@ -36,6 +37,7 @@ from journey import build_journey, bus_arrival_window, miss_line, parse_journey_
 from journey_plan import plan_journey
 from lta_static import load_static_data
 from service_hours import data_status, load_rail_table, startup_warning
+from train_alerts import current_alerts
 from nearby import BOARDING_RADIUS_M, haversine_m, nearby_boarding_stops
 from pace import is_near_stop
 from reroute import (
@@ -158,6 +160,11 @@ def walk_speed_js() -> FileResponse:
 @app.get("/place-icons.js")
 def place_icons_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "place-icons.js", media_type="text/javascript")
+
+
+@app.get("/first-run.js")
+def first_run_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "first-run.js", media_type="text/javascript")
 
 
 @app.get("/saved-places.js")
@@ -1426,6 +1433,13 @@ def arrivals_peek(
         ],
         "simulated": demo.arrival_is_simulated(),
     }
+
+
+@app.get("/api/train-alerts", response_model=None)
+def train_alerts() -> dict:
+    """Active train service alerts (LTA TrainServiceAlerts), one list for everyone, kept 60 s on the server. No
+    parameters: nothing about the user is read or sent. Any failure, and Demo Mode, answer an empty list. Display only."""
+    return {"alerts": current_alerts()}
 
 
 @app.get("/api/arrivals/later", response_model=None)

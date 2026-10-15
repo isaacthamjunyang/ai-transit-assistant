@@ -24,6 +24,7 @@ import demo
 import explain
 import lta_static
 import observations
+import train_alerts
 from edge_runner import find_edge
 from lta_static import StopAndRouteCache
 from nearby import EARTH_RADIUS_M
@@ -67,7 +68,9 @@ def _free_port() -> int:
 @contextmanager
 def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str = "warning", lta_status: int = 200,
                 reroute_stub: bool = False, onemap=None, rail_table: dict | None = None,
-                lta_services: dict | None = None, lta_log: list | None = None):
+                lta_services: dict | None = None, lta_log: list | None = None, train_alerts_payload: dict | None = None,
+                alerts_log: list | None = None, alerts_status: int = 200,
+                loads: list | None = None):
     """The real FastAPI app on a local port, with the fake cache and a fake LTA.
 
     eta_minutes is one number (one bus) or a list (NextBus, NextBus2, NextBus3). With reroute_stub the reroute
@@ -94,6 +97,8 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
     patches.delenv("DEMO_MODE", raising=False)
     patches.setattr("main.load_static_data", lambda: cache)
     patches.setattr(arrivals, "read_account_key", lambda: "test-account-key")
+    patches.setattr(train_alerts, "read_account_key", lambda: "test-account-key")
+    train_alerts.clear_cache()
     real_get = httpx.Client.get
     etas = list(eta_minutes) if isinstance(eta_minutes, (list, tuple)) else [eta_minutes]
     if reroute_stub:
@@ -122,6 +127,13 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
             return httpx.Response(200, json=body) if body is not None else httpx.Response(404, json={"error": "none"})
         if "onemap.gov.sg" in str(url):  # nothing else may reach OneMap from a test
             return httpx.Response(503, json={})
+        if str(url).endswith("/TrainServiceAlerts"):  # scripted: no alerts unless the test gives a payload
+            if alerts_log is not None:
+                alerts_log.append({"params": dict(kwargs.get("params") or {}), "has_key": "AccountKey" in (kwargs.get("headers") or {})})
+            if alerts_status != 200:
+                return httpx.Response(alerts_status, json={})
+            return httpx.Response(200, json=train_alerts_payload or {
+                "odata.metadata": "scripted", "value": {"Status": 1, "AffectedSegments": [], "Message": []}})
         if "/v3/BusArrival" in str(url):
             if lta_log is not None:
                 lta_log.append(dict(kwargs.get("params") or {}))  # the query only: never a key, never a header
@@ -130,10 +142,12 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
 
             def shaped(number, minutes_list):
                 item = {"ServiceNo": number}
-                for name, minutes in zip(("NextBus", "NextBus2", "NextBus3"), minutes_list):
+                for index, (name, minutes) in enumerate(zip(("NextBus", "NextBus2", "NextBus3"), minutes_list)):
                     eta = (datetime.now(SGT) + timedelta(minutes=minutes)).replace(microsecond=0).isoformat()
                     item[name] = {"EstimatedArrival": eta, "Monitored": 1, "Latitude": "", "Longitude": "",
                                   "OriginCode": "", "DestinationCode": ""}
+                    if loads is not None and number == "18" and index < len(loads):
+                        item[name]["Load"] = loads[index]  # scripted crowding; absent unless the test gives it
                 return item
 
             services = [shaped("18", etas)] + [shaped(number, minutes) for number, minutes in (lta_services or {}).items()]
@@ -158,6 +172,7 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
         arrivals._peek_handoff.clear()  # a peek the overview made and no Start ever used must not reach the next test
         arrivals.clear_remembered_arrivals()
         arrivals.clear_later_arrivals()
+        train_alerts.clear_cache()
 
 
 def _wait_until_serving(server, base: str, limit_s: float = 30.0) -> None:

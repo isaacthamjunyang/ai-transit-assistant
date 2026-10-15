@@ -3331,6 +3331,29 @@ body:not(.is-screen-live) #arrival-card {
   font-size: 0.875rem;
 }
 
+/* Bus crowding (LTA Load): an icon and a word, never colour alone. Display only. */
+.crowd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.crowd-chip[hidden] {
+  display: none;
+}
+
+.crowd-chip__icon {
+  display: inline-flex;
+}
+
+.crowd-chip__icon .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
 .bus-tile-card__arriving {
   color: var(--status-live);
   font-size: 0.8125rem;
@@ -5854,4 +5877,127 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
 
 .sample-walk-map--near .map-stop--live.sample-walk-map__stop {
   top: 56%;
+}
+
+/* Train service alerts: a warning banner (icon and text) under the journey summary and on the live pages. The text is
+   cut at two lines with an expand control that shows only when it is cut. */
+
+.train-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.train-alerts[hidden] {
+  display: none;
+}
+
+.train-alert__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.train-alert.is-expanded .train-alert__text {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+
+.train-alert__toggle {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  color: inherit;
+  text-decoration: underline;
+}
+
+.train-alert__toggle[hidden] {
+  display: none;
+}
+
+body.is-page-c #live-train-alerts,
+body.is-page-w #live-train-alerts,
+body.is-entry-loading #live-train-alerts {
+  display: none;
+}
+
+/* First-run explainer: a fixed overlay over the page, so it shifts no layout. Controls are at least 44 px. */
+
+.first-run {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+}
+
+.first-run[hidden] {
+  display: none;
+}
+
+.first-run__card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  width: min(100%, 24rem);
+  padding: var(--space-4);
+  background: var(--color-card);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.first-run__card p {
+  margin: 0;
+}
+
+.first-run__step {
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+  font-weight: 600;
+}
+
+.first-run__icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-secondary);
+  color: var(--color-primary);
+}
+
+.first-run__icon .icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.first-run__text {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.first-run__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.first-run__actions button {
+  flex: 1 1 0;
+  min-height: var(--tap-min);
+}
+
+.first-run__actions button[hidden] {
+  display: none;
 }

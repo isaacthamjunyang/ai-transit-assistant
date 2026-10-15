@@ -429,6 +429,28 @@ var copy = {
     PG: "Punggol LRT",
     SS: "Sentosa Express"
   },
+  /* proposed, needs approval: the first-run explainer (three steps over Home, reopened from the menu as "How it works").
+     {n} and {total} are the step number and the number of steps. Mirrored in index.html (FIRST_RUN_*). */
+  firstRun: {
+    title: "How it works",
+    menu: "How it works",
+    stepOf: "Step {n} of {total}",
+    step1: "Pick where you're going.",
+    step2: "We show when to leave, and your chance of catching the bus or train.",
+    step3: "Walk, and we'll keep the chance updated.",
+    skip: "Skip",
+    next: "Next",
+    done: "Done"
+  },
+  /* proposed, needs approval: the train service alert banner (LTA TrainServiceAlerts). {line} is the line's name from
+     lineNames, {message} the notice LTA published for that line. Mirrored in index.html (TRAIN_ALERT_*). */
+  trainAlert: {
+    text: "{line}: {message}",
+    noMessageMinor: "Minor delays. Check for updates.",
+    noMessageDisrupted: "Train service is disrupted. Check for updates.",
+    more: "Show more",
+    less: "Show less"
+  },
   liveCatch: {
     /* proposed, needs approval; a deliberate deviation from mockup 7, recorded in the plan */
     chanceToCatch: "Chance to catch Bus {service}",
@@ -519,6 +541,13 @@ var copy = {
     reasonHighestChance: "Bus {s} is recommended: it has the highest chance of catching.",
     reasonShorterWalk: "Bus {s} has a similar chance to the other options, and the walk to its stop is shorter.",
     reasonNoneByTarget: "No option should reach your destination by your arrive-by time. Bus {s} should get you there earliest."
+  },
+  /* proposed, needs approval: bus crowding from the LTA Load field. Text and icon on the Next 3 buses tiles and Page A.
+     Display only. Mirrored in index.html (CROWD_TEXT). SEA seats available, SDA standing available, LSD limited standing. */
+  crowding: {
+    SEA: "Seats",
+    SDA: "Standing",
+    LSD: "Crowded"
   },
   liveTracking: {
     refresh: "Refresh live arrivals",

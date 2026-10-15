@@ -439,6 +439,17 @@ def _buses_from_payload(payload: object, service_no: str) -> list[dict]:
     return buses
 
 
+LOAD_VALUES = ("SEA", "SDA", "LSD")
+
+
+def _load(value: object) -> str | None:
+    """The guide's crowding code (SEA seats, SDA standing, LSD limited standing), or None when blank or unknown.
+    Display only: it never reaches the probability, the ring or the ranking."""
+    if isinstance(value, str) and value.strip().upper() in LOAD_VALUES:
+        return value.strip().upper()
+    return None
+
+
 def _normalize_bus(raw: object, position: str) -> dict | None:
     if not isinstance(raw, dict):
         return None
@@ -453,6 +464,7 @@ def _normalize_bus(raw: object, position: str) -> dict | None:
         "longitude": _coordinate(raw.get("Longitude")),
         "origin_code": _text_code(raw.get("OriginCode")),
         "destination_code": _text_code(raw.get("DestinationCode")),
+        "load": _load(raw.get("Load")),
     }
 
 

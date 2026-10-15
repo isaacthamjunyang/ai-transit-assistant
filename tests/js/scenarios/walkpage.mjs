@@ -182,6 +182,6 @@ export default async function (h) {
   out.afterEnd = await h.eval("({ own: walkWatchId !== null, timer: walkRescoreTimer !== null, watching: __geo.watching() })");
 
   out.requestsAll = await h.eval("__requests.slice()");
-  out.storageKeys = await h.eval("Object.keys(localStorage)");
+  out.storageKeys = await h.eval("Object.keys(localStorage).filter(function (k) { return k !== 'bus-catch-first-run-v1'; })");
   return out;
 }

@@ -46,6 +46,7 @@
         <button type="button" class="menu-radio" id="theme-light" role="radio" aria-checked="false">Light</button>
         <button type="button" class="menu-radio" id="theme-dark" role="radio" aria-checked="false">Dark</button>
       </div>
+      <button type="button" class="menu-row" id="how-it-works"><span>How it works</span></button>
       <details id="demo-controls" hidden>
       <summary>Demo Controls</summary>
       <label for="demo-scenario">Scenario</label>
@@ -322,6 +323,7 @@
           <p class="overview-summary__cell"><span class="overview-summary__label">Transfers</span><span id="summary-transfers" class="overview-summary__value"></span></p>
           <p class="overview-summary__cell"><span class="overview-summary__label">Walking</span><span id="summary-walking" class="overview-summary__value"></span></p>
         </div>
+        <div id="overview-train-alerts" class="train-alerts" hidden></div>
         <p id="overview-traffic-note" class="overview-note" hidden>Bus times can vary with traffic.</p>
         <ol id="overview-skeleton" class="journey-steps journey-steps--skeleton" aria-hidden="true" hidden>
           <li class="journey-step"><span class="step-node step-node--skeleton"></span><span class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></span></li>
@@ -549,6 +551,7 @@
         </div>
       </div>
     </section>
+    <div id="live-train-alerts" class="train-alerts live-only" hidden></div>
     <section class="card catch-card" id="arrival-card" tabindex="-1" hidden aria-labelledby="catch-title" aria-live="polite">
       <p id="arrival-heading" class="visually-hidden">Live arrivals</p>
       <div class="catch-card__row">
@@ -563,6 +566,7 @@
               <p id="catch-title" class="visually-hidden">Chance to catch Bus</p>
               <p id="catch-line" class="journey-step__line catch-card__line"><span id="catch-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="catch-pill-text">live</span></span></p>
               <p id="catch-when" class="catch-card__when"></p>
+              <p id="catch-load" class="crowd-chip" hidden></p>
             </div>
           </div>
           <p id="catch-arrives" class="catch-card__arrives" hidden><span id="catch-arrives-time" class="catch-card__arrives-time"></span></p>
@@ -694,6 +698,17 @@
   <div id="see-arrivals-bar" class="catch-bar catch-bar--single" hidden>
     <button type="button" id="see-arrivals" class="primary primary--icon"><span>See bus arrival times</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
   </div>
+  <div id="first-run" class="first-run" role="dialog" aria-modal="true" aria-label="How it works" hidden>
+    <div class="first-run__card">
+      <p id="first-run-step" class="first-run__step"></p>
+      <span id="first-run-icon" class="first-run__icon" aria-hidden="true"></span>
+      <p id="first-run-text" class="first-run__text"></p>
+      <div class="first-run__actions">
+        <button type="button" class="secondary" id="first-run-skip">Skip</button>
+        <button type="button" class="primary" id="first-run-next">Next</button>
+      </div>
+    </div>
+  </div>
   <div id="catch-bar" class="catch-bar" role="group" aria-labelledby="catch-bar-title" hidden>
     <p id="catch-bar-title" class="catch-bar__title">Did you catch the bus?</p>
     <div class="catch-bar__actions">
@@ -710,6 +725,7 @@
   <script src="place-icons.js"></script>
   <script src="walk-speed.js"></script>
   <script src="saved-places.js"></script>
+  <script src="first-run.js"></script>
   <script>
     var AI_EXPLANATION_ENABLED = true;
     (function applyAiExplanationFlag() {
@@ -4722,8 +4738,162 @@
 
     requestLocation();
     startDemoControls();
+    window.setTimeout(function () { decideFirstRun(false); }, 2500);
+
+    // ---- First-run explainer: three short steps over Home, once per phone, reopened from the menu ("How it works").
+    // static/first-run.js keeps the one flag on this phone only; nothing is sent. Skip, Done and Escape all set it.
+    // Not shown in Demo Mode. MIRROR: copy.js firstRun (tests: tests/test_first_run.py).
+    var FIRST_RUN_STEP_OF = "Step {n} of {total}";
+    var FIRST_RUN_STEPS = [
+      "Pick where you're going.",
+      "We show when to leave, and your chance of catching the bus or train.",
+      "Walk, and we'll keep the chance updated."
+    ];
+    // Crowding on the bus (LTA Load): text and icon, never colour alone. MIRROR of copy.js crowding. Display only: it is
+    // never read by the probability, the ring or the ranking. A blank or unknown value draws nothing.
+    var CROWD_TEXT = { SEA: "Seats", SDA: "Standing", LSD: "Crowded" };
+    var CROWD_LABEL = "Bus crowding: {label}";
+    var CROWD_ICONS = {
+      SEA: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v8h9l2 6M7 12v6M16 12v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+      SDA: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v6M9 21l3-7 3 7M8 11h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+      LSD: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2"></circle><circle cx="16" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M4 20v-5a4 4 0 0 1 8 0v5M12 20v-5a4 4 0 0 1 8 0v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>'
+    };
+
+    // Fills a crowding element from a bus's load code, or hides it. Only a bus (never a train) has a load.
+    function setCrowd(el, bus) {
+      var code = bus && !bus.is_missed && !isTrain() && typeof bus.load === "string" ? bus.load : "";
+      var known = Object.prototype.hasOwnProperty.call(CROWD_TEXT, code);
+      el.hidden = !known;
+      el.replaceChildren();
+      if (!known) {
+        el.removeAttribute("data-load");
+        return;
+      }
+      el.setAttribute("data-load", code);
+      var icon = document.createElement("span");
+      icon.className = "crowd-chip__icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = CROWD_ICONS[code];
+      var text = document.createElement("span");
+      text.className = "crowd-chip__text";
+      text.textContent = CROWD_TEXT[code];
+      el.appendChild(icon);
+      el.appendChild(text);
+    }
+
+    var FIRST_RUN_SKIP = "Skip";
+    var FIRST_RUN_NEXT = "Next";
+    var FIRST_RUN_DONE = "Done";
+    // PIN_SVG is defined further down the script, so the first icon is read when a step is drawn.
+    var FIRST_RUN_ICONS = [
+      null,
+      "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>",
+      "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"2\" fill=\"currentColor\"></circle><path d=\"M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>"
+    ];
+    var firstRunStep = 0;
+    var firstRunReturnFocus = null;
+    var firstRunDecided = false;
+
+    function firstRunOpen() {
+      var box = document.getElementById("first-run");
+      return !!box && !box.hidden;
+    }
+
+    function renderFirstRun() {
+      var last = firstRunStep === FIRST_RUN_STEPS.length - 1;
+      document.getElementById("first-run-step").textContent = fillText(FIRST_RUN_STEP_OF, { n: firstRunStep + 1, total: FIRST_RUN_STEPS.length });
+      document.getElementById("first-run-icon").innerHTML = firstRunStep === 0 ? PIN_SVG : FIRST_RUN_ICONS[firstRunStep];
+      document.getElementById("first-run-text").textContent = FIRST_RUN_STEPS[firstRunStep];
+      document.getElementById("first-run-next").textContent = last ? FIRST_RUN_DONE : FIRST_RUN_NEXT;
+      document.getElementById("first-run-skip").hidden = last;
+    }
+
+    function openFirstRun() {
+      var box = document.getElementById("first-run");
+      if (!box || firstRunOpen()) {
+        return;
+      }
+      firstRunReturnFocus = document.activeElement;
+      firstRunStep = 0;
+      renderFirstRun();
+      box.hidden = false;
+      document.body.classList.add("is-first-run");
+      document.getElementById("first-run-next").focus();
+    }
+
+    function closeFirstRun() {
+      var box = document.getElementById("first-run");
+      if (!box || box.hidden) {
+        return;
+      }
+      if (window.FirstRun) {
+        window.FirstRun.markDone();
+      }
+      box.hidden = true;
+      document.body.classList.remove("is-first-run");
+      var back = firstRunReturnFocus;
+      firstRunReturnFocus = null;
+      if (back && typeof back.focus === "function" && document.contains(back)) {
+        back.focus();
+      }
+    }
+
+    function nextFirstRun() {
+      if (firstRunStep >= FIRST_RUN_STEPS.length - 1) {
+        closeFirstRun();
+        return;
+      }
+      firstRunStep += 1;
+      renderFirstRun();
+      document.getElementById("first-run-next").focus();
+    }
+
+    // The first open only: not in Demo Mode, and only when this phone has not finished it. Called once Demo Mode is known.
+    function decideFirstRun(demoOn) {
+      if (firstRunDecided) {
+        return;
+      }
+      firstRunDecided = true;
+      if (demoOn === true || !window.FirstRun || window.FirstRun.isDone()) {
+        return;
+      }
+      openFirstRun();
+    }
+
+    document.getElementById("first-run-next").addEventListener("click", nextFirstRun);
+    document.getElementById("first-run-skip").addEventListener("click", closeFirstRun);
+    document.getElementById("how-it-works").addEventListener("click", function () {
+      closeMenu();
+      openFirstRun();
+    });
+    // Escape closes; Tab stays inside the card. Captured first so the page's own Escape handler never runs behind it.
+    document.addEventListener("keydown", function (event) {
+      if (!firstRunOpen()) {
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeFirstRun();
+        return;
+      }
+      if (event.key !== "Tab") {
+        return;
+      }
+      var stops = Array.prototype.filter.call(document.querySelectorAll("#first-run button"), function (button) {
+        return !button.hidden;
+      });
+      if (!stops.length) {
+        return;
+      }
+      var at = stops.indexOf(document.activeElement);
+      var next = event.shiftKey ? (at <= 0 ? stops.length - 1 : at - 1) : (at === -1 || at === stops.length - 1 ? 0 : at + 1);
+      event.preventDefault();
+      stops[next].focus();
+    }, true);
 
     function showDemoChrome(enabled) {
+      decideFirstRun(enabled === true);
       var banner = document.getElementById("demo-banner");
       var controls = document.getElementById("demo-controls");
       banner.hidden = enabled !== true;
@@ -6688,6 +6858,174 @@
     }
 
     // One row per leg of the chosen itinerary (OneMap: walk, bus and train legs; the bus planner: its bus legs).
+    // ---- Train service alerts (LTA TrainServiceAlerts through /api/train-alerts). Display only: they change no ranking,
+    // no probability and no reroute. The server keeps one answer for 60 s for everyone and answers an empty list on any
+    // failure, so a failure shows nothing. The request has no parameters: nothing about the user is sent.
+    // MIRROR: copy.js trainAlert (tests: tests/test_train_alerts.py).
+    var TRAIN_ALERT_TEXT = "{line}: {message}";
+    var TRAIN_ALERT_NO_MESSAGE_MINOR = "Minor delays. Check for updates.";
+    var TRAIN_ALERT_NO_MESSAGE_DISRUPTED = "Train service is disrupted. Check for updates.";
+    var TRAIN_ALERT_MORE = "Show more";
+    var TRAIN_ALERT_LESS = "Show less";
+    var TRAIN_ALERT_REFRESH_MS = 60000;
+    var trainAlerts = [];
+    var trainAlertsAt = 0;
+    var trainAlertsBusy = false;
+    var trainAlertSerial = 0;
+
+    // The alert lines a rail leg is on: the East-West alert also covers the Changi Airport branch (guide: EWL).
+    function railAlertLines(legs) {
+      var lines = [];
+      (legs || []).forEach(function (leg) {
+        if (!legIsRail(leg)) {
+          return;
+        }
+        var code = String(leg.line_code || "").toUpperCase();
+        [code].concat(code === "CG" ? ["EW"] : []).forEach(function (line) {
+          if (line && lines.indexOf(line) === -1) {
+            lines.push(line);
+          }
+        });
+      });
+      return lines;
+    }
+
+    function alertsForRoute(legs) {
+      var lines = railAlertLines(legs);
+      return trainAlerts.filter(function (alert) { return lines.indexOf(alert.line) !== -1; });
+    }
+
+    function trainAlertLegs(forLive) {
+      if (forLive) {
+        return monitoringActive && activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan.legs : [];
+      }
+      if (pendingItinerary && pendingItinerary.legs) {
+        return pendingItinerary.legs;
+      }
+      return pendingRouteOption && pendingRouteOption.legs ? pendingRouteOption.legs : [];
+    }
+
+    // The words of an LTA message as the banner shows them. LTA writes "1700hrs : NSL - No train service ...": the banner
+    // already names the line, so a leading line code and dash is dropped. A leading 24-hour stamp such as "1700hrs :" is
+    // kept, as the page's own 12-hour clock ("5:00 PM"), then ": " and the rest. A stamp that is not a real time leaves
+    // the whole message as it is. A message with neither is unchanged. Returns "" when nothing is left.
+    // MIRROR: tests/test_train_alerts.py runs this function from this file.
+    function cleanTrainAlertMessage(text) {
+      var leadingCode = /^(?:EWL|NSL|NEL|CCL|DTL|TEL|BPL|STL|PTL|EW|NS|NE|CC|DT|TE|BP|SK|PG)\s*[-\u2013\u2014]\s*/;
+      var message = String(text).trim();
+      var stamp = /^(\d{4})\s*hrs\s*:\s*/i.exec(message);
+      if (!stamp) {
+        return message.replace(leadingCode, "").trim();
+      }
+      var hours = parseInt(stamp[1].slice(0, 2), 10);
+      var minutes = parseInt(stamp[1].slice(2), 10);
+      if (hours > 23 || minutes > 59) {
+        return message;
+      }
+      var rest = message.slice(stamp[0].length).replace(leadingCode, "").trim();
+      var clock = (hours % 12 === 0 ? 12 : hours % 12) + ":" + (minutes < 10 ? "0" : "") + minutes
+        + "\u00a0" + (hours < 12 ? "AM" : "PM");
+      return rest ? clock + ": " + rest : "";
+    }
+
+    function buildTrainAlert(alert, index, prefix) {
+      var name = LINE_NAMES[alert.line] || alert.line;
+      var cleaned = typeof alert.message === "string" ? cleanTrainAlertMessage(alert.message) : "";
+      var message = cleaned || (alert.status === "disrupted" ? TRAIN_ALERT_NO_MESSAGE_DISRUPTED : TRAIN_ALERT_NO_MESSAGE_MINOR);
+      var box = document.createElement("div");
+      box.className = "banner banner--caution alert-row train-alert";
+      box.setAttribute("role", "status");
+      box.setAttribute("data-line", alert.line);
+      box.setAttribute("data-status", alert.status === "disrupted" ? "disrupted" : "minor");
+      var icon = document.createElement("span");
+      icon.className = "alert-row__icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = WARN_SVG_SMALL;
+      var copy = document.createElement("div");
+      copy.className = "alert-row__copy";
+      var text = document.createElement("p");
+      text.className = "alert-row__title train-alert__text";
+      text.id = prefix + "-text-" + index;
+      text.textContent = fillText(TRAIN_ALERT_TEXT, { line: name, message: message });
+      var toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "link-button train-alert__toggle";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-controls", text.id);
+      toggle.textContent = TRAIN_ALERT_MORE;
+      toggle.hidden = true;
+      toggle.addEventListener("click", function () {
+        var open = box.classList.toggle("is-expanded");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.textContent = open ? TRAIN_ALERT_LESS : TRAIN_ALERT_MORE;
+      });
+      copy.appendChild(text);
+      copy.appendChild(toggle);
+      box.appendChild(icon);
+      box.appendChild(copy);
+      return box;
+    }
+
+    // Shown only for a route with a rail leg on an alert line; hidden otherwise. Rebuilt only when the alerts change, so an
+    // expanded alert stays expanded between polls. The expand control shows only when the text is cut at two lines.
+    function paintTrainAlerts(hostId, legs, prefix) {
+      var host = document.getElementById(hostId);
+      if (!host) {
+        return;
+      }
+      var list = alertsForRoute(legs);
+      var signature = list.map(function (alert) { return alert.line + "|" + alert.status + "|" + alert.message; }).join("\n");
+      if (host.getAttribute("data-signature") !== signature) {
+        host.setAttribute("data-signature", signature);
+        host.replaceChildren();
+        list.forEach(function (alert, index) {
+          host.appendChild(buildTrainAlert(alert, index, prefix));
+        });
+      }
+      host.hidden = list.length === 0;
+      Array.prototype.forEach.call(host.querySelectorAll(".train-alert"), function (box) {
+        if (box.classList.contains("is-expanded")) {
+          return;
+        }
+        var text = box.querySelector(".train-alert__text");
+        var toggle = box.querySelector(".train-alert__toggle");
+        toggle.hidden = !(text.scrollHeight > text.clientHeight + 1);
+      });
+    }
+
+    function renderTrainAlerts() {
+      paintTrainAlerts("overview-train-alerts", trainAlertLegs(false), "overview-alert");
+      paintTrainAlerts("live-train-alerts", trainAlertLegs(true), "live-alert");
+    }
+
+    // At most one request a minute from this page, and only when a shown route has a rail leg. Any failure: no alerts.
+    function syncTrainAlerts() {
+      var needed = railAlertLines(trainAlertLegs(false)).length + railAlertLines(trainAlertLegs(true)).length > 0;
+      if (needed && !trainAlertsBusy && Date.now() - trainAlertsAt >= TRAIN_ALERT_REFRESH_MS) {
+        trainAlertsBusy = true;
+        trainAlertsAt = Date.now();
+        var serial = trainAlertSerial;
+        fetch("/api/train-alerts", { headers: { Accept: "application/json" } })
+          .then(function (response) { return response.ok ? response.json() : { alerts: [] }; })
+          .catch(function () { return { alerts: [] }; })
+          .then(function (body) {
+            trainAlertsBusy = false;
+            if (serial !== trainAlertSerial) {
+              return;
+            }
+            var list = body && Array.isArray(body.alerts) ? body.alerts : [];
+            trainAlerts = list.filter(function (alert) {
+              return alert && typeof alert.line === "string" && LINE_NAMES[alert.line];
+            }).slice(0, 12).map(function (alert) {
+              return { line: alert.line, status: alert.status === "disrupted" ? "disrupted" : "minor",
+                message: typeof alert.message === "string" ? alert.message.slice(0, 600) : "" };
+            });
+            renderTrainAlerts();
+          });
+      }
+      renderTrainAlerts();
+    }
+
     function renderJourneyOverview() {
       var list = document.getElementById("overview-timeline");
       var option = pendingRouteOption;
@@ -6744,6 +7082,7 @@
       renderOverviewSummary(overviewSummaryData(transit, toBoard), transit.some(function (leg) { return !legIsRail(leg); }));
       syncArriveBySummary();
       syncOverviewArrive();
+      syncTrainAlerts();
     }
 
     // Priority: a native select. Each journey opens on Fastest; changing it refetches. Under the bus planner fallback the options it
@@ -6959,6 +7298,12 @@
         service.textContent = "Bus " + (selectedService || "");
         tile.appendChild(minutes);
         tile.appendChild(service);
+        var crowd = document.createElement("span");
+        crowd.className = "crowd-chip";
+        setCrowd(crowd, bus);
+        if (!crowd.hidden) {
+          tile.appendChild(crowd);
+        }
         if (bus === hero) {
           var arriving = document.createElement("span");
           arriving.className = "bus-tile-card__arriving";
@@ -7351,6 +7696,7 @@
       renderLeaveTiles();
       refreshProposalCountdown();
       syncQuality();
+      syncTrainAlerts();
     }
 
     document.getElementById("live-refresh").addEventListener("click", manualRefresh);
@@ -7486,6 +7832,7 @@
       renderPaceSlot(usable && !nearStop ? paceChip(paceCategoryFor(chance.pace) || "neutral") : null);
       updatePageCCurrent(hero, usable, state);
       renderUnlikelyBanner(hero);
+      syncTrainAlerts();
     }
 
     // The train's time line: "Scheduled · In 4 min", "Scheduled · In 1 min" or "Scheduled · Now" (the overview's wording).
@@ -7523,6 +7870,7 @@
       whenEl.textContent = when;
       whenEl.hidden = !when;
       whenEl.className = "catch-card__when" + (train ? "" : " journey-step__arriving");
+      setCrowd(document.getElementById("catch-load"), hero);
     }
 
     // The clock time or "Leave now" stays on one line; a trailing " (tomorrow)" may wrap by itself.

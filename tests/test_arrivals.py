@@ -94,7 +94,8 @@ def test_normalizes_three_buses_and_monitored_independently():
     assert result["buses"][1]["latitude"] == pytest.approx(1.2912)
     assert result["buses"][2]["latitude"] is None
     assert result["buses"][2]["longitude"] is None
-    assert "Load" not in str(result)
+    assert [bus["load"] for bus in result["buses"]] == ["SEA", "SEA", "SEA"]  # shown as a label, never scored
+    assert "'Load'" not in str(result)
     assert ACCOUNT_KEY not in str(result)
 
 
@@ -383,7 +384,8 @@ def test_arrivals_with_location_score_each_bus(tmp_path, monkeypatch):
         chances[0]
     )
     assert ACCOUNT_KEY not in response.text
-    assert "Load" not in response.text
+    assert [bus["load"] for bus in body["buses"]] == ["SEA", "SEA", "SEA"]
+    assert '"Load"' not in response.text
 
 
 def test_arrivals_mark_a_missed_bus_without_a_probability(tmp_path, monkeypatch):

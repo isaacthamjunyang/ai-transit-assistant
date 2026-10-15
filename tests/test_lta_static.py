@@ -443,6 +443,7 @@ def test_home_page_still_loads_from_cache(tmp_path: Path, monkeypatch):
         "/place-icons.js",
         "/walk-speed.js",
         "/saved-places.js",
+        "/first-run.js",
         "/sw.js",
         "/api/stops/nearby",
         "/api/arrivals",
@@ -462,6 +463,7 @@ def test_home_page_still_loads_from_cache(tmp_path: Path, monkeypatch):
         "/api/demo/reset",
         "/api/explain-option",
         "/api/data-status",
+        "/api/train-alerts",
     }
 
 

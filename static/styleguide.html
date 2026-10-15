@@ -962,6 +962,28 @@
         + "</span>" + DOWN_ICON + "</button>";
     }
 
+    // The first-run explainer: step n of 3, one line and a simple icon; Skip and Next, Done on the last. A fixed overlay in
+    // the app; here the card is shown in place.
+    function sgFirstRun(step) {
+      var fr = copy.firstRun;
+      var icons = [PIN_FILL_ICON, CLOCK_ICON, WALK_ICON];
+      var last = step === 3;
+      return "<div class=\"first-run__card\" role=\"group\" aria-label=\"" + fr.title + "\">"
+        + "<p class=\"first-run__step\">" + sgFill(fr.stepOf, { n: step, total: 3 }) + "</p>"
+        + "<span class=\"first-run__icon\" aria-hidden=\"true\">" + icons[step - 1] + "</span>"
+        + "<p class=\"first-run__text\">" + fr["step" + step] + "</p>"
+        + "<div class=\"first-run__actions\">" + (last ? "" : "<button type=\"button\" class=\"secondary\">" + fr.skip + "</button>")
+        + "<button type=\"button\" class=\"primary\">" + (last ? fr.done : fr.next) + "</button></div></div>";
+    }
+
+    function firstRunSample() {
+      return "<h4>Menu row: How it works (reopens the explainer)</h4><div class=\"menu-sheet is-preview\">"
+        + "<button type=\"button\" class=\"menu-row\"><span>" + copy.firstRun.menu + "</span></button></div>"
+        + "<h4>First-run explainer: step 1</h4><div class=\"stack\">" + sgFirstRun(1) + "</div>"
+        + "<h4>First-run explainer: step 2</h4><div class=\"stack\">" + sgFirstRun(2) + "</div>"
+        + "<h4>First-run explainer: step 3 (Done, no Skip)</h4><div class=\"stack\">" + sgFirstRun(3) + "</div>";
+    }
+
     function homeGateSample() {
       return ""
         + "<h4>Find my route, incomplete, with both messages and the Required tag</h4>"
@@ -981,7 +1003,8 @@
         + arriveField(copy.arriveBy.in30, "6:45\u00a0PM")
         + arriveField(copy.arriveBy.inHour, "7:15\u00a0PM")
         + arriveField(copy.arriveBy.custom, "6:30\u00a0PM")
-        + "</div>";
+        + "</div>"
+        + firstRunSample();
     }
 
     document.getElementById("dest-sample-light").innerHTML = homeGateSample() + destSample();
@@ -1224,6 +1247,49 @@
     }
 
     // A train as the first leg (plan_edits_9 4.6, 4.8): the words of Pages A and B and the missed-train card, from copy.js.
+    // A train service alert: the warning icon and "{line}: {message}", cut at two lines with an expand control that shows
+    // only when the text is cut. expanded shows the whole text.
+    // Bus crowding (copy.js crowding): an icon and a word, on the Next 3 buses tiles and under Page A's heading.
+    function crowdingSample() {
+      var words = copy.crowding;
+      var icons = {
+        SEA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 4v8h9l2 6M7 12v6M16 12v6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+        SDA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"5\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v6M9 21l3-7 3 7M8 11h8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+        LSD: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"8\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"16\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M4 20v-5a4 4 0 0 1 8 0v5M12 20v-5a4 4 0 0 1 8 0v5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>"
+      };
+      var tiles = ["SEA", "SDA", "LSD"].map(function (code, index) {
+        return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + (index + 2) + " min</span>"
+          + "<span class=\"bus-tile-card__service\">Bus 174</span><span class=\"crowd-chip\"><span class=\"crowd-chip__icon\" aria-hidden=\"true\">"
+          + icons[code] + "</span><span class=\"crowd-chip__text\">" + words[code] + "</span></span></li>";
+      }).join("");
+      return "<h4>Bus crowding: Seats, Standing, Crowded on the Next 3 buses tiles (a blank value draws nothing)</h4><ul class=\"bus-tiles bus-tiles--3\">" + tiles + "</ul>";
+    }
+
+    function sgTrainAlert(lineName, message, expanded, cut) {
+      var ta = copy.trainAlert;
+      return "<div class=\"banner banner--caution alert-row train-alert" + (expanded ? " is-expanded" : "") + "\" role=\"status\">"
+        + "<span class=\"alert-row__icon\" aria-hidden=\"true\">" + WARN_ICON + "</span><div class=\"alert-row__copy\">"
+        + "<p class=\"alert-row__title train-alert__text\">" + sgFill(ta.text, { line: lineName, message: message }) + "</p>"
+        + (cut ? "<button type=\"button\" class=\"link-button train-alert__toggle\">" + (expanded ? ta.less : ta.more) + "</button>" : "")
+        + "</div></div>";
+    }
+
+    function trainAlertSample() {
+      var short = "1700hrs : NSL - No train service between Bishan and Woodlands. Free bus rides are available.";
+      var long = "1657hrs : NEL - Additional travelling time of 20 minutes between Boon Keng and Dhoby Ghaut stations towards "
+        + "HarbourFront station due to a signal fault. Please plan for extra time and use the free bus service at the "
+        + "designated bus stops. Free MRT shuttle services are also available along the affected stretch.";
+      var cleaned = "5:00\u00a0PM: No train service between Bishan and Woodlands. Free bus rides are available.";
+      var bare = "Additional travelling time of 10 minutes between Punggol and HarbourFront.";
+      return "<h4>Train alert: cleaned message (code dropped, 12-hour time kept)</h4><div class=\"train-alerts\">" + sgTrainAlert("North-South Line", cleaned, false, false) + "</div>"
+        + "<h4>Train alert: code dropped, no time stamp</h4><div class=\"train-alerts\">" + sgTrainAlert("North-East Line", bare, false, false) + "</div>"
+        + "<h4>Train alert: no message, Status 1 (minor delay)</h4><div class=\"train-alerts\">" + sgTrainAlert("Circle Line", copy.trainAlert.noMessageMinor, false, false) + "</div>"
+        + "<h4>Train alert: no message, Status 2 (disrupted)</h4><div class=\"train-alerts\">" + sgTrainAlert("Circle Line", copy.trainAlert.noMessageDisrupted, false, false) + "</div>"
+        + "<h4>Train alert: a short message (no expand control)</h4><div class=\"train-alerts\">" + sgTrainAlert("North-South Line", short, false, false) + "</div>"
+        + "<h4>Train alert: a long message cut at two lines, with Show more</h4><div class=\"train-alerts\">" + sgTrainAlert("North-East Line", long, false, true) + "</div>"
+        + "<h4>Train alert: expanded, with Show less</h4><div class=\"train-alerts\">" + sgTrainAlert("North-East Line", long, true, true) + "</div>";
+    }
+
     function trainPagesSample() {
       var tp = copy.trainPage;
       var line = "North-South Line";
@@ -1255,7 +1321,9 @@
         + "</ul><button type=\"button\" class=\"primary\">Plan a new journey</button></div>";
       return "<h4>A train first leg: Page A (ring caption, tiles, miss row, See train times)</h4>" + pageA
         + "<h4>A train first leg: Page B (line, direction, departs, next trains, status)</h4>" + pageB
-        + "<h4>A train first leg: the missed train (plain rows, no Switch button)</h4>" + missed;
+        + "<h4>A train first leg: the missed train (plain rows, no Switch button)</h4>" + missed
+        + trainAlertSample()
+        + crowdingSample();
     }
 
     function legsSample() {

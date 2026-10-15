@@ -13,7 +13,7 @@ const READ = `(function () {
     note: shown(note) ? text(note) : null, noteHidden: note.hidden, summaryShown: shown(summary),
     summaryTime: text(document.getElementById("summary-time")),
     legKinds: legs.map(function (l) { return l.kind; }),
-    noteIsAfterSummary: summary.nextElementSibling === note,
+    noteIsAfterSummary: (function () { var n = summary.nextElementSibling; if (n && n.id === "overview-train-alerts") { n = n.nextElementSibling; } return n === note; })(),
     scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth,
     inlineStyles: note.hasAttribute("style")
   };

@@ -27,6 +27,7 @@
   --tint-success: #E7F9F0;
   --fill-success: #24BC6C;
   --tint-warning: #FFF3D8;
+  --scrim: rgba(0, 0, 0, 0.55);
   --fill-warning: #F2A900;
   --tint-danger: #FCE7EA;
   --fill-danger: #E5484D;
@@ -210,6 +211,7 @@
     --tint-success: #0F2E22; /* derived, not in mockup */
     --fill-success: #24BC6C; /* derived, not in mockup */
     --tint-warning: #3A2A08; /* derived, not in mockup */
+    --scrim: rgba(0, 0, 0, 0.55);
     --fill-warning: #F2A900; /* derived, not in mockup */
     --tint-danger: #3B1519; /* derived, not in mockup */
     --fill-danger: #E5484D; /* derived, not in mockup */
@@ -341,6 +343,7 @@
   --tint-success: #E7F9F0;
   --fill-success: #24BC6C;
   --tint-warning: #FFF3D8;
+  --scrim: rgba(0, 0, 0, 0.55);
   --fill-warning: #F2A900;
   --tint-danger: #FCE7EA;
   --fill-danger: #E5484D;
@@ -471,6 +474,7 @@
   --tint-success: #0F2E22; /* derived, not in mockup */
   --fill-success: #24BC6C; /* derived, not in mockup */
   --tint-warning: #3A2A08; /* derived, not in mockup */
+  --scrim: rgba(0, 0, 0, 0.55);
   --fill-warning: #F2A900; /* derived, not in mockup */
   --tint-danger: #3B1519; /* derived, not in mockup */
   --fill-danger: #E5484D; /* derived, not in mockup */
