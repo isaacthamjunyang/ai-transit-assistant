@@ -211,18 +211,10 @@ def test_if_you_miss_follows_each_live_condition():
         hidden = dict(shown)
         hidden[key] = value
         assert show_if_you_miss(**hidden) is False
+    # the page no longer draws the line (the server still works the data out)
     script = INDEX.read_text(encoding="utf-8")
-    guard = script.split("function showMiss", 1)[1].split("function renderMiss", 1)[0]
-    for needle in (
-        'body.status !== "ok"',
-        "body.demo_stale",
-        "displayFrozen",
-        "successAgeMs() > STALE_MS",
-        "buses.length < 2",
-        "!buses[0].monitored",
-        "!buses[1].monitored",
-    ):
-        assert needle in guard
+    assert "function showMiss(" not in script and "function renderMiss(" not in script
+    assert 'id="if-you-miss"' not in script
 
 
 def test_miss_line_uses_the_second_arrival_and_omits_a_null_ride():
@@ -308,11 +300,11 @@ def test_new_arrive_by_strings_avoid_guaranteed_arrival_wording():
     copy = COPY.read_text(encoding="utf-8")
     block = copy.split("arriveBy: {", 1)[1].split("noRoute:", 1)[0]
     html = INDEX.read_text(encoding="utf-8")
-    phrases = html.split("function latePhrase", 1)[1].split("function refreshPlanningWarning", 1)[0]
-    combined = (block + "\n" + phrases).lower()
+    assert "latePhrase" not in html
+    combined = block.lower()
     for banned in GUARANTEE_PHRASES:
         assert banned not in combined
     assert "That time has already passed today. Choose Tomorrow or a later time." in html
-    assert "If you miss it" in html
+    assert "If you miss it" not in html  # the miss row is gone from Page A
     assert "Change time" in html
     assert re.search(r"In 30 min", html)

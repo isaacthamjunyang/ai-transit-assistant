@@ -80,12 +80,17 @@ def test_the_card_function_makes_no_request_and_builds_no_link():
     for banned in ("fetch(", "XMLHttpRequest", "sendBeacon", "href", "setAttribute", "location", "Image(", "src"):
         assert banned not in body, banned
     # the card's distance is worked out from points already on the phone
-    assert "haversineMetres(userLat, userLon, selectedDestination.latitude, selectedDestination.longitude)" in body
+    assert "rideDistanceText()" in body
+    distance = INDEX.split("function rideDistanceText() {", 1)[1].split("\n    }\n", 1)[0]
+    for banned in ("fetch(", "XMLHttpRequest", "sendBeacon", "href", "setAttribute", "location", "Image(", "src"):
+        assert banned not in distance, banned
+    assert "haversineMetres(userLat, userLon, selectedDestination.latitude, selectedDestination.longitude)" in distance
 
 
 def test_the_page_never_puts_the_users_points_into_a_ride_app_link():
     # the only places a ride-app link is written are the static markup and the style guide's sample, both from copy.js
-    assert INDEX.count("ride-apps__link") == 5
+    # five in the overview card and five in the Page C card shown after a miss with nothing found
+    assert INDEX.count("ride-apps__link") == 10
     assert re.search(r"ride-apps[^\n]*(userLat|userLon|latitude|longitude)", INDEX.split("function showRideApps", 1)[0]) is None
 
 

@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from arrivals import BUS_POSITIONS, ArrivalUnavailable
 from catch_heuristic import MISSED_AFTER_S, is_location_uncertain, location_age_seconds, ring_band
-from config import MIN_REAL_CHANCE_RANGE_HIGH, WALK_SPEED_DEFAULT_MPS
+from config import MIN_REAL_CHANCE_RANGE_HIGH, WALK_SPEED_DEFAULT_MPS, display_stop_name
 from destination_stops import _arrival_terms, _hops, _links, _total_minutes
 from journey import bus_arrival_window, leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
@@ -26,14 +26,12 @@ COOLDOWN_S = 120
 ALTERNATE_STOP_LIMIT = 2
 RANGE_HIGH_BELOW = MIN_REAL_CHANCE_RANGE_HIGH
 CONTINUITY_WINDOW_S = 180
-NO_BETTER_OPTION = (
-    "Primary bus target has low catch probability ({point}%), "
-    "but no better direct alternative meets the 15% improvement threshold."
-)
-POST_REROUTE_NO_BETTER = (
-    "Primary bus target has low catch probability ({point}%), "
-    "but no better direct alternative meets the post-reroute 20% improvement threshold."
-)
+MISS_ROW_LIMIT = 5
+# Where a candidate came from, for the order after a miss: the next buses of the same service at the stop,
+# the other services at the stop, then nearby stops and planner routes.
+GROUP_SAME_SERVICE = 1
+GROUP_SAME_STOP = 2
+GROUP_NEARBY = 3
 
 
 def plan_reroute(
@@ -259,6 +257,20 @@ def closest_alternate_stops(
     return found
 
 
+def nearest_stops(cache, user_lat: float, user_lon: float, exclude_code: str, limit: int) -> list[dict]:
+    """The closest boarding stops within BOARDING_RADIUS_M, nearest first, whether or not they reach the destination."""
+    near = []
+    for stop in cache.stops:
+        code = stop.get("BusStopCode")
+        if not isinstance(code, str) or code == exclude_code:
+            continue
+        distance = haversine_m(user_lat, user_lon, stop["Latitude"], stop["Longitude"])
+        if distance <= BOARDING_RADIUS_M:
+            near.append((distance, code, stop))
+    near.sort(key=lambda item: (item[0], item[1]))
+    return [stop for _distance, _code, stop in near[:limit]]
+
+
 def _decide(
     *,
     cache,
@@ -328,14 +340,8 @@ def _decide(
     }
     recommendation = recommend_option([row for row in rows if row["id"] in passing], arrive_by)
     if recommendation is None:
-        text = None
-        if isinstance(current_point, int) and not isinstance(current_point, bool):
-            if margin == NORMAL_MARGIN:
-                text = NO_BETTER_OPTION.format(point=current_point)
-            elif margin == COOLDOWN_MARGIN:
-                text = POST_REROUTE_NO_BETTER.format(point=current_point)
+        # No sentence is sent: the page says nothing when no option clears the margin.
         decision = _hold()
-        decision["no_better_option"] = text
         decision["options"] = rank_options(rows, None, arrive_by, "better")
         return _logged(
             decision, cache, current, primary, user_lat, user_lon, accuracy_m, now,
@@ -354,7 +360,6 @@ def _decide(
         stop["services"].append(winner["service_no"])
     decision = {
         "switched": True,
-        "no_better_option": None,
         "reroute": {
             "service_no": winner["service_no"],
             "stop": stop,
@@ -408,6 +413,7 @@ def _candidates(
     include_primary: bool = False,
     missed_eta_epoch: float | None = None,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    planner=None,
 ) -> list[dict]:
     found = []
     current_stop = current.get("stop_code") or ""
@@ -440,6 +446,7 @@ def _candidates(
             walk_speed_m_s=walk_speed_m_s,
         )
         if candidate is not None:
+            candidate["group"] = GROUP_SAME_SERVICE
             found.append(candidate)
     if loader is None:
         return found
@@ -460,32 +467,51 @@ def _candidates(
     prefetch = getattr(loader, "prefetch", None)
     if callable(prefetch) and plan:
         prefetch(plan)
-    for code, services in plan:
-        for service in services:
-            try:
-                loaded = loader(code, service)
-            except ArrivalUnavailable:
-                continue
-            if not isinstance(loaded, dict) or loaded.get("status") != "ok":
-                continue
-            for bus in loaded.get("buses") or []:
-                candidate = _candidate_from_bus(
-                    cache,
-                    bus,
-                    stop_code=code,
-                    service_no=service,
-                    fetched_at=loaded.get("fetched_at"),
-                    user_lat=user_lat,
-                    user_lon=user_lon,
-                    destination_stop_code=destination_stop_code,
-                    place_lat=place_lat,
-                    place_lon=place_lon,
-                    arrive_by=arrive_by,
-                    now=now,
-                    walk_speed_m_s=walk_speed_m_s,
-                )
-                if candidate is not None:
-                    found.append(candidate)
+    # Planner routes (OneMap, bus first leg) are looked up after the stops above, one lookup per stop and
+    # service not already in the plan. A failed planner call is the same as no planner routes.
+    planned: list[tuple[str, str]] = []
+    if planner is not None:
+        covered = {(code, service) for code, services in plan for service in services}
+        try:
+            starts = planner()
+        except Exception:  # noqa: BLE001 - the planner is optional; it never fails the search
+            starts = []
+        for start in starts or []:
+            if start not in covered and start not in planned:
+                planned.append(start)
+    lookups = [
+        (code, service, GROUP_SAME_STOP if code == current_stop else GROUP_NEARBY, False)
+        for code, services in plan
+        for service in services
+    ]
+    lookups += [(code, service, GROUP_NEARBY, True) for code, service in planned]
+    for code, service, group, unlinked in lookups:
+        try:
+            loaded = loader(code, service)
+        except ArrivalUnavailable:
+            continue
+        if not isinstance(loaded, dict) or loaded.get("status") != "ok":
+            continue
+        for bus in loaded.get("buses") or []:
+            candidate = _candidate_from_bus(
+                cache,
+                bus,
+                stop_code=code,
+                service_no=service,
+                fetched_at=loaded.get("fetched_at"),
+                user_lat=user_lat,
+                user_lon=user_lon,
+                destination_stop_code=destination_stop_code,
+                place_lat=place_lat,
+                place_lon=place_lon,
+                arrive_by=arrive_by,
+                now=now,
+                walk_speed_m_s=walk_speed_m_s,
+                allow_unlinked=unlinked,
+            )
+            if candidate is not None:
+                candidate["group"] = group
+                found.append(candidate)
     return found
 
 
@@ -504,7 +530,9 @@ def _candidate_from_bus(
     now: datetime,
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
     fetched_at=None,
+    allow_unlinked: bool = False,
 ) -> dict | None:
+    """allow_unlinked: a planner route may reach the destination by a transfer, so no direct link is needed."""
     if bus.get("is_missed"):
         return None
     chance = bus.get("probability")
@@ -522,7 +550,7 @@ def _candidate_from_bus(
     links = _service_links(
         cache, stop_code, service_no, destination_stop_code, user_lat, user_lon
     )
-    if not links:
+    if not links and not allow_unlinked:
         return None
     eta = _parse_eta(bus.get("arrival_time"), now)
     if eta is None:
@@ -602,13 +630,23 @@ def _option_id(candidate: dict) -> str:
     return f"{candidate['service_no']}|{candidate['stop_code']}|{int(candidate['eta'].timestamp())}"
 
 
-def rank_options(rows: list[dict], recommendation: dict | None, arrive_by: datetime | None, entry: str) -> dict:
+def rank_options(
+    rows: list[dict],
+    recommendation: dict | None,
+    arrive_by: datetime | None,
+    entry: str,
+    after_miss: bool = False,
+) -> dict:
     """Name the pills and order the list. Pure; there is no blended score.
 
     `recommendation` is the recommend_option result ({"id", "reason"}) or None. The recommended
     option is the card and is not in the list. The list is ordered by point probability (high
     first), then the earlier estimated arrival, then the service number. `entry` is "better"
     (the automatic entry) or "recommended" (the "No, I missed it" entry).
+
+    after_miss orders the list by source group (the same service at the stop, the other services at
+    the stop, nearby stops and planner routes), then by the nearest arrival, and keeps at most
+    MISS_ROW_LIMIT rows. The recommended card is not a row.
     """
     holders = pills(rows)
     deadline = None if arrive_by is None else _as_sgt(arrive_by)
@@ -637,7 +675,11 @@ def rank_options(rows: list[dict], recommendation: dict | None, arrive_by: datet
     def row_key(row: dict):
         return (-row["point"], arrival_key(row), natural_key(row["service_no"]))
 
-    listed = sorted((row for row in rows if row is not recommended), key=row_key)
+    def miss_key(row: dict):
+        return (row.get("group", GROUP_NEARBY), arrival_key(row, "arrival_time"), natural_key(row["service_no"]))
+
+    others = (row for row in rows if row is not recommended)
+    listed = sorted(others, key=miss_key)[:MISS_ROW_LIMIT] if after_miss else sorted(others, key=row_key)
     return {
         "mode": "winner" if recommended is not None else "none",
         "entry": entry,
@@ -678,6 +720,7 @@ def _option_row(
         "walk_m": 0 if at_current else stop.get("distance_m"),
         "at_current_stop": at_current,
         "next_of_same_service": at_current and service == current_service,
+        "group": candidate.get("group", GROUP_NEARBY),
         "monitored": candidate.get("monitored"),
         "leave_by": _leave_by_iso(candidate["eta"], stop.get("distance_m"), walk_speed_m_s),
         "reroute": {
@@ -686,10 +729,10 @@ def _option_row(
             "arrival_time": candidate["eta"].replace(microsecond=0).isoformat(),
             "eta_epoch": candidate["eta"].timestamp(),
             "title": "Route Updated",
-            "message": f"Switched to Bus {service} at {name} ({code}).",
+            "message": f"Switched to Bus {service} at {display_stop_name(name)}.",
             "probability_line": line,
             "notification_title": f"Route Updated \u2014 Bus {service}",
-            "notification_body": f"Switched to Bus {service} at {name}. {notification_line}",
+            "notification_body": f"Switched to Bus {service} at {display_stop_name(name)}. {notification_line}",
             "reroute_reason": f"Switched from Bus {current_service} ({current_stop}) to Bus {service} ({code})",
         },
     }
@@ -727,8 +770,13 @@ def plan_options(
     missed_eta_epoch: float | None = None,
     entry: str = "recommended",
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    planner=None,
+    after_miss: bool = False,
 ) -> dict:
-    """On-demand search (missed or unlikely entry). It ignores the unlikely-trigger and the improvement rule."""
+    """On-demand search (missed or unlikely entry). It ignores the unlikely-trigger and the improvement rule.
+
+    after_miss (the "No, I missed it" entry) adds planner routes and lists the options in group order.
+    planner is a callable returning (stop code, service) pairs for routes whose first leg is a bus."""
     moment = _as_sgt(now)
     if current.get("status") != "ok":
         return {"mode": "none", "entry": entry, "recommended_id": None, "recommended": None, "rows": []}
@@ -747,9 +795,10 @@ def plan_options(
         include_primary=True,
         missed_eta_epoch=missed_eta_epoch,
         walk_speed_m_s=walk_speed_m_s,
+        planner=planner if after_miss else None,
     )
     rows = build_rows(cache, candidates, user_lat, user_lon, current, walk_speed_m_s)
-    return rank_options(rows, recommend_option(rows, arrive_by), arrive_by, entry)
+    return rank_options(rows, recommend_option(rows, arrive_by), arrive_by, entry, after_miss)
 
 
 def _required_margin(now: datetime, last_reroute_at: datetime | None) -> int | None:
@@ -840,13 +889,13 @@ def _switch_copy(*, old_service, old_stop, old_high, old_point, winner) -> dict:
     point = winner["point"]
     return {
         "title": "Route Updated",
-        "message": f"Switched to Bus {service} at {name} ({code}).",
+        "message": f"Switched to Bus {service} at {display_stop_name(name)}.",
         "probability_line": (
             f"Catch probability: about {point}% vs previous about {old_point}%."
         ),
         "notification_title": f"Route Updated \u2014 Bus {service}",
         "notification_body": (
-            f"Switched to Bus {service} at {name}. "
+            f"Switched to Bus {service} at {display_stop_name(name)}. "
             f"Catch probability: {point}% (range {low}\u2013{high}%)."
         ),
         "reroute_reason": (
@@ -959,7 +1008,7 @@ def _primary(buses: list[dict]) -> dict | None:
 
 
 def _hold() -> dict:
-    return {"switched": False, "no_better_option": None, "reroute": None}
+    return {"switched": False, "reroute": None}
 
 
 def _stop_name(cache, stop_code: str) -> str:

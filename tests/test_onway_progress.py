@@ -124,18 +124,18 @@ WALK_TO_DEST = r"Next: Walk \d+ min to Destination"
 
 # (minutes from planning, steps ticked, the row that is "On board" or None, the Next line)
 BUS_BUS_BUS = [
-    (0, 0, 0, r"Next: Get off at .* \(28059\)"),
-    (14.5, 1, None, r"Next: Walk \d+ min to .* \(03011\)"),
-    (16.5, 2, None, r"Next: Board Bus 36 at .* \(03011\)"),
-    (21, 2, 2, r"Next: Get off at .* \(05012\)"),
-    (30.5, 3, None, r"Next: Walk \d+ min to .* \(06013\)"),
-    (32.5, 4, None, r"Next: Board Bus 77 at .* \(06013\)"),
-    (37, 4, 4, r"Next: Get off at .* \(07013\)"),
+    (0, 0, 0, r"Next: Get off at .*"),
+    (14.5, 1, None, r"Next: Walk \d+ min to .*"),
+    (16.5, 2, None, r"Next: Board Bus 36 at .*"),
+    (21, 2, 2, r"Next: Get off at .*"),
+    (30.5, 3, None, r"Next: Walk \d+ min to .*"),
+    (32.5, 4, None, r"Next: Board Bus 77 at .*"),
+    (37, 4, 4, r"Next: Get off at .*"),
     (46.5, 5, None, WALK_TO_DEST),
     (49, 6, None, None),
 ]
 BUS_TRAIN = [
-    (0, 0, 0, r"Next: Get off at .* \(28059\)"),
+    (0, 0, 0, r"Next: Get off at .*"),
     (14.5, 1, None, r"Next: Walk \d+ min to .* \(NS17\)"),
     (16.5, 2, None, r"Next: Board the North-South Line train at .* \(NS17\)"),
     (21, 2, 2, r"Next: Get off at .* \(NS26\)"),
@@ -228,7 +228,7 @@ def test_the_alert_fires_once_at_399_m_and_not_at_401_m_for_a_bus(alert_bus):
     r = alert_bus
     assert r["t0"]["alert"] is None and r["t0"]["reading"] is True
     assert r["at401"]["alert"] is None and r["at401"]["notes"] == []
-    assert re.fullmatch(r"Get off next stop: .* \(28059\)", _flat(r["at399"]["alert"])), r["at399"]["alert"]
+    assert re.fullmatch(r"Get off next stop: .*", _flat(r["at399"]["alert"])), r["at399"]["alert"]
     assert r["at399"]["alertVisible"] is True
     assert r["again"]["alert"] == r["at399"]["alert"]
     assert r["dismissed"]["alert"] is None
@@ -237,7 +237,7 @@ def test_the_alert_fires_once_at_399_m_and_not_at_401_m_for_a_bus(alert_bus):
     assert r["at399"]["notes"] == [] and r["afterDismiss"]["asked"] == 0
     # the next leg gets its own alert, with the same 401 / 399 rule
     assert r["second401"]["alert"] is None
-    assert re.fullmatch(r"Get off next stop: .* \(05012\)", _flat(r["second399"]["alert"])), r["second399"]["alert"]
+    assert re.fullmatch(r"Get off next stop: .*", _flat(r["second399"]["alert"])), r["second399"]["alert"]
 
 
 def test_the_alert_for_a_train_says_get_off_at_the_station_and_notifies_only_when_granted(alert_train):
@@ -268,7 +268,7 @@ def test_without_a_position_the_alert_falls_back_to_two_minutes_before_the_plann
     r = fallback
     assert r["noFix"]["alert"] is None and r["noFix"]["reading"] is True
     assert r["at150"]["alert"] is None
-    assert re.fullmatch(r"Get off next stop: .* \(28059\)", _flat(r["at119"]["alert"])), r["at119"]["alert"]
+    assert re.fullmatch(r"Get off next stop: .*", _flat(r["at119"]["alert"])), r["at119"]["alert"]
     # a usable position wins over the clock; a poor one (500 m) is no position
     assert r["farFixEarly"]["alert"] is None and r["farFix"]["alert"] is None
     assert _flat(r["poorFix"]["alert"]).startswith("Get off next stop: ")
@@ -389,7 +389,7 @@ def test_a_yes_with_no_plan_shows_the_minimal_leg_and_nothing_that_needs_an_end_
     first = r["firstRow"]
     assert "journey-step--bus" in first["cls"] and "journey-step--leg" in first["cls"]
     assert first["nodes"] == 1 and first["bar"] is False  # a start marker only: no end marker, no bar
-    assert first["titles"] == ["Origin (01011)"]
+    assert first["titles"] == ["Origin"]
     assert first["badge"].replace("Bus ", "") == "18"
     assert "On board" in first["text"] and "To " not in first["text"] and "stop" not in first["text"].replace("Origin", "")
     rows = r["t0"]["rows"]

@@ -18,7 +18,7 @@ def test_route_preview_uses_stop_coordinates_and_does_not_start_arrivals():
     assert "legPath" in preview  # drawn from the decoded path, falling back to the stops
     assert '"BOARD"' in preview
     assert '"CHANGE"' in preview and '"EXIT"' in preview
-    assert '"DESTINATION"' in preview
+    assert "routeDestinationFlag(place)" in preview
     assert "map.fitBounds" in preview
     # Route cards were removed: the app picks the route. Start journey runs the existing action.
     assert "function renderRouteOptions" not in html

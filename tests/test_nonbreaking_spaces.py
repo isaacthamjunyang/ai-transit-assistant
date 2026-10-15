@@ -49,20 +49,11 @@ def test_copy_js_page_and_tile_strings_hold_the_no_break_spaces():
     for source in (COPY, INDEX):
         assert source.count("{kmh}" + ESC + "km/h") >= 3
         assert not re.search(r"(about|speed of) \{kmh\} km/h", source)  # the sentence templates only
-    for name, expected in (
-        ("leaveByIn", "in {n}" + ESC + "min · {w}" + ESC + "min walk"),
-        ("leaveByInUnder", "in under 1" + ESC + "min · {w}" + ESC + "min walk"),
-        ("leaveNowBusAway", "The bus is {e}" + ESC + "min away and the walk takes about {w}" + ESC + "min."),
-        ("leaveNowBusArriving", "The bus is arriving now and the walk takes about {w}" + ESC + "min."),
-    ):
-        assert f'{name}: "{expected}"' in COPY, name
-    for expected in (
-        'var LEAVE_TILE_IN_MIN = "in {n}' + ESC + 'min · {w}' + ESC + 'min walk";',
-        'var LEAVE_TILE_IN_UNDER = "in under 1' + ESC + 'min · {w}' + ESC + 'min walk";',
-        'var LEAVE_TILE_BUS_AWAY = "The bus is {e}' + ESC + 'min away and the walk takes about {w}' + ESC + 'min.";',
-        'var LEAVE_TILE_BUS_ARRIVING = "The bus is arriving now and the walk takes about {w}' + ESC + 'min.";',
-    ):
-        assert expected in INDEX, expected
+    assert 'leaveWalk: "{w}' + ESC + 'min walk"' in COPY
+    assert 'var LEAVE_TILE_WALK = "{w}' + ESC + 'min walk";' in INDEX
+    for gone in ("leaveByIn", "leaveByInUnder", "leaveNowBusAway", "leaveNowBusArriving", "LEAVE_TILE_IN_MIN",
+                 "LEAVE_TILE_BUS_AWAY", "LEAVE_TILE_AT_STOP_AWAY"):
+        assert gone not in COPY and gone not in INDEX, gone
 
 
 def test_every_page_clock_joins_the_time_and_am_pm_with_a_no_break_space():
@@ -80,7 +71,7 @@ def test_the_page_clock_and_range_run_with_the_no_break_space():
         return start + text.split(start, 1)[1].split(end, 1)[0]
 
     parts = between(INDEX, "function singaporeParts(date) {", "function pad2(value)")
-    clock = between(INDEX, "function formatClock(iso, withTomorrow) {", "// Only the late wording")
+    clock = between(INDEX, "function formatClock(iso, withTomorrow) {", "function estimateSentence(estimate")
     program = parts + clock + (
         'console.log(JSON.stringify([formatClock("2026-10-05T22:03:30+08:00", false),'
         ' leaveClockText("2026-10-05T22:03:30+08:00", Date.parse("2026-10-05T21:00:00+08:00"))]));'

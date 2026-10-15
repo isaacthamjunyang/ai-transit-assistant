@@ -123,8 +123,9 @@ def test_the_page_reads_tokens_only_and_draws_by_pattern():
                   'cssToken("--map-line-" + code + "-casing")'):
         assert token in region, token
     assert 'dashArray: "5, 10"' in region and 'dashArray: dotted ? "1, 9" : ""' in region
-    for label in ('"BOARD"', '"CHANGE"', '"EXIT"', '"DESTINATION"'):
+    for label in ('"BOARD"', '"CHANGE"', '"EXIT"'):
         assert f"routePin(" in region and label in region
+    assert "routeDestinationFlag(place)" in region  # the destination is the green flag (tests/test_map_markers.py)
     assert "TRANSFER" not in region  # the old two-leg drawing is gone
 
 
@@ -182,8 +183,8 @@ def test_each_leg_kind_is_drawn_in_its_own_pattern(mixed_light):
     assert all(layer["points"] >= 2 for layer in layers)  # drawn from the decoded paths, not from two stops
 
 
-def test_the_pins_are_board_change_exit_and_destination(mixed_light):
-    assert mixed_light["pins"] == ["BOARD", "CHANGE", "CHANGE", "CHANGE", "EXIT", "DESTINATION"]
+def test_the_pins_are_board_change_exit_and_the_destination_flag(mixed_light):
+    assert mixed_light["pins"] == ["BOARD", "CHANGE", "CHANGE", "CHANGE", "EXIT", "FLAG Destination"]
     assert not any("TRANSFER" in pin for pin in mixed_light["pins"])
 
 
@@ -193,7 +194,7 @@ def test_cc_gets_an_ink_casing_in_light_and_nothing_else_does(casing_light):
     assert len(wide) == 1 and _norm(wide[0]["color"]) == _norm(tokens["cc_casing"])
     index = layers.index(wide[0])
     assert layers[index + 1]["weight"] == 6 and _norm(layers[index + 1]["color"]) == _norm(tokens["cc"])  # the line sits on it
-    assert [l["weight"] for l in layers].count(6) == 4 and casing_light["pins"][-2:] == ["EXIT", "DESTINATION"]
+    assert [l["weight"] for l in layers].count(6) == 4 and casing_light["pins"][-2:] == ["EXIT", "FLAG Destination"]
 
 
 def test_ne_dt_and_te_get_a_white_casing_in_dark_and_cc_does_not(casing_dark):

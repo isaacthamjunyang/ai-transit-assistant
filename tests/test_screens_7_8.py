@@ -27,8 +27,8 @@ def test_duplicates_are_gone_and_needed_ids_stay():
                  "function appendScore", "function appendHeroPoint", "function appendCatchMeter", "function heroRoute"):
         assert gone not in html
     for kept in ("arrival-card", "arrival-heading", "arrival-status", "arrival-warning", "arrival-list", "arrival-updated",
-                 "quality-banner", "stale-status", "location-card", "leave-now-banner", "if-you-miss", "leave-by-section", "journey-comparison", "journey-leave-countdown",
-                 "reroute-block", "reroute-card", "reroute-title", "reroute-none", "ai-explanation", "ai-explanation-status",
+                 "quality-banner", "stale-status", "location-card", "leave-now-banner", "leave-by-section", "journey-comparison", "journey-leave-countdown",
+                 "reroute-block", "reroute-card", "reroute-title", "ai-explanation", "ai-explanation-status",
                  "ai-explanation-text", "notification-panel",
                  "catch-warning", "live-tracking"):
         assert html.count('id="%s"' % kept) == 1, kept
@@ -54,8 +54,8 @@ def test_ring_label_carries_the_point_only():
     assert "!displayFrozen && chance" in card
     markup = _between(html, 'id="arrival-card"', "</section>")
     assert 'aria-live="polite"' in _between(html, '<section class="card catch-card" id="arrival-card"', ">")
-    assert 'id="catch-ring" class="prob-ring" role="img"' in markup
-    assert "if you leave now and walk at a normal pace" in markup
+    assert 'id="catch-ring" class="prob-ring prob-ring--large" role="img"' in markup
+    assert "catch-caption" not in markup and "if you leave now" not in markup  # Page A's card has no caption
 
 
 def test_no_on_screen_probability_text_shows_a_range():
@@ -73,16 +73,16 @@ def test_tiles_mirror_existing_values():
     tiles = _between(html, "function renderLeaveTiles()", "// Screen 8")
     # The Leave by tile reads the leave rule: a clock time or "Leave now", never both (leaveTileView).
     assert "formatClock(lastSuccess.leave_by, true)" not in tiles
-    assert "leaveTileView(" in tiles and "trackedAction(lastSuccess)" in tiles and "WAIT_ALERT_TEXT" not in tiles
-    assert 'action === "switch_route" || action === "do_not_rely"' in tiles
+    assert "leaveTileView(" in tiles and "WAIT_ALERT_TEXT" not in tiles
+    assert "leaveTile.hidden = false;" in tiles  # both tiles are on Page A in every band and action
     assert "formatRange" not in tiles and "arrival_low" not in tiles  # the tile shows the point time, never the range
     assert "journey-spare" not in tiles and "tile-spare" not in tiles  # the spare line is gone
-    assert "journeyComparison.textContent" in tiles
-    assert "journeyNote.textContent" in tiles
-    views = _between(html, "function renderArrivalViews(estimate)", "function showMiss")
+    assert "journeyComparison" not in tiles and "journeyNote" not in tiles  # no check pill or note on Page A
+    views = _between(html, "function renderArrivalViews(estimate)", "function renderPlanningWarning")
     assert "lastTileEstimate = " in views
     markup = _between(html, 'id="leave-tiles"', "</section>")
-    assert "Estimated destination arrival" in markup and ">Arrive by<" not in markup
+    assert "Estimated destination arrival" not in markup and ">Arrive by<" not in markup  # no second tile
+    assert 'id="tile-arrival"' not in markup
 
 
 def test_ai_flag_defaults_off_and_the_card_is_never_empty(tmp_path, monkeypatch):
@@ -106,7 +106,7 @@ def test_ai_flag_defaults_off_and_the_card_is_never_empty(tmp_path, monkeypatch)
     assert "body.snapshot !== lastExplanationPack.snapshot" in begin  # a reply for an older poll is dropped
     sync = _between(html, "function syncExplanation(body)", "function notifyReroute")
     assert "renderExplanation({ text: pack.text" in sync  # the text is shown on every poll, so the card is never empty
-    assert "Worked out from the app's own estimates." in html
+    assert "Worked out from the app's own estimates." not in html  # no grey helper line under the card
     assert "Probabilities come from the app's own calculation" not in html
 
 

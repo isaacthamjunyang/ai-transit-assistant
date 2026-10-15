@@ -210,7 +210,7 @@ def test_the_payload_has_the_poll_shape_and_says_it_is_scheduled():
     assert first["arrival_time"] == DEPARTURE and first["is_primary"] and first["monitored"] is False
     chance = first["probability"]
     assert chance["data_quality"] == "schedule" and chance["at_stop"] is False and chance["point"] <= 60
-    assert body["not_live_text"] == "Train times are scheduled, not live."
+    assert "not_live_text" not in body and "if_you_miss_text" not in body  # the page no longer draws either
     assert len(body["next_departures"]) == 3 and body["next_departures"][0] == DEPARTURE
 
 
@@ -247,7 +247,6 @@ def test_reroute_is_off_in_the_payload_and_in_reroute_enabled():
 def test_a_missed_train_lists_the_next_three_departures_and_says_the_train_has_left():
     body = payload(departure_iso=iso(-3))
     assert body["buses"][0]["is_missed"] is True and body["buses"][0]["probability"] is None
-    assert body["if_you_miss_text"] is None
     assert len(body["next_departures"]) == 3 and datetime.fromisoformat(body["next_departures"][0]) > NOW - timedelta(seconds=30)
     assert body["left_text"] == ("The North-South Line train has left. The next one is at about "
                                  + explain.format_clock(datetime.fromisoformat(body["next_departures"][0]), NOW) + ".")
@@ -258,8 +257,7 @@ def test_a_missed_train_lists_the_next_three_departures_and_says_the_train_has_l
 def test_a_train_that_is_coming_says_what_to_do_if_you_miss_it():
     body = payload()
     assert body["left_text"] is None
-    assert body["if_you_miss_text"] == "If you miss it, the next train is at about " + explain.format_clock(
-        datetime.fromisoformat(body["next_departures"][1]), NOW) + "."
+    assert "if_you_miss_text" not in body
 
 
 def test_a_bad_departure_is_a_value_error_and_a_missing_table_still_works():
@@ -319,9 +317,9 @@ LINE = "North-South Line"
 
 @pytest.mark.parametrize("e, leave_in, expected", [
     (4, 120, f"The {LINE} train is scheduled in 4{NB}min. Live train times are not available. "
-             f"Leave by 8:22{NB}AM so you have 2 minutes to reach your station and catch the train departing at 8:24{NB}AM."),
+             f"Leave by 8:22{NB}AM to reach your station in 3 minutes and catch the train departing at 8:24{NB}AM."),
     (1, 61, f"The {LINE} train is scheduled in 1{NB}min. Live train times are not available. "
-            f"Leave by 8:21{NB}AM so you have 1 minute to reach your station and catch the train departing at 8:21{NB}AM."),
+            f"Leave by 8:21{NB}AM to reach your station in 3 minutes and catch the train departing at 8:21{NB}AM."),
     (0, 0, f"The {LINE} train is scheduled to leave now. Live train times are not available. "
            f"Leave now to try to catch the train departing at 8:20{NB}AM."),
 ])
@@ -333,7 +331,7 @@ def test_the_train_card_is_the_train_sentence_then_the_train_leave_sentence(e, l
 def test_the_train_card_with_leave_now_and_with_an_uncertain_location():
     now_text = explain.card_text(numbers(e=4, leave_in=30, action="leave_now"), band="ok", uncertain=True)
     assert now_text == (f"The {LINE} train is scheduled in 4{NB}min. Live train times are not available. "
-                        f"Leave now so you have 4 minutes to reach your station and catch the train departing at 8:24{NB}AM. "
+                        f"Leave now to reach your station in 3 minutes and catch the train departing at 8:24{NB}AM. "
                         "Your location is uncertain, so the walking time may be off.")
     by_text = explain.card_text(numbers(e=4, leave_in=120), band="ok", uncertain=True)
     assert by_text.endswith("Your location is uncertain, so leave a little earlier than that to be safe.")
@@ -373,19 +371,18 @@ def test_no_train_card_says_bus_or_stop_and_no_bus_card_says_train():
         assert "train" in text
     for text in bus_cards:
         assert not re.search(r"train", text, re.IGNORECASE), text
-    for text in (explain.TRAIN_MISS, explain.TRAIN_LEFT, explain.TRAIN_NEXT, explain.TRAIN_ABOUT, explain.TRAIN_NOT_LIVE):
+    for text in (explain.TRAIN_LEFT, explain.TRAIN_NEXT, explain.TRAIN_ABOUT):
         assert not re.search(r"\b(bus|stop)\b", text, re.IGNORECASE), text
 
 
 def test_projected_departures_are_listed_with_about():
     assert explain.TRAIN_ABOUT == "about {time}" and explain.TRAIN_NEXT == "Next trains: {list}."
-    assert explain.TRAIN_MISS == "If you miss it, the next train is at about {time}."
+    assert not hasattr(explain, "TRAIN_MISS") and not hasattr(explain, "TRAIN_NOT_LIVE")
     assert explain.TRAIN_LEFT == "The {line} train has left. The next one is at about {time}."
     body = payload()
     first = [datetime.fromisoformat(d) for d in body["next_departures"]]
     expected = "Next trains: " + ", ".join("about " + explain.format_clock(d, NOW) for d in first) + "."
     assert body["next_departures_text"] == expected and expected.count("about") == 3
-    assert body["if_you_miss_text"] == "If you miss it, the next train is at about " + explain.format_clock(first[1], NOW) + "."
     closed = payload(departure_iso=iso(-3))
     assert closed["left_text"].endswith("The next one is at about " + explain.format_clock(
         datetime.fromisoformat(closed["next_departures"][0]), NOW) + ".")
@@ -400,7 +397,7 @@ def test_the_bus_card_is_word_for_word_what_it_was():
     assert bus["train_line"] is None
     assert explain.card_text(bus, band="ok", uncertain=False) == (
         "The bus is 10 minutes away, and you are 300 m from the stop and walking at about 4.5 km/h. "
-        "Leave by 8:30 AM so you have 10 minutes to reach your stop and catch the bus arriving at 8:40 AM.")
+        "Leave by 8:30 AM to reach your stop in 4 minutes and catch the bus arriving at 8:40 AM.")
     empty = explain.build_numbers(
         bus_minutes=4, walk_minutes=4, chosen_action="wait", distance_m=300.0, walk_speed_used=1.25,
         walk_speed_source="gps", leave_by=iso(10), arrival_time=iso(4), now=NOW, train_line="  ")
@@ -418,8 +415,7 @@ def test_the_train_strings_match_copy_js_and_the_page_mirror():
         "leaveNowTrain": (explain.S2_TRAIN_LEAVE_NOW, "EXPL_TRAIN_LEAVE_NOW"),
         "leaveNowDepartingTrain": (explain.S2_TRAIN_LEAVE_NOW_DEPARTING, "EXPL_TRAIN_LEAVE_NOW_DEPARTING"),
     }
-    copy_only = {"trainNotLive": explain.TRAIN_NOT_LIVE, "trainAbout": explain.TRAIN_ABOUT,
-                 "trainNext": explain.TRAIN_NEXT, "trainMiss": explain.TRAIN_MISS, "trainLeft": explain.TRAIN_LEFT}
+    copy_only = {"trainAbout": explain.TRAIN_ABOUT, "trainNext": explain.TRAIN_NEXT, "trainLeft": explain.TRAIN_LEFT}
     block = COPY.split("train: {", 1)[1].split(chr(10) + "  },", 1)[0]
     for key, (value, variable) in in_both.items():
         source = value.replace(chr(0xA0), escape)

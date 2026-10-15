@@ -30,6 +30,12 @@ const READ = `(function () {
   var main = document.getElementById("overview-arrive-value");
   var gap = document.getElementById("overview-arrive-estimate");
   var status = document.getElementById("overview-arrive-status");
+  function look(el) {
+    if (!el) { return null; }
+    var c = getComputedStyle(el);
+    return [c.fontFamily, c.fontSize, c.fontWeight, c.paddingTop, c.paddingRight, c.paddingBottom, c.paddingLeft,
+      c.borderTopLeftRadius, c.backgroundColor, c.color, c.minHeight].join("|");
+  }
   var lines = Array.prototype.filter.call(box.querySelectorAll(".arrive-box__copy > p"), shown);
   return {
     label: box.querySelector(".arrive-box__label") ? text(box.querySelector(".arrive-box__label")) : null,
@@ -39,6 +45,7 @@ const READ = `(function () {
     boxBackground: getComputedStyle(box).backgroundColor,
     pillColour: shown(status) ? getComputedStyle(status).color : null,
     gapClass: gap.className,
+    gapLook: shown(gap) ? look(gap) : null, pillLook: shown(status) ? look(status) : null,
     main: shown(main) ? text(main) : null,
     gap: shown(gap) ? text(gap) : null,
     status: shown(status) ? text(status) : null,

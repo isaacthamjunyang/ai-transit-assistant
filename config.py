@@ -84,3 +84,11 @@ PUBLIC_HOLIDAYS: frozenset[date] = frozenset({
 
 # The newest year the list covers; shown in the menu so you know when to update it.
 PUBLIC_HOLIDAYS_YEAR: int = max(d.year for d in PUBLIC_HOLIDAYS)
+
+def display_stop_name(name: object) -> str:
+    """A bus stop as shown to the user: its name, never the five-digit code in brackets. The code stays in data,
+    requests and URLs. (MRT and LRT station codes are not touched.) static/index.html displayStopName mirrors this."""
+    import re
+
+    text = re.sub(r"\s+", " ", re.sub(r"\s*\(\d{5}\)", "", "" if name is None else str(name))).strip()
+    return "Bus stop" if not text or re.fullmatch(r"\d{5}", text) else text

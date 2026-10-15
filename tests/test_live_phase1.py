@@ -37,7 +37,7 @@ def test_no_service_and_unavailable_use_the_status_card_layout():
     assert 'var arrivingText = state === "stale" ? staleArrivingText() : ""' in sync
     css = CSS.read_text(encoding="utf-8")
     block = _between(css, "body.is-data-blocked #arrival-card,", "}")
-    for target in ("#pace-slot", "#leave-tiles", "#if-you-miss", "#ai-explanation", "#reroute-block"):
+    for target in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#reroute-block"):
         assert target in block
     status = _between(html, 'id="stale-status"', "</section>")
     for needle in ("bus-tile--hero", "pill pill--schedule", "info-box", 'id="stale-info"'):
@@ -84,13 +84,13 @@ def test_live_map_has_a_destination_pin_and_a_full_route_toggle():
     assert "<svg" in button and "Full route" in button
     assert "Near me" in html and "Near me" in COPY.read_text(encoding="utf-8")
     pin = _between(html, "function syncLiveDestination()", "function routeLinePoints")
-    assert "dest-pin__svg" in pin and "dest-pin__body" in pin and "map-dest-live__label" in pin
+    assert "flagIcon(" in pin and "map-dest-live__label" in pin and "MAP_FLAG_HTML" in html
     assert "confirmedDestinationStop" in pin
-    assert "fill: var(--map-destination)" in css
+    assert "fill: var(--marker-end)" in css  # the green flag (tests/test_map_markers.py)
     fit = _between(html, "function fitFullRoute()", "function setLiveFull")
     for needle in ("routeLinePoints()", "userLat", "boardingPoint()", "liveBusTag", "liveDestMarker", "padding"):
         assert needle in fit
-    local = _between(html, "function fitLiveView(busPoint, stopPoint)", "function setStatusCell")
+    local = _between(html, "function fitLiveView(busPoint, stopPoint)", "function renderLiveTracking")
     assert "liveFull || liveUserMoved" in local
     click = _between(html, 'getElementById("live-full-route").addEventListener("click"', "\n    });")
     assert "setLiveFull(false)" in click and "setLiveFull(true)" in click and "fitFullRoute()" in click

@@ -162,10 +162,7 @@ def test_low_range_without_a_qualifying_alternative_keeps_the_route():
     decision = _decide([_primary(), _bus("NextBus2", 40, 55, 48)])
     assert decision["switched"] is False
     assert decision["reroute"] is None
-    assert decision["no_better_option"] == (
-        "Primary bus target has low catch probability (30%), "
-        "but no better direct alternative meets the 15% improvement threshold."
-    )
+    assert "no_better_option" not in decision  # no threshold sentence is sent any more
 
 
 def test_exact_15_point_lower_bound_switches():
@@ -183,15 +180,13 @@ def test_exact_15_point_lower_bound_switches():
 def test_14_point_gap_does_not_switch():
     decision = _decide([_primary(), _bus("NextBus2", 53, 80, 90)])
     assert decision["switched"] is False
-    assert decision["no_better_option"].startswith(
-        "Primary bus target has low catch probability (30%)"
-    )
+    assert "no_better_option" not in decision
 
 
 def test_point_probability_does_not_replace_range_high():
     blocked = _decide([_primary(high=50, point=5), _bus("NextBus2", 99, 99, 99)])
     assert blocked["switched"] is False
-    assert blocked["no_better_option"] is None
+    assert "no_better_option" not in blocked
     switched = _decide([_primary(high=39, point=90), _bus("NextBus2", 54, 70, 10)])
     assert switched["switched"] is True
     assert switched["reroute"]["probability_line"].endswith("vs previous about 90%.")
@@ -493,7 +488,7 @@ def test_uncertain_gps_does_not_switch():
         location_timestamp=NOW.timestamp() - 60,
     )
     assert by_accuracy["switched"] is False
-    assert by_accuracy["no_better_option"] is None
+    assert "no_better_option" not in by_accuracy
     assert by_age["switched"] is False
     assert called == []
     assert fresh["switched"] is True
@@ -625,12 +620,9 @@ def test_cooldown_blocks_until_120_seconds_and_then_requires_20_points():
     )
     assert calls == []
     assert during["switched"] is False
-    assert during["no_better_option"] is None
+    assert "no_better_option" not in during
     assert barely["switched"] is False
-    assert barely["no_better_option"] == (
-        "Primary bus target has low catch probability (30%), "
-        "but no better direct alternative meets the post-reroute 20% improvement threshold."
-    )
+    assert "no_better_option" not in barely
     assert enough["switched"] is True
     assert "+20% margin" in enough["reroute"]["reroute_reason"]
 
@@ -680,7 +672,7 @@ def test_reroute_copy_uses_the_old_and_new_results():
     decision = _decide([_primary(point=28), _bus("NextBus2", 60, 81, 73)])
     reroute = decision["reroute"]
     assert reroute["title"] == "Route Updated"
-    assert reroute["message"] == "Switched to Bus 18 at Origin (01011)."
+    assert reroute["message"] == "Switched to Bus 18 at Origin."
     assert reroute["probability_line"] == (
         "Catch probability: about 73% vs previous about 28%."
     )
@@ -706,7 +698,7 @@ def test_page_shows_the_server_copy_and_does_not_request_permission(tmp_path):
     assert "rerouteTitle.textContent = reroute.title" in html
     assert "rerouteMessage.textContent = reroute.message" in html
     assert "rerouteProbability.textContent = reroute.probability_line" in html
-    assert "decision.no_better_option" in html
+    assert "no_better_option" not in html and "rerouteNone" not in html and 'id="reroute-none"' not in html
     assert html.count("setInterval(") == 3
     assert "var POLL_MS = 20000;" in html
     assert "not_before" not in html

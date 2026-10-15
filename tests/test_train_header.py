@@ -35,17 +35,19 @@ def test_the_tile_css_keeps_the_outline_and_the_minimum_height_and_the_header_us
     assert ".bus-tile-card.is-selected {\n  box-shadow: 0 0 0 2px var(--color-selected-outline);" in CSS
     tile = CSS.split(".bus-tile-card {", 1)[1].split("}", 1)[0]
     assert "min-height: var(--tap-min);" in tile
-    header = CSS.split(".bus-card__title--train {", 1)[1].split(".bus-tile-card", 1)[0]
+    header = CSS.split(".bus-card__line {", 1)[1].split(".bus-card__badge {", 1)[0]
     assert not re.search(r"#[0-9A-Fa-f]{3,8}\b|rgb\(|hsl\(", header) and "style=" not in header
-    assert ".bus-card__title .line-badge {" not in CSS  # the old margin rule is replaced by the row's gap
+    for gone in (".bus-card__title--train", ".bus-card__line-name", ".status-grid", ".live-then"):
+        assert gone not in CSS, gone
 
 
 def test_the_plan_and_the_style_guide_describe_the_header_and_the_time_only_tiles():
     assert "with no line name on the tile" in PLAN and "North-South Line train, 8:16 PM" in PLAN
-    assert "never under the badge" in PLAN
+    assert "the logo tile, the line badge and `To {terminus}`" in PLAN
     sample = GUIDE.split("function trainPagesSample()", 1)[1].split("function legsSample()", 1)[0]
-    assert "bus-card__title--train" in sample and "Thomson-East Coast Line" in sample and "Circle Line" in sample
+    assert "bus-card__line" in sample and "Thomson-East Coast Line" in sample and "Circle Line" in sample
     assert "bus-tile-card__service" not in sample and "aria-label" in sample
+    assert "bus-card__line-name" not in sample and "status-grid" not in sample and "live-then" not in sample
 
 
 @pytest.fixture(scope="module", params=[
@@ -58,36 +60,26 @@ def run(request, tmp_path_factory):
     with running_app(tmp_path_factory.mktemp("hdr" + name), onemap=stub.by_mode({"TRANSIT": stub.train_first}),
                      rail_table=_table(), lta_status=500) as base:
         return run_scenario("trainheader", base, {"name": name, "width": width, "height": height, "dark": dark,
-                                                  "names": [LONG, SHORT]}, timeout=300)["result"]
+                                                  "names": ["Woodlands North", "HarbourFront"]}, timeout=300)["result"]
 
 
 def _all(run):
-    return [("North-South Line", run["real"]), (LONG, run["sizes"][LONG]), (SHORT, run["sizes"][SHORT])]
+    return [("real", run["real"])] + [(name, m) for name, m in run["sizes"].items()]
 
 
 def test_the_badge_and_the_name_share_a_row_and_a_wrapped_name_stays_under_the_name(run):
+    """The header row: the logo tile, then the badge, "To {terminus}" and the pill, with no line name, no arrival line,
+    no status rows and no "Then" line."""
+    real = run["real"]
+    assert real["badgeText"] == "NS" and real["toText"] == "To Marina South Pier"
+    assert real["lineName"] is False and real["arriving"] is False
+    assert real["statusRows"] is False and real["thenLine"] is False
     for label, m in _all(run):
-        badge, name = m["badge"], m["name"]
-        assert name["left"] >= badge["right"] - 0.5, label  # the name is beside the badge, never under it
-        first_line_top = min(r for r in [name["top"]])
-        # one line: the badge and the name text centre on each other; wrapped: the badge centres on the first line
-        centre_badge = (badge["top"] + badge["bottom"]) / 2
-        centre_first = first_line_top + m["lineHeight"] / 2
-        assert abs(centre_badge - centre_first) <= 3, (label, centre_badge, centre_first)
+        assert m["badge"]["left"] >= m["hero"]["right"] - 0.5, label  # the text column is beside the logo tile
         assert m["scrollWidth"] <= m["innerWidth"], label
-    if run["real"]["innerWidth"] >= 360:
-        assert run["sizes"][SHORT]["nameLines"] == 1  # a short name stays on one line from 360 px up
-    # a long name may wrap at a phone width; the alignment checks above hold either way, and no word is cut mid-word
-    # when it has a space or a hyphen to break at (the longest piece, "Thomson-", fits the column)
-    assert run["sizes"][LONG]["nameLines"] <= 4
-
-
-def test_the_pill_and_the_direction_sit_under_the_name_left_aligned(run):
-    for label, m in _all(run):
-        line, pill, to = m["line"], m["pill"], m["to"]
-        assert pill["top"] >= line["bottom"] - 1 and to["top"] >= pill["bottom"] - 1, label
-        assert abs(pill["left"] - line["left"]) <= 1 and abs(to["left"] - line["left"]) <= 1, label
-        assert to["left"] >= m["hero"]["right"] - 0.5, label  # the text column is beside the train icon tile
+        assert m["to"]["left"] >= m["badge"]["right"] - 0.5 or m["to"]["top"] >= m["badge"]["bottom"] - 1, label
+        assert m["pill"]["left"] >= m["to"]["right"] - 0.5 or m["pill"]["top"] >= m["to"]["bottom"] - 1, label
+        assert m["pill"]["right"] <= m["card"]["right"] + 0.5, label
 
 
 def test_the_refresh_button_is_at_the_top_right(run):
@@ -95,7 +87,7 @@ def test_the_refresh_button_is_at_the_top_right(run):
         refresh, card = m["refresh"], m["card"]
         assert refresh["right"] <= card["right"] and card["right"] - refresh["right"] <= 24, label
         assert refresh["top"] - card["top"] <= 24, label
-        assert refresh["left"] >= m["to"]["left"] or refresh["left"] >= m["line"]["left"], label
+        assert refresh["left"] >= m["badge"]["left"], label
 
 
 def test_the_tiles_show_the_time_only_with_the_outline_44px_equal_widths_and_an_aria_label(run):

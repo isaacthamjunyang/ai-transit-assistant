@@ -143,7 +143,7 @@ def test_stale_layout_hides_the_live_cards_and_shows_the_status_card():
     html = _page()
     css = CSS.read_text(encoding="utf-8")
     block = _between(css, "body.is-data-blocked #arrival-card,", "}")
-    for target in ("#pace-slot", "#leave-tiles", "#if-you-miss", "#ai-explanation", "#reroute-block"):
+    for target in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#reroute-block"):
         assert target in block
     assert "#live-tracking" not in block
     status = _between(html, 'id="stale-status"', "</section>")

@@ -9,12 +9,20 @@ const A = `(function () {
   var hero = lastSuccess && lastSuccess.buses ? featuredBus(lastSuccess.buses) : null;
   return {
     top: screenStack[screenStack.length - 1], isTrain: isTrain(), service: selectedService,
-    pill: text("catch-pill-text"), title: text("catch-title"), sub: text("catch-sub"), ring: text("catch-ring-text"),
+    pill: text("catch-pill-text"), title: text("catch-title"), line: text("catch-line"), when: text("catch-when"), legClass: document.getElementById("catch-leg").className,
+    nodeRing: getComputedStyle(document.getElementById("catch-node")).boxShadow, ring: text("catch-ring-text"),
+    hasSub: !!document.getElementById("catch-sub"), hasCaption: !!document.getElementById("catch-caption"), pace: text("pace-slot"), paceHidden: document.getElementById("pace-slot").hidden,
     ringLabel: document.getElementById("catch-ring").getAttribute("aria-label"),
-    arrivesLabel: text("catch-arrives"), notLive: shown("catch-not-live") ? text("catch-not-live") : null,
+    arrives: text("catch-arrives"), hasLabel: !!document.querySelector("#catch-arrives .catch-card__arrives-label"), notLive: !!document.getElementById("catch-not-live"),
     tileLeaveLabel: text("tile-leave-label"), tileLeave: text("tile-leave-by"), tileLeaveMeta: shown("tile-leave-detail") ? text("tile-leave-detail") : null,
+    geo: (function () {
+      function box(el) { if (!el) { return null; } var r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; }
+      return { ring: box(document.getElementById("catch-ring")), leg: box(document.getElementById("catch-leg")),
+        arrives: box(document.getElementById("catch-arrives")), tile: box(document.getElementById("tile-leave")),
+        tiles: box(document.getElementById("leave-tiles")) };
+    })(),
     tileDepartsLabel: text("tile-arrival-label"), tileDeparts: text("tile-arrival"), tileRange: shown("tile-arrival-range"),
-    miss: shown("if-you-miss") ? text("if-you-miss-body") : null, missLabelShown: shown("if-you-miss") && !document.querySelector("#if-you-miss .miss-row__label").hidden,
+    missRow: !!document.getElementById("if-you-miss"), aiBadge: !!document.getElementById("ai-badge"), tileNote: !!document.getElementById("tile-row"),
     ai: shown("ai-explanation") ? text("ai-explanation-text") : null,
     bar: shown("see-arrivals-bar") ? text("see-arrivals-bar") : null, catchBar: shown("catch-bar"), barTitle: text("catch-bar-title"),
     unlikelyBanner: shown("unlikely-banner"), catchWarning: shown("catch-warning"), pageC: document.body.classList.contains("is-page-c"),

@@ -18,7 +18,7 @@ from lta_static import StopAndRouteCache
 SGT = timezone(timedelta(hours=8))
 PAGE = Path(__file__).resolve().parents[1] / "static" / "index.html"
 TITLE = "Leave Now — Bus 36"
-BODY = "Walk to Boarding (08057) now to catch Bus 36. Catch probability: 64% (51–78%)."
+BODY = "Walk to Boarding now to catch Bus 36. Catch probability: 64% (51–78%)."
 
 
 def _page() -> str:
@@ -123,7 +123,7 @@ def test_live_poll_keeps_leave_by_and_sets_notification_time(monkeypatch):
     assert body["leave_now"]["bus_id"] == "36|08057|NextBus"
     assert body["leave_now"]["title"] == f"Leave Now — Bus 36"
     assert body["leave_now"]["body"] == (
-        "Walk to Boarding (08057) now to catch Bus 36. "
+        "Walk to Boarding now to catch Bus 36. "
         f"Catch probability: {chance['point']}% ({chance['range_low']}–{chance['range_high']}%)."
     )
 

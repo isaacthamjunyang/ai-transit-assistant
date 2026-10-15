@@ -22,7 +22,7 @@ export default async function (h) {
   out.card = await h.eval("document.getElementById('ai-explanation-text').textContent");
   out.pack = await h.eval("lastExplanationPack ? JSON.parse(JSON.stringify(lastExplanationPack)) : null");
   out.heroEta = await h.eval("(function () { var hero = featuredBus(lastSuccess.buses); return hero ? hero.arrival_time : null; })()");
-  out.tileSub = await h.eval("document.getElementById('catch-sub-eta').textContent");
+  out.tileSub = await h.eval("document.getElementById('catch-when').textContent");
   if (out.pack) {
     out.redrawn = await h.eval(`(function () {
       var pack = lastExplanationPack;

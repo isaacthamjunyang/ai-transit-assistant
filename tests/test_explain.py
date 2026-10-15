@@ -131,7 +131,7 @@ def test_the_example_from_the_prompt():
     fact = sheet(bus=14, walk=3, leave_in=540, source="remembered", speed=1.25, distance=203.0)
     assert card_text(fact, **CTX) == (
         "The bus is 14 minutes away, and you are 203 m from the stop and walking at your usual speed of 4.5 km/h. "
-        "Leave by 2:09 PM so you have 5 minutes to reach your stop and catch the bus arriving at 2:14 PM.")
+        "Leave by 2:09 PM to reach your stop in 3 minutes and catch the bus arriving at 2:14 PM.")
     # 643 s shows 11 on the tile, so the text says 11 (the tile's rounding wins).
     eleven = sheet(bus=tile_minutes(_iso(643), NOW), walk=3, leave_in=300)
     assert card_text(eleven, **CTX).startswith("The bus is 11 minutes away, and you are 300 m from the stop")
@@ -173,17 +173,16 @@ def test_unlikely_is_one_sentence_for_a_low_band_or_switch_or_do_not_rely():
 
 def test_the_leave_by_sentence():
     text = sentence_two(sheet(10, 3, leave_in=300), band="ok", uncertain=False)
-    assert text == "Leave by 2:05 PM so you have 5 minutes to reach your stop and catch the bus arriving at 2:10 PM."
+    assert text == "Leave by 2:05 PM to reach your stop in 3 minutes and catch the bus arriving at 2:10 PM."
     two = sentence_two(sheet(10, 3, leave_in=480), band="ok", uncertain=False)  # leave by 2:08, X = 2
-    assert two == "Leave by 2:08 PM so you have 2 minutes to reach your stop and catch the bus arriving at 2:10 PM."
+    assert two == "Leave by 2:08 PM to reach your stop in 3 minutes and catch the bus arriving at 2:10 PM."
 
 
-def test_the_leave_by_sentence_reads_one_minute_when_the_clocks_are_less_than_a_minute_apart():
-    # never produced by the real margin (X is at least 2 there), but the clamp is at least 1 and singular
-    text = sentence_two(sheet(10, 3, leave_in=599), band="ok", uncertain=False)
-    assert text == "Leave by 2:09 PM so you have 1 minute to reach your stop and catch the bus arriving at 2:10 PM."
-    late = sentence_two(sheet(10, 3, leave_in=900), band="ok", uncertain=False)  # leave-by after the arrival
-    assert "you have 1 minute to reach" in late
+def test_the_leave_by_sentence_reads_one_minute_for_a_one_minute_walk():
+    text = sentence_two(sheet(10, 1, leave_in=599), band="ok", uncertain=False)
+    assert text == "Leave by 2:09 PM to reach your stop in 1 minute and catch the bus arriving at 2:10 PM."
+    late = sentence_two(sheet(10, 1, leave_in=900), band="ok", uncertain=False)  # leave-by after the arrival
+    assert "to reach your stop in 1 minute and catch" in late
 
 
 def test_x_is_the_difference_of_the_displayed_clock_minutes_at_the_rollovers():
@@ -219,9 +218,9 @@ def test_every_leave_by_case_has_at_least_two_minutes():
 def test_the_leave_now_sentence():
     for seconds in (60, 30, 0, -1, -600):
         text = sentence_two(sheet(10, 3, leave_in=seconds), band="ok", uncertain=False)
-        assert text == "Leave now so you have 10 minutes to reach your stop and catch the bus arriving at 2:10 PM.", seconds
-    one = sentence_two(sheet(1, 3, leave_in=0), band="ok", uncertain=False)
-    assert one == "Leave now so you have 1 minute to reach your stop and catch the bus arriving at 2:01 PM."
+        assert text == "Leave now to reach your stop in 3 minutes and catch the bus arriving at 2:10 PM.", seconds
+    one = sentence_two(sheet(1, 1, leave_in=0), band="ok", uncertain=False)
+    assert one == "Leave now to reach your stop in 1 minute and catch the bus arriving at 2:01 PM."
     now = sentence_two(sheet(0, 3, leave_in=0), band="ok", uncertain=False)
     assert now == "Leave now to try to catch the bus arriving at 2:00 PM."
 
@@ -249,7 +248,7 @@ def test_distance_and_clock_formats():
 def test_variant_priority_first_match_wins():
     # unlikely (low band, switch, do-not-rely), then leave now or leave by with the uncertain sentence after it.
     assert "unlikely" in card_text(sheet(2, 5, "do_not_rely"), band="ok", uncertain=False)
-    assert "Leave now so you have 2 minutes" in card_text(sheet(2, 5, leave_in=0), band="mid", uncertain=False)
+    assert "Leave now to reach your stop in 5 minutes" in card_text(sheet(2, 5, leave_in=0), band="mid", uncertain=False)
     assert "Leave by" in card_text(sheet(10, 5, leave_in=301), band="mid", uncertain=False)
     assert "unlikely" in card_text(sheet(2, 5), band="low", uncertain=True)
 
@@ -288,8 +287,9 @@ def test_no_explanation_has_a_heading_probability_seconds_or_spare():
             for banned in ("second", "spare", "probability", "chance", "range", "slack", "headline", "advisable"):
                 assert banned not in lowered, (banned, text)
             rest = text
-            for piece in (format_distance(numbers["distance_m"]), format_kmh(numbers["walk_speed_used"]), numbers["time_text"],
-                          numbers["arrival_text"], str(e), str(numbers["x_minutes"])):
+            for piece in (explain.minutes_text(numbers["walk_minutes"]), format_distance(numbers["distance_m"]),
+                          format_kmh(numbers["walk_speed_used"]), numbers["time_text"],
+                          numbers["arrival_text"], str(e)):
                 rest = rest.replace(piece, "")
             assert not re.search(r"\d", rest), (rest, text)  # every digit is a placeholder value
             assert text.endswith(".")
@@ -462,7 +462,7 @@ def _poll(payload, **overrides):
 def test_the_poll_text_uses_this_polls_numbers_and_the_fixed_clause_until_the_model_answers():
     first = _poll(_payload(643))
     assert first["text"] == ("The bus is 11 minutes away, and you are 225\u00a0m from the stop and walking at an average speed of "
-                             "4.5\u00a0km/h. Leave by 2:10\u00a0PM so you have 1 minute to reach your stop and catch the bus "
+                             "4.5\u00a0km/h. Leave by 2:10\u00a0PM to reach your stop in 3 minutes and catch the bus "
                              "arriving at 2:10\u00a0PM.")
     assert "advisable" not in first["text"]
     assert first["call"] is True and first["action"] == "wait" and first["model_enabled"] is True

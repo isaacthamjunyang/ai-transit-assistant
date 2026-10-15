@@ -1008,17 +1008,11 @@ select,
   font: inherit;
 }
 
-.spare-line,
-.miss-row {
+.spare-line {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
   margin: 0;
-}
-
-.miss-row__label {
-  margin: 0;
-  font-weight: 700;
 }
 
 .planning-banner {
@@ -1140,7 +1134,7 @@ select,
 }
 
 /* Saved places have a green outline (the success outline token, 3:1 or more on the card in both themes) on the normal
-   chip background, with the name in the normal text colour. Starters keep the neutral line. */
+   chip background, with the name in the normal text colour. */
 .saved-chip__main {
   display: inline-flex;
   align-items: center;
@@ -1224,6 +1218,11 @@ select,
 
 .saved-places__note--warn {
   color: var(--status-uncertain);
+}
+
+/* The privacy note is concealed, not removed, while nothing is saved and the add panel is closed, so the space stays. */
+.saved-places__note.is-concealed {
+  visibility: hidden;
 }
 
 .saved-panel {
@@ -1756,10 +1755,54 @@ select,
 .leaflet-marker-icon.marker.marker--user,
 .leaflet-div-icon.user-marker,
 .leaflet-div-icon.marker.marker--user {
-  border-radius: var(--radius-pill);
-  background: var(--color-primary);
-  color: var(--color-primary-ink);
-  border-color: var(--color-card);
+  display: block;
+  overflow: visible;
+  background: transparent;
+  color: var(--color-ink);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* The map markers: the red pin (current location, --marker-start) and the green flag (destination, --marker-end), the
+   same icons as the journey overview rows. A light casing (--map-marker-ring) keeps each at 3:1 or more on the map in both
+   themes; the colours are 3:1 or more on the land stand-in token. The 48 px box is the tap target. */
+.map-pin__svg,
+.map-flag__svg {
+  display: block;
+  width: 48px;
+  height: 48px;
+  overflow: visible;
+}
+
+.map-pin__body {
+  fill: var(--marker-start);
+  stroke: var(--map-marker-ring);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
+.map-pin__hole {
+  fill: var(--map-marker-ring);
+}
+
+.map-flag__casing,
+.map-flag__body {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map-flag__casing {
+  fill: var(--map-marker-ring);
+  stroke: var(--map-marker-ring);
+  stroke-width: 5;
+}
+
+.map-flag__body {
+  fill: var(--marker-end);
+  stroke: var(--marker-end);
+  stroke-width: 2;
 }
 
 .leaflet-marker-icon.stop-marker,
@@ -1799,9 +1842,20 @@ select,
   color: var(--color-primary-ink);
 }
 
+/* The "You" label sits to the right of the pin's head, on the card surface so it reads on any map. */
 .marker__label {
+  position: absolute;
+  top: 12px;
+  left: calc(50% + 14px);
+  padding: 1px var(--space-2);
+  background: var(--color-card);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
   font-size: var(--type-caption);
   font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .catch-readout {
@@ -1957,13 +2011,13 @@ body.is-screen-stops main.wrap {
 
 .map-dest-only,
 .map-stop__label,
-.leaflet-marker-icon.dest-pin,
+.leaflet-marker-icon.dest-flag,
 .dest-walk-line {
   display: none;
 }
 
 .dest-map .leaflet-control-scale.map-dest-only,
-.dest-map .leaflet-marker-icon.dest-pin,
+.dest-map .leaflet-marker-icon.dest-flag,
 .dest-map .map-stop__label,
 .map-stop.is-selected .map-stop__label {
   display: block;
@@ -2062,25 +2116,15 @@ body.is-screen-stops main.wrap {
   cursor: default;
 }
 
-.leaflet-div-icon.dest-pin {
+.leaflet-div-icon.dest-flag,
+.leaflet-marker-icon.dest-flag {
   background: transparent;
   border: 0;
 }
 
-.dest-pin__svg {
+/* The destination on the route preview shows wherever the route does, but not on the live map. */
+.leaflet-marker-icon.dest-flag.route-flag {
   display: block;
-  width: 32px;
-  height: 40px;
-}
-
-.dest-pin__body {
-  fill: var(--map-destination);
-  stroke: var(--map-marker-ring);
-  stroke-width: 2;
-}
-
-.dest-pin__dot {
-  fill: var(--map-marker-ring);
 }
 
 .dest-walk-line {
@@ -3119,7 +3163,7 @@ body:not(.is-screen-live) #arrival-card {
 .bus-card {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-2) + var(--space-1));
+  gap: var(--space-2);
 }
 
 .bus-tile.bus-tile--hero {
@@ -3320,6 +3364,7 @@ body:not(.is-screen-live) #arrival-card {
 .live-map .leaflet-control-zoom,
 .live-map .boarding-radius,
 .live-map .route-pin,
+.live-map .leaflet-marker-icon.dest-flag.route-flag,
 .live-map .map-stop--boarding,
 .live-map .map-stop--dest {
   display: none;
@@ -3394,70 +3439,6 @@ body:not(.is-screen-live) #arrival-card {
 .leaflet-div-icon.map-stop--live .map-stop__label,
 .map-stop--live .map-stop__label {
   display: block;
-}
-
-.status-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: var(--space-2) calc(var(--space-2) + var(--space-1));
-}
-
-.status-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  margin: 0;
-  color: var(--color-ink);
-  font-size: 0.875rem;
-  line-height: 1.3;
-}
-
-.status-cell__icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 1rem;
-  height: 1rem;
-  color: var(--color-muted);
-}
-
-.status-cell__icon .icon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.status-dot-icon::before {
-  content: "";
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-muted);
-}
-
-.status-cell.is-ok .status-dot-icon::before {
-  background: var(--status-live);
-}
-
-.status-cell.is-ok .status-cell__icon {
-  color: var(--status-live);
-}
-
-.status-cell__warn {
-  display: none;
-}
-
-.status-cell.is-warn {
-  color: var(--status-uncertain);
-}
-
-.status-cell.is-warn .status-cell__warn {
-  display: grid;
-  color: var(--status-uncertain);
-}
-
-.status-cell time {
-  font-variant-numeric: tabular-nums;
 }
 
 /* Style guide frame for the live map samples. */
@@ -3954,26 +3935,24 @@ body.is-screen-journey main.wrap {
   color: var(--color-ink);
 }
 
-.catch-card__not-live {
-  color: var(--color-muted);
-}
-
-/* A train card: the badge and the line name on one row (the badge centred on the first line, a wrapped name staying under the
-   name, never under the badge), then the pill and the direction under the name, all left-aligned. The refresh button stays
-   top right. */
-.bus-card__title--train {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: flex-start;
-  gap: var(--space-1);
-}
-
 .bus-card__line {
   display: flex;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
   min-width: 0;
   max-width: 100%;
+  color: var(--color-ink);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.bus-card__line .bus-card__to {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  font-size: inherit;
 }
 
 .bus-card__badge {
@@ -3981,29 +3960,6 @@ body.is-screen-journey main.wrap {
   align-items: center;
   flex: none;
   height: 1.2em;
-}
-
-.bus-card__line-name {
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-/* On a narrow phone the name column is what is left beside the icon tile and the refresh button: a smaller tile and name
-   keep a short name on one line and break a long one at its spaces and hyphens. */
-@media (max-width: 400px) {
-  .bus-card__title--train {
-    font-size: 1.25rem;
-  }
-
-  .bus-card:has(.bus-card__title--train) .bus-tile--hero {
-    width: 3rem;
-    height: 3rem;
-  }
-
-  .bus-card:has(.bus-card__title--train) .bus-tile--hero .icon {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
 }
 
 .overview-state__actions {
@@ -4112,29 +4068,6 @@ body.is-screen-journey main.wrap {
   50% {
     opacity: 0.5;
   }
-}
-
-/* The gap to the target under the main line: one step below the main line, always words ("12 minutes before target").
-   Its colour follows the pill state with the pill's own text tokens (each is at least 4.5:1 on the card in both themes);
-   with no check or N/A it is the muted grey. */
-.arrive-box__estimate {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.arrive-box__estimate--track {
-  color: var(--status-live);
-}
-
-.arrive-box__estimate--risk {
-  color: var(--status-uncertain);
-}
-
-.arrive-box__estimate--na {
-  color: var(--status-no-history);
 }
 
 /* Screens 7 and 8: the live page around the bus tracking card. */
@@ -4278,7 +4211,7 @@ body:not(.is-screen-live) .live-only {
 .option-card {
   display: flex;
   align-items: flex-start;
-  gap: calc(var(--space-2) + var(--space-1));
+  gap: var(--space-2);
 }
 
 .option-card__copy {
@@ -4292,36 +4225,6 @@ body:not(.is-screen-live) .live-only {
 .option-card__copy p,
 .option-card__aside p {
   margin: 0;
-}
-
-.option-card__title {
-  font-size: 1.125rem;
-  font-weight: 700;
-}
-
-.option-card__arrives {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-
-.option-card__live {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  color: var(--status-live);
-  font-weight: 600;
-}
-
-.option-card__arrow .icon {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-.option-card__meta {
-  color: var(--color-muted);
-  font-size: 0.9375rem;
 }
 
 .option-card__leave,
@@ -4372,6 +4275,7 @@ body:not(.is-screen-live) .live-only {
   border-radius: var(--radius-pill);
   background: var(--color-secondary);
   color: var(--color-ink);
+  box-shadow: 0 0 0 3px var(--leg-ring, var(--ring-neutral));
 }
 
 .alt-row__hole {
@@ -4385,8 +4289,20 @@ body:not(.is-screen-live) .live-only {
 .alt-row__top {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
+}
+
+.alt-row__service {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.alt-row__to {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .alt-row__service {
@@ -4421,6 +4337,16 @@ body:not(.is-screen-live) .live-only {
 .prob-ring--small {
   width: 4rem;
   height: 4rem;
+}
+
+/* Page A's ring: larger, on the left of the heading. At 360 px it is 108 px; never under 96 px (6rem). */
+.prob-ring--large {
+  width: clamp(6rem, 30vw, 7.5rem);
+  height: clamp(6rem, 30vw, 7.5rem);
+}
+
+.prob-ring--large .prob-ring__text {
+  font-size: 1.875rem;
 }
 
 .prob-ring__svg {
@@ -4509,6 +4435,49 @@ body:not(.is-screen-live) .live-only {
   flex: 0 0 auto;
 }
 
+/* Page A's heading: the overview's marker (ring grey for a bus, the line's own colour for a train, set by the
+   journey-step--rail-{code} class that only sets --leg-ring), the row and the time line. */
+.catch-card__leg {
+  --step-node: 2.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.catch-card__leg p {
+  margin: 0;
+}
+
+.catch-card__leg .step-node {
+  flex: 0 0 auto;
+  background: var(--color-secondary);
+  color: var(--color-ink);
+  box-shadow: 0 0 0 3px var(--leg-ring, var(--ring-neutral));
+}
+
+.catch-card__line {
+  flex-wrap: wrap;
+}
+
+.catch-card__line .line-badge,
+.catch-card__line .pill {
+  flex: none;
+}
+
+.catch-card__when {
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.catch-card__when.journey-step__arriving {
+  color: var(--status-live);
+}
+
+.catch-card__when[hidden] {
+  display: none;
+}
+
 .catch-card__row {
   display: flex;
   align-items: center;
@@ -4517,9 +4486,15 @@ body:not(.is-screen-live) .live-only {
 
 .catch-card__copy {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   min-width: 0;
+}
+
+/* Page A: the heading (marker, row, time line) sits at the right of the ring, the clock time below it. */
+.catch-card__copy .catch-card__arrives-time {
+  font-size: 1.25rem;
 }
 
 .catch-card__title {
@@ -4603,7 +4578,7 @@ body:not(.is-screen-live) .live-only {
 
 .leave-tiles {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 
@@ -4649,7 +4624,7 @@ body:not(.is-screen-live) .live-only {
   font-size: var(--type-caption);
 }
 
-/* The clock time and "Leave now" stay on one line in the half-width tile at every phone width. */
+/* The clock time and "Leave now" stay on one line in the full-width tile at every phone width. */
 .leave-tile__nowrap {
   white-space: nowrap;
 }
@@ -4673,39 +4648,6 @@ body:not(.is-screen-live) .live-only {
   flex: 0 0 auto;
   width: 1rem;
   height: 1rem;
-}
-
-.leave-tiles__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--color-muted);
-  font-size: var(--type-caption);
-}
-
-.badge.tile-status {
-  min-height: 0;
-  padding: 2px var(--space-2);
-}
-
-.miss-row.live-only {
-  padding: calc(var(--space-2) + var(--space-1)) var(--space-3);
-  background: var(--tint-neutral);
-  color: var(--color-ink);
-  border-radius: var(--radius-card);
-}
-
-.miss-row.live-only .icon {
-  flex: 0 0 auto;
-  color: var(--color-muted);
-}
-
-.miss-row.live-only p {
-  margin: 0;
-  font-size: 0.9375rem;
 }
 
 #ai-explanation.is-enabled:not(.has-content) {
@@ -4752,11 +4694,6 @@ body:not(.is-screen-live) .live-only {
 .ai-card__text {
   font-size: 0.9375rem;
   line-height: 1.55;
-}
-
-.ai-card__note {
-  color: var(--color-muted);
-  font-size: var(--type-caption);
 }
 
 #journey-panel {
@@ -4890,7 +4827,6 @@ body:not(.is-screen-live) .live-only {
 body.is-data-blocked #arrival-card,
 body.is-data-blocked #pace-slot,
 body.is-data-blocked #leave-tiles,
-body.is-data-blocked #if-you-miss,
 body.is-data-blocked #ai-explanation.ai-card.is-enabled.has-content,
 body.is-data-blocked #ai-explanation,
 body.is-data-blocked #reroute-block {
@@ -4911,7 +4847,7 @@ body.is-data-blocked #reroute-block {
 
 .map-dest-live__label {
   position: absolute;
-  top: 0;
+  top: 8px;
   right: calc(100% + var(--space-1));
   max-width: 9rem;
   padding: 2px var(--space-2);
@@ -5225,13 +5161,11 @@ body.has-catch-bar {
 body.is-bus-missed #arrival-card,
 body.is-bus-missed #pace-slot,
 body.is-bus-missed #leave-tiles,
-body.is-bus-missed #if-you-miss,
 body.is-bus-missed #ai-explanation.ai-card.is-enabled.has-content,
 body.is-bus-missed #ai-explanation,
 body.is-tracking-ended #arrival-card,
 body.is-tracking-ended #pace-slot,
 body.is-tracking-ended #leave-tiles,
-body.is-tracking-ended #if-you-miss,
 body.is-tracking-ended #ai-explanation.ai-card.is-enabled.has-content,
 body.is-tracking-ended #ai-explanation,
 body.is-tracking-ended #reroute-block {
@@ -5255,8 +5189,8 @@ body.is-screen-onway main.wrap {
 .sample-live .map-dest-live.sample-pin {
   position: relative;
   display: block;
-  width: 32px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   margin: var(--space-4) 0 0 12rem;
 }
 
@@ -5265,7 +5199,6 @@ body.is-screen-onway main.wrap {
 body.is-page-b #arrival-card,
 body.is-page-b #pace-slot,
 body.is-page-b #leave-tiles,
-body.is-page-b #if-you-miss,
 body.is-page-b #stale-status,
 body.is-page-b #ai-explanation.ai-card.is-enabled.has-content,
 body.is-page-b #ai-explanation {
@@ -5274,16 +5207,6 @@ body.is-page-b #ai-explanation {
 
 .catch-bar.catch-bar--single {
   padding-top: var(--space-2);
-}
-
-.live-then__when {
-  display: block;
-}
-
-.live-then {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.9375rem;
 }
 
 .ring-samples {
@@ -5298,11 +5221,6 @@ body.is-page-b #ai-explanation {
   align-items: center;
   gap: var(--space-2);
   text-align: center;
-}
-
-.ai-card__badge {
-  align-self: flex-start;
-  margin: 0;
 }
 
 .pill--stopped {
@@ -5405,7 +5323,6 @@ body.is-page-b #ai-explanation {
 body.is-page-c #arrival-card,
 body.is-page-c #pace-slot,
 body.is-page-c #leave-tiles,
-body.is-page-c #if-you-miss,
 body.is-page-c #ai-explanation.ai-card.is-enabled.has-content,
 body.is-page-c #ai-explanation,
 body.is-page-c #see-arrivals-bar,
@@ -5414,7 +5331,6 @@ body.is-page-c #catch-warning,
 body.is-entry-loading #arrival-card,
 body.is-entry-loading #pace-slot,
 body.is-entry-loading #leave-tiles,
-body.is-entry-loading #if-you-miss,
 body.is-entry-loading #ai-explanation.ai-card.is-enabled.has-content,
 body.is-entry-loading #ai-explanation,
 body.is-entry-loading #see-arrivals-bar,
@@ -5577,7 +5493,6 @@ body.is-page-w .walk-page {
 body.is-page-w #arrival-card,
 body.is-page-w #pace-slot,
 body.is-page-w #leave-tiles,
-body.is-page-w #if-you-miss,
 body.is-page-w #stale-status,
 body.is-page-w #ai-explanation.ai-card.is-enabled.has-content,
 body.is-page-w #ai-explanation {
@@ -5651,6 +5566,11 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
 
 .walk-wedge.is-hidden {
   display: none;
+}
+
+/* The wedge points from the pin's tip: the 48 px icon's tip is at 50% across and 87.5% down. */
+.walk-you .walk-wedge {
+  top: 87.5%;
 }
 
 .walk-wedge__shape {
@@ -5868,22 +5788,14 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
   height: 150px;
 }
 
+/* The pin's tip (24, 42 in its 48 px box) is the point; the sample places that point at top and left. */
 .sample-walk-map__you {
   position: absolute;
   top: 28%;
   left: 30%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin: -22px 0 0 -22px;
-  background: var(--color-primary);
-  color: var(--color-primary-ink);
-  border: 2px solid var(--color-card);
-  border-radius: var(--radius-pill);
-  font-size: var(--type-caption);
-  font-weight: 700;
+  width: 48px;
+  height: 48px;
+  margin: -42px 0 0 -24px;
 }
 
 .sample-walk-map .map-stop--live.sample-walk-map__stop {
@@ -5891,6 +5803,45 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
   top: 66%;
   left: 50%;
   display: block;
+}
+
+/* Style guide: the two map markers on the land stand-in, and the overlap case (the flag's pole base on the pin's top). */
+.sample-markers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: calc(var(--space-5) + var(--space-4));
+  padding: var(--space-3);
+  background: var(--map-land-standin);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.sample-markers__item {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 48px;
+}
+
+.sample-markers__item--stack {
+  height: 80px;
+}
+
+.sample-markers__flag,
+.sample-markers__pin {
+  position: absolute;
+  left: 0;
+  width: 48px;
+  height: 48px;
+}
+
+.sample-markers__flag {
+  top: 0;
+}
+
+.sample-markers__pin {
+  top: 32px;
 }
 
 /* Zoom 19 (12 m from the stop): You and the stop sit side by side at the centre, as in the real map. */

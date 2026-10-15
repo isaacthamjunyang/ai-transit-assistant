@@ -151,7 +151,7 @@ def test_start_journey_opens_page_a_and_the_button_opens_page_b():
     assert 'getElementById("live-tracking").hidden = name !== "arrivals"' in screens
     css = (STATIC / "components.css").read_text(encoding="utf-8")
     block = _between(css, "body.is-page-b #arrival-card,", "}")
-    for target in ("#pace-slot", "#leave-tiles", "#if-you-miss", "#ai-explanation", "#stale-status"):
+    for target in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#stale-status"):
         assert target in block
     assert "See bus arrival times" in html.split('id="see-arrivals-bar"', 1)[1].split("</div>", 1)[0]
 
@@ -175,7 +175,7 @@ def test_the_map_is_invalidated_and_fitted_each_time_page_b_opens():
     place = _between(html, "function placeMap(inDestination, inLive, inWalk)", "function placeArriveBy")
     live = _between(place, "if (inLive) {", "return;")
     assert "map.invalidateSize()" in live and "liveFit = { done: false, withBus: false }" in live and "renderLiveTracking()" in live
-    fit = _between(html, "function fitLiveView(busPoint, stopPoint)", "function setStatusCell")
+    fit = _between(html, "function fitLiveView(busPoint, stopPoint)", "function renderLiveTracking")
     assert "liveFull || liveUserMoved" in fit  # never re-fits after a pan or zoom
 
 
@@ -201,11 +201,12 @@ def test_yes_and_no_still_end_tracking_and_open_the_right_view():
     assert "onDemand: true" in _between(html, "function loadPageCOptions()", "function pageCRefreshCooling()")
 
 
-def test_the_then_bus_line_shows_only_on_the_first_leg_of_a_transfer_route():
+def test_page_b_has_no_then_line_and_the_later_leg_data_is_kept_internally():
     html = _page()
-    assert "Then Bus {service} at {stop}" in html
-    then = _between(html, 'var then = document.getElementById("live-then");', "var stopPoint")
-    assert "leg_index === 1" in then
+    for gone in ("Then Bus {service} at {stop}", "Then {line} at {station}", 'id="live-then"', "renderThenLine", "live-then"):
+        assert gone not in html, gone
+    # the later leg's lookup and its 90 s hold stay: only the line that drew them on Page B is gone
+    assert "function laterLiveFor(leg)" in html and "LATER_HOLD_MS" in html
 
 
 def test_question_bar_needs_a_known_arrival_time():

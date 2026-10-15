@@ -42,8 +42,10 @@ from reroute import (
     SGT,
     _reaching_services,
     apply_active_target,
+    ALTERNATE_STOP_LIMIT,
     closest_alternate_stops,
     log_scored_poll,
+    nearest_stops,
     plan_options,
     plan_reroute,
     resolve_pinned_target,
@@ -589,7 +591,7 @@ def _rail_response(*, station, line, headsign, train_departure, lat, lon, accura
     kept = {key: payload.get(key) for key in (
         "status", "stop_code", "service_no", "fetched_at", "leave_by", "near_stop", "leave_now_threshold_s",
         "chosen_action", "walk_speed_used", "walk_speed_source", "leg_kind", "line_code", "line_name", "headsign",
-        "scheduled", "live", "headway_s", "next_departures", "next_departures_text", "not_live_text", "if_you_miss_text", "left_text",
+        "scheduled", "live", "headway_s", "next_departures", "next_departures_text", "left_text",
         "notifications", "explanation") if key in payload}
     kept["rescored"] = True
     kept["buses"] = [{key: bus.get(key) for key in RESCORE_BUS_FIELDS} for bus in payload["buses"]]
@@ -717,6 +719,53 @@ def _alternate_loader(
     )
 
 
+def _reroute_planner_starts(
+    cache, lat, lon, current_stop, destination_code, dest_lat, dest_lon, arrive_by, speed, moment
+) -> list[tuple[str, str]]:
+    """Routes from the nearest stops by the OneMap planner (bus only), as (stop code, service) first legs.
+
+    The user's position only measures the walk to the first stop inside the planner; it is never sent, stored
+    or logged. Each route's bus legs were already checked with service_runs_at there. A planner failure of any
+    kind (no credentials, a timeout, no route, Demo Mode) returns an empty list."""
+    if demo.destination_is_simulated():
+        return []
+    session = getattr(app.state, "onemap_session", None)
+    if session is None:
+        session = OneMapSession()
+        app.state.onemap_session = session
+    router = getattr(app.state, "pt_router", None)
+    if router is None:
+        router = pt_route.PtRouter()
+        app.state.pt_router = router
+    token, email, password = read_onemap_credentials()
+    end = cache.stop_by_code(destination_code)
+    end_lat = end.get("Latitude") if isinstance(end, dict) else None
+    end_lon = end.get("Longitude") if isinstance(end, dict) else None
+    found: list[tuple[str, str]] = []
+    with httpx.Client(timeout=pt_route.ROUTE_TIMEOUT_SECONDS) as client:
+        for stop in nearest_stops(cache, lat, lon, current_stop, ALTERNATE_STOP_LIMIT):
+            try:
+                planned = pt_plan.plan_multi_leg(
+                    cache, router=router, session=session, client=client,
+                    rail_table=getattr(app.state, "rail_table", None),
+                    user_lat=lat, user_lon=lon, dest_lat=dest_lat, dest_lon=dest_lon,
+                    destination_stop_code=destination_code, end_lat=end_lat, end_lon=end_lon,
+                    origin_stop_code=stop["BusStopCode"], arrive_by=arrive_by,
+                    priority=pt_plan.PRIORITY_BUS_ONLY, walk_speed_m_s=speed, now=moment,
+                    token=token, email=email, password=password)
+            except (pt_route.RouteUnavailable, pt_route.RouteRejected, pt_route.BudgetExhausted):
+                continue
+            for option in planned.get("options") or []:
+                legs = option.get("legs") or []
+                first = legs[0] if legs else None
+                if not isinstance(first, dict) or first.get("kind") != pt_route.KIND_BUS:
+                    continue
+                start = (str(first.get("boarding_stop_code") or ""), str(first.get("service_no") or ""))
+                if all(start) and start not in found:
+                    found.append(start)
+    return found
+
+
 @app.get("/api/reroute-options", response_model=None)
 def reroute_options(
     stop_code: Annotated[str, Query(min_length=1)],
@@ -801,6 +850,10 @@ def reroute_options(
         missed_eta_epoch=missed_eta,
         entry=entry,
         walk_speed_m_s=speed,
+        planner=lambda: _reroute_planner_starts(
+            cache, lat, lon, current_stop, destination_code, dest_lat, dest_lon, parsed_arrive_by, speed, moment
+        ),
+        after_miss=entry == "recommended",
     )
     return {
         **response_fields(speed, speed_source),

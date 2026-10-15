@@ -7,14 +7,22 @@ const READ = `(function () {
     return { color: o.color, weight: o.weight, dash: o.dashArray || "", cap: o.lineCap, points: layer.getLatLngs().length };
   }
   var names = ["ns", "ew", "cg", "ne", "cc", "dt", "te", "bp", "sk", "pg", "ss"];
-  var tokens = { walk: cssToken("--map-walk-line"), bus: cssToken("--map-line-bus") };
+  var tokens = { walk: cssToken("--map-walk-line"), bus: cssToken("--map-line-bus"), end: cssToken("--marker-end") };
   names.forEach(function (code) {
     tokens[code] = cssToken("--map-line-" + code);
     tokens[code + "_casing"] = cssToken("--map-line-" + code + "-casing");
   });
   return {
     layers: routePreviewLayers.map(style),
-    pins: routeRoleMarkers.map(function (m) { return m.options.icon.options.html; }),
+    pins: routeRoleMarkers.map(function (m) {
+      var o = m.options.icon.options;
+      return o.className.indexOf("dest-flag") !== -1 ? "FLAG " + m.getElement().getAttribute("aria-label") : o.html;
+    }),
+    flag: flagMarkers.route ? (function () {
+      var m = flagMarkers.route, o = m.options.icon.options;
+      return { cls: o.className, anchor: o.iconAnchor, size: o.iconSize,
+               fill: getComputedStyle(m.getElement().querySelector(".map-flag__body")).fill };
+    })() : null,
     tokens: tokens
   };
 })()`;

@@ -77,3 +77,29 @@ def test_the_static_planner_keeps_its_bus_only_sentence_and_its_own_no_route_sen
     assert words["static|service"] == OLD
     assert words["static|service|bus_only"] == OLD  # the bus planner is bus only: the old sentence is accurate
     assert words["static|route"] == "No direct or 1-transfer bus connection available for this trip."
+
+
+# ---- the Arrive by card is not drawn in an empty answer (tests/test_arrive_hidden.py checks it with a route) -----------
+
+
+@pytest.mark.parametrize("priority", ALL)
+def test_the_arrive_by_card_is_hidden_in_a_walk_only_answer_and_the_ride_apps_show(walk_only, priority):
+    state = walk_only["byPriority"][priority]
+    assert state["arriveBox"] is False and state["arriveBoxHeight"] == 0, state
+    assert state["rideApps"] is True and state["startDisabled"] is True
+    assert state["buttons"] == ["Edit destination", "Edit arrive-by time"]  # the message card keeps its button
+
+
+@pytest.mark.parametrize("priority", ALL)
+def test_the_arrive_by_card_is_hidden_in_a_404_answer_and_start_stays_disabled(no_route, priority):
+    state = no_route["byPriority"][priority]
+    assert state["arriveBox"] is False and state["arriveBoxHeight"] == 0, state
+    assert state["startDisabled"] is True and state["buttons"] == ["Edit destination", "Edit arrive-by time"]
+
+
+def test_empty_answers_leave_no_gap_for_the_hidden_card_and_do_not_jump_between_priorities(walk_only, no_route):
+    # the sentence may wrap to one line more or less, but the space between the card and Start journey is the same
+    for report in (walk_only, no_route):
+        gaps = {state["cardGap"] for state in report["byPriority"].values()}
+        assert len(gaps) == 1, gaps
+        assert all(state["arriveBoxHeight"] == 0 for state in report["byPriority"].values())

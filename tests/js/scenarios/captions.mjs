@@ -1,7 +1,7 @@
 import { poll, toLive } from "./common.mjs";
 
 const CARD = `({
-  caption: document.getElementById("catch-caption").textContent,
+  hasCaption: !!document.getElementById("catch-caption"),
   line: document.getElementById("catch-pace-line").textContent,
   live: document.getElementById("catch-pace-line").getAttribute("aria-live"),
   visible: !!document.getElementById("catch-pace-line").offsetParent

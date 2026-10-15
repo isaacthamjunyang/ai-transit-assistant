@@ -10,16 +10,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 PACE_LINES = (
     "Walk slower",
-    "You have time. A relaxed pace should still work.",
     "Walk slightly slower",
-    "You can ease your pace a little.",
     "Keep a steady pace",
-    "A normal walking pace works.",
     "Walk slightly faster",
-    "A slightly brisker walk improves your chances.",
     "Walk faster",
-    "A brisk walk improves your chances. Stay on footpaths and use crossings.",
     "Unlikely at a normal pace",
+)
+# The sentences that used to sit under the chip: removed from the page, copy.js and the plan.
+REMOVED_PACE_SENTENCES = (
+    "You have time. A relaxed pace should still work.",
+    "You can ease your pace a little.",
+    "A normal walking pace works.",
+    "A slightly brisker walk improves your chances.",
+    "A brisk walk improves your chances. Stay on footpaths and use crossings.",
     "Walking faster is unlikely to be enough. Check the reroute options or the next bus.",
 )
 
@@ -113,6 +116,8 @@ def test_pace_copy_avoids_unsafe_language_and_is_in_the_plan():
         assert line in copy_js
         assert line in page
         assert line in section
+    for sentence in REMOVED_PACE_SENTENCES:
+        assert sentence not in copy_js and sentence not in page and sentence not in plan, sentence
     for phrase in UNSAFE_PHRASES:
         pattern = r"\b" + re.escape(phrase) + r"\b" if " " not in phrase else re.escape(phrase)
         assert re.search(pattern, blob, flags=re.IGNORECASE) is None

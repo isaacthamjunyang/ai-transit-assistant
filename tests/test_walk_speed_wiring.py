@@ -146,8 +146,6 @@ GUIDE = (ROOT / "static" / "styleguide.html").read_text(encoding="utf-8")
 THEME = (ROOT / "static" / "theme.css").read_text(encoding="utf-8")
 
 NEW_STRINGS = [
-    "if you leave now and keep walking at your current pace",
-    "if you leave now and walk at your usual pace",
     "Walking pace: {kmh} km/h · from GPS",
     "Walking pace: {kmh} km/h · from your steps",
     "Walking pace: {kmh} km/h · your usual pace",
@@ -176,7 +174,7 @@ def test_the_new_strings_are_in_copy_js_and_in_the_page_character_for_character(
         assert old not in everywhere, old
     for fragment in ("Your walking speed is used to improve the estimate", "Only your walking speed is sent to improve"):
         assert fragment not in everywhere, fragment
-    current = NEW_STRINGS[6]
+    current = NEW_STRINGS[4]
     assert current == "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before."
     assert current in plan  # the plan quotes the current line
 
@@ -186,7 +184,7 @@ def test_the_pace_line_is_muted_silent_and_inside_the_probability_card():
     # the pace line moved out from under the caption: it is the muted, silent subtitle of the button row that opens Page W
     assert '<span id="catch-pace-line" class="walk-open-row__sub" aria-live="off"></span>' in card
     assert '<p id="catch-pace-line"' not in card
-    assert card.index('id="catch-caption"') < card.index('id="walk-open"') < card.index('id="catch-pace-line"')
+    assert 'id="catch-caption"' not in card and card.index('id="walk-open"') < card.index('id="catch-pace-line"')
     for note in ('id="overview-motion-note"', 'id="new-journey-motion-note"'):  # the overview lines: muted, silent
         assert f'<p {note} class="note" aria-live="off"></p>' in INDEX
     start = INDEX.index('<p id="overview-motion-note" class="note" aria-live="off"></p>')
@@ -201,7 +199,7 @@ def test_the_menu_keeps_only_appearance_and_adds_no_row():
 
 
 def test_the_style_guide_shows_every_caption_pace_line_note_and_the_readout_in_both_themes():
-    for key in ("captionCurrentPace", "captionUsualPace", "walkPaceGps", "walkPaceSteps", "walkPaceUsual", "walkPaceNormal"):
+    for key in ("walkPaceGps", "walkPaceSteps", "walkPaceUsual", "walkPaceNormal"):
         assert f"lc.{key}" in GUIDE, key
     for source in ("gps", "cadence", "remembered", "default"):
         assert f'sgWalk("{source}"' in GUIDE, source

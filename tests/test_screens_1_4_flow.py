@@ -17,11 +17,11 @@ def _between(text: str, start: str, end: str) -> str:
     return text.split(start, 1)[1].split(end, 1)[0]
 
 
-def test_quick_picks_fill_the_field_but_do_not_search():
+def test_saved_place_row_runs_saved_actions_only_and_does_not_search():
     html = _page()
     chips = _between(html, 'getElementById("quick-picks").addEventListener("click"', "});")
-    assert "destinationInput.value = chip.textContent" in chips
-    assert "destinationInput.focus()" in chips
+    assert "savedPlaceAction(chip)" in chips
+    assert "destinationInput.value" not in chips
     assert "requestSubmit" not in chips
     assert "pushScreen" not in chips
     assert "fetch(" not in chips

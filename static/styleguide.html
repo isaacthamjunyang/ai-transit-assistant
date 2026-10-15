@@ -184,27 +184,21 @@
       <p class="field__hint">When pace guidance has no category, this chip is not shown.</p>
       <div class="pace-chip">
         <p class="badge badge--live"><span data-copy="pace.slower.title"></span></p>
-        <p class="field__hint" data-copy="pace.slower.detail"></p>
       </div>
       <div class="pace-chip">
         <p class="badge badge--live"><span data-copy="pace.slightly_slower.title"></span></p>
-        <p class="field__hint" data-copy="pace.slightly_slower.detail"></p>
       </div>
       <div class="pace-chip">
         <p class="badge badge--no-history"><span data-copy="pace.steady.title"></span></p>
-        <p class="field__hint" data-copy="pace.steady.detail"></p>
       </div>
       <div class="pace-chip">
         <p class="badge badge--uncertain"><span data-copy="pace.slightly_faster.title"></span></p>
-        <p class="field__hint" data-copy="pace.slightly_faster.detail"></p>
       </div>
       <div class="pace-chip">
         <p class="badge badge--uncertain"><span data-copy="pace.faster.title"></span></p>
-        <p class="field__hint" data-copy="pace.faster.detail"></p>
       </div>
       <div class="pace-chip">
         <p class="badge badge--unavailable"><span data-copy="pace.unlikely.title"></span></p>
-        <p class="field__hint" data-copy="pace.unlikely.detail"></p>
       </div>
     </section>
 
@@ -261,12 +255,6 @@
         <p id="reroute-message"></p>
         <p id="reroute-probability"></p>
       </article>
-      <article class="card card--caution">
-        <p id="no-better-standard"></p>
-      </article>
-      <article class="card card--caution">
-        <p id="no-better-post"></p>
-      </article>
     </section>
 
     <section class="stack" aria-labelledby="arrive-heading">
@@ -289,17 +277,10 @@
     </section>
 
     <section class="stack" aria-labelledby="arrive-panel-heading">
-      <h2 id="arrive-panel-heading">Arrive-by estimate, miss line, and picker</h2>
+      <h2 id="arrive-panel-heading">Arrive-by estimate and picker</h2>
       <div class="place-row-samples theme-sample-light">
         <p>Arrive about 6:24 PM</p>
         <p>Estimated destination arrival about 6:24 PM</p>
-        <div class="miss-row">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-          <div>
-            <p class="miss-row__label" data-copy="arriveBy.missLabel"></p>
-            <p>Next Bus 36 in 12 min · reach destination about 6:36 PM (about 6 min late)</p>
-          </div>
-        </div>
         <div class="banner banner--caution planning-banner">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           <p>Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p>
@@ -326,13 +307,6 @@
       <div class="place-row-samples theme-sample-dark">
         <p>Arrive about 6:24 PM</p>
         <p>Estimated destination arrival about 6:24 PM</p>
-        <div class="miss-row">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-          <div>
-            <p class="miss-row__label">If you miss it</p>
-            <p>Next Bus 36 in 12 min · reach destination about 6:36 PM (about 6 min late)</p>
-          </div>
-        </div>
         <div class="banner banner--caution planning-banner">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           <p>Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p>
@@ -642,8 +616,6 @@
       .replace("{new_low}", "60")
       .replace("{new_high}", "81")
       .replace("{old_point}", "28");
-    document.getElementById("no-better-standard").textContent = copy.noBetter.standard.replace("{point}", "28");
-    document.getElementById("no-better-post").textContent = copy.noBetter.postReroute.replace("{point}", "28");
     document.getElementById("probability").setAttribute("aria-label", copy.probabilityExample);
 
     function showSlot(id, button) {
@@ -731,18 +703,17 @@
     // Saved places on Home: the saved chips side by side with a green outline (the name only), "+" (not at five) and, when
     // something is saved, the Edit / Done toggle. "+" has a dashed green outline and green text, Edit a red outline and
     // red text, and Done the neutral chip style. In edit mode a small "x" badge sits on each chip's upper right corner and
-    // the chip itself renames. Starters stay neutral. selected: the index of the chip with the selected outer ring.
+    // the chip itself renames. With nothing saved the row is "+" alone and the privacy note is concealed (its space
+    // stays). selected: the index of the chip with the selected outer ring.
 
     function sgSavedRow(names, editing, selected) {
       var sp = copy.home.savedPlaces;
-      var chips = names.length ? names.map(function (name, index) {
+      var chips = names.map(function (name, index) {
         var label = editing ? sp.menuLabel : sp.chipLabel;
         var chosen = index === selected;
         return "<span class=\"saved-chip\"><button type=\"button\" class=\"quick-pick saved-chip__main" + (chosen ? " is-selected" : "") + "\" aria-label=\"" + label.replace("{name}", name) + "\"" + (!editing ? " aria-pressed=\"" + (chosen ? "true" : "false") + "\"" : "") + "><span class=\"saved-chip__name\">" + name + "</span></button>"
           + (editing ? "<button type=\"button\" class=\"saved-chip__badge\" aria-label=\"" + sp.deleteMarkLabel.replace("{name}", name) + "\"><span class=\"saved-chip__badge-mark\">" + sp.deleteMark + "</span></button>" : "")
           + "</span>";
-      }) : copy.home.quickPicks.map(function (name) {
-        return "<button type=\"button\" class=\"quick-pick\">" + name + "</button>";
       });
       if (names.length < 5) {
         chips.push("<button type=\"button\" class=\"quick-pick quick-pick--add\" aria-label=\"" + sp.addLabel + "\">" + sp.add + "</button>");
@@ -752,7 +723,7 @@
       }
       var count = names.length >= 5 ? "<p class=\"saved-places__note\">" + sp.count.replace("{n}", "5").replace("{max}", "5") + "</p>" : "";
       return "<div class=\"quick-picks\">" + chips.join("") + "</div><div class=\"saved-places\">" + count
-        + "<p class=\"saved-places__note\">" + sp.note + "</p></div>";
+        + "<p class=\"saved-places__note" + (names.length ? "" : " is-concealed") + "\">" + sp.note + "</p></div>";
     }
 
     function sgSavedField(label, value, hint) {
@@ -795,7 +766,7 @@
       return "<div class=\"card screen-sample\">" +
         "<div class=\"hero\">" + heroArt + "<p class=\"hero__copy\"><span class=\"hero__line\">" + copy.home.heroLeave + "</span><span class=\"hero__line\">" + copy.home.heroCatch + "</span></p></div>" +
         "<p class=\"hero-support\">" + copy.home.heroSupport + "</p>" +
-        "<p class=\"note\">Saved places: nothing saved (the starters, never stored)</p>" + sgSavedRow([]) +
+        "<p class=\"note\">Saved places: nothing saved (\"+\" alone; no Edit; the note is concealed)</p>" + sgSavedRow([]) +
         "<p class=\"note\">Saved places: one saved (\"+\" dashed green, Edit red)</p>" + sgSavedRow(["Home"]) +
         "<p class=\"note\">Saved places: one selected (a blue outer ring with a gap, apart from the green outline)</p>" +
         sgSavedRow(["Home", "School"], false, 0) +
@@ -856,7 +827,9 @@
     var INFO_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 11v6M12 7.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var CHEVRON_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var CROSSHAIR_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\" fill=\"currentColor\"></circle><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
-    var PIN_SVG = "<svg class=\"dest-pin__svg\" viewBox=\"0 0 32 40\" aria-hidden=\"true\" focusable=\"false\"><path class=\"dest-pin__body\" d=\"M16 38s12-11.6 12-22a12 12 0 1 0-24 0c0 10.4 12 22 12 22z\"></path><circle class=\"dest-pin__dot\" cx=\"16\" cy=\"16\" r=\"4.5\"></circle></svg>";
+    // The map markers (the same svg as static/index.html): the green flag and the red pin, 48 px, anchors in the plan.
+    var MAP_FLAG_SVG = "<svg class=\"map-flag__svg\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path class=\"map-flag__casing\" d=\"M6 21V4M6 4h11l-2 4 2 4H6\"></path><path class=\"map-flag__body\" d=\"M6 21V4M6 4h11l-2 4 2 4H6\"></path></svg>";
+    var MAP_PIN_SVG = "<svg class=\"map-pin__svg\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path class=\"map-pin__body\" d=\"M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z\"></path><circle class=\"map-pin__hole\" cx=\"12\" cy=\"11\" r=\"2.5\"></circle></svg>";
     var CLOCK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var ARROW_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 12h14M13 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var DOWN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 9l6 6 6-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
@@ -889,14 +862,21 @@
 
     function destSample() {
       return ""
-        + "<h4>Map overlay card, markers, pin and locate button</h4>"
+        + "<h4>Map overlay card, markers, destination flag and locate button</h4>"
         + "<div class=\"dest-map sample-map\">"
         + "<div class=\"map-place-card\"><p class=\"map-place-card__name\">Marina Bay Sands</p><p class=\"map-place-card__address\">10 Bayfront Ave, Singapore 018956</p></div>"
         + "<div class=\"sample-map__strip\">"
-        + "<span class=\"dest-pin\">" + PIN_SVG + "</span>"
+        + "<span class=\"dest-flag\">" + MAP_FLAG_SVG + "</span>"
         + "<span class=\"map-stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right\">Unselected stop</span></span>"
         + "<span class=\"map-stop is-selected\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right is-selected\">Selected stop</span></span>"
         + "<span class=\"map-stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label is-right is-label-hidden\">Hidden label</span></span>"
+        + "</div>"
+        + "<h4>Current location (red pin, --marker-start, tip on your position, label You), destination (green flag, --marker-end, pole base on the place) and the overlap case (within a few metres the flag stands above the pin)</h4>"
+        + "<div class=\"sample-markers\">"
+        + "<span class=\"sample-markers__item\" role=\"img\" aria-label=\"" + copy.map.yourLocation + "\">" + MAP_PIN_SVG + "<span class=\"marker__label\">" + copy.map.you + "</span></span>"
+        + "<span class=\"sample-markers__item\" role=\"img\" aria-label=\"" + copy.map.destination + "\">" + MAP_FLAG_SVG + "</span>"
+        + "<span class=\"sample-markers__item sample-markers__item--stack\"><span class=\"sample-markers__flag\" role=\"img\" aria-label=\"" + copy.map.destination + "\">" + MAP_FLAG_SVG + "</span>"
+        + "<span class=\"sample-markers__pin\" role=\"img\" aria-label=\"" + copy.map.yourLocation + "\">" + MAP_PIN_SVG + "<span class=\"marker__label\">" + copy.map.you + "</span></span></span>"
         + "</div>"
         + "<h4>Destination markers: a bus stop has the bus icon in a grey ring, a station the train icon in its first line's ring and a label that says MRT or LRT</h4>"
         + "<div class=\"dest-map sample-map\"><div class=\"sample-map__strip\">"
@@ -1035,11 +1015,11 @@
     function sgTimeline(withTransfer) {
       var items = [
         sgStep("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title"), sgDetail(jo.toBoarding.replace("{distance}", "200\u00a0m"))], ""),
-        sgStep("stop", jo.boardingStop, [sgDetail("Opp Stamford Pr Sch (04119)"), sgDetail(jo.walk.replace("{minutes}", "4"))], ""),
+        sgStep("stop", jo.boardingStop, [sgDetail("Opp Stamford Pr Sch"), sgDetail(jo.walk.replace("{minutes}", "4"))], ""),
         sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "36") + "</span>" + sgPill("live") + "</p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.arrivingIn.replace("{minutes}", "4 min"), "journey-step__arriving")], "")
       ];
       if (withTransfer) {
-        items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza (09048)"), sgDetail(jo.walk.replace("{minutes}", "2"))], ""));
+        items.push(sgStep("stop", jo.transferStop, [sgDetail("Orchard Stn/Lucky Plaza"), sgDetail(jo.walk.replace("{minutes}", "2"))], ""));
         items.push(sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "106") + "</span></p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.headway.replace("{minutes}", "12"))], ""));
       }
       items.push(sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands"), sgDetail(jo.walkToDestination.replace("{minutes}", "3"))], jo.editDestinationStop));
@@ -1103,14 +1083,14 @@
       return copy.arriveBy[direction === "before" ? "gapBefore" : "gapAfter"].replace("{amount}", amount);
     }
 
-    // No visible label: the card is a group named "Arrive by". The gap line takes the pill's state colour (track, risk,
-    // or the muted N/A), and always says before or after target in words.
+    // No visible label: the card is a group named "Arrive by". The gap is a pill, the same component as the check pill, in
+    // the same state (track, risk or N/A), and always says before or after target in words.
     function sgArriveBox(time, gap, pill) {
       var tone = pill && pill[0] === "badge--track" ? "track" : pill && pill[0] === "badge--risk" ? "risk" : "na";
       return "<div class=\"arrive-box\" role=\"group\" aria-label=\"" + copy.home.arriveBy + "\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
         + "<div class=\"arrive-box__copy\">"
         + "<p class=\"arrive-box__value\">" + copy.arriveBy.arriveLine.replace("{time}", time) + "</p>"
-        + (gap ? "<p class=\"arrive-box__estimate arrive-box__estimate--" + tone + "\">" + gap + "</p>" : "")
+        + (gap ? "<p class=\"badge badge--" + tone + " arrive-box__status\">" + gap + "</p>" : "")
         + (pill ? "<p class=\"badge " + pill[0] + " arrive-box__status\">" + pill[1] + "</p>" : "") + "</div>"
         + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
     }
@@ -1121,8 +1101,8 @@
 
     function sgBusCard(state, refreshClass, refreshDisabled) {
       return "<div class=\"bus-card\"><span class=\"bus-tile bus-tile--hero\" aria-hidden=\"true\">" + BUS_SVG + "</span>"
-        + "<div class=\"bus-card__copy\"><p class=\"bus-card__title\"><span>" + jo.bus.replace("{service}", "36") + "</span>" + sgPill(state) + "</p>"
-        + "<p class=\"bus-card__to\">" + jo.to.replace("{destination}", "Marina Bay Sands") + "</p></div>"
+        + "<div class=\"bus-card__copy\"><p class=\"journey-step__line bus-card__line\"><span class=\"bus-card__badge\"><span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>36</span></span>"
+        + "<span class=\"bus-card__to\">" + jo.to.replace("{destination}", "Marina Bay Sands") + "</span>" + sgPill(state) + "</p></div>"
         + "<button type=\"button\" class=\"refresh-button" + (refreshClass ? " " + refreshClass : "") + "\" aria-label=\"" + lt.refresh + "\" aria-disabled=\"" + (refreshDisabled ? "true" : "false") + "\">" + REFRESH_ICON + "</button></div>";
     }
 
@@ -1131,21 +1111,6 @@
         return "<li class=\"bus-tile-card" + (i === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + m + "</span><span class=\"bus-tile-card__service\">" + jo.bus.replace("{service}", "36") + "</span>"
           + (i === 0 ? "<span class=\"bus-tile-card__arriving\">" + lt.arriving + "</span>" : "") + "</li>";
       }).join("") + "</ul>";
-    }
-
-    function sgStatus(mode) {
-      var live = mode === "live" || mode === "uncertain";
-      function cell(text, icon, state, extra) {
-        return "<p class=\"status-cell" + (state ? " " + state : "") + "\"><span class=\"status-cell__icon" + (extra || "") + "\" aria-hidden=\"true\">" + icon + "</span><span>" + text + "</span></p>";
-      }
-      return "<div class=\"status-grid\">"
-        + cell(live ? lt.liveAvailable : lt.liveUnavailable, "", live ? "is-ok" : "is-off", " status-dot-icon")
-        + cell(live ? lt.monitored : lt.notMonitored, MAP_PIN_ICON, live ? "is-ok" : "is-off")
-        + cell(lt.gpsAccuracy, TARGET_ICON, "")
-        + "<p class=\"status-cell" + (mode === "uncertain" ? " is-warn" : "") + "\"><span class=\"status-cell__icon status-cell__warn\" aria-hidden=\"true\">" + WARN_ICON + "</span><span>" + (mode === "uncertain" ? "120\u00a0m" : mode === "live" ? "18\u00a0m" : lt.noValue) + "</span></p>"
-        + cell(lt.lastUpdate, CLOCK_ICON, "")
-        + "<p class=\"status-cell\"><time datetime=\"2026-10-01T18:04:10+08:00\">" + (mode === "unavailable" ? "1 min 24 sec ago" : "8 seconds ago") + "</time></p>"
-        + "</div>";
     }
 
     function liveSample() {
@@ -1159,7 +1124,7 @@
         + "<h4>Arrive-by box: an hour and 1 min (the minute is singular)</h4>" + sgArriveBox("5:29\u00a0PM", sgArriveGap("before", copy.arriveBy.gapHrMinOne.replace("{h}", "1")), ["badge--track", copy.arriveBy.onTrack])
         + "<h4>Arrive-by box: across midnight (estimate 11:55 PM, target 12:05 AM tomorrow)</h4>" + sgArriveBox("11:55\u00a0PM", sgArriveGap("before", copy.arriveBy.gapMinutes.replace("{n}", "10")), ["badge--track", copy.arriveBy.onTrack])
         + "<h4>Arrive-by box: a next-day estimate carries (tomorrow); 2 hr after the target</h4>" + sgArriveBox("2:30\u00a0AM " + copy.arriveBy.tomorrow, sgArriveGap("after", jo.durationHr.replace("{h}", "2")), ["badge--risk", copy.arriveBy.risk])
-        + "<h4>Arrive-by box, No target (the main line only, no label)</h4>" + sgArriveBoxNoTarget()
+        + "<h4>Arrive-by box, No target (the main line only, no label). With no estimate, and in every empty overview state, the card is not drawn</h4>" + sgArriveBoxNoTarget()
         + "<h4>Screen 5: planning (loading)</h4>" + sgOverviewState("loading")
         + "<h4>Screen 5: no location</h4>" + sgOverviewState("no-location")
         + "<h4>Screen 5: no route</h4>" + sgOverviewState("no-route")
@@ -1177,11 +1142,9 @@
         + "<h4>Next buses: three, two and one</h4><p class=\"live-label\">" + lt.nextBuses + "</p>" + sgTiles(["4 min", "12 min", "24 min"]) + sgTiles(["Due", "15 min"]) + sgTiles(["<1 min"])
         + "<h4>Live bus tag and boarding-stop label chip</h4>"
         + "<div class=\"live-map sample-live\"><span class=\"live-bus-tag\"><span class=\"live-bus-tag__icon\">" + BUS_SVG + "</span><span class=\"live-bus-tag__text\"><span class=\"live-bus-tag__service\">" + jo.bus.replace("{service}", "36") + "</span><span class=\"live-bus-tag__eta\">4 min</span></span></span>"
-        + "<span class=\"map-stop map-stop--live\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Opp Stamford Pr Sch<br>(04119)</span></span>"
+        + "<span class=\"map-stop map-stop--live\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Opp Stamford Pr Sch</span></span>"
         + "<div class=\"map-range-chip\"><span class=\"map-range-chip__text\">" + stopsCopy.range.replace("{distance}", "200\u00a0m") + "</span></div></div>"
-        + "<h4>Status grid: live</h4>" + sgStatus("live")
-        + "<h4>Status grid: unavailable</h4>" + sgStatus("unavailable")
-        + "<h4>Status grid: location uncertain</h4>" + sgStatus("uncertain");
+        + "";
     }
 
     // Line badges, leg rows and the priority chips (plan_edits_9 4.1, 4.2, 4.4). The same classes as the overview.
@@ -1265,33 +1228,27 @@
       var tp = copy.trainPage;
       var line = "North-South Line";
       var tiles = "<div class=\"leave-tiles\"><div class=\"leave-tile\"><div><p class=\"leave-tile__label\">Leave by</p><p class=\"leave-tile__value\">8:44" + " AM</p>"
-        + "<p class=\"leave-tile__meta\">in 3 min · 3 min walk</p></div></div>"
-        + "<div class=\"leave-tile\"><div><p class=\"leave-tile__label\">" + tp.departsLabel + "</p><p class=\"leave-tile__value\">8:50 AM</p></div></div></div>";
-      var pageA = "<div class=\"card catch-card\"><div class=\"catch-card__head\"><div class=\"catch-card__heading\"><p class=\"catch-card__title\">" + sgFill(tp.catchHeading, { line: line }) + "</p></div>"
-        + sgPill("schedule") + "</div><p class=\"catch-card__sub\">" + sgFill(tp.departsIn, { n: 6 }) + " · Bishan MRT Station</p>"
-        + "<p class=\"catch-card__caption catch-card__not-live\">" + tp.notLive + "</p></div>" + tiles
-        + "<div class=\"miss-row\"><div><p>" + copy.train.trainMiss.replace("{time}", "8:54 AM") + "</p></div></div>"
+        + "<p class=\"leave-tile__meta\">3 min walk</p></div></div></div>";
+      var pageA = sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgPaceChip("steady") + tiles
         + "<div class=\"catch-bar catch-bar--single\"><button type=\"button\" class=\"primary\"><span>" + tp.seeTimes + "</span></button></div>";
       // Page B card header: the tile, then the badge and the name on one row (a wrapped name stays under the name), the pill and
       // the direction under it, the refresh button top right. Tiles show the time only; the aria-label names the line and time.
       var refresh = "<button type=\"button\" class=\"refresh-button\" aria-label=\"Refresh live arrivals\">" + REFRESH_ICON + "</button>";
       var pageBCard = function (code, name, terminus, wide) {
         return "<div class=\"card live-card\"><div class=\"bus-card\"><span class=\"bus-tile bus-tile--hero\" aria-hidden=\"true\">" + SG_TRAIN_ICON + "</span>"
-          + "<div class=\"bus-card__copy\"><p class=\"bus-card__title bus-card__title--train\"><span class=\"bus-card__line\"><span class=\"bus-card__badge\">"
-          + sgBadge(code) + "</span><span class=\"bus-card__line-name\">" + name + "</span></span>" + sgPill("schedule") + "</p>"
-          + "<p class=\"bus-card__to\">" + sgFill(tp.toward, { terminus: terminus }) + "</p></div>" + refresh + "</div>"
-          + "<p class=\"live-then\">" + sgFill(tp.departsAt, { time: "8:50 AM" }) + "</p>"
+          + "<div class=\"bus-card__copy\"><p class=\"journey-step__line bus-card__line\"><span class=\"bus-card__badge\">"
+          + sgBadge(code) + "</span><span class=\"bus-card__to\">" + jo.trainToward.replace("{terminus}", terminus) + "</span>"
+          + sgPill("schedule") + "</p></div>" + refresh + "</div>"
           + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"bus-tiles bus-tiles--3\">"
           + ["8:50", "8:54", "8:58"].map(function (time, index) {
             return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\" aria-label=\"" + sgFill(tp.tileLabel, { line: name, time: time + " AM" })
               + "\"><span class=\"bus-tile-card__minutes\">" + time + "\u00a0AM</span></li>";
-          }).join("") + "</ul><div class=\"status-grid\"><p class=\"status-cell\"><span>" + tp.scheduled + "</span></p><p class=\"status-cell\"><span>"
-          + sgFill(tp.every, { n: 4 }) + "</span></p></div>"
+          }).join("") + "</ul>"
           + (wide ? "<div class=\"catch-bar\"><p class=\"catch-bar__title\">" + tp.question + "</p></div>" : "") + "</div>";
       };
       var pageB = pageBCard("NS", line, "Marina South Pier", true)
-        + "<h4>Page B header: a long line name wraps under the name, not under the badge</h4>" + pageBCard("TE", "Thomson-East Coast Line", "Woodlands North", false)
-        + "<h4>Page B header: a short line name stays on the badge row</h4>" + pageBCard("CC", "Circle Line", "HarbourFront", false);
+        + "<h4>Page B header: a long terminus wraps inside its own text</h4>" + pageBCard("TE", "Thomson-East Coast Line", "Woodlands North", false)
+        + "<h4>Page B header: a short terminus stays on the badge row</h4>" + pageBCard("CC", "Circle Line", "HarbourFront", false);
       var missed = "<div class=\"card train-missed\"><p class=\"train-missed__left\">" + sgFill(tp.left, { line: line, time: "8:54 AM" }) + "</p>"
         + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"train-rows\">"
         + ["8:54", "8:58", "9:02"].map(function (time) { return "<li class=\"train-rows__item\">" + sgFill(tp.about, { time: time + " AM" }) + "</li>"; }).join("")
@@ -1305,9 +1262,9 @@
       var nb = "\u00a0";
       var rows = [
         sgLegRow("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title")], ""),
-        sgLegRow("walk", sgFill(jo.walkRow, { n: 4 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "300" + nb + "m", place: "Opp Stamford Pr Sch (04119)" }))], ""),
-        sgBusLeg("36", "Opp Stamford Pr Sch (04119)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "live",
-          sgFill(copy.liveCatch.arrivingIn, { n: 4 }), "journey-step__arriving", "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd (28059)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 4 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "300" + nb + "m", place: "Opp Stamford Pr Sch" }))], ""),
+        sgBusLeg("36", "Opp Stamford Pr Sch", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "live",
+          sgFill(copy.liveCatch.arrivingIn, { n: 4 }), "journey-step__arriving", "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd"),
         sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "130" + nb + "m", place: "Bishan MRT Station (NS17)" }))], ""),
         sgRailLeg("NS", "Bishan MRT Station (NS17)", sgFill(jo.directionPlatform, { direction: sgFill(jo.trainToward, { terminus: "Marina South Pier" }), x: "B" }),
           sgFill(jo.scheduledAt, { time: "8:44" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 6, m: 12 }), "Raffles Place MRT Station (NS26)"),
@@ -1317,11 +1274,11 @@
         sgLegRow("walk", sgFill(jo.walkRow, { n: 3 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "261" + nb + "m", place: "Bukit Panjang LRT Station (BP6)" }))], ""),
         sgRailLeg("BP", "Bukit Panjang LRT Station (BP6)", "", sgFill(jo.scheduledAt, { time: "9:12" + nb + "AM" }),
           sgFill(jo.stopsAndMin, { k: 3, m: 6 }), "Segar LRT Station (BP11)"),
-        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "110" + nb + "m", place: "Opp Segar Rd (45011)" }))], ""),
-        sgBusLeg("106", "Opp Segar Rd (45011)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "",
-          sgFill(jo.liveIn, { n: 6 }), "", "", sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Bef Marina Bay Stn (03029)"),
-        sgBusLeg("77", "Bef Marina Bay Stn (03029)", sgFill(jo.busToward, { terminus: "Tanjong Pagar" }), "",
-          sgFill(jo.scheduledAt, { time: "9:41" + nb + "AM" }), "", "", sgFill(jo.stopsAndMin, { k: 4, m: 8 }), "Tanjong Pagar Stn (07013)"),
+        sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "110" + nb + "m", place: "Opp Segar Rd" }))], ""),
+        sgBusLeg("106", "Opp Segar Rd", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "",
+          sgFill(jo.liveIn, { n: 6 }), "", "", sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Bef Marina Bay Stn"),
+        sgBusLeg("77", "Bef Marina Bay Stn", sgFill(jo.busToward, { terminus: "Tanjong Pagar" }), "",
+          sgFill(jo.scheduledAt, { time: "9:41" + nb + "AM" }), "", "", sgFill(jo.stopsAndMin, { k: 4, m: 8 }), "Tanjong Pagar Stn"),
         sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "150" + nb + "m", place: "Marina Bay Sands" }))], jo.editDestinationStop),
         sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], jo.editDestination)
       ];
@@ -1340,16 +1297,16 @@
           sgFill(jo.scheduledAt, { time: "9:06" + nb + "AM" }), sgFill(jo.stopsAndMin, { k: 2, m: 4 }), "Tiong Bahru MRT Station (EW17)")
       ];
       var busLabels = [
-        sgBusLeg("36", "Opp Stamford Pr Sch (04119)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "live",
-          jo.arrivingSoon, "journey-step__arriving", "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd (28059)"),
-        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
-          sgFill(jo.liveIn, { n: 4 }), "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)"),
-        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
-          jo.liveArrivingSoon, "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)"),
-        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
-          jo.liveNow, "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)"),
-        sgBusLeg("12", "Bef Toh Guan Rd (28060)", sgFill(jo.busToward, { terminus: "Clementi" }), "",
-          sgFill(jo.scheduledAt, { time: "9:30" + nb + "AM" }), "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd (28061)")
+        sgBusLeg("36", "Opp Stamford Pr Sch", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "live",
+          jo.arrivingSoon, "journey-step__arriving", "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd"),
+        sgBusLeg("12", "Bef Toh Guan Rd", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          sgFill(jo.liveIn, { n: 4 }), "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd"),
+        sgBusLeg("12", "Bef Toh Guan Rd", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          jo.liveArrivingSoon, "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd"),
+        sgBusLeg("12", "Bef Toh Guan Rd", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          jo.liveNow, "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd"),
+        sgBusLeg("12", "Bef Toh Guan Rd", sgFill(jo.busToward, { terminus: "Clementi" }), "",
+          sgFill(jo.scheduledAt, { time: "9:30" + nb + "AM" }), "", "", sgFill(jo.stopOneAndMin, { m: 2 }), "Aft Toh Guan Rd")
       ];
       var trainWords = [
         sgRailLeg("CC", "Promenade MRT Station (CC4)", sgFill(jo.directionPlatform, { direction: sgFill(jo.loopToward, { direction: jo.anticlockwise, terminus: "HarbourFront" }), x: "A" }),
@@ -1381,11 +1338,6 @@
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + interchange.join("") + "</ol></div>"
         + "<h4>Bus legs: the first bus says Arriving soon; a later bus says Live (In n min, Arriving soon, Now) or Scheduled</h4>"
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + busLabels.join("") + "</ol></div>"
-        + "<h4>Live page line under the bus card: Live (In n min, Arriving soon, Now), Scheduled, and a train next leg</h4>"
-        + "<div class=\"card live-card\">" + [jo.liveIn.replace("{n}", "4"), jo.liveArrivingSoon, jo.liveNow, sgFill(jo.scheduledAt, { time: "9:30" + nb + "AM" })].map(function (when) {
-          return "<p class=\"live-then\">" + cp.thenBus.replace("{service}", "36").replace("{stop}", "Opp Toh Guan Rd (03011)") + " <span class=\"live-then__when\">" + when + "</span></p>";
-        }).join("") + "<p class=\"live-then\">" + cp.thenTrain.replace("{line}", "North-South Line").replace("{station}", "Bishan MRT Station (NS17)")
-        + " <span class=\"live-then__when\">" + sgFill(jo.scheduledAt, { time: "9:41" + nb + "AM" }) + "</span></p></div>"
         + "<h4>Train leg row: a loop line adds Clockwise or Anticlockwise, \"In 1 min\", \"Now\", and a platform only when one is known</h4>"
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + trainWords.join("") + "</ol></div>"
         + trainPagesSample();
@@ -1411,9 +1363,9 @@
         + "<div class=\"journey-step__body\"><p class=\"journey-step__title\">" + sgFill(jo.walkRow, { n: 2 }) + "</p>"
         + sgDetail(sgFill(jo.walkRowTo, { distance: "120" + nb + "m", place: "Buona Vista MRT Station (EW21)" })) + "</li>";
       var rows = [
-        doneLeg("bus", "", "Opp Stamford Pr Sch (04119)",
+        doneLeg("bus", "", "Opp Stamford Pr Sch",
           "<p class=\"journey-step__line\"><span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>36</span> <span>" + sgFill(jo.busToward, { terminus: "Marina Bay Sands" }) + "</span></p>",
-          sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd (28059)"),
+          sgFill(jo.stopsAndMin, { k: 7, m: 8 }), "Bef Toh Guan Rd"),
         doneWalk,
         sgRailLeg("CC", "Buona Vista MRT Station (CC22)", sgFill(jo.loopToward, { direction: jo.anticlockwise, terminus: "HarbourFront" }),
           copy.catchPrompt.boarded, sgFill(jo.stopsAndMin, { k: 3, m: 6 }), "Haw Par Villa MRT Station (CC25)"),
@@ -1435,20 +1387,19 @@
       };
       return "<h4>Get off banner: a train, then a bus (an icon and a text label, with Dismiss)</h4>"
         + banner(sgFill(ow.getOffTrain, { station: "Haw Par Villa MRT Station (CC25)" }))
-        + banner(sgFill(ow.getOffBus, { place: "Bef Toh Guan Rd (28059)" }))
+        + banner(sgFill(ow.getOffBus, { place: "Bef Toh Guan Rd" }))
         + "<h4>On your way: ticked leg and walk, the leg being ridden, legs to come</h4>"
         + card(sgFill(ow.nextGetOff, { place: "Haw Par Villa MRT Station (CC25)" }), rows)
         + "<h4>The Next line: a walk, and a leg to board (a bus and a train)</h4>"
         + "<div class=\"card overview-card\">" + nextLine(sgFill(ow.nextWalk, { n: 2, place: "Outram Park MRT Station (EW16)" }))
-        + nextLine(sgFill(ow.nextBoardBus, { service: "36", place: "Opp Toh Guan Rd (03011)" }))
+        + nextLine(sgFill(ow.nextBoardBus, { service: "36", place: "Opp Toh Guan Rd" }))
         + nextLine(sgFill(ow.nextBoardTrain, { line: "East-West Line", place: "Outram Park MRT Station (EW16)" })) + "</div>"
         + "<h4>The two muted lines under the card</h4>"
         + "<p class=\"note\">" + ow.privacy + "</p><p class=\"note\">" + ow.openNote + "</p>"
         + "<button type=\"button\" class=\"primary\">" + copy.catchPrompt.planNew + "</button>";
     }
 
-    document.getElementById("legs-sample-light").innerHTML = legsSample();
-    document.getElementById("legs-sample-dark").innerHTML = legsSample();
+    // document.getElementById("legs-sample-light") and the dark one are filled at the end of this script
     document.getElementById("on-way-sample-light").innerHTML = onWayLegsSample();
     document.getElementById("on-way-sample-dark").innerHTML = onWayLegsSample();
     document.getElementById("live-sample-light").innerHTML = liveSample();
@@ -1468,6 +1419,11 @@
     function sgBusArrives(minutes) {
       return '<p class="catch-card__arrives"><span class="catch-card__arrives-label">' + lc.busArrives + '</span>'
         + '<span class="catch-card__arrives-time">' + sgClock(minutes * 60) + '</span></p>';
+    }
+
+    // Page A's clock time beside the ring: no label.
+    function sgBusArrivesClock(minutes) {
+      return '<p class="catch-card__arrives"><span class="catch-card__arrives-time">' + sgClock(minutes * 60) + '</span></p>';
     }
 
     function sgEtaMinutes(eta) {
@@ -1505,31 +1461,40 @@
         + sgPill(state).replace("class=\"pill ", "class=\"pill catch-card__pill ") + "</div>" + sub;
     }
 
-    function sgCatchCard(state, point, low, high, stop, eta, walk) {
+    // Page A's heading, from the overview's row components: a marker (ring grey for a bus, the line's colour for a train),
+    // the row with the state pill, then the time line. kind: "bus" (default) or "train".
+    function sgCatchHead(state, kind, eta) {
+      var train = kind === "train";
+      var pill = sgPill(state);
+      var row = train
+        ? "<p class=\"journey-step__line catch-card__line\">" + sgBadge("NS") + "<span>" + jo.trainToward.replace("{terminus}", "Jurong East") + " · Platform A</span>" + pill + "</p>"
+        : "<p class=\"journey-step__line catch-card__line\"><span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>11</span><span>"
+          + jo.busToward.replace("{terminus}", "Pasir Ris Int") + "</span>" + pill + "</p>";
+      var when = train
+        ? jo.scheduledIn.replace("{n}", "6")
+        : (eta === undefined ? lc.arrivingIn.replace("{n}", "15") : eta);
+      return "<div class=\"catch-card__leg" + (train ? " journey-step--rail-ns" : "") + "\"><span class=\"step-node\" aria-hidden=\"true\">" + (train ? SG_TRAIN_ICON : BUS_SVG) + "</span>"
+        + "<div class=\"catch-card__heading\">" + row
+        + (when ? "<p class=\"catch-card__when" + (train ? "" : " journey-step__arriving") + "\">" + when + "</p>" : "") + "</div></div>";
+    }
+
+    function sgCatchCard(state, point, low, high, stop, eta, walk, kind) {
       var usable = point !== null;
-      var caption = walk && walk.caption ? walk.caption : lc.caption;
       return "<section class=\"card catch-card\" aria-live=\"polite\">"
-        + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), sgSub(eta === undefined ? lc.arrivingIn.replace("{n}", "15") : eta, stop === undefined ? "Tanjong Rhu Stn Exit 2" : stop), state)
-        + "<div class=\"catch-card__row\">" + sgRing(point, low, high, false, lc.unavailable)
-        + "<div class=\"catch-card__copy\">"
-        + (usable && sgEtaMinutes(eta) !== null ? sgBusArrives(sgEtaMinutes(eta)) : "") + "</div></div>"
-        + "<p class=\"catch-card__caption\">" + caption + "</p>"
+        + "<div class=\"catch-card__row\">" + sgRing(point, low, high, false, lc.unavailable).replace("class=\"prob-ring", "class=\"prob-ring prob-ring--large")
+        + "<div class=\"catch-card__copy\">" + sgCatchHead(state, kind, eta)
+        + (usable ? sgBusArrivesClock(kind === "train" ? 6 : (sgEtaMinutes(eta) === null ? 15 : sgEtaMinutes(eta))) : "") + "</div></div>"
         + sgWalkRow(walk && walk.line ? walk.line : lc.walkPaceNormal.replace("{kmh}", "4.5")) + "</section>";
     }
 
-    // The four walking-speed sources: the caption and the muted pace line (1.25 m/s is 4.5 km/h).
+    // The four walking-speed sources: the muted pace line (1.25 m/s is 4.5 km/h).
     function sgWalk(source, kmh) {
-      var map = {
-        gps: [lc.captionCurrentPace, lc.walkPaceGps],
-        cadence: [lc.captionCurrentPace, lc.walkPaceSteps],
-        remembered: [lc.captionUsualPace, lc.walkPaceUsual],
-        "default": [lc.caption, lc.walkPaceNormal]
-      };
-      return { caption: map[source][0], line: map[source][1].replace("{kmh}", kmh) };
+      var map = { gps: lc.walkPaceGps, cadence: lc.walkPaceSteps, remembered: lc.walkPaceUsual, "default": lc.walkPaceNormal };
+      return { line: map[source].replace("{kmh}", kmh) };
     }
 
     function sgPaceChip(key) {
-      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p><p class=\"field__hint\">" + copy.pace[key].detail + "</p></div></div>";
+      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p></div></div>";
     }
 
     // ---- consistent sample values: "now" is 9:55:00\u00a0PM and every leave-by value is computed with the app's rule
@@ -1560,10 +1525,10 @@
       var state = { e: e, warn: !!uncertain };
       if (lv.mode === "by") {
         state.value = lv.time;
-        state.meta = lc.leaveByIn.replace("{n}", lv.n).replace("{w}", lv.w);
+        state.meta = lc.leaveWalk.replace("{w}", lv.w);
       } else {
         state.value = lc.leaveNow;
-        state.meta = lc.leaveNowBusAway.replace("{e}", e).replace("{w}", lv.w);
+        state.meta = lc.leaveWalk.replace("{w}", lv.w);
       }
       return state;
     }
@@ -1571,8 +1536,7 @@
     // At the stop (the probability carries at_stop): the tile and the whole card, from the same strings as the page.
     function sgAtStopTile(e) {
       return {
-        e: e, warn: false, value: copy.atStop.tile,
-        meta: e < 1 ? copy.atStop.tileArriving : copy.atStop.tileBus.replace("{e}", e)
+        e: e, warn: false, value: copy.atStop.tile, meta: ""
       };
     }
 
@@ -1594,8 +1558,6 @@
         + (state.meta ? "<p class=\"leave-tile__meta\">" + state.meta + "</p>" : "")
         + (state.warn ? "<p class=\"leave-tile__meta leave-tile__warn\">" + SG_WARN_ICON + "<span>" + lc.leaveUncertain + "</span></p>" : "")
         + "</div></div>"
-        + "<div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + TILE_FLAG_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.estimatedArrival + "</p><p class=\"leave-tile__value\"><span class=\"leave-tile__nowrap\">" + sgClock((e + 15) * 60) + "</span></p><p class=\"leave-tile__meta\">(" + range + ")</p></div></div>"
-        + (withTarget ? "<p class=\"leave-tiles__row\"><span class=\"badge badge--track tile-status\">" + copy.arriveBy.onTrack + "</span></p>" : "")
         + "</section>";
     }
 
@@ -1625,12 +1587,12 @@
       }
       one += x["speed" + kind].replace("{kmh}", kmh);
       var arrival = sgClock(e * 60);
+      var walkMin = Math.max(1, Math.round(metres / speed / 60));
       var two;
       if (now) {
-        two = e < 1 ? x.leaveNowArriving.replace("{arrival}", arrival) : x.leaveNow.replace("{e}", sgMinutes(e)).replace("{arrival}", arrival);
+        two = e < 1 ? x.leaveNowArriving.replace("{arrival}", arrival) : x.leaveNow.replace("{w}", sgMinutes(walkMin)).replace("{arrival}", arrival);
       } else {
-        var reach = Math.max(1, Math.floor((SG_NOW_S + e * 60) / 60) - Math.floor((SG_NOW_S + lv.secs) / 60));
-        two = x.leaveBy.replace("{time}", lv.time).replace("{x}", sgMinutes(reach)).replace("{arrival}", arrival);
+        two = x.leaveBy.replace("{time}", lv.time).replace("{w}", sgMinutes(walkMin)).replace("{arrival}", arrival);
       }
       if (opts.uncertain) {
         two += " " + (now ? x.uncertainNow : x.uncertainBy);
@@ -1641,11 +1603,10 @@
     function sgAiCard(mode, opts) {
       opts = opts || {};
       var text = mode === "loading" ? "" : sgExplainText(opts);
-      var badge = opts.badge ? "<p class=\"badge ai-card__badge " + (opts.badgeClass || "badge--track") + "\">" + (opts.prefix ? copy.ifCatchPrefix : "") + opts.badge + "</p>" : "";
-      return "<section class=\"ai-card is-enabled has-content\" aria-live=\"polite\">" + badge
+      return "<section class=\"ai-card is-enabled has-content\" aria-live=\"polite\">"
         + "<p class=\"ai-card__head\"><span class=\"ai-card__icon\" aria-hidden=\"true\">" + SPARKLE_ICON + "</span><span>" + lc.aiTitle + "</span></p>"
         + (mode === "loading" ? "<span class=\"ai-card__status\">" + copy.updatingExplanation + "</span>" : "")
-        + "<p class=\"ai-card__text\">" + text + "</p><p class=\"ai-card__note\">" + lc.aiNote + "</p></section>";
+        + "<p class=\"ai-card__text\">" + text + "</p></section>";
     }
 
     var PILL_STAR_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7L12 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path></svg>";
@@ -1667,9 +1628,11 @@
     function sgMergedCard(chip, reasonKey, pills, service) {
       return '<div class="reroute-option"><div class="card option-merged"><p class="option-chip"><span class="option-chip__icon" aria-hidden="true">' + SHIELD_ICON + '</span><span>' + chip + '</span></p>'
         + sgPills(pills)
-        + '<div class="option-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
-        + '<div class="option-card__copy"><p class="option-card__title">Bus ' + service + '</p><p class="option-card__arrives"><span class="option-card__live">' + rp.arrivesIn.replace("{minutes}", "6 min") + ' <span class="option-card__arrow" aria-hidden="true">' + ARROW_ICON + '</span></span></p>'
-        + '<p class="option-card__meta">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</p><p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15\u00a0PM") + '</p></div>'
+        + '<div class="option-card">'
+        + '<div class="option-card__copy"><div class="catch-card__leg option-heading"><span class="step-node" aria-hidden="true">' + BUS_SVG + '</span>'
+        + '<div class="catch-card__heading"><p class="journey-step__line catch-card__line"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>' + service + '</span> <span>' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</span></p>'
+        + '<p class="catch-card__when journey-step__arriving">' + lc.arrivingIn.replace("{n}", "6") + '</p></div></div>'
+        + '<p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15\u00a0PM") + '</p></div>'
         + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '<p class="option-card__arrive">' + rp.arrive.replace("{time}", "6:36\u00a0PM") + '</p></div></div></div>'
         + '<section class="ai-card option-explain" aria-live="polite"><p class="ai-card__head"><span class="ai-card__icon" aria-hidden="true">' + SPARKLE_ICON + '</span><span>' + lc.aiTitle + '</span></p>'
         + '<p class="ai-card__text">' + sgReasonSentence(reasonKey, service) + '</p></section>'
@@ -1714,6 +1677,12 @@
         + '</ul></div></div>';
     }
 
+    // After a miss with nothing found: the plain text on the notice line and the ride-app card, no list.
+    function sgPageCMissedNone() {
+      return '<div class="page-c"><div class="reroute-proposal"><p class="banner banner--info reroute-notice">' + rp.noOtherOptions + '</p>'
+        + sgRideApps(true) + '</div></div>';
+    }
+
     function sgPageCMissed() {
       return '<div class="page-c"><div class="reroute-proposal"><p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "11") + '</p>'
         + sgMergedCard(rp.recommended, "reasonHighestChanceOnTime", ["highest_chance"], "7")
@@ -1723,7 +1692,7 @@
     }
 
     function sgPageCNone() {
-      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal"><p class="banner banner--quiet reroute-none">' + copy.noBetter.standard.replace("{point}", "5") + '</p>'
+      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal"><p class="banner banner--quiet reroute-none">' + rp.noOtherOptions + '</p>'
         + sgRefreshHeader(rp.otherBuses) + '<ul class="reroute-alternatives">'
         + sgOptionRow("11", 35, 25, 39, "31 min", "7:05\u00a0PM", rp.atYourStop, { unlikely: true }) + '</ul></div></div>';
     }
@@ -1750,8 +1719,8 @@
       return "<div class=\"live-map walk-map sample-walk-map" + (near ? " sample-walk-map--near" : "") + "\"><span class=\"sample-walk-map__chip\">" + (near ? "Range: 20 m" : formatSgRange()) + "</span>"
         + "<svg class=\"sample-walk-map__line\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\" focusable=\"false\"><line x1=\"" + (near ? "50\" y1=\"40\" x2=\"50\" y2=\"56" : "30\" y1=\"28\" x2=\"50\" y2=\"66") + "\"></line></svg>"
         + (accuracy ? "<span class=\"sample-walk-map__acc sample-walk-map__acc--" + accuracy + "\"></span>" : "")
-        + "<span class=\"sample-walk-map__you\">You</span>"
-        + "<span class=\"map-stop map-stop--live sample-walk-map__stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Origin<br>(01011)</span></span>"
+        + "<span class=\"sample-walk-map__you\" role=\"img\" aria-label=\"" + copy.map.yourLocation + "\">" + MAP_PIN_SVG + "<span class=\"marker__label\">" + copy.map.you + "</span></span>"
+        + "<span class=\"map-stop map-stop--live sample-walk-map__stop\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Origin</span></span>"
         + "<button type=\"button\" class=\"map-recentre\" aria-label=\"" + copy.walkPage.recentre + "\">" + SG_RECENTRE_ICON + "</button></div>";
     }
 
@@ -1809,8 +1778,10 @@
 
     function catchSample() {
       return ""
-        + "<h4>Probability card: live, with the pace chip</h4>" + sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady")
-        + "<h4>Probability card: schedule only, no pace chip</h4>" + sgCatchCard("schedule", 41, 30, 52)
+        + "<h4>Probability card: bus, live, with the pace chip</h4>" + sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady")
+        + "<h4>Probability card: bus, schedule only, low band, with the pace chip</h4>" + sgCatchCard("schedule", 41, 30, 52) + sgPaceChip("unlikely")
+        + "<h4>Probability card: MRT, schedule only (line badge, To terminus \u00b7 Platform, Scheduled \u00b7 In n min)</h4>" + sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgPaceChip("steady")
+        + "<h4>Pace chip before a speed is measured</h4>" + sgPaceChip("neutral")
         + "<h4>Walking pace: from GPS</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("gps", "4.7"))
         + "<h4>Walking pace: from your steps</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("cadence", "4.3"))
         + "<h4>Walking pace: your usual pace</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("remembered", "3.9"))
@@ -1819,22 +1790,18 @@
         + "<div class=\"pace-debug pace-debug--sample is-open\"><button type=\"button\" class=\"pace-debug__bar\">mode gps &middot; used 1.30 m/s &middot; ok &middot; srv age 3 s</button>"
         + "<div class=\"pace-debug__panel\"><pre class=\"pace-debug__text\">mode gps (walking by gps)\ncadence 1.82 score 0.91 rms 1.20 null 0 cv 0.04\ngps 1.30 m/s reported acc 8 m age 0.4 s\nfix age 0.4 s, stale ignored 0\nlocation age: server 3 s, phone 2 s\ngps-only n 9 in 8 out 0 outliers 1 cv 0.05 ok\npick stride_doubled in 0.00/0.00 all 1.01/0.82 low 1.01/0.82\nstep 0.72 m n=4 learn: ok\nused 1.30 m/s gps smooth 1.29 sent 1.28\nmotion on events 1420\ntrace: trace ready: 90 rows, raw 2250 values</pre>"
         + "<div class=\"pace-debug__actions\"><button type=\"button\" class=\"pace-debug__button\">Record trace</button><button type=\"button\" class=\"pace-debug__button\">Copy trace</button><button type=\"button\" class=\"pace-debug__button\">Copy raw motion</button></div></div></div>"
-        + "<h4>Page A heading with a long stop name (ellipsis, full name in the title)</h4>" + sgCatchCard("live", 64, 51, 78, SG_LONG_STOP)
-        + "<h4>Page A heading with no ETA (stop name only)</h4>" + sgCatchCard("schedule", 41, 30, 52, "Tanjong Rhu Stn Exit 2", "")
+        + "<h4>Page A heading with no ETA (no time line)</h4>" + sgCatchCard("schedule", 41, 30, 52, undefined, "")
         + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
-        + "<h4>Page A, action wait: Leave by tile shows the clock time with the minutes and the walk, no pace chip</h4>" + sgCatchCard("live", 92, 92, 92, undefined, sgArriving(15)) + sgLeaveTiles(true, sgTileState(15, 300, 1.25))
+        + "<h4>Page A, action wait: Leave by tile shows the clock time with the minutes and the walk, with the pace chip</h4>" + sgCatchCard("live", 92, 92, 92, undefined, sgArriving(15)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(15, 300, 1.25))
         + "<h4>Page A, action leave_now: Leave by tile reads Leave now with the bus and walk minutes, with the pace chip</h4>" + sgCatchCard("live", 70, 44, 76, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.3))
         + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, sgTileState(15, 300, 1.25, true))
         + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, sgTileState(6, 250, 1.3, true))
         + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: sgLeave(15, 300, 1.25).time, e: 15 })
         + "<h4>Leave by tile, at the stop: the bus is 4 minutes away</h4>" + sgLeaveTiles(false, sgAtStopTile(4))
         + "<h4>Leave by tile, at the stop: the bus is arriving now</h4>" + sgLeaveTiles(false, sgAtStopTile(0))
-        + "<h4>Leave by and Estimated destination arrival tiles, with the Arrive-by check under them</h4>" + sgLeaveTiles(true)
-        + "<h4>Tiles with No target (no check)</h4>" + sgLeaveTiles(false)
+        + "<h4>Leave by and Estimated destination arrival tiles</h4>" + sgLeaveTiles(true)
         + "<h4>AI Explanation: loading</h4>" + sgAiCard("loading")
-        + "<h4>AI Explanation: badge row, band ok (no prefix)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait", badge: copy.arriveBy.onTrack })
-        + "<h4>AI Explanation: badge row, band mid (prefix)</h4>" + sgAiCard("normal", { e: 6, band: "mid", action: "leaveNow", badge: copy.arriveBy.risk, badgeClass: "badge--risk", prefix: true })
-        + "<h4>AI Explanation: no target (no badge row)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait" })
+        + "<h4>AI Explanation (no check pill above it)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait" })
         + "<h4>Unlikely, bus arriving now and one minute away (one sentence, nothing after it)</h4>" + sgAiCard("normal", { e: 0, band: "low", action: "doNotRely" }) + sgAiCard("normal", { e: 1, band: "low", action: "doNotRely" })
         + "<h4>Leave by: measured speed (GPS or steps)</h4>" + sgAiCard("normal", { e: 12, band: "ok", action: "wait", source: "gps", speed: 1.25, distance: 300 })
         + "<h4>Leave by: your usual speed</h4>" + sgAiCard("normal", { e: 18, band: "ok", action: "wait", source: "remembered", speed: 1.1, distance: 820 })
@@ -1851,7 +1818,7 @@
         + sgAiCard("normal", { e: 0, band: "ok", action: "wait", atStop: true })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
         + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
-        + "<h4>No better option</h4><p class=\"banner banner--quiet reroute-none\">" + copy.noBetter.standard.replace("{point}", "28") + "</p>";
+        + "<h4>Options asked for, none found</h4><p class=\"banner banner--quiet reroute-none\">" + rp.noOtherOptions + "</p>";
     }
 
     document.getElementById("catch-sample-light").innerHTML = catchSample();
@@ -1903,7 +1870,7 @@
     }
 
     function qualitySample() {
-      var longName = "Opp Stamford Pr Sch (04119)";
+      var longName = "Opp Stamford Pr Sch";
       return ""
         + "<h4>Leave now banner: short strings</h4>" + sgLeaveNow(copy.leaveNow.title.replace("{service_no}", "36"), copy.leaveNow.body.replace("{stop_name}", "Hotel Grand Pacific").replace("{stop_code}", "01012").replace(/\{service_no\}/g, "36").replace("{point}", "64").replace("{range_low}", "51").replace("{range_high}", "78"), false)
         + "<h4>Leave now banner: long stop name, with the [SIMULATED] tag</h4>" + sgLeaveNow(copy.leaveNow.title.replace("{service_no}", "190"), copy.leaveNow.body.replace("{stop_name}", "Opp Singapore Management University Administration Building").replace("{stop_code}", "04119").replace(/\{service_no\}/g, "190").replace("{point}", "64").replace("{range_low}", "51").replace("{range_high}", "78"), true)
@@ -1913,7 +1880,7 @@
         + "<h4>Location uncertain card</h4>" + sgLocationCard()
         + "<h4>Stale and location uncertain, stacked</h4>" + sgStaleBanner() + sgStaleStatus() + sgLocationCard()
         + "<h4>Complete stale page layout</h4>" + sgStaleBanner() + sgStaleStatus() + sgLocationCard()
-        + '<div class="card live-card">' + sgBusCard("stale", "", false) + '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["6 min", "14 min", "25 min"]) + sgStatus("unavailable") + '</div>';
+        + '<div class="card live-card">' + sgBusCard("stale", "", false) + '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["6 min", "14 min", "25 min"]) + '</div>';
     }
 
     document.getElementById("quality-sample-light").innerHTML = qualitySample();
@@ -1922,7 +1889,7 @@
     // Live flow samples: no-service layout, the map toggle, the question bar, overviews, reroute options.
     var CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     var ROUTE_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20 10 8l4 6 6-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
-    var PIN_SVG_SG = '<svg class="dest-pin__svg" viewBox="0 0 32 40" aria-hidden="true" focusable="false"><path class="dest-pin__body" d="M16 38s12-11.6 12-22a12 12 0 1 0-24 0c0 10.4 12 22 12 22z"></path><circle class="dest-pin__dot" cx="16" cy="16" r="4.5"></circle></svg>';
+    var PIN_SVG_SG = MAP_FLAG_SVG;
 
     function sgStatusCard(pill, info, arriving) {
       return '<section class="card stale-status"><div class="bus-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
@@ -1950,13 +1917,13 @@
     function sgOnWay(transfer) {
       var nb = "\u00a0";
       var items = [
-        sgBusLeg("36", "Opp Stamford Pr Sch (04119)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "", cp.boarded, "",
-          "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), transfer ? "Orchard Stn/Lucky Plaza (09048)" : "Marina Bay Sands (03029)")
+        sgBusLeg("36", "Opp Stamford Pr Sch", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "", cp.boarded, "",
+          "", sgFill(jo.stopsAndMin, { k: 7, m: 8 }), transfer ? "Orchard Stn/Lucky Plaza" : "Marina Bay Sands")
       ];
       if (transfer) {
-        items.push(sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "130" + nb + "m", place: "Orchard Stn/Lucky Plaza (09049)" }))], ""));
-        items.push(sgBusLeg("106", "Orchard Stn/Lucky Plaza (09049)", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "",
-          sgFill(jo.scheduledAt, { time: "9:12" + nb + "AM" }), "", "", sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Marina Bay Sands (03029)"));
+        items.push(sgLegRow("walk", sgFill(jo.walkRow, { n: 2 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "130" + nb + "m", place: "Orchard Stn/Lucky Plaza" }))], ""));
+        items.push(sgBusLeg("106", "Orchard Stn/Lucky Plaza", sgFill(jo.busToward, { terminus: "Marina Bay Sands" }), "",
+          sgFill(jo.scheduledAt, { time: "9:12" + nb + "AM" }), "", "", sgFill(jo.stopsAndMin, { k: 5, m: 9 }), "Marina Bay Sands"));
       }
       items.push(sgLegRow("walk", sgFill(jo.walkRow, { n: 3 }), [sgDetail(sgFill(jo.walkRowTo, { distance: "180" + nb + "m", place: "Marina Bay Sands" }))], ""));
       items.push(sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], ""));
@@ -1968,10 +1935,10 @@
       opts = opts || {};
       var warn = function (text) { return '<p class="alt-row__warn">' + WARN_ICON + '<span>' + text + '</span></p>'; };
       return '<li class="alt-row' + (opts.unlikely ? " alt-row--unlikely" : "") + '"><button type="button" class="alt-row__hit"><span class="alt-row__icon" aria-hidden="true">' + BUS_SVG + '</span>'
-        + '<div class="alt-row__body"><p class="alt-row__top"><span class="alt-row__service">' + jo.bus.replace("{service}", service) + '</span>'
+        + '<div class="alt-row__body"><p class="alt-row__top journey-step__line"><span class="alt-row__service"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>' + service + '</span> <span class="alt-row__to">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</span></span>'
         + '<span class="alt-row__chance">' + rp.alternativeChance.replace("{point}", point) + '</span></p>'
         + sgPills(opts.pills)
-        + '<p class="alt-row__bottom"><span class="alt-row__arrives">' + rp.arrivesIn.replace("{minutes}", minutes) + '</span><span class="alt-row__reach">' + rp.reachDestination.replace("{time}", reach) + '</span></p>'
+        + '<p class="alt-row__bottom"><span class="alt-row__arrives catch-card__when journey-step__arriving">' + lc.arrivingIn.replace("{n}", String(parseInt(minutes, 10))) + '</span><span class="alt-row__reach">' + rp.reachDestination.replace("{time}", reach) + '</span></p>'
         + '<p class="alt-row__bottom">' + walk + '</p>'
         + (opts.unlikely ? warn(copy.pace.unlikely.title) : '') + (opts.after ? warn(rp.afterTarget) : '') + '</div>'
         + '<span class="alt-row__chevron" aria-hidden="true">' + CHEVRON_SM + '</span></button></li>';
@@ -1984,7 +1951,7 @@
     function sgNewJourney() {
       var items = [
         sgStep("origin", "", [sgDetail(jo.from, "journey-step__kicker"), sgDetail(jo.currentLocation, "journey-step__title"), sgDetail(jo.toBoarding.replace("{distance}", "320\u00a0m"))], ""),
-        sgStep("stop", jo.boardingStop, [sgDetail("Bras Basah Complex (01015)"), sgDetail(jo.walk.replace("{minutes}", "5"))], ""),
+        sgStep("stop", jo.boardingStop, [sgDetail("Bras Basah Complex"), sgDetail(jo.walk.replace("{minutes}", "5"))], ""),
         sgStep("bus", jo.busService, ["<p class=\"journey-step__service\"><span>" + jo.bus.replace("{service}", "16") + "</span>" + sgPill("live") + "</p>", sgDetail(jo.to.replace("{destination}", "Marina Bay Sands")), sgDetail(jo.arrivingIn.replace("{minutes}", "9 min"), "journey-step__arriving")], ""),
         sgStep("stop", jo.destinationStop, [sgDetail("Marina Bay Sands"), sgDetail(jo.walkToDestination.replace("{minutes}", "3"))], ""),
         sgStep("destination", jo.destination, [sgDetail("Marina Bay Sands")], "")
@@ -2001,7 +1968,7 @@
         sgOptionRow("36", 30, 22, 38, "19 min", "6:50\u00a0PM", rp.atYourStop, { unlikely: true, after: true })
       ];
       return ""
-        + "<h4>No buses in service (no-service layout)</h4>" + sgStatusCard(copy.status.unavailable, copy.quality.noService) + '<div class="card live-card">' + sgBusCard("unavailable", "", false) + '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>' + sgStatus("unavailable") + '</div>'
+        + "<h4>No buses in service (no-service layout)</h4>" + sgStatusCard(copy.status.unavailable, copy.quality.noService) + '<div class="card live-card">' + sgBusCard("unavailable", "", false) + '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>' + '</div>'
         + "<h4>Live map: local view with the destination pin</h4>" + sgMap(false)
         + "<h4>Live map: Full route pressed</h4>" + sgMap(true)
         + "<h4>Question bar</h4>" + sgQuestionBar()
@@ -2011,6 +1978,7 @@
         + '<div class="banner banner--info alert-row end-card"><span class="alert-row__icon" aria-hidden="true">' + INFO_ICON + '</span><div class="alert-row__copy"><p class="alert-row__title">' + cp.endMax + '</p><button type="button" class="primary">' + cp.planNew + '</button></div></div>'
         + "<h4>Page C, unlikely entry (current-bus card, recommended card, refresh header, alternatives)</h4>" + sgPageCUnlikely()
         + "<h4>Page C, missed entry (banner first, no current-bus card)</h4>" + sgPageCMissed()
+        + "<h4>Page C, missed entry, nothing found (plain text and the ride-app card)</h4>" + sgPageCMissedNone()
         + "<h4>Page C, nothing eligible (no recommended card, no AI block)</h4>" + sgPageCNone()
         + "<h4>Compact warning banner on Pages A and B</h4>" + sgUnlikelyBanner()
         + "<h4>Page C current-bus card on its own</h4>" + sgCurrentBusCard()
@@ -2056,7 +2024,6 @@
     function sgPageA(kind) {
       var cards = kind === "live"
         ? sgCatchCard("live", 65, 48, 78, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.25))
-          + '<div class="miss-row"><span>' + CLOCK_ICON + '</span><div><p class="miss-row__label">' + copy.arriveBy.missLabel + '</p><p>' + copy.arriveBy.missWithLate.replace("{service}", "36").replace("{minutes}", "8").replace("{point}", "6:36\u00a0PM").replace("{late}", "about 6 min late") + '</p></div></div>'
           + sgAiCard("normal", { e: 6, action: "leaveNow", band: "ok", distance: 250, speed: 1.25, source: "default" })
         : "";
       return sgPageAlerts(kind === "live" ? "" : kind) + cards + sgSeeArrivalsBar();
@@ -2068,7 +2035,7 @@
         : '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["4 min", "12 min", "24 min"]);
       var pill = kind === "no-service" ? "unavailable" : "live";
       return sgPageAlerts(kind === "uncertain" || kind === "stale" ? "" : "")
-        + '<div class="card live-card">' + sgBusCard(pill, "", false) + '<p class="live-then">' + cp.thenBus.replace("{service}", "106").replace("{stop}", "Orchard Stn (02049)") + ' <span class="live-then__when">' + jo.liveIn.replace("{n}", "4") + '</span></p>' + tiles + sgMap(false) + sgStatus(kind === "no-service" ? "unavailable" : kind === "uncertain" ? "uncertain" : "live") + '</div>'
+        + '<div class="card live-card">' + sgBusCard(pill, "", false) + '' + tiles + sgMap(false) + '</div>'
         + (kind === "no-service" ? "" : sgQuestionBar());
     }
 
@@ -2138,12 +2105,20 @@
       function marker(label, className) {
         return L.divIcon({
           className: className,
-          html: "<span class=\"marker__label\">" + label + "</span>",
-          iconSize: [44, 44],
-          iconAnchor: [22, 22]
+          html: MAP_PIN_SVG + "<span class=\"marker__label\">" + label + "</span>",
+          iconSize: [48, 48],
+          iconAnchor: [24, 42]
         });
       }
-      L.marker([1.3521, 103.8198], { icon: marker("You", "marker marker--user") }).addTo(guideMap);
+      var guideYou = L.marker([1.3521, 103.8198], { icon: marker(copy.map.you, "marker marker--user") }).addTo(guideMap);
+      guideYou.getElement().setAttribute("aria-label", copy.map.yourLocation);
+      var guideFlag = L.marker([1.3545, 103.8225], {
+        icon: L.divIcon({ className: "dest-flag route-flag", html: MAP_FLAG_SVG, iconSize: [48, 48], iconAnchor: [12, 42] }),
+        interactive: false,
+        keyboard: false
+      }).addTo(guideMap);
+      guideFlag.getElement().setAttribute("aria-label", copy.map.destination);
+      guideFlag.getElement().setAttribute("role", "img");
       L.marker([1.356, 103.828], {
         icon: L.divIcon({
           className: "map-stop",
@@ -2161,6 +2136,9 @@
         })
       }).addTo(guideMap);
     }
+      // drawn last: the train Page A sample uses the Page A card helpers defined further down
+    document.getElementById("legs-sample-light").innerHTML = legsSample();
+    document.getElementById("legs-sample-dark").innerHTML = legsSample();
   </script>
 </body>
 </html>

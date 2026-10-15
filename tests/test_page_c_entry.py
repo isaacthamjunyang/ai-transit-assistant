@@ -115,21 +115,21 @@ def test_unlikely_entry_has_the_current_bus_card_first_and_no_page_a_cards():
     for text in ("Catching this bus is unlikely. Here are your other options.", "See bus arrival times", 'id="pc-pill"', 'id="pc-ring"'):
         assert text in page_c
     hidden = between(CSS, "body.is-page-c #arrival-card,", "{")
-    for needed in ("#pace-slot", "#leave-tiles", "#if-you-miss", "#ai-explanation", "#see-arrivals-bar", "#unlikely-banner", "#catch-warning"):
+    for needed in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#see-arrivals-bar", "#unlikely-banner", "#catch-warning"):
         assert needed in hidden, needed
 
 
 def test_missed_entry_has_no_current_bus_card_and_the_banner_leads():
     render = _function("renderPageC")
     assert 'document.getElementById("reroute-current").hidden = !unlikelyEntry' in render
-    assert 'pageC.entry === "missed" && !!rerouteNotice' in render
+    assert 'pageC.entry === "missed" && !!noticeText' in render
     assert 'rerouteNotice = BUS_LEFT_NOTICE.replace("{service}", service || "")' in _function("answerMissed")
     assert HTML.index('id="reroute-notice"') < HTML.index('id="reroute-cards"')
 
 
 def test_nothing_eligible_shows_the_current_card_the_no_better_card_and_the_list_without_ai():
     render = _function("renderPageC")
-    assert "OTHER_BUSES_HEADING" in render and "noBetterText()" in render
+    assert "OTHER_BUSES_HEADING" in render and "NO_OTHER_OPTIONS" in render and "noBetterText" not in HTML
     assert "options.recommended ? ALTERNATIVES_HEADING : OTHER_BUSES_HEADING" in render
     assert "Other buses at your stop" in HTML and "Other buses at your stop" in COPY
     # The AI block belongs to the recommended card only.
@@ -145,12 +145,12 @@ def test_every_probability_names_its_bus_and_appears_once_per_option():
     assert "LEG2" not in heading and "CATCH_HEADING_TEXT" in heading
     assert 'getElementById("catch-title").textContent = catchHeading(false)' in _function("renderCatchCard")
     assert 'getElementById("pc-title").textContent = catchHeading(true)' in _function("updatePageCCurrent")
-    assert 'setCatchSub("catch", hero)' in _function("renderCatchCard") and 'setCatchSub("pc", hero)' in _function("updatePageCCurrent")
+    assert "renderCatchHeading(hero)" in _function("renderCatchCard") and 'setCatchSub("pc", hero)' in _function("updatePageCCurrent")
     assert 'aria-label", ringLabel(chance,' in _function("setRing")
     card = _function("buildOptionCard")
-    assert '"Bus " + row.service_no' in card and "Catch probability" not in card and card.count("buildProbRing(row)") == 1
+    assert "optionHeading(row)" in card and "busBadge(row.service_no)" in _function("optionHeading") and "Catch probability" not in card and card.count("buildProbRing(row)") == 1
     row = _function("buildOptionRow")
-    assert '"Bus " + row.service_no' in row and "CHANCE_TEXT" in row and "Catch probability" not in row.replace("probabilityText(row)", "")
+    assert "busBadge(row.service_no)" in row and "CHANCE_TEXT" in row and "Catch probability" not in row.replace("probabilityText(row)", "")
     assert "chance to catch" not in HTML.replace("Chance to catch", "") and "chance to catch\"" not in COPY
 
 
@@ -195,8 +195,8 @@ def test_tile_clause_and_notification_agree_with_the_python_action(action, case)
 
 def test_the_tile_reads_the_action_and_hides_for_switch_and_do_not_rely():
     tiles = _function("renderLeaveTiles")
-    assert 'action === "leave_now"' in tiles and 'action === "wait"' in tiles and "leaveTileView(" in tiles
-    assert 'leaveTile.hidden = action === "switch_route" || action === "do_not_rely"' in tiles
+    # both tiles are on Page A in every band and action: the tile is never hidden by the action
+    assert "leaveTile.hidden = false;" in tiles and "do_not_rely" not in tiles and "leaveTileView(" in tiles
     assert "formatClock(lastSuccess.leave_by" not in tiles
     assert 'var LEAVE_NOW_TEXT = "Leave now";' in HTML and "WAIT_ALERT_TEXT" not in HTML
     assert "Wait for Leave By Alert" not in HTML + COPY and '"Leave now"' in COPY
@@ -220,9 +220,11 @@ def test_the_page_applies_the_same_sixty_second_rule_between_polls():
                    "s-1": "leave_now", "leave": "leave_now", "switchRoute": "switch_route", "none": None, "noThreshold": "wait"}
 
 
-def test_the_pace_chip_shows_only_for_leave_now():
+def test_the_pace_chip_is_on_page_a_in_every_band_and_action_and_hides_only_near_the_stop():
     card = _function("renderCatchCard")
-    assert 'trackedAction(lastSuccess) === "leave_now" ? paceChip(paceCategoryFor(chance.pace)) : null' in card
+    assert 'renderPaceSlot(usable && !nearStop ? paceChip(paceCategoryFor(chance.pace) || "neutral") : null)' in card
+    assert "trackedAction" not in card
+    assert "chance.at_stop === true" in card and "lastSuccess.near_stop === true" in card
 
 
 def _poll_client(monkeypatch, tmp_path, high, point, minutes=15):
@@ -432,7 +434,7 @@ def test_the_muted_line_and_the_ring_label_follow_the_agreed_wording():
         'var RING_LABEL_TEXT = "about {p} percent chance of catching Bus {service}{eta}{at}";'
         'var RING_ETA_TEXT = " arriving in {n} minutes", RING_ETA_SOON_TEXT = " arriving in under 1 minute", RING_ETA_NOW_TEXT = " arriving now", RING_AT_TEXT = " at {stop}";'
         "function isTrain() { return false; } var selectedService = '11'; var selectedBoardingStop = {description: 'Tanjong Rhu Stn Exit 2', stop_code: '90041'};"
-        + _function("fillText") + "\n" + _function("boardingStopName") + "\n" + _function("etaParts") + "\n" + _function("ringLabel") + "\n"
+        + 'var STOP_FALLBACK_TEXT = "Bus stop";' + _function("displayStopName") + "\n" + _function("fillText") + "\n" + _function("boardingStopName") + "\n" + _function("etaParts") + "\n" + _function("ringLabel") + "\n"
         + "var at = function (s) { return {arrival_time: new Date(Date.now() + s * 1000).toISOString(), is_missed: false}; };"
         "var chance = {point: 92, range_low: 80, range_high: 95};"
         "console.log(JSON.stringify({min15: etaParts(at(900)).line, soon: etaParts(at(45)).line, now: etaParts(at(10)).line, none: etaParts({is_missed: false}),"
@@ -457,8 +459,8 @@ def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title__():
     stop = between(CSS, ".catch-card__stop {", "}")
     assert "overflow: hidden" in stop and "text-overflow: ellipsis" in stop and "min-width: 0" in stop
     assert "flex: 0 0 auto" in between(CSS, ".catch-card__eta,", "}")
-    for prefix in ("catch", "pc"):
-        assert f'id="{prefix}-sub-stop"' in HTML and f'id="{prefix}-sub-eta"' in HTML
+    assert 'id="pc-sub-stop"' in HTML and 'id="pc-sub-eta"' in HTML
+    assert 'id="catch-sub' not in HTML  # Page A's card has no muted stop line any more
     assert "Arriving in {n} min" in COPY and "Chance to catch your Bus {service}" in COPY
     assert 'ringLabel: "about {p} percent chance of catching Bus {service}{eta}{at}"' in COPY
 
@@ -468,9 +470,10 @@ def test_the_pill_shares_a_row_with_the_heading_and_the_heading_wraps_instead_of
     head = between(CSS, ".catch-card__head {", "}")
     assert "display: flex" in head and "justify-content: space-between" in head
     assert "min-width: 0" in between(CSS, ".catch-card__heading {", "}")  # the heading shrinks and wraps beside the pill
-    for prefix in ("catch", "pc"):
-        after = HTML.split(f'id="{prefix}-title"', 1)[1].split('<div class="catch-card__row">', 1)[0]
-        assert after.index(f'id="{prefix}-pill"') < after.index(f'id="{prefix}-sub"')  # head row (title, pill), then the muted line
+    after = HTML.split('id="pc-title"', 1)[1].split('<div class="catch-card__row">', 1)[0]
+    assert after.index('id="pc-pill"') < after.index('id="pc-sub"')  # head row (title, pill), then the muted line
+    line = HTML.split('id="catch-line"', 1)[1].split("</p>", 1)[0]
+    assert 'id="catch-pill"' in line  # on Page A the pill sits in the heading row, after the badge and the direction
 
 
 def test_no_old_heading_remains_in_the_repo():

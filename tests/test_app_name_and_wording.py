@@ -79,5 +79,5 @@ def test_the_train_tiles_under_next_trains_show_the_plain_time_and_other_about_s
     # still "about", on purpose: the missed-train rows and the sentences
     assert "row.textContent = trainAbout(iso);" in INDEX
     for text in ('about: "about {time}"', 'left: "The {line} train has left. The next one is at about {time}."',
-                 'every: "Every about {n} min"', 'ringLabel: "about {p} percent chance of catching the {line} train{eta}{at}"'):
+                 'ringLabel: "about {p} percent chance of catching the {line} train{eta}{at}"'):
         assert text in COPY, text

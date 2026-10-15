@@ -31,7 +31,7 @@ def test_at_the_stop_the_ring_the_tile_the_card_and_the_aria_say_so(report):
     assert view["atStop"] is True and view["packAtStop"] is True and view["action"] == "wait"
     assert "97" in view["ring"] and "about 97 percent" in view["aria"].replace(NB, " ")
     assert view["tile"] == "At the stop"
-    assert view["detail"] == f"The bus is {view['e']}{NB}min away." and view["detailHidden"] is False
+    assert view["detail"] == "" and view["detailHidden"] is True  # no subline under "At the stop"
     assert view["card"] == f"You are at the stop. You have {view['e']} minutes to wait."
     assert view["cautionHidden"] is True  # the location-uncertain line cannot appear with a good fix
     assert view["chip"] == ""  # no pace chip (hidden inside 30 m)
@@ -39,12 +39,12 @@ def test_at_the_stop_the_ring_the_tile_the_card_and_the_aria_say_so(report):
     assert report["atStopRescore"]["near"] is True
 
 
-def test_the_caption_is_hidden_at_the_stop_and_comes_back_after_each_way_out(report):
-    assert report["far"]["captionHidden"] is False and report["far"]["caption"].startswith("if you leave now")
-    assert report["atStop"]["captionHidden"] is True
-    assert report["poorFix"]["captionHidden"] is False  # a poll that clears at_stop
-    assert report["rescored"]["captionHidden"] is True
-    assert report["afterRescoreAway"]["captionHidden"] is False  # a rescore that clears at_stop
+def test_the_pace_chip_is_hidden_inside_30_m_and_comes_back_after_each_way_out(report):
+    assert report["far"]["chipHidden"] is False and report["far"]["tilesShown"] is True
+    assert report["atStop"]["chipHidden"] is True and report["atStop"]["tilesShown"] is True
+    assert report["poorFix"]["chipHidden"] is True  # still inside the 30 m rule (near_stop), whatever the fix quality
+    assert report["rescored"]["chipHidden"] is True
+    assert report["afterRescoreAway"]["chipHidden"] is False  # a rescore that clears near_stop
     assert report["afterRescoreAway"]["atStop"] is False
 
 
@@ -70,7 +70,7 @@ def test_the_at_stop_strings_are_in_the_page_and_in_copy_js():
     for text in ("You are at the stop. You have {e} to wait.", "You are at the stop. The bus is arriving now.",
                  "At the stop", "The bus is arriving now."):
         assert text in INDEX and text in COPY, text
-    assert "The bus is {e}\\u00a0min away." in INDEX and "The bus is {e}\\u00a0min away." in COPY
+    assert "The bus is {e}\\u00a0min away." not in INDEX and "The bus is {e}\\u00a0min away." not in COPY  # no subline
 
 
 def test_one_place_decides_the_tile_the_card_and_the_action_between_polls():

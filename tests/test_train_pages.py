@@ -41,8 +41,7 @@ def test_the_page_words_are_copy_js_character_for_character():
 def test_the_spec_words_are_exact():
     expected = {
         "walkTitle": "Walk to your station", "walkArrived": "Arrived at the station", "departsLabel": "Train departs",
-        "seeTimes": "See train times", "question": "Did you catch the train?", "scheduled": "Scheduled",
-        "every": "Every about {n} min", "notLive": "Train times are scheduled, not live.", "nextTrains": "Next trains",
+        "seeTimes": "See train times", "question": "Did you catch the train?", "nextTrains": "Next trains",
     }
     for key, value in expected.items():
         assert COPY_PAGE[key] == value, key
@@ -52,13 +51,14 @@ def test_the_words_that_the_server_also_sends_match_copy_train():
     train = COPY.split("train: {", 1)[1].split("\n  },", 1)[0]
     server = dict(re.findall(r'^\s*(\w+): "((?:[^"\\]|\\.)*)",?$', train, flags=re.M))
     assert PAGE_PAGE["about"] == server["trainAbout"] and PAGE_PAGE["left"] == server["trainLeft"]
-    assert PAGE_PAGE["notLive"] == server["trainNotLive"]
+    assert "trainNotLive" not in server and "trainMiss" not in server and "notLive" not in PAGE_PAGE
 
 
 def test_a_number_never_splits_from_min_in_the_new_words():
-    for key in ("tileAway", "tileDeparting"):
-        assert "}" + ESC + "min" in PAGE_PAGE[key] or key == "tileDeparting" and "{w}" + ESC + "min" in PAGE_PAGE[key], key
-    assert "{e}" + ESC + "min" in PAGE_PAGE["tileAway"] and "{w}" + ESC + "min" in PAGE_PAGE["tileAway"]
+    # the Leave by tile's sentences (and the Page B status cells and Departs line) are gone from the train words
+    for key in ("tileAway", "tileDeparting", "scheduled", "every", "departsAt"):
+        assert key not in PAGE_PAGE and key not in COPY_PAGE, key
+    assert "toward" not in PAGE_PAGE  # Page B's "To {terminus}" is the overview's own JO_TOWARD
 
 
 def test_the_temporary_note_is_gone_everywhere():
@@ -70,7 +70,7 @@ def test_the_temporary_note_is_gone_everywhere():
 
 def test_the_bus_words_are_still_in_the_markup():
     for text in ('Walk to your stop</h2>', 'id="next-buses-label">Next 3 buses', 'Did you catch the bus?</p>',
-                 "<span>See bus arrival times</span>", 'Estimated destination arrival</p>', 'Bus arrives</span>'):
+                 "<span>See bus arrival times</span>", 'Bus arrives</span>'):
         assert text in INDEX, text
 
 
@@ -95,7 +95,7 @@ def test_a_train_never_reaches_the_bus_or_reroute_code():
 
 def test_the_plan_describes_the_train_pages_and_the_map():
     for text in ("**A train as the first leg.**", "Walk to your station", "Did you catch the train?", "See train times",
-                 "Train times are scheduled, not live.", "`--map-line-<code>`", "plain rows"):
+                 "`--map-line-<code>`", "plain rows"):
         assert text in PLAN, text
 
 
@@ -184,16 +184,24 @@ def test_page_a_for_a_train(missed_light):
     a = missed_light["pageA"]
     assert a["isTrain"] is True and a["service"] == "NS" and a["top"] == "live"
     assert a["title"] == "Chance to catch the North-South Line train"
-    assert a["pill"] == "schedule only" and a["notLive"] == "Train times are scheduled, not live."
+    assert a["pill"] == "schedule only" and a["notLive"] is False and a["hasSub"] is False and a["hasCaption"] is False
     assert a["hero"]["monitored"] is False and a["hero"]["quality"] == "schedule" and a["hero"]["atStop"] is False
     assert a["hero"]["point"] <= 60 and a["hero"]["high"] <= 60  # the schedule cap
     assert a["ring"] == f"{a['hero']['point']}%"
-    assert re.match(r"Departs in \d+ min · ", a["sub"].replace(NB, " "))
-    assert a["tileLeaveLabel"] == "Leave by" and a["tileDepartsLabel"] == "Train departs" and a["tileRange"] is False
-    assert re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", a["tileDeparts"])
-    assert a["arrivesLabel"].startswith("Train departs")
+    # the overview's row: line badge, "To {terminus}" (platform only when known), the pill, then "Scheduled · In n min"
+    assert a["line"].startswith("NS ") and "To Marina South Pier" in a["line"]
+    assert re.fullmatch(r"Scheduled · (In \d+ min|In 1 min|Now)", a["when"].replace(NB, " ")), a["when"]
+    assert "journey-step--rail-ns" in a["legClass"] and a["nodeRing"] != "none"
+    assert a["pace"] and a["paceHidden"] is False  # the chip is always on Page A
+    assert a["tileLeaveLabel"] == "Leave by" and a["tileDepartsLabel"] is None and a["tileRange"] is False
+    assert a["tileDeparts"] is None  # no second tile: the clock time is beside the ring
+    geo = a["geo"]  # the ring is larger on the left; the heading then the clock time stack at its right (>= 96 px ring)
+    assert geo["ring"]["w"] >= 96 and geo["ring"]["r"] <= geo["leg"]["x"] + 1
+    assert geo["arrives"]["y"] >= geo["leg"]["b"] - 1 and abs(geo["arrives"]["x"] - geo["leg"]["x"]) < 1.5
+    assert abs(geo["tile"]["w"] - geo["tiles"]["w"]) < 1.5  # Leave by is the full width
+    assert a["hasLabel"] is False and re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", a["arrives"])
     assert a["bar"] == "See train times" and a["catchBar"] is False
-    assert a["miss"].startswith("If you miss it, the next train is at about ") and a["missLabelShown"] is False
+    assert a["missRow"] is False and a["aiBadge"] is False and a["tileNote"] is False
     assert "The North-South Line train is scheduled in " in a["ai"] and "Live train times are not available." in a["ai"]
     assert "Leave by" in a["ai"] and "catch the train departing at" in a["ai"] and "bus" not in a["ai"].lower()
     assert not a["unlikelyBanner"] and not a["catchWarning"] and not a["pageC"]
@@ -217,11 +225,11 @@ def test_page_w_for_a_train_and_arrived_reads_station(missed_light):
 def test_page_b_for_a_train(missed_light):
     b = missed_light["pageB"]
     assert b["pageB"] is True and b["card"] is True
-    assert b["badge"]["text"] == "NS" and "line-badge--ns" in b["badge"]["cls"] and b["title"].endswith("North-South Line")
-    assert b["to"] == "Toward Marina South Pier" and re.fullmatch(r"Departs \d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", b["then"])
+    assert b["badge"]["text"] == "NS" and "line-badge--ns" in b["badge"]["cls"] and b["title"] == "NS"
+    assert b["to"] == "To Marina South Pier" and b["then"] is None  # no Departs line, no line name
     assert b["pill"] == "schedule only" and b["label"] == "Next trains"
     assert len(b["next"]) == 3 and all(re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", row) for row in b["next"])  # the plain time only: no line name, no "about"
-    assert b["cells"]["live"] == "Scheduled" and b["cells"]["monitored"] == "Every about 4 min"
+    assert b["cells"]["live"] is None and b["cells"]["monitored"] is None  # the status rows are gone
     assert b["question"] == "Did you catch the train?" and b["seeBar"] is False and b["yes"] and b["no"]
     assert b["scrollWidth"] <= b["innerWidth"]
 
@@ -290,12 +298,13 @@ def test_the_question_bar_says_train_for_a_train_and_bus_for_a_bus_on_pages_a_b_
 def test_a_bus_first_journey_keeps_every_bus_word_and_request(bus_first):
     a, b, w = bus_first["pageA"], bus_first["pageB"], bus_first["pageW"]
     assert a["isTrain"] is False and a["title"] == "Chance to catch Bus 18"
-    assert a["pill"] in ("live", "schedule only") and a["notLive"] is None
-    assert a["tileDepartsLabel"] == "Estimated destination arrival" and a["tileLeaveLabel"] == "Leave by"
-    assert a["arrivesLabel"].startswith("Bus arrives") and a["bar"] == "See bus arrival times"
+    assert a["pill"] in ("live", "schedule only") and a["notLive"] is False and a["hasLabel"] is False
+    assert a["line"].startswith("18 ") or a["line"].startswith("Bus 18") or "18" in a["line"]
+    assert a["tileDepartsLabel"] is None and a["tileLeaveLabel"] == "Leave by"
+    assert a["bar"] == "See bus arrival times"
     assert w["title"] == "Walk to your stop" and w["distance"].endswith(NB + "m to the stop")
-    assert "Bus 18" in b["title"] and b["badge"] is None and b["label"] in (None, "Next 3 buses")
+    assert "Bus 18" in b["title"] and "line-badge--bus" in b["badge"]["cls"] and b["label"] in (None, "Next 3 buses")
     assert b["question"] == "Did you catch the bus?" and b["to"].startswith("To ")
-    assert b["cells"]["live"] in ("Live bus location available", "Live bus location unavailable")
+    assert b["cells"]["live"] is None and b["then"] is None
     assert all("leg_kind" not in u and "train_departure" not in u for u in bus_first["allRequests"])
     assert any(u.startswith("/api/arrivals?stop_code=") for u in bus_first["allRequests"])

@@ -32,7 +32,7 @@ export default async function (h) {
   const stopLat = h.config.lat, stopLon = h.config.lon;
   const north = h.config.userNorth;
   out.pageA = await h.eval(`({ row: document.getElementById("walk-open").textContent, sub: document.getElementById("catch-pace-line").textContent,
-    caption: document.getElementById("catch-caption").textContent, top: screenStack[screenStack.length - 1], cardLines: document.getElementById("arrival-card").querySelectorAll("p#catch-pace-line").length })`);
+    hasCaption: !!document.getElementById("catch-caption"), top: screenStack[screenStack.length - 1], cardLines: document.getElementById("arrival-card").querySelectorAll("p#catch-pace-line").length })`);
   out.requestsBefore = await h.eval("__requests.length");
 
   // A to W

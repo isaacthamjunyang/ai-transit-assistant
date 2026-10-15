@@ -71,7 +71,15 @@ const SNAP = `(function () {
   return {
     row: __spRow(),
     count: __spShown(document.getElementById("saved-places-count")) ? __spText(document.getElementById("saved-places-count")) : null,
-    note: __spText(document.querySelector("#saved-places .saved-places__note:not([id])")),
+    note: __spText(document.getElementById("saved-places-note")),
+    noteShown: getComputedStyle(document.getElementById("saved-places-note")).visibility !== "hidden",
+    toggle: __spText(document.querySelector('#quick-picks [data-saved-action="toggle-edit"]')),
+    layout: (function () {
+      var rect = function (el) { var r = el.getBoundingClientRect(); return { top: r.top, height: r.height }; };
+      var hair = document.querySelector("#saved-places + hr");
+      return { row: rect(document.getElementById("quick-picks")), note: rect(document.getElementById("saved-places-note")),
+               places: rect(document.getElementById("saved-places")), below: hair ? rect(hair) : null };
+    })(),
     storage: __spShown(document.getElementById("saved-places-storage")) ? __spText(document.getElementById("saved-places-storage")) : null,
     panel: __spShown(panel) ? __spText(panel) : null,
     error: __spShown(panel.querySelector(".saved-panel__error")) ? __spText(panel.querySelector(".saved-panel__error")) : null,
@@ -338,19 +346,27 @@ export default async function (h) {
     requests: __sent.slice(window.__spBefore).map(function (e) { return e.via + " " + e.url + " " + e.body; }),
     searches: window.__spSearches.length })`);
 
-  // typing in the search box clears a chosen saved place; the starters have no delete control and no Edit toggle
+  // typing in the search box clears a chosen saved place
   await h.eval(`resetScreens(); __spButton("#quick-picks", "Uni").click(); true`);
   out.steps.typedBefore = await h.eval(`({ saved: savedSelection ? savedSelection.name : null })`);
   await h.eval(`__spType("destination", "Marina"); true`);
   out.steps.typedAfter = await h.eval(`({ saved: savedSelection, value: destinationInput.value })`);
-  await h.eval(`localStorage.removeItem("bus-catch-saved-places-v1"); renderSavedPlaces(); true`);
-  out.steps.starters = await h.eval(`(function () { var s = ${SNAP}; s.edit = ${EDIT_READ}; return s; })()`);
-  out.steps.starterLook = await h.eval(`(function () {
-    var starter = document.querySelector("#quick-picks > button");
-    var style = getComputedStyle(starter);
-    return { border: style.borderTopColor, background: style.backgroundColor, color: style.color,
-             tick: !!starter.querySelector("svg"), text: __spText(starter) };
-  })()`);
+  // nothing saved: "+" alone, no Edit toggle, no badges, the note concealed; then one saved place and back to none
+  await h.eval(`resetScreens(); localStorage.removeItem("bus-catch-saved-places-v1"); renderSavedPlaces(); true`);
+  out.steps.none = await h.eval(`(function () { var s = ${SNAP}; s.edit = ${EDIT_READ}; return s; })()`);
+  await h.eval(`localStorage.setItem("bus-catch-saved-places-v1", JSON.stringify({ v: 1, places: [
+      { id: "s1", name: "Solo", address: "1 Solo Road", latitude: 1.3, longitude: 103.8 }] }));
+    renderSavedPlaces(); true`);
+  out.steps.solo = await h.eval(SNAP);
+  await h.eval(`__spButton("#quick-picks", "Edit").click(); true`);
+  out.steps.soloEdit = await h.eval(`(function () { var s = ${SNAP}; s.edit = ${EDIT_READ}; return s; })()`);
+  await h.eval(`document.querySelector("#quick-picks .saved-chip__badge").click();
+    __spButton("#saved-panel", "Delete").click(); true`);
+  out.steps.lastDeleted = await h.eval(`(function () { var s = ${SNAP}; s.edit = ${EDIT_READ}; return s; })()`);
+  await h.eval(`__spButton("#quick-picks", "+").click(); true`);
+  out.steps.noneAddOpen = await h.eval(SNAP);
+  await h.eval(`__spButton("#saved-panel", "Cancel").click(); true`);
+  out.steps.noneAfterCancel = await h.eval(SNAP);
   out.steps.noCustom = await h.eval(`document.body.innerHTML.indexOf('data-saved-action="custom"') === -1
     && Array.prototype.every.call(document.querySelectorAll("#quick-picks button, #saved-places button"), function (b) {
       return __spText(b) !== "Custom"; })`);

@@ -77,7 +77,7 @@ def test_map_tokens_have_light_and_dark_values():
     for token in ("--map-destination", "--map-marker-ring", "--map-walk-line", "--map-selected-ring"):
         assert theme.count(token + ":") == 4
     css = CSS.read_text(encoding="utf-8")
-    assert "fill: var(--map-destination)" in css
+    assert "fill: var(--marker-end)" in css  # the destination is the green flag, not the red pin
     assert ".dest-map .leaflet-control-zoom" in css
     assert re.search(r"#[0-9a-fA-F]{3,8}\b|rgb\(|hsl\(", css.split("/* Screen 3:", 1)[1]) is None
 

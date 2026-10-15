@@ -62,7 +62,7 @@ def test_page_a_has_the_button_row_and_the_pace_line_is_its_subtitle(report):
     page = report["pageA"]
     assert "See current location and walking pace" in page["row"]
     assert page["sub"] == "Walking pace: 4.5 km/h · normal pace"  # the same pace line as before, now the muted subtitle
-    assert page["caption"] == "if you leave now and walk at a normal pace"  # the caption under the ring stays
+    assert page["hasCaption"] is False  # Page A's card has no caption under the ring
     assert page["cardLines"] == 0 and page["top"] == "live"  # no pace line under the caption any more
 
 

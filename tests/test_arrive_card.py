@@ -43,7 +43,7 @@ def test_copy_js_and_the_page_carry_the_same_strings():
         assert expected in INDEX, expected
     # the whole-hour form reuses the existing duration; the shared durations and every other "minutes" string are untouched
     assert f'durationHr: "{{h}}{ESC}hr"' in COPY and f'durationHrMin: "{{h}}{ESC}hr {{m}}{ESC}min"' in COPY
-    assert 'late: "about {minutes} min late"' in COPY and "{n}" + ESC + "minutes" not in COPY
+    assert 'late: "about {minutes} min late"' not in COPY and "{n}" + ESC + "minutes" not in COPY
     assert "minutes" not in COPY.split("gapMinutes:", 1)[1].split("gapOnTarget:", 1)[0]
 
 
@@ -54,9 +54,9 @@ def test_the_old_lines_and_their_strings_and_code_are_gone():
     card_code = INDEX.split("function renderArriveCard(prefix, iso) {", 1)[1].split("function renderArrivalViews", 1)[0]
     for old in OLD:
         assert old not in card_code, old
-    # nothing else used the two strings or their css: the estimate class now holds the muted gap line
+    # nothing else used the two strings or their css: the gap is now a pill like the check pill
     assert "arriveBy.targetLine" not in GUIDE and "arriveBy.estimateLine" not in GUIDE
-    assert "color: var(--color-muted);" in CSS.split(".arrive-box__estimate {", 1)[1].split("}", 1)[0]
+    assert "arrive-box__estimate" not in CSS and "arrive-box__estimate" not in INDEX and "arrive-box__estimate" not in GUIDE
 
 
 def test_the_card_is_fed_by_one_function_in_all_three_places():
@@ -84,15 +84,13 @@ def test_the_pill_and_the_edit_link_are_where_they_were():
 def test_the_label_markup_and_css_are_gone_and_each_card_is_a_named_group():
     for name, text in (("page", INDEX), ("guide", GUIDE), ("css", CSS)):
         assert "arrive-box__label" not in text, name
-    assert INDEX.count('<div class="arrive-box" role="group" aria-label="Arrive by">') == 3
+    assert INDEX.count('class="arrive-box" role="group" aria-label="Arrive by" hidden>') == 3
     assert 'role=\\"group\\" aria-label=\\"" + copy.home.arriveBy' in GUIDE
-    gap = CSS.split(".arrive-box__estimate {", 1)[1].split("}", 1)[0]
-    assert "font-size: 0.875rem;" in gap and "color: var(--color-muted);" in gap
+    # the gap is the check pill's own component: the same classes, so the same font, size, padding, radius and tokens
+    assert INDEX.count('-arrive-estimate" class="badge arrive-box__status badge--na" hidden></p>') == 3
+    assert 'gap.className = "badge arrive-box__status badge--" + arriveTone();' in INDEX
     for tone, token in (("track", "--status-live"), ("risk", "--status-uncertain"), ("na", "--status-no-history")):
-        rule = CSS.split(f".arrive-box__estimate--{tone} {{", 1)[1].split("}", 1)[0]
-        assert f"color: var({token});" in rule
-        assert f"color: var({token});" in CSS.split(".badge--" + {"track": "track", "risk": "risk", "na": "na"}[tone] + " {", 1)[1].split("}", 1)[0]
-    assert 'arriveTone()' in INDEX and "arrive-box__estimate--" in INDEX
+        assert f"color: var({token});" in CSS.split(".badge--" + tone + " {", 1)[1].split("}", 1)[0]
 
 
 def test_the_style_guide_shows_before_after_on_target_hours_midnight_next_day_and_no_target():
@@ -180,7 +178,7 @@ def test_the_pill_and_the_edit_link_are_unchanged_below_the_lines(report):
 
 def test_the_main_line_is_heading_size_and_the_gap_is_one_step_smaller(report):
     card = report["cases"]["before"]
-    assert card["mainSize"] == 18.0 and card["gapSize"] == 14.0  # 1.125 rem and 0.875 rem; the gap was 0.75 rem (12 px)
+    assert card["mainSize"] == 18.0  # 1.125 rem; the gap is the pill's caption size, the same as the check pill
     assert card["gapSize"] < card["mainSize"]
     assert card["inlineStyles"] == 0 and card["scrollWidth"] <= card["innerWidth"]
 
@@ -204,8 +202,10 @@ def _contrast(foreground, background):
                                        ("afterOne", "risk"), ("notAvailable", "na")])
 def test_the_gap_colour_follows_the_pill_state_and_reads_on_the_card(report, case, tone):
     card = report["cases"][case]
-    assert f"arrive-box__estimate--{tone}" in card["gapClass"], card["gapClass"]
-    assert card["gapColour"] == card["pillColour"], card  # the pill's own text token
+    assert f"badge--{tone}" in card["gapClass"] and "arrive-box__status" in card["gapClass"], card["gapClass"]
+    assert card["gapColour"] == card["pillColour"] or card["pillColour"] is None, card  # the pill's own text token
+    if card["pillLook"]:
+        assert card["gapLook"].split("|")[:8] == card["pillLook"].split("|")[:8], card  # font, size, padding, radius
     assert _contrast(card["gapColour"], card["boxBackground"]) >= 4.5, (card["gapColour"], card["boxBackground"])
     assert "before target" in (card["gap"] or "") or "after target" in (card["gap"] or "") or card["gap"] == "On target time"
 

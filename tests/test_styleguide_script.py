@@ -59,7 +59,7 @@ def test_every_style_guide_leave_sentence_agrees_with_its_numbers():
             speed = float(kmh.group(1)) / 3.6
             assert e * 60 > metres / speed + 195 - 12, card  # more than 60 s to leave-by (the 12 s covers km/h rounding)
             assert "It is advisable" not in card, card
-        elif " Leave now so you have " in card:
+        elif " Leave now to reach your " in card:
             seen["now"] += 1
             assert "It is advisable" not in card, card
             assert e >= 1 and (e == 1 or f"{e} minutes" in card), card  # leave now reads the minutes the tile shows
@@ -73,10 +73,8 @@ def test_every_style_guide_leave_by_tile_shows_a_time_or_leave_now_never_both():
     tiles = [t for t in texts["tiles"] if t[0] == "Leave now" or re.fullmatch(r"\d{1,2}:\d\d\u00a0(AM|PM)", t[0])]
     assert len(tiles) >= 6
     for value, meta in tiles:
-        if value == "Leave now":
-            assert meta.startswith("The bus is ") and "the walk takes about" in meta, (value, meta)
-        else:
-            assert meta == "" or re.fullmatch(r"in \d+\u00a0min · \d+\u00a0min walk", meta), (value, meta)
+        # one short line, the walk minutes; no bus-away or in-n-min sentence under Leave by
+        assert meta == "" or re.fullmatch(r"\d+.min walk", meta), (value, meta)
 
 
 def test_every_style_guide_page_w_trend_line_agrees_with_its_state_line():
@@ -136,8 +134,8 @@ def test_the_style_guide_shows_the_at_stop_card_and_tile():
     assert "You are at the stop. You have 1 minute to wait." in texts["cards"]
     assert "You are at the stop. The bus is arriving now." in texts["cards"]
     tiles = [tuple(t) for t in texts["tiles"]]
-    assert ("At the stop", f"The bus is 4{NB}min away.") in tiles
-    assert ("At the stop", "The bus is arriving now.") in tiles
+    assert ("At the stop", "") in tiles  # no subline under "At the stop"
+    assert not any(t[0] == "At the stop" and t[1] for t in tiles)
     for card in texts["cards"]:
         if card.startswith("You are at the stop"):
             assert "km/h" not in card and "Leave" not in card

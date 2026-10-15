@@ -1,5 +1,7 @@
 """The Leave by tile in the REAL page: the clock time and "Leave now" stay on one line at every phone width."""
 
+import re
+
 import pytest
 
 from page_runner import require_edge, run_scenario, running_app
@@ -23,5 +25,6 @@ def test_the_leave_by_value_is_one_line_and_not_clipped(report, width, state):
     assert m["valueScroll"] <= m["valueClient"], m  # nothing spills sideways (even with " (tomorrow)")
     assert m["tileScroll"] <= m["tileClient"] and m["tileRight"] <= m["viewport"], m
     assert m["clipped"] is False and m["pageScroll"] is False, m
-    assert m["arrivalLines"] == 1 and m["rangeGone"] is True, m  # the estimated arrival time on one line, and no range under it
+    assert m["arrivalGone"] is True and m["tileFull"] is True, m  # no destination arrival tile; Leave by is full width
+    assert re.fullmatch(r"\d+\u00a0min walk", m["walkLine"]), m  # one short line, the walk minutes
     assert (m["text"] == "Leave now") == (state == "now"), m  # a time or "Leave now", never both

@@ -51,7 +51,7 @@ export default async function (h) {
     hero.arrival_time = new Date(Date.now() + 7 * 60000 + 100).toISOString();
     renderCatchCard(hero);
     renderExplanationNow();
-    return {sub: document.getElementById('catch-sub-eta').textContent, text: document.getElementById('ai-explanation-text').textContent};
+    return {sub: document.getElementById('catch-when').textContent, text: document.getElementById('ai-explanation-text').textContent};
   })()`);
   // a poll with no explanation clears the card (nothing from an older poll stays)
   out.cleared = await h.eval(`(function () {

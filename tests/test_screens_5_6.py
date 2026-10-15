@@ -110,16 +110,15 @@ def test_refresh_has_a_cooldown_and_adds_no_second_timer():
     assert "animation: refresh-spin" in spin
 
 
-def test_status_grid_states_and_relative_time_counter():
+def test_the_status_rows_are_gone_from_page_b():
     html = _page()
     live = _between(html, "function renderLiveTracking()", 'document.getElementById("live-refresh")')
+    for text in ("Live bus location available", "Live bus location unavailable", "Monitored (live GPS)", "Not monitored (no GPS)",
+                 "GPS accuracy", "status-updated", "live-status-announce", "setStatusCell"):
+        assert text not in live, text
     for text in ("Live bus location available", "Live bus location unavailable", "Monitored (live GPS)", "Not monitored (no GPS)"):
-        assert text in live
-        assert text in COPY.read_text(encoding="utf-8")
-    assert "userAccuracy > UNCERTAIN_ACCURACY_M ? \"is-warn\"" in live
-    assert 'updated.setAttribute("datetime", iso)' in live
-    assert 'aria-live="off"><time id="status-updated"' in html
-    assert 'id="live-status-announce" class="visually-hidden" aria-live="polite"' in html
+        assert text not in html and text not in COPY.read_text(encoding="utf-8"), text
+    assert 'id="live-status"' not in html and 'class="status-grid"' not in html
     ages = _between(html, "function relativeAge(iso)", "function hasBusPosition")
     assert '" seconds ago"' in ages and '" min " + (seconds % 60) + " sec ago"' in ages
     tick = _between(html, "function refreshDisplay(generation)", "function clearPrimaryBus")
@@ -133,7 +132,7 @@ def test_no_bus_tag_without_coordinates_and_no_invented_position():
     tag = _between(html, "function syncLiveBusTag(hero)", "function fitLiveView")
     assert tag.index("if (!hasBusPosition(hero) || displayFrozen)") < tag.index("clearLiveBusTag()")
     assert "[hero.latitude, hero.longitude]" in tag
-    fit = _between(html, "function fitLiveView(busPoint, stopPoint)", "function setStatusCell")
+    fit = _between(html, "function fitLiveView(busPoint, stopPoint)", "function renderLiveTracking")
     assert "liveUserMoved" in fit and "liveFit.withBus" in fit
     css = CSS.read_text(encoding="utf-8")
     assert "background: var(--map-live-bus);" in css
@@ -144,7 +143,7 @@ def test_no_bus_tag_without_coordinates_and_no_invented_position():
 
 def test_live_page_order_puts_the_bus_card_last():
     html = _page()
-    order = ['id="alert-slot"', 'id="arrival-card"', 'id="pace-slot"', 'id="leave-tiles"', 'id="if-you-miss"',
+    order = ['id="alert-slot"', 'id="arrival-card"', 'id="pace-slot"', 'id="leave-tiles"',
              'id="ai-explanation"', 'id="live-tracking"', 'id="journey-panel"']
     positions = [html.index(marker) for marker in order]
     assert positions == sorted(positions)

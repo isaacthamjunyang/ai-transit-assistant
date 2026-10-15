@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 import pt_plan
 from catch_heuristic import MISSED_AFTER_S, score_scheduled_rail, straight_line_m
 from config import WALK_SPEED_DEFAULT_MPS
-from explain import TRAIN_ABOUT, TRAIN_LEFT, TRAIN_MISS, TRAIN_NEXT, TRAIN_NOT_LIVE, format_clock
+from explain import TRAIN_ABOUT, TRAIN_LEFT, TRAIN_NEXT, format_clock
 from journey import _as_sgt_iso, parse_journey_time, resolve_leave_by
 from nearby import haversine_m
 from pace import is_near_stop
@@ -145,8 +145,6 @@ def rail_payload(
         "reroute": {"enabled": False, "switched": False},
         "next_departures": [d.replace(microsecond=0).isoformat() for d in upcoming],
         "next_departures_text": next_departures_text(upcoming, moment),
-        "not_live_text": TRAIN_NOT_LIVE,
-        "if_you_miss_text": None if missed or not later else TRAIN_MISS.replace("{time}", format_clock(later[0], moment)),
         "left_text": TRAIN_LEFT.replace("{line}", name).replace("{time}", format_clock(upcoming[0], moment))
         if missed and upcoming else None,
         "near_stop": distance is not None and is_near_stop(distance),

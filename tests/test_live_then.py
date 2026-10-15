@@ -49,44 +49,31 @@ def single(tmp_path_factory):
 
 
 @pytest.mark.parametrize("fixture", ["narrow_light", "wide_dark"])
-def test_the_line_names_the_next_bus_and_says_live_with_the_minutes(fixture, request):
+def test_page_b_draws_no_then_line_while_the_later_leg_is_looked_up(fixture, request):
     live = request.getfixturevalue(fixture)["live"]
-    assert live["shown"] and live["top"] == "arrivals"  # the bus card, Page B, is where the line is
-    assert live["text"].startswith("Then Bus 36 at Opp Toh Guan Rd (03011)")
-    assert re.fullmatch(r"Live " + DOT + r" In \d+" + NB + "min", live["when"]), live["when"]
-    assert live["text"].endswith(live["when"].replace(NB, " "))  # the label sits on the same line element, under the words
-
-
-@pytest.mark.parametrize("fixture", ["narrow_light", "wide_dark"])
-def test_the_line_fits_at_360_and_1280_in_both_themes(fixture, request):
-    live = request.getfixturevalue(fixture)["live"]
+    assert live["top"] == "arrivals" and live["thenElement"] is False
+    assert "Then Bus" not in live["text"] and "Live " + DOT + " In" not in live["text"]
+    assert live["kept"] is True and live["stops"] >= 1  # the answer is still fetched and kept internally
     assert live["right"] <= live["innerWidth"] and live["scrollWidth"] <= live["innerWidth"]
-    assert live["width"] > 100 and live["color"].startswith("rgb")
 
 
-def test_the_live_answer_is_kept_for_90_seconds_and_survives_a_failed_lookup(wide_dark):
-    assert re.fullmatch(r"Live " + DOT + r" In \d+" + NB + "min", wide_dark["at80"]["when"])  # 80 s old: no flicker
-    assert wide_dark["afterFailure"]["when"].startswith("Live " + DOT)  # a failed lookup changes nothing
-    assert "error" not in wide_dark["afterFailure"]["text"].lower()
+def test_the_live_answer_is_still_kept_for_90_seconds_and_survives_a_failed_lookup(wide_dark):
+    assert wide_dark["at80"]["kept"] is True  # 80 s old: kept
+    assert wide_dark["afterFailure"]["kept"] is True  # a failed lookup changes nothing
+    assert wide_dark["at95"]["kept"] is False  # after 90 s without an answer it is dropped
+    for key in ("at80", "afterFailure", "at95"):
+        text = wide_dark[key]["text"].lower()
+        assert "then bus" not in text and "scheduled " + DOT not in text and "error" not in text
 
 
-def test_after_90_seconds_without_an_answer_the_line_is_scheduled_with_no_error_text(wide_dark):
-    after = wide_dark["at95"]
-    assert re.fullmatch(r"Scheduled " + DOT + r" \d{1,2}:\d\d" + NB + "(AM|PM)( [(]tomorrow[)])?", after["when"]), after["when"]
-    assert after["shown"] and after["text"].startswith("Then Bus 36 at")  # the line stays, only its label changes
-    assert "error" not in after["text"].lower() and "unavailable" not in after["text"].lower()
-
-
-def test_a_train_next_leg_always_says_scheduled_and_is_never_looked_up(rail):
-    line = rail["rail"]
-    assert line["shown"] and line["text"].startswith("Then North-South Line at Bishan MRT Station (NS17)")
-    assert re.fullmatch(r"Scheduled " + DOT + r" \d{1,2}:\d\d" + NB + "(AM|PM)( [(]tomorrow[)])?", line["when"]), line["when"]
+def test_a_train_next_leg_is_never_looked_up_and_nothing_is_drawn(rail):
+    assert rail["rail"]["thenElement"] is False and "Then North-South Line" not in rail["rail"]["text"]
     assert rail["requests"] == []
     assert all("NS17" not in str(query) for query in rail["lta"])  # no BusArrival call for the station
 
 
-def test_a_journey_with_one_bus_has_no_line_and_makes_no_later_lookup(single):
-    assert single["single"]["shown"] is False
+def test_a_journey_with_one_bus_makes_no_later_lookup(single):
+    assert single["single"]["thenElement"] is False
     assert single["requests"] == []  # the first leg uses its own poll, unchanged
 
 
@@ -97,24 +84,21 @@ def test_the_first_leg_still_polls_and_the_later_lookup_sends_only_a_stop_and_se
     assert later and all(set(query) == {"BusStopCode"} for query in later)  # no position, no service number
 
 
-def test_the_hold_and_the_label_code_are_what_the_plan_says():
+def test_the_hold_and_the_lookup_code_are_what_the_plan_says():
     assert "var LATER_HOLD_MS = 90000;" in INDEX
     fn = INDEX.split("function laterLiveFor(leg)", 1)[1].split("function laterLiveText", 1)[0]
     assert "LATER_HOLD_MS" in fn and "STALE_MS" not in fn
-    then = INDEX.split("function renderThenLine(then, second)", 1)[1].split("function stepItem(", 1)[0]
-    assert "legIsRail(next) ? null : laterLiveFor(next)" in then and "scheduleLine(next)" in then
-    assert "setInterval" not in then and "fetch(" not in then  # no timer and no lookup of its own
+    for gone in ("renderThenLine", "THEN_BUS_TEXT", "THEN_TRAIN_TEXT", "live-then"):
+        assert gone not in INDEX, gone
     for fn_name in ("requestArrivals(", "renderCatchCard(", "syncCatchBar(", "handleSuccess("):
         if f"function {fn_name}" in INDEX:
             body = INDEX.split(f"function {fn_name}", 1)[1].split("\n    function ", 1)[0]
-            assert "laterLiveFor" not in body and "laterCache" not in body and "renderThenLine" not in body, fn_name
+            assert "laterLiveFor" not in body and "laterCache" not in body, fn_name
     assert INDEX.count("setInterval(") == 3
 
 
-def test_the_new_train_line_is_in_copy_js_and_the_page_and_the_guide_shows_the_line():
-    assert 'thenTrain: "Then {line} at {station}"' in COPY and 'var THEN_TRAIN_TEXT = "Then {line} at {station}";' in INDEX
-    guide = GUIDE.split("Live page line under the bus card", 1)[1].split("Train leg row", 1)[0]
-    for needle in ("jo.liveIn", "jo.liveArrivingSoon", "jo.liveNow", "jo.scheduledAt", "cp.thenTrain", "live-then__when"):
-        assert needle in guide, needle
+def test_the_then_strings_are_gone_from_copy_js_the_page_and_the_guide():
+    for text in ("thenBus", "thenTrain", "Then Bus {service} at {stop}", "Then {line} at {station}", "live-then"):
+        assert text not in COPY and text not in INDEX and text not in GUIDE, text
     css = (ROOT / "static" / "components.css").read_text(encoding="utf-8")
-    assert ".live-then__when {\n  display: block;" in css.replace("\r\n", "\n")
+    assert ".live-then" not in css

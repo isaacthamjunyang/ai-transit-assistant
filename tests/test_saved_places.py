@@ -114,17 +114,20 @@ def test_copy_js_and_the_page_carry_the_same_words():
     assert NOTE in INDEX and STORAGE_LINE in INDEX
 
 
-def test_the_row_starts_with_the_three_starters_and_plus_so_nothing_shifts():
+def test_the_row_markup_is_the_plus_chip_alone_and_no_starters_exist_anywhere():
     row = INDEX.split('id="quick-picks"', 1)[1].split("</div>", 1)[0]
     texts = re.findall(r">([^<]+)</button>", row)
-    assert texts == ["NUS", "Orchard Road", "Changi Airport", "+"]
-    assert 'var QUICK_PICKS = ["NUS", "Orchard Road", "Changi Airport"]' in COPY
-    assert 'starters: ["NUS", "Orchard Road", "Changi Airport"]' in INDEX
+    assert texts == ["+"]
+    for text in (INDEX, COPY, GUIDE):
+        assert "QUICK_PICKS" not in text and "quickPicks" not in text and "starters" not in text.lower()
+    para = PLAN.split("**Saved places (Home).**", 1)[1].split("\n", 1)[0]
+    assert "starter" not in para.lower() and "With nothing saved the row is the `+` chip alone." in para
+    assert INDEX.count('class="quick-pick"') == 0  # no plain suggestion chip in the markup
 
 
-def test_a_starter_is_never_stored_and_a_tap_never_sends_the_saved_place_anywhere_else():
+def test_the_row_handler_only_runs_saved_actions_and_never_fills_the_search_box_or_sends_anything():
     handler = INDEX.split('getElementById("quick-picks").addEventListener("click"', 1)[1].split("});", 1)[0]
-    assert "savedPlaceAction(chip)" in handler and "destinationInput.value = chip.textContent" in handler
+    assert "savedPlaceAction(chip)" in handler and "destinationInput.value" not in handler
     assert "fetch(" not in handler and "pushScreen" not in handler
     ui = _ui()
     # the only request the saved-places code makes is the ordinary destination search typed in the add panel
@@ -156,10 +159,12 @@ def test_css_44px_ellipsis_tokens_and_no_inline_styles():
 
 
 def test_the_style_guide_shows_empty_one_selected_five_edit_mode_add_and_delete():
+    assert "copy.home.quickPicks" not in GUIDE and "starters" not in GUIDE.lower()
+    assert "is-concealed" in GUIDE.split("function sgSavedRow(", 1)[1].split("function sgSavedField", 1)[0]
     for needle in ("sgSavedRow([])", 'sgSavedRow(["Home"])', "sgSavedRow([\"Home\", \"School\"", ", true)",
                    'sgSavedRow(["Home", "School"], false, 0)', 'sgSavedPanel("add")', 'sgSavedPanel("delete")',
                    "storageUnavailable", "copy.home.savedPlaces", "sp.deleteMarkLabel", "sp.editToggle",
-                   "saved-chip__badge", "Starters stay neutral"):
+                   "saved-chip__badge"):
         assert needle in GUIDE, needle
 
 
@@ -261,12 +266,50 @@ def _names(snap):
     return [item["text"] for item in snap["row"]]
 
 
-def test_with_nothing_saved_the_starters_and_plus_show(flow):
+def test_with_nothing_saved_the_row_is_plus_alone_with_no_edit_and_no_note(flow):
     empty = flow["steps"]["empty"]
-    assert _names(empty) == ["NUS", "Orchard Road", "Changi Airport", "+"]
-    assert [item["saved"] for item in empty["row"]] == [False] * 4
-    assert empty["note"] == NOTE and empty["count"] is None and empty["storage"] is None
-    assert empty["stored"] is None  # the starters are never stored
+    assert _names(empty) == ["+"]
+    assert [item["saved"] for item in empty["row"]] == [False]
+    assert empty["toggle"] is None and empty["noteShown"] is False
+    assert empty["count"] is None and empty["storage"] is None and empty["stored"] is None
+    none = flow["steps"]["none"]
+    assert _names(none) == ["+"] and none["toggle"] is None and none["noteShown"] is False
+    assert none["edit"]["toggle"] is None and none["edit"]["badgeCount"] == 0 and none["edit"]["badges"] == []
+
+
+def test_edit_appears_after_the_first_save_and_the_note_comes_with_it(flow):
+    steps = flow["steps"]
+    after = steps["afterFirst"]
+    assert _names(after) == ["Uni", "+", "Edit"] and after["toggle"] == "Edit"
+    assert after["noteShown"] is True and after["note"] == NOTE
+    assert steps["solo"]["toggle"] == "Edit" and steps["solo"]["noteShown"] is True
+
+
+def test_edit_disappears_and_edit_mode_ends_after_the_last_delete(flow):
+    steps = flow["steps"]
+    assert steps["soloEdit"]["toggle"] == "Done" and steps["soloEdit"]["edit"]["badgeCount"] == 1
+    last = steps["lastDeleted"]
+    assert _names(last) == ["+"] and last["toggle"] is None and last["noteShown"] is False
+    assert last["edit"]["badgeCount"] == 0 and last["edit"]["toggle"] is None
+    assert last["panel"] is None and last["stored"] is not None and json.loads(last["stored"])["places"] == []
+
+
+def test_the_note_shows_while_the_add_panel_is_open_and_hides_again_when_it_closes(flow):
+    steps = flow["steps"]
+    assert steps["noneAddOpen"]["noteShown"] is True and steps["noneAddOpen"]["panel"] is not None
+    assert steps["noneAfterCancel"]["noteShown"] is False and steps["noneAfterCancel"]["toggle"] is None
+    # the first save from the add panel in the main flow also shows the note and Edit
+    assert steps["addOpen"]["noteShown"] is True and steps["addOpen"]["toggle"] is None
+
+
+def test_the_empty_and_saved_states_have_the_same_layout_so_nothing_shifts(flow):
+    none, solo, closed = flow["steps"]["none"], flow["steps"]["solo"], flow["steps"]["noneAfterCancel"]
+    for other in (solo, closed):
+        assert other["layout"]["row"]["top"] == none["layout"]["row"]["top"]
+        assert other["layout"]["row"]["height"] == none["layout"]["row"]["height"]
+        assert other["layout"]["note"]["top"] == none["layout"]["note"]["top"]
+        assert other["layout"]["note"]["height"] == none["layout"]["note"]["height"] > 0
+        assert other["layout"]["below"]["top"] == none["layout"]["below"]["top"]
 
 
 def test_add_picks_a_result_then_the_user_types_their_own_name(flow):
@@ -345,13 +388,9 @@ def test_saved_chips_have_a_green_outline_no_tint_and_no_icon(flow):
     assert _contrast(look["nameColor"], look["background"]) >= 4.5
 
 
-def test_the_starters_stay_neutral_and_differ_from_a_saved_chip_only_by_the_outline(flow):
-    look, starter, tokens = flow["steps"]["look"], flow["steps"]["starterLook"], flow["steps"]["tokens"]
-    # the only difference between a saved chip and any other chip is the green outline
-    assert _rgb(look["addBackground"]) == _rgb(look["background"]) == _rgb(starter["background"])
-    assert _rgb(starter["border"]) != _rgb(look["border"])
-    assert _rgb(starter["border"]) != _rgb(tokens["outlineSuccess"])  # starters carry no green
-    assert starter["tick"] is False and starter["text"] == "NUS"
+def test_the_plus_chip_has_the_normal_chip_background(flow):
+    look = flow["steps"]["look"]
+    assert _rgb(look["addBackground"]) == _rgb(look["background"])
 
 
 def test_the_selected_chip_has_a_blue_outer_ring_with_a_gap_apart_from_the_green_outline(flow):
@@ -438,19 +477,12 @@ def test_escape_and_done_leave_edit_mode_and_every_control_is_a_button(flow):
     assert len(steps["keyboardEdit"]) == len(steps["keyboard"]) + 4  # the four badges join the tab order
 
 
-def test_starters_have_no_delete_control_and_no_edit_toggle(flow):
-    starters = flow["steps"]["starters"]
-    assert _names(starters) == ["NUS", "Orchard Road", "Changi Airport", "+"]
-    assert starters["edit"]["toggle"] is None and starters["edit"]["badgeCount"] == 0
-    assert starters["edit"]["badges"] == [] and starters["stored"] is None
-
-
-def test_malformed_storage_is_dropped_and_garbage_gives_the_starters(flow):
+def test_malformed_storage_is_dropped_and_garbage_gives_the_plus_chip_alone(flow):
     steps = flow["steps"]
     saved = [item["text"] for item in steps["malformed"]["row"] if item["saved"]]
     assert saved == ["Good", "Two", "Three", "Four", "Five"]
-    assert [item["text"] for item in steps["garbage"]["row"]][:3] == ["NUS", "Orchard Road", "Changi Airport"]
-    assert not [item for item in steps["garbage"]["row"] if item["saved"]]
+    assert [item["text"] for item in steps["garbage"]["row"]] == ["+"]
+    assert steps["garbage"]["toggle"] is None and steps["garbage"]["noteShown"] is False
 
 
 def test_a_tap_goes_to_the_stops_step_like_a_search_result_with_the_stored_point(flow):

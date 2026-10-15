@@ -135,11 +135,11 @@ def test_a_remembered_pace_goes_with_the_planning_request_and_the_page_shows_the
 
 PRIVACY = "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before."
 SENSOR_OFF = "Motion sensor is off, so your steps are not used."
-CAPTIONS = {
-    "gps": ("if you leave now and keep walking at your current pace", "Walking pace: 4.7 km/h · from GPS"),
-    "cadence": ("if you leave now and keep walking at your current pace", "Walking pace: 4.3 km/h · from your steps"),
-    "remembered": ("if you leave now and walk at your usual pace", "Walking pace: 3.2 km/h · your usual pace"),
-    "default": ("if you leave now and walk at a normal pace", "Walking pace: 4.5 km/h · normal pace"),
+CAPTIONS = {  # Page A's card has no caption any more: only the pace line
+    "gps": "Walking pace: 4.7 km/h · from GPS",
+    "cadence": "Walking pace: 4.3 km/h · from your steps",
+    "remembered": "Walking pace: 3.2 km/h · your usual pace",
+    "default": "Walking pace: 4.5 km/h · normal pace",
 }
 
 
@@ -160,7 +160,7 @@ def ui(app):
 @pytest.mark.parametrize("source", list(CAPTIONS))
 def test_the_card_shows_the_caption_and_pace_line_for_the_servers_source(ui, source):
     card = ui["captions"]["sources"][source]
-    assert (card["caption"], card["line"]) == CAPTIONS[source]
+    assert card["hasCaption"] is False and card["line"] == CAPTIONS[source]
     assert card["live"] == "off" and card["visible"] is True
 
 
@@ -168,12 +168,12 @@ def test_the_real_poll_with_no_value_is_the_normal_pace(ui):
     real = ui["captions"]["real"]
     assert real["server"] == {"used": 1.25, "source": "default"}
     assert real["card"]["line"] == "Walking pace: 4.5 km/h · normal pace"
-    assert real["card"]["caption"] == "if you leave now and walk at a normal pace"
+    assert real["card"]["hasCaption"] is False
 
 
 def test_an_unknown_source_falls_back_to_the_normal_pace(ui):
     bogus = ui["captions"]["bogus"]
-    assert bogus["caption"] == CAPTIONS["default"][0] and bogus["line"] == "Walking pace: 4.5 km/h · normal pace"
+    assert bogus["hasCaption"] is False and bogus["line"] == "Walking pace: 4.5 km/h · normal pace"
 
 
 def test_the_overview_shows_the_privacy_line_or_the_sensor_off_line(ui):

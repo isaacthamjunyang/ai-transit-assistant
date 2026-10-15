@@ -281,10 +281,10 @@ def test_the_overview_has_one_row_per_leg_in_order(wide_dark):
     # a change is a walk row only when OneMap gave a walk: NS26 to EW14 had none, so the two rail legs touch
     assert _kinds(rows) == ["origin", "walk", "bus", "walk", "rail", "rail", "walk", "rail", "walk", "destination"]
     assert rows[0]["lines"][0] == "From" and rows[0]["lines"][1] == "Your current location"
-    assert rows[1]["title"].startswith("Walk ") and "to Origin (01011)" in rows[1]["text"]
+    assert rows[1]["title"].startswith("Walk ") and "to Origin" in rows[1]["text"]
     bus = rows[2]
-    assert bus["lines"][0] == "Origin (01011)" and bus["lines"][1].startswith("Bus 18")
-    assert re.fullmatch(r"4 stops · 8" + NB + "min", bus["lines"][-2]) and bus["lines"][-1] == "Bef Toh Guan Rd (28059)"
+    assert bus["lines"][0] == "Origin" and bus["lines"][1].startswith("Bus 18")
+    assert re.fullmatch(r"4 stops · 8" + NB + "min", bus["lines"][-2]) and bus["lines"][-1] == "Bef Toh Guan Rd"
     assert "Board" not in bus["text"] and "Get off" not in bus["text"] and "Toward" not in bus["text"]
     assert any(line.startswith("Arriving in") for line in bus["lines"])  # the first bus keeps its live line
 
@@ -354,7 +354,7 @@ def test_a_bus_leg_has_the_same_shape_with_bus_icons_and_neutral_rings(wide_dark
     for token in (row["badge"]["bg"] for row in rows if row["badge"] and row is not bus):
         assert token not in info["startRing"] and token != info["barBg"]  # no line colour on a bus leg
     assert info["barBg"] == info["startBg"]  # the plain primary connector colour
-    assert bus["lines"][0] == "Origin (01011)" and bus["lines"][-1] == "Bef Toh Guan Rd (28059)"
+    assert bus["lines"][0] == "Origin" and bus["lines"][-1] == "Bef Toh Guan Rd"
 
 
 def test_the_first_bus_only_text_is_gone_from_every_row(later_buses):
@@ -417,7 +417,7 @@ def test_the_leg_markers_bar_and_end_label_fit_at_360_and_1280_in_both_themes(fi
         assert info["bar"]["y"] <= info["start"]["y"] + info["start"]["h"] / 2 + 1
         assert info["bar"]["y"] + info["bar"]["h"] >= info["end"]["y"] + info["end"]["h"] / 2 - 1
         assert info["bar"]["w"] >= 3 and abs(info["bar"]["x"] + info["bar"]["w"] / 2 - (info["start"]["x"] + info["start"]["w"] / 2)) < 1.5
-        assert info["endText"] and "(" in info["endText"]  # a text label with the code: not colour alone
+        assert info["endText"]  # a text label with the stop name: not colour alone
         assert info["endColor"] != info["endBg"]
         assert row["right"] <= result["innerWidth"]
     for row in legs[1:]:

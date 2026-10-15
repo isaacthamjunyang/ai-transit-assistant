@@ -101,7 +101,7 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
             now = kwargs["now"]
             better = (now + timedelta(minutes=22)).replace(microsecond=0)
             return {
-                "switched": True, "no_better_option": None,
+                "switched": True,
                 "reroute": {
                     "service_no": "99", "stop": {"stop_code": DEST, "description": "Destination", "distance_m": 150,
                                                  "walk_minutes": 2, "services": ["99"]},

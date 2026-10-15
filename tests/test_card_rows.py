@@ -22,37 +22,37 @@ def nb(text: str) -> str:
 
 # (label, case kwargs, expected text)
 ROWS = [
-    ("1 by, remembered", dict(e=14, leave_in=540, source="remembered", distance=203.0),
+    ("1 by, remembered", dict(e=14, w=5, leave_in=540, source="remembered", distance=203.0),
      "The bus is 14 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
-     "Leave by 4:04~PM so you have 5 minutes to reach your stop and catch the bus arriving at 4:09~PM."),
-    ("2 by, measured", dict(e=14, leave_in=540, source="gps", speed=4.8 / 3.6, distance=203.0),
+     "Leave by 4:04~PM to reach your stop in 5 minutes and catch the bus arriving at 4:09~PM."),
+    ("2 by, measured", dict(e=14, w=5, leave_in=540, source="gps", speed=4.8 / 3.6, distance=203.0),
      "The bus is 14 minutes away, and you are 203~m from the stop and walking at about 4.8~km/h. "
-     "Leave by 4:04~PM so you have 5 minutes to reach your stop and catch the bus arriving at 4:09~PM."),
-    ("3 by, default", dict(e=14, leave_in=540, source="default", distance=203.0),
+     "Leave by 4:04~PM to reach your stop in 5 minutes and catch the bus arriving at 4:09~PM."),
+    ("3 by, default", dict(e=14, w=5, leave_in=540, source="default", distance=203.0),
      "The bus is 14 minutes away, and you are 203~m from the stop and walking at an average speed of 4.5~km/h. "
-     "Leave by 4:04~PM so you have 5 minutes to reach your stop and catch the bus arriving at 4:09~PM."),
-    ("4 by, across midnight", dict(e=14, leave_in=540, source="remembered", distance=203.0, now=LATE),
+     "Leave by 4:04~PM to reach your stop in 5 minutes and catch the bus arriving at 4:09~PM."),
+    ("4 by, across midnight", dict(e=14, w=5, leave_in=540, source="remembered", distance=203.0, now=LATE),
      "The bus is 14 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
-     "Leave by 11:59~PM so you have 5 minutes to reach your stop and catch the bus arriving at 12:04~AM (tomorrow)."),
-    ("5 by, X = 2", dict(e=14, leave_in=720, source="remembered", distance=203.0),
+     "Leave by 11:59~PM to reach your stop in 5 minutes and catch the bus arriving at 12:04~AM (tomorrow)."),
+    ("5 by, X = 2", dict(e=14, w=2, leave_in=720, source="remembered", distance=203.0),
      "The bus is 14 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
-     "Leave by 4:07~PM so you have 2 minutes to reach your stop and catch the bus arriving at 4:09~PM."),
-    ("6 now, e = 6", dict(e=6, leave_in=30, source="remembered", distance=203.0),
+     "Leave by 4:07~PM to reach your stop in 2 minutes and catch the bus arriving at 4:09~PM."),
+    ("6 now, e = 6", dict(e=6, w=6, leave_in=30, source="remembered", distance=203.0),
      "The bus is 6 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
-     "Leave now so you have 6 minutes to reach your stop and catch the bus arriving at 4:01~PM."),
-    ("7 now, e = 1", dict(e=1, leave_in=0, source="remembered", distance=203.0),
+     "Leave now to reach your stop in 6 minutes and catch the bus arriving at 4:01~PM."),
+    ("7 now, e = 1", dict(e=1, w=1, leave_in=0, source="remembered", distance=203.0),
      "The bus is 1 minute away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
-     "Leave now so you have 1 minute to reach your stop and catch the bus arriving at 3:56~PM."),
+     "Leave now to reach your stop in 1 minute and catch the bus arriving at 3:56~PM."),
     ("8 now, arriving now", dict(e=0, leave_in=0, source="gps", speed=4.8 / 3.6, distance=20.0),
      "The bus is arriving now, and you are 20~m from the stop and walking at about 4.8~km/h. "
      "Leave now to try to catch the bus arriving at 3:55~PM."),
-    ("9 by + uncertain", dict(e=14, leave_in=540, source="remembered", distance=203.0, unc=True),
+    ("9 by + uncertain", dict(e=14, w=5, leave_in=540, source="remembered", distance=203.0, unc=True),
      "The bus is 14 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
-     "Leave by 4:04~PM so you have 5 minutes to reach your stop and catch the bus arriving at 4:09~PM. "
+     "Leave by 4:04~PM to reach your stop in 5 minutes and catch the bus arriving at 4:09~PM. "
      "Your location is uncertain, so leave a little earlier than that to be safe."),
-    ("10 now + uncertain", dict(e=6, leave_in=30, source="remembered", distance=203.0, unc=True),
+    ("10 now + uncertain", dict(e=6, w=6, leave_in=30, source="remembered", distance=203.0, unc=True),
      "The bus is 6 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
-     "Leave now so you have 6 minutes to reach your stop and catch the bus arriving at 4:01~PM. "
+     "Leave now to reach your stop in 6 minutes and catch the bus arriving at 4:01~PM. "
      "Your location is uncertain, so the walking time may be off."),
     ("11 unlikely", dict(e=14, leave_in=540, band="low", distance=203.0),
      "The bus is 14 minutes away, and you are 203~m from the stop, but catching this bus is unlikely."),
@@ -92,11 +92,12 @@ def test_the_page_mirror_writes_every_row_word_for_word():
     assert got == [nb(row[2]) for row in ROWS]
 
 
-# ---- the boundary rule: X is the difference of the two clock minutes as displayed
+# ---- one value: the walk minutes in the sentence are the pack's walk_minutes, whatever the two clock times are
 
 BOUNDARY = [
-    ("leave 4:04:59, arrival 4:09:00", dict(e=14, leave_in=599, arr_off=840)),
-    ("leave 4:04:00, arrival 4:09:59", dict(e=14, leave_in=540, arr_off=899)),
+    ("leave 4:04:59, arrival 4:09:00", dict(e=14, w=5, leave_in=599, arr_off=840)),
+    ("leave 4:04:00, arrival 4:09:59", dict(e=14, w=5, leave_in=540, arr_off=899)),
+    ("gap 2 but walk 7", dict(e=14, w=7, leave_in=720, arr_off=840)),
 ]
 
 
@@ -105,23 +106,59 @@ def _boundary_cases():
 
 
 @pytest.mark.parametrize("index", range(len(BOUNDARY)), ids=[b[0] for b in BOUNDARY])
-def test_python_reads_5_minutes_when_the_displayed_clocks_are_5_apart(index):
-    text = _python_text(_boundary_cases()[index])
-    assert "so you have 5 minutes to reach your stop" in text and "Leave by 4:04 PM" in text
+def test_python_states_the_walk_minutes_not_the_gap(index):
+    case = _boundary_cases()[index]
+    assert f"to reach your stop in {case['w']} minutes and catch the bus" in _python_text(case)
 
 
 @needs_node
-def test_the_page_mirror_reads_5_minutes_at_the_same_boundaries():
+def test_the_page_mirror_states_the_same_walk_minutes():
     cases = _boundary_cases()
-    got = _mirror_cases(cases)
-    assert got == [_python_text(c) for c in cases]
-    assert all("so you have 5 minutes to reach your stop" in text for text in got)
+    assert _mirror_cases(cases) == [_python_text(c) for c in cases]
 
 
-def test_less_than_a_minute_apart_reads_one_minute():
-    c = _case(e=14, now=NOON_ISH, speed=1.25, source="remembered", distance=203.0, leave_in=540, arr_off=540 + 30)
-    # leave by 4:04:00 and a bus at 4:04:30 cannot be a leave-by case in the app, but the text still reads "1 minute"
-    assert "so you have 1 minute to reach your stop" in _python_text(dict(c, e=9))
+def _sentence_minutes(text: str):
+    import re
+
+    found = re.search(r" in (\d+) minutes? and catch the (?:bus|train)", text)
+    return int(found.group(1)) if found else None
+
+
+def _tile_grid():
+    cases = []
+    for e in (2, 6, 14):
+        for w in (1, 2, 5, 12):
+            for leave_in in (30, 540, 900):
+                for unc in (False, True):
+                    for train in (None, "North-South Line"):
+                        cases.append(_case(e=e, w=w, now=NOON_ISH, speed=1.25, source="gps", distance=203.0,
+                                           leave_in=leave_in, unc=unc, train=train))
+    return cases
+
+
+@needs_node
+def test_the_tile_minutes_equal_the_minutes_in_the_sentence_for_every_grid_case():
+    cases = _tile_grid()
+    texts = _mirror_cases(cases)
+    assert len(texts) == len(cases)
+    seen = {"1 minute": 0, "uncertain": 0, "train": 0}
+    for case, text in zip(cases, texts):
+        assert _sentence_minutes(text) == case["w"], (case, text)
+        seen["1 minute"] += case["w"] == 1
+        seen["uncertain"] += case["unc"]
+        seen["train"] += bool(case["train"])
+    assert all(seen.values()) and ("in 1 minute and catch" in " ".join(texts))
+
+
+def test_the_leave_sentences_never_use_the_leave_to_arrival_gap():
+    for case in _tile_grid():
+        now = datetime.fromisoformat(case["now"])
+        numbers = build_numbers(
+            bus_minutes=case["e"], walk_minutes=case["w"], chosen_action="wait", distance_m=203.0, walk_speed_used=1.25,
+            walk_speed_source="gps", leave_by=(now + timedelta(seconds=case["leave_in"])).isoformat(),
+            arrival_time=(now + timedelta(seconds=case["arr_off"])).isoformat(), now=now, train_line=case["train"])
+        text = card_text(numbers, band="ok", uncertain=case["unc"])
+        assert "so you have" not in text and _sentence_minutes(text) == case["w"], text
 
 
 # ---- at the stop (tmp/plan_edits_8.md section 6): the whole card, nothing after it

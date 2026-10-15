@@ -31,3 +31,17 @@ def _no_bus_traffic_factor(request):
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(config, "BUS_PEAK_FACTOR", 1.0)
         yield
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _no_reroute_planner(request):
+    """/api/reroute-options asks the OneMap planner for routes after a miss. A real .env can hold credentials, so no
+    test reaches it unless the module sets USES_REROUTE_PLANNER = True and stubs the OneMap transport itself."""
+    if getattr(request.module, "USES_REROUTE_PLANNER", False):
+        yield
+        return
+    import main
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(main, "_reroute_planner_starts", lambda *args, **kwargs: [])
+        yield

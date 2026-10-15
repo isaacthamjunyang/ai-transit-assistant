@@ -7,6 +7,7 @@ LTA, OneMap, or OpenAI.
 
 from datetime import datetime, timedelta, timezone
 
+from config import display_stop_name
 from journey import parse_journey_time
 
 SGT = timezone(timedelta(hours=8))
@@ -74,7 +75,7 @@ def leave_now_notice(
             if range_low == range_high
             else f"Catch probability: {point}% ({range_low}–{range_high}%)."
         )
-        body = f"Walk to {stop_name} ({stop_code}) now to catch Bus {service_no}. " + chance_text
+        body = f"Walk to {display_stop_name(stop_name)} now to catch Bus {service_no}. " + chance_text
     return {
         "bus_id": bus_id,
         "eligible": eligible,

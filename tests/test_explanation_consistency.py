@@ -280,30 +280,30 @@ def test_the_page_mirror_equals_python_at_the_minute_rollovers_of_the_two_clock_
     got, expected = _mirror_cases(cases), _python_leads(cases)
     bad = [(c, g, x) for c, g, x in zip(cases, got, expected) if g != x]
     assert not bad, f"{len(bad)} differ, first: {bad[0]}"
-    # leave by 9:04:59 and arrival 9:09:00 read 9:04 and 9:09: five minutes, on both sides
-    five = _mirror_cases([_case(e=9, leave_in=299, arr_off=540), _case(e=9, leave_in=240, arr_off=599)])
-    assert all("so you have 5 minutes to reach your stop" in text for text in five), five
+    # the sentence states the walk minutes (5), not the gap of the two displayed clock minutes
+    five = _mirror_cases([_case(e=9, w=5, leave_in=299, arr_off=540), _case(e=9, w=5, leave_in=240, arr_off=599)])
+    assert all("to reach your stop in 5 minutes and catch" in text for text in five), five
     assert "catch the bus arriving at 9:09\u00a0AM" in five[0] and "Leave by 9:04\u00a0AM" in five[0]
 
 
 @needs_node
-def test_every_leave_by_case_in_the_mirror_has_at_least_two_minutes():
-    # leave-by is the arrival minus the walk minus the 135 s margin
+def test_every_leave_by_case_in_the_mirror_states_the_walk_minutes_it_was_given():
+    # the leave sentence states the pack walk minutes, whatever the gap between leave-by and arrival
     import re
 
     cases = []
     for arr_off in range(240, 420, 7):
         for walk_s in (0, 1, 20, 59, 60, 119, 120, 300, 600, 3000):
             for now in (NOW, NOW + timedelta(seconds=17), NOW + timedelta(seconds=44)):
-                cases.append(_case(e=round(arr_off / 60), leave_in=arr_off - walk_s - 135, arr_off=arr_off, now=now))
+                cases.append(_case(e=round(arr_off / 60), w=max(1, round(walk_s / 60)), leave_in=arr_off - walk_s - 135, arr_off=arr_off, now=now))
     got = _mirror_cases(cases)
     assert got == _python_leads(cases)
     seen = 0
     for text in got:
-        found = re.search(r"so you have (\d+) minutes? to reach", text)
+        found = re.search(r"to reach your stop in (\d+) minutes? and catch", text)
         if "Leave by" in text:
             seen += 1
-            assert found and int(found.group(1)) >= 2, text
+            assert found and int(found.group(1)) >= 1, text
     assert seen > 100
 
 

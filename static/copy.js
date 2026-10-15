@@ -2,8 +2,6 @@
    This file is a classic script so the style guide can open as a file.
    The constants object is `copy`. */
 
-var QUICK_PICKS = ["NUS", "Orchard Road", "Changi Airport"];
-
 var copy = {
   menuData: {
     holidays: "Public holidays updated to {year}",
@@ -24,12 +22,10 @@ var copy = {
   cautionBanner: "⚠ Catch chance dropping ({point}%). Tap to enable Leave-Now Alert.",
   leaveNow: {
     title: "Leave Now — Bus {service_no}",
-    body: "Walk to {stop_name} ({stop_code}) now to catch Bus {service_no}. Catch probability: {point}% ({range_low}–{range_high}%)."
+    body: "Walk to {stop_name} now to catch Bus {service_no}. Catch probability: {point}% ({range_low}–{range_high}%)."
   },
   atStop: {
     tile: "At the stop",
-    tileBus: "The bus is {e}\u00a0min away.",
-    tileArriving: "The bus is arriving now.",
     card: "You are at the stop. You have {e} to wait.",
     cardArriving: "You are at the stop. The bus is arriving now."
   },
@@ -40,31 +36,25 @@ var copy = {
     explTrainNow: "The {line} train is scheduled to leave now. Live train times are not available.",
     explTrainUnlikely: "The {line} train is scheduled in {e}\u00a0min, and you are {distance} from the station, but catching this train is unlikely.",
     explTrainNowUnlikely: "The {line} train is scheduled to leave now, and you are {distance} from the station, but catching this train is unlikely.",
-    leaveByTrain: "Leave by {time} so you have {x} to reach your station and catch the train departing at {arrival}.",
-    leaveNowTrain: "Leave now so you have {e} to reach your station and catch the train departing at {arrival}.",
+    leaveByTrain: "Leave by {time} to reach your station in {w} and catch the train departing at {arrival}.",
+    leaveNowTrain: "Leave now to reach your station in {w} and catch the train departing at {arrival}.",
     leaveNowDepartingTrain: "Leave now to try to catch the train departing at {arrival}.",
-    trainNotLive: "Train times are scheduled, not live.",
     trainAbout: "about {time}",
     trainNext: "Next trains: {list}.",
-    trainMiss: "If you miss it, the next train is at about {time}.",
     trainLeft: "The {line} train has left. The next one is at about {time}."
   },
   rerouteCard: {
     title: "Route Updated",
-    message: "Switched to Bus {new_service} at {new_stop_name} ({new_stop_code}).",
+    message: "Switched to Bus {new_service} at {new_stop_name}.",
     probability: "Catch probability: about {new_point}% vs previous about {old_point}%."
   },
   rerouteNotification: {
     title: "Route Updated — Bus {new_service}",
     body: "Switched to Bus {new_service} at {new_stop_name}. Catch probability: {new_point}% (range {new_low}–{new_high}%)."
   },
-  noBetter: {
-    standard: "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the 15% improvement threshold.",
-    postReroute: "Primary bus target has low catch probability ({point}%), but no better direct alternative meets the post-reroute 20% improvement threshold."
-  },
   /* approved: the explanation is written by Python from these templates (explain.py); no model is called for it.
      Sentence one is busMinutes (or busArrivingNow) + youAre + a speed part, or the unlikely tail. Sentence two is the
-     leave sentence. {x} and {e} are minutes ("1 minute", "5 minutes"). */
+     leave sentence. {e} and {w} are minutes ("1 minute", "5 minutes"); {w} is the walk. */
   explanation: {
     busArrivingNow: "The bus is arriving now",
     busMinutes: "The bus is {e} away",
@@ -73,8 +63,8 @@ var copy = {
     speedMeasured: " and walking at about {kmh}\u00a0km/h.",
     speedRemembered: " and walking at your usual speed of {kmh}\u00a0km/h.",
     speedDefault: " and walking at an average speed of {kmh}\u00a0km/h.",
-    leaveBy: "Leave by {time} so you have {x} to reach your stop and catch the bus arriving at {arrival}.",
-    leaveNow: "Leave now so you have {e} to reach your stop and catch the bus arriving at {arrival}.",
+    leaveBy: "Leave by {time} to reach your stop in {w} and catch the bus arriving at {arrival}.",
+    leaveNow: "Leave now to reach your stop in {w} and catch the bus arriving at {arrival}.",
     leaveNowArriving: "Leave now to try to catch the bus arriving at {arrival}.",
     uncertainBy: "Your location is uncertain, so leave a little earlier than that to be safe.",
     uncertainNow: "Your location is uncertain, so the walking time may be off."
@@ -147,11 +137,6 @@ var copy = {
     gapBefore: "{amount} before target",
     gapAfter: "{amount} after target",
     gapOnTarget: "On target time",
-    late: "about {minutes} min late",
-    missLabel: "If you miss it",
-    missWithLate: "Next Bus {service} in {minutes} min · reach destination about {point} ({late})",
-    missNoSpare: "Next Bus {service} in {minutes} min · reach destination about {point}",
-    missWait: "Next Bus {service} in {minutes} min",
     warning: "Earliest arrival is about {earliest}, after your {target} target.",
     changeTime: "Change time",
     noTarget: "No target",
@@ -171,35 +156,31 @@ var copy = {
   noDirectBus: "no direct bus from near you — a transfer may still work",
   demoBanner: "SIMULATED DEMO MODE",
   simulated: "[SIMULATED]",
-  /* proposed, approved */
-  ifCatchPrefix: "If you catch this bus: ",
   aiExplanationTitle: "AI Explanation",
   updatingExplanation: "● Updating explanation...",
   probabilityExample: "about 64%",
   pace: {
     slower: {
-      title: "Walk slower",
-      detail: "You have time. A relaxed pace should still work."
+      title: "Walk slower"
     },
     slightly_slower: {
-      title: "Walk slightly slower",
-      detail: "You can ease your pace a little."
+      title: "Walk slightly slower"
     },
     steady: {
-      title: "Keep a steady pace",
-      detail: "A normal walking pace works."
+      title: "Keep a steady pace"
     },
     slightly_faster: {
-      title: "Walk slightly faster",
-      detail: "A slightly brisker walk improves your chances."
+      title: "Walk slightly faster"
     },
     faster: {
-      title: "Walk faster",
-      detail: "A brisk walk improves your chances. Stay on footpaths and use crossings."
+      title: "Walk faster"
     },
     unlikely: {
-      title: "Unlikely at a normal pace",
-      detail: "Walking faster is unlikely to be enough. Check the reroute options or the next bus."
+      title: "Unlikely at a normal pace"
+    },
+    /* proposed, needs approval: the chip's state before any walking speed is measured, so Page A always has the chip */
+    neutral: {
+      title: "Walking pace"
     }
   },
   status: {
@@ -219,9 +200,8 @@ var copy = {
     heroSupport: "Get real-time bus information, catch probability and personalised leave-by time.",
     heading: "Where do you want to go?",
     placeholder: "e.g. Marina Bay Sands, NUS, Orchard Road",
-    quickPicks: QUICK_PICKS,
     /* proposed, needs approval: saved places on Home (up to {max}, named by the user, kept on this phone only; see
-       static/saved-places.js). The three quickPicks names above are the starters shown only while nothing is saved. */
+       static/saved-places.js). With nothing saved the row is "+" alone and the note and Edit toggle are hidden. */
     savedPlaces: {
       note: "Saved on this phone only.",
       add: "+",
@@ -426,21 +406,14 @@ var copy = {
     ringDepartsSoon: " departing in under 1 minute",
     ringDepartsNow: " departing now",
     departsLabel: "Train departs",
-    tileAway: "The train departs in {e}\u00a0min and the walk takes about {w}\u00a0min.",
-    tileDeparting: "The train is departing now and the walk takes about {w}\u00a0min.",
     seeTimes: "See train times",
     question: "Did you catch the train?",
     nextTrains: "Next trains",
-    scheduled: "Scheduled",
-    every: "Every about {n} min",
-    departsAt: "Departs {time}",
-    toward: "Toward {terminus}",
     leftOnly: "The {line} train has left.",
     trainTitle: "{line} train",
     tileLabel: "{line} train, {time}",
     about: "about {time}",
-    left: "The {line} train has left. The next one is at about {time}.",
-    notLive: "Train times are scheduled, not live."
+    left: "The {line} train has left. The next one is at about {time}."
   },
   /* proposed, needs approval (plan_edits_9 4.2): the line names shown beside the badge */
   lineNames: {
@@ -473,10 +446,8 @@ var copy = {
     ringAt: " at {stop}",
     /* approved: muted label left of the bus arrival clock time, at the right of the ring */
     busArrives: "Bus arrives",
+    /* Page C's current-bus card keeps its one fixed caption; Page A's card has no caption */
     caption: "if you leave now and walk at a normal pace",
-    /* proposed, approved: the caption follows the source the server reports for the walking speed */
-    captionCurrentPace: "if you leave now and keep walking at your current pace",
-    captionUsualPace: "if you leave now and walk at your usual pace",
     /* approved: the muted line under the caption; {kmh} is the server's walk_speed_used x 3.6, one decimal */
     walkPaceGps: "Walking pace: {kmh} km/h · from GPS",
     walkPaceSteps: "Walking pace: {kmh} km/h · from your steps",
@@ -486,16 +457,10 @@ var copy = {
     missed: "Missed",
     leaveBy: "Leave by",
     leaveNow: "Leave now",
-    /* approved: the Leave by tile shows a clock time or "Leave now", never both; {n} and {w} are whole minutes */
-    leaveByIn: "in {n}\u00a0min · {w}\u00a0min walk",
-    leaveByInUnder: "in under 1\u00a0min · {w}\u00a0min walk",
-    leaveNowBusAway: "The bus is {e}\u00a0min away and the walk takes about {w}\u00a0min.",
-    leaveNowBusArriving: "The bus is arriving now and the walk takes about {w}\u00a0min.",
+    /* approved: the Leave by tile shows a clock time or "Leave now", never both, and one walk line; {w} is whole minutes */
+    leaveWalk: "{w}\u00a0min walk",
     leaveUncertain: "Location uncertain: leave a bit earlier to be safe.",
-    estimatedArrival: "Estimated destination arrival",
-    aiTitle: "AI Explanation",
-    /* proposed, needs approval */
-    aiNote: "Worked out from the app's own estimates."
+    aiTitle: "AI Explanation"
   },
   rerouteProposal: {
     /* proposed, needs approval */
@@ -540,6 +505,8 @@ var copy = {
     newJourneyReason: "Switching because your current bus is unlikely to be caught.",
     /* proposed, needs approval */
     busLeftNotice: "Bus {service} has left. Here are your other options.",
+    /* proposed, needs approval: after a miss when no bus or route is found; the ride-app card follows it */
+    noOtherOptions: "No other buses or routes are available right now.",
     /* proposed, needs approval */
     alreadyLeft: "That bus has already left. Choose another option.",
     /* proposed, needs approval: browser notification while a proposal is pending */
@@ -556,23 +523,11 @@ var copy = {
   liveTracking: {
     refresh: "Refresh live arrivals",
     nextBuses: "Next 3 buses",
-    arriving: "(Arriving)",
-    liveAvailable: "Live bus location available",
-    liveUnavailable: "Live bus location unavailable",
-    monitored: "Monitored (live GPS)",
-    notMonitored: "Not monitored (no GPS)",
-    gpsAccuracy: "GPS accuracy",
-    lastUpdate: "Last update",
-    secondsAgo: "{seconds} seconds ago",
-    minutesAgo: "{minutes} min {seconds} sec ago",
-    noValue: "—"
+    arriving: "(Arriving)"
   },
   /* proposed, needs approval: every string in catchPrompt */
   catchPrompt: {
     seeArrivals: "See bus arrival times",
-    thenBus: "Then Bus {service} at {stop}",
-    /* proposed, needs approval: the same line when the next leg is a train */
-    thenTrain: "Then {line} at {station}",
     question: "Did you catch the bus?",
     yes: "Yes, I caught it",
     no: "No, I missed it",
@@ -595,6 +550,13 @@ var copy = {
     done: "Done",
     privacy: "Your position stays on this phone. It is used only for the Get off alert and is never sent, stored or logged.",
     openNote: "Works while this page is open."
+  },
+  /* proposed, needs approval: the words of the two map markers. "You" shows beside the red pin; the green flag has no
+     visible word. Each icon's text name for assistive technology is yourLocation or destination. */
+  map: {
+    you: "You",
+    yourLocation: "Your location",
+    destination: "Destination"
   },
   liveMap: {
     fullRoute: "Full route",

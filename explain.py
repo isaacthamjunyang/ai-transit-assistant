@@ -273,8 +273,8 @@ S1_SPEED = {
     "remembered": " and walking at your usual speed of {kmh}\u00a0km/h.",
     "default": " and walking at an average speed of {kmh}\u00a0km/h.",
 }
-S2_LEAVE_BY = "Leave by {time} so you have {x} to reach your stop and catch the bus arriving at {arrival}."
-S2_LEAVE_NOW = "Leave now so you have {e} to reach your stop and catch the bus arriving at {arrival}."
+S2_LEAVE_BY = "Leave by {time} to reach your stop in {w} and catch the bus arriving at {arrival}."
+S2_LEAVE_NOW = "Leave now to reach your stop in {w} and catch the bus arriving at {arrival}."
 S2_LEAVE_NOW_ARRIVING = "Leave now to try to catch the bus arriving at {arrival}."
 S2_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe."
 S2_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off."
@@ -285,18 +285,16 @@ S_AT_STOP_ARRIVING = "You are at the stop. The bus is arriving now."
 # {line} is the line's name ("North-South Line"), {e} the whole minutes. The page mirror copies these (EXPL_TRAIN*).
 S_TRAIN = "The {line} train is scheduled in {e}\u00a0min. Live train times are not available."
 S_TRAIN_NOW = "The {line} train is scheduled to leave now. Live train times are not available."
-TRAIN_NOT_LIVE = "Train times are scheduled, not live."
 # Unlikely train: the whole card, nothing after it. Arriving-now form when the train leaves in under a minute.
 S_TRAIN_UNLIKELY = "The {line} train is scheduled in {e}\u00a0min, and you are {distance} from the station, but catching this train is unlikely."
 S_TRAIN_NOW_UNLIKELY = "The {line} train is scheduled to leave now, and you are {distance} from the station, but catching this train is unlikely."
 # The leave sentence of a train card (same rules and numbers as S2_*, in train and station words).
-S2_TRAIN_LEAVE_BY = "Leave by {time} so you have {x} to reach your station and catch the train departing at {arrival}."
-S2_TRAIN_LEAVE_NOW = "Leave now so you have {e} to reach your station and catch the train departing at {arrival}."
+S2_TRAIN_LEAVE_BY = "Leave by {time} to reach your station in {w} and catch the train departing at {arrival}."
+S2_TRAIN_LEAVE_NOW = "Leave now to reach your station in {w} and catch the train departing at {arrival}."
 S2_TRAIN_LEAVE_NOW_DEPARTING = "Leave now to try to catch the train departing at {arrival}."
 # Projected departures (the table has the headway, not each train) are shown with "about".
 TRAIN_ABOUT = "about {time}"
 TRAIN_NEXT = "Next trains: {list}."
-TRAIN_MISS = "If you miss it, the next train is at about {time}."
 TRAIN_LEFT = "The {line} train has left. The next one is at about {time}."
 
 
@@ -434,12 +432,12 @@ def sentence_two(numbers: dict, *, band: str | None, uncertain: bool) -> str:
         if e < 1:
             text = (S2_TRAIN_LEAVE_NOW_DEPARTING if train else S2_LEAVE_NOW_ARRIVING).replace("{arrival}", arrival)
         else:
-            text = (S2_TRAIN_LEAVE_NOW if train else S2_LEAVE_NOW).replace("{e}", minutes_text(e)).replace(
-                "{arrival}", arrival)
+            text = (S2_TRAIN_LEAVE_NOW if train else S2_LEAVE_NOW).replace(
+                "{w}", minutes_text(numbers["walk_minutes"])).replace("{arrival}", arrival)
     else:
         text = (
             (S2_TRAIN_LEAVE_BY if train else S2_LEAVE_BY).replace("{time}", numbers["time_text"])
-            .replace("{x}", minutes_text(numbers["x_minutes"]))
+            .replace("{w}", minutes_text(numbers["walk_minutes"]))
             .replace("{arrival}", arrival)
         )
     if uncertain:

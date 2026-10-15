@@ -215,7 +215,7 @@ def test_automatic_decision_carries_every_candidate_even_with_no_winner():
         destination_stop_code=DEST, place_lat=dest_lat, place_lon=dest_lon, arrive_by=None, last_reroute_at=None,
         now=NOW, loader=loader,
     )
-    assert decision["switched"] is False and decision["no_better_option"]
+    assert decision["switched"] is False and "no_better_option" not in decision
     options = decision["options"]
     assert options["mode"] == "none" and options["recommended"] is None
     assert len(options["rows"]) == 3  # NextBus2 at this stop plus Bus 7 and Bus 16 at the alternate stop

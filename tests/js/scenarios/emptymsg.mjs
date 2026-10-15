@@ -14,6 +14,13 @@ const READ = `(function () {
     ready: shown("overview-timeline"), loading: shown("overview-skeleton"), priority: planPriority,
     select: document.getElementById("priority-select").value,
     buttons: Array.prototype.map.call(document.querySelectorAll(shown("overview-no-service") ? "#overview-no-service button" : "#overview-no-route button"), text),
+    arriveBox: shown("overview-arrive-box"),
+    arriveBoxHeight: document.getElementById("overview-arrive-box").getBoundingClientRect().height,
+    rideApps: shown("ride-apps"), startDisabled: document.getElementById("start-journey").disabled,
+    startTop: Math.round(document.getElementById("start-journey").getBoundingClientRect().top + window.scrollY),
+    cardGap: Math.round(document.getElementById("start-journey").getBoundingClientRect().top
+      - document.getElementById("overview-card").getBoundingClientRect().bottom),
+    privacy: !!document.getElementById("overview-motion-note"),
     scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth
   };
 })()`;

@@ -28,29 +28,27 @@ def test_no_spare_or_on_target_line_exists_anywhere():
     assert "the spare line and the status agree" not in plan
 
 
-def test_the_late_wording_survives_only_inside_if_you_miss():
+def test_the_late_wording_and_the_miss_line_are_gone_from_the_page():
     html = _page()
-    late = _between(html, "function latePhrase(minutes)", "function estimateSentence")
-    assert 'minutes < 0 ? "about " + Math.abs(minutes) + " min late" : ""' in late
-    miss = _between(html, "function renderMiss(body)", "function renderPlanningWarning")
-    assert "latePhrase(miss.spare_minutes)" in miss and "if (late)" in miss
+    assert "latePhrase" not in html and "renderMiss" not in html and 'id="if-you-miss"' not in html
     assert "Earliest arrival is about" in html  # the planning warning stays
     copy = (STATIC / "copy.js").read_text(encoding="utf-8")
-    assert 'late: "about {minutes} min late"' in copy
-    assert "{late}" in copy
+    for gone in ('late: "about {minutes} min late"', "{late}", "missLabel", "missWithLate", "missNoSpare", "missWait"):
+        assert gone not in copy, gone
 
 
-def test_the_badge_sits_in_the_ai_card_with_the_band_prefix():
+def test_no_check_pill_sits_above_the_ai_card():
     html = _page()
     card = _between(html, 'id="ai-explanation"', "</section>")
-    assert card.index('id="ai-badge"') < card.index('class="ai-card__head"')  # top left, above the title
+    assert 'id="ai-badge"' not in html and "ai-card__badge" not in html and "ai-card__badge" not in (STATIC / "components.css").read_text(encoding="utf-8")
+    assert card.index('class="ai-card__head"') < card.index('id="ai-explanation-text"')
     tiles = _between(html, "function renderLeaveTiles()", "// Screen 8")
-    assert 'band === "mid" || band === "low"' in tiles and "IF_CATCH_PREFIX + label" in tiles
-    assert "aiBadge.hidden = !(badgeText && aiShown)" in tiles  # hidden with no target (no label) or no AI card
-    assert "status.hidden = !badgeText || aiShown" in tiles  # under the tiles only when the AI card is not shown
-    assert 'var IF_CATCH_PREFIX = "If you catch this bus: ";' in html
-    assert "hero.probability.band" in tiles  # the band comes from Python; no number here
-    assert not re.search(r"\b(40|50)\b", _between(tiles, "var hero = ", "var aiCard"))
+    assert "IF_CATCH_PREFIX" not in html and "If you catch this bus" not in html
+    assert "tile-status" not in html and 'id="tile-row"' not in html and 'id="tile-note"' not in html
+    assert "aiBadge" not in tiles
+    copy = (STATIC / "copy.js").read_text(encoding="utf-8")
+    assert "ifCatchPrefix" not in copy and "If you catch this bus" not in copy
+    assert "If you catch this bus" not in (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8").replace("`If you catch this bus:` prefix", "")
     # Step 9's calculation is untouched.
     journey = (ROOT / "journey.py").read_text(encoding="utf-8")
     assert 'LATE_LABEL = "Arrive-by check: Risk of delay"' in journey and 'ON_TRACK_LABEL = "Arrive-by check: On track"' in journey

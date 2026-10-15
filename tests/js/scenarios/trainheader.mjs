@@ -1,8 +1,8 @@
 import { openHome, planOverview, tapStart } from "./common.mjs";
 
-// Page B's train card: the header (badge and name on one row, the pill and the direction under the name, the refresh button
-// at the top right) and the "Next trains" tiles (the time only, an aria-label with the line and the time).
-// config: width, height, dark, names (the line names to try; the real one is measured first), shots (a folder).
+// Page B's train card: the header (the logo tile, the line badge, "To {terminus}" and the pill on one wrapping row, the refresh
+// button at the top right) and the "Next trains" tiles (the time only, an aria-label with the line and the time).
+// config: width, height, dark, names (termini to try in the same markup; the real one is measured first), shots (a folder).
 
 const MEASURE = `(function () {
   function box(el) {
@@ -11,26 +11,23 @@ const MEASURE = `(function () {
     return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
   }
   var card = document.getElementById("live-tracking");
-  var badge = document.querySelector("#live-bus-title .bus-card__badge .line-badge");
-  var name = document.querySelector("#live-bus-title .bus-card__line-name");
-  var line = document.getElementById("live-bus-title");
+  var badge = document.querySelector("#live-bus-title .line-badge");
+  var row = document.querySelector("#live-tracking .bus-card__line");
   var pill = document.getElementById("live-bus-pill");
   var to = document.getElementById("live-bus-to");
   var refresh = document.getElementById("live-refresh");
   var hero = document.querySelector("#live-tracking .bus-tile--hero");
-  var range = document.createRange();
-  range.selectNodeContents(name);
-  var rects = Array.prototype.map.call(range.getClientRects(), function (r) { return { left: r.left, top: r.top, bottom: r.bottom }; });
-  var lineHeight = parseFloat(getComputedStyle(name).lineHeight);
   var tiles = Array.prototype.map.call(document.querySelectorAll("#next-buses > li"), function (li) {
     var s = getComputedStyle(li);
     return { text: li.textContent, aria: li.getAttribute("aria-label"), height: li.getBoundingClientRect().height,
       width: li.getBoundingClientRect().width, shadow: s.boxShadow, kids: li.children.length, selected: li.classList.contains("is-selected") };
   });
   return {
-    card: box(card), badge: box(badge), name: box(name), line: box(line), pill: box(pill), to: box(to), refresh: box(refresh),
-    hero: box(hero), nameLines: Math.round(box(name).height / lineHeight), lineHeight: lineHeight,
-    nameRects: rects.length, titleText: name.textContent, tiles: tiles,
+    card: box(card), badge: box(badge), badgeText: badge ? badge.textContent : null, row: box(row), pill: box(pill), to: box(to),
+    toText: to.textContent, refresh: box(refresh), hero: box(hero), tiles: tiles,
+    lineName: !!document.querySelector("#live-tracking .bus-card__line-name"),
+    arriving: !!document.querySelector("#live-tracking .journey-step__arriving"),
+    statusRows: !!document.getElementById("live-status"), thenLine: !!document.getElementById("live-then"),
     scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth
   };
 })()`;
@@ -50,9 +47,9 @@ export default async function (h) {
   if (c.shots) {
     await h.screenshot(`${c.shots}/trainheader-${c.name || "a"}-real.png`);
   }
-  // other names in the same markup: a long one and a short one (the layout, not the data)
+  // other termini in the same markup: a long one and a short one (the layout, not the data)
   for (const name of c.names) {
-    await h.eval(`document.querySelector("#live-bus-title .bus-card__line-name").textContent = ${JSON.stringify(name)}; true`);
+    await h.eval(`document.getElementById("live-bus-to").textContent = "To " + ${JSON.stringify(name)}; true`);
     await h.eval("document.fonts.ready.then(function () { return true; })");
     await h.sleep(300);
     out.sizes[name] = await h.eval(MEASURE);

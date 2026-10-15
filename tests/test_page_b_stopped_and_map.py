@@ -22,7 +22,9 @@ def test_pill_and_last_update_use_the_same_time_and_the_same_60_second_rule():
     assert "var STALE_MS = 60000;" in html
     live = _between(html, "function renderLiveTracking()", 'document.getElementById("live-refresh")')
     assert 'dataIsStale() ? "stale"' in live and "displayFrozen ? \"stale\"" not in live
-    assert "relativeAge(iso)" in live and "body.fetched_at" in live  # the counter reads the same fetched-at time
+    quality = _between(html, "function syncQuality()", "function activePlannedLeg()")
+    assert "relativeAge(iso)" in quality and "lastSuccess.fetched_at" in quality  # the stale message reads the same fetched-at time
+    assert 'state === "stale"' in quality and "relativeAge" not in live and "status-updated" not in html  # only when old
     assert "lastSuccess.fetched_at" in _between(html, "function successAgeMs()", "function requestArrivals")  # one fetched-at time
     card = _between(html, "function renderCatchCard(hero)", "function renderLeaveTiles")
     assert "dataIsStale()" in card
