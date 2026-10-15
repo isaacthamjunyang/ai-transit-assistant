@@ -4,8 +4,8 @@ import { poll, toLive } from "./common.mjs";
 // With config.shots (a folder) a screenshot of each state is written there. Without it only the text is returned.
 const READ = `({
   tile: document.getElementById('tile-leave-by').textContent,
-  detail: document.getElementById('tile-leave-detail').textContent,
-  detailHidden: document.getElementById('tile-leave-detail').hidden,
+  detail: document.getElementById('pace-walk').textContent,
+  detailHidden: document.getElementById('pace-walk').hidden,
   caution: document.getElementById('tile-leave-caution-text').textContent,
   cautionHidden: document.getElementById('tile-leave-caution').hidden,
   card: document.getElementById('ai-explanation-text').textContent,

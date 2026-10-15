@@ -64,6 +64,15 @@ def test_the_variants_in_the_real_payloads_are_the_ones_expected(reports):
     assert reports["missed"]["pack"]["text"].startswith("The bus is 12 minutes away, and you are ")
 
 
+def _same_minutes(walk_line, card):
+    """The walk line under the pace chip and the AI sentence state one number."""
+    import re
+
+    n = int(re.match(r"\d+", walk_line).group())
+    phrase = "1 minute" if n == 1 else f"{n} minutes"
+    assert f"reach your stop in {phrase}" in card.replace(chr(0xA0), " "), (walk_line, card)
+
+
 def test_leave_by_passing_between_two_polls_flips_the_tile_the_card_the_chip_the_banner_and_the_alert_together(reports):
     import re
 
@@ -79,10 +88,9 @@ def test_leave_by_passing_between_two_polls_flips_the_tile_the_card_the_chip_the
         assert row["action"] == ("leave_now" if leave_now else "wait")
         assert row["banner"] is leave_now and row["notifications"] == (1 if leave_now else 0), (seconds, row)
         assert row["paceSlotShown"] is True, (seconds, row)  # the pace chip is on Page A in every action
-        if leave_now:
-            assert re.fullmatch(r"\d+ min walk", row["detail"]), row  # one short line, the walk minutes
-        else:
-            assert re.fullmatch(r"\d+ min walk", row["detail"])
+        # the walk line under the pace chip: one short line, the walk minutes the AI sentence states
+        assert re.fullmatch(r"\d+\u00a0min walk", row["detail"]), row
+        _same_minutes(row["detail"], row["card"])
 
 
 def test_with_no_tracked_bus_there_is_no_pack_and_the_card_is_empty(reports):
@@ -99,12 +107,14 @@ def test_the_leave_by_tile_and_the_card_in_every_state_in_the_real_page(tmp_path
     clock = CLOCK
     by, by_unc, now, now_unc = states["by"], states["byUncertain"], states["now"], states["nowUncertain"]
     assert re.fullmatch(clock, by["tile"]) and by["tile"] == by["expectedClock"]
-    assert re.fullmatch(r"\d+ min walk", by["detail"])
+    assert re.fullmatch(r"\d+\u00a0min walk", by["detail"])
+    _same_minutes(by["detail"], by["card"])
     assert by["cautionHidden"] is True and " Leave by " in by["card"] and "Your location is uncertain" not in by["card"]
     assert by_unc["cautionHidden"] is False and by_unc["caution"] == "Location uncertain: leave a bit earlier to be safe."
     assert by_unc["card"].endswith(" Leave by " + by_unc["card"].split(" Leave by ", 1)[1])
     assert by_unc["card"].endswith("Your location is uncertain, so leave a little earlier than that to be safe.")
-    assert now["tile"] == "Leave now" and re.fullmatch(r"\d+ min walk", now["detail"])
+    assert now["tile"] == "Leave now" and re.fullmatch(r"\d+\u00a0min walk", now["detail"])
+    _same_minutes(now["detail"], now["card"])
     assert now["cautionHidden"] is True and " Leave now to reach your stop in 4 minutes and catch the bus arriving at " in now["card"]
     # the clock reads "12:04 AM (tomorrow)." in the last minutes before midnight
     tail = now["card"].replace(chr(0xA0), " ")

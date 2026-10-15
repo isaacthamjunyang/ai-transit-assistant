@@ -27,4 +27,6 @@ def test_the_leave_by_value_is_one_line_and_not_clipped(report, width, state):
     assert m["clipped"] is False and m["pageScroll"] is False, m
     assert m["arrivalGone"] is True and m["tileFull"] is True, m  # no destination arrival tile; Leave by is full width
     assert re.fullmatch(r"\d+\u00a0min walk", m["walkLine"]), m  # one short line, the walk minutes
-    assert (m["text"] == "Leave now") == (state == "now"), m  # a time or "Leave now", never both
+    assert (m["text"] == "Leave now") == (state == "now"), m
+    # "Leave by: {time}" carries the label; "Leave now" stands alone; the tile's accessible name is always "Leave by"
+    assert m["labelHidden"] == (state == "now") and m["tileName"] == "Leave by", m  # a time or "Leave now", never both

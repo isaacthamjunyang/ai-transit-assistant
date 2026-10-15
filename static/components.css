@@ -4487,6 +4487,48 @@ body:not(.is-screen-live) .live-only {
   flex: none;
 }
 
+/* Page A's heading column, top down. The line badge (or bus number), "To {place}" and the clock time are the largest
+   text; the pill, the platform and the crowding label are smaller. */
+.catch-card__line .line-badge {
+  min-height: 1.75rem;
+  font-size: 1.25rem;
+}
+
+.catch-card__line-name {
+  color: var(--color-ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.catch-card__direction {
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.catch-card__direction[hidden],
+.catch-card__to[hidden] {
+  display: none;
+}
+
+.catch-card__to {
+  color: var(--color-ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.catch-card__platform {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.catch-card__status {
+  display: flex;
+}
+
 .catch-card__when {
   color: var(--color-muted);
   font-size: 0.9375rem;
@@ -4599,6 +4641,18 @@ body:not(.is-screen-live) .live-only {
   margin: 0;
 }
 
+/* The walk line under the pace chip: the chip's own font, the primary text colour. */
+.pace-walk {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--type-caption);
+  font-weight: 700;
+}
+
+.pace-walk[hidden] {
+  display: none;
+}
+
 .leave-tiles {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -4628,6 +4682,22 @@ body:not(.is-screen-live) .live-only {
 .leave-tile__icon .icon {
   width: 1.5rem;
   height: 1.5rem;
+}
+
+/* "Leave by: {time}" on one line; "Leave now" and "At the stop" stand alone (the label is hidden). */
+.leave-tile__line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.leave-tile__line .leave-tile__label {
+  font-size: clamp(0.9rem, 4.4vw, 1.375rem);
+}
+
+.leave-tile__label[hidden] {
+  display: none;
 }
 
 .leave-tile__label {

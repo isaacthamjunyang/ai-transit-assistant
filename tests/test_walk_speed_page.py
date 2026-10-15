@@ -1,6 +1,7 @@
 """The estimator wired into the real page: lifecycle, requests and permission. Real app, real page, headless Edge."""
 
 import concurrent.futures
+import re
 
 import pytest
 
@@ -264,7 +265,7 @@ def test_a_late_model_reply_for_an_older_poll_is_ignored_and_the_text_follows_th
     assert match["advice"].startswith("wait for your leave-by alert and keep") and match["advice"] not in match["text"]
     assert match["text"] == late["text"]  # a model clause never changes the card text
     assert report["tile"]["text"].startswith("The bus is 7 minutes away, and you are ")
-    assert report["tile"]["sub"] == "Arriving in 7 min"
+    assert re.fullmatch(r"\d{1,2}:\d{2}\u00a0[AP]M", report["tile"]["sub"]), report["tile"]  # the clock time
     assert report["cleared"] == ""
 
 

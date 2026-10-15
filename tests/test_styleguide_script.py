@@ -73,8 +73,8 @@ def test_every_style_guide_leave_by_tile_shows_a_time_or_leave_now_never_both():
     tiles = [t for t in texts["tiles"] if t[0] == "Leave now" or re.fullmatch(r"\d{1,2}:\d\d\u00a0(AM|PM)", t[0])]
     assert len(tiles) >= 6
     for value, meta in tiles:
-        # one short line, the walk minutes; no bus-away or in-n-min sentence under Leave by
-        assert meta == "" or re.fullmatch(r"\d+.min walk", meta), (value, meta)
+        # one line: the tile has no walk line any more (it is under the pace chip); only the location warning may follow
+        assert meta in ("", "Location uncertain: leave a bit earlier to be safe."), (value, meta)
 
 
 def test_every_style_guide_page_w_trend_line_agrees_with_its_state_line():

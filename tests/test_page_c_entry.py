@@ -200,7 +200,9 @@ def test_the_tile_reads_the_action_and_hides_for_switch_and_do_not_rely():
     assert "formatClock(lastSuccess.leave_by" not in tiles
     assert 'var LEAVE_NOW_TEXT = "Leave now";' in HTML and "WAIT_ALERT_TEXT" not in HTML
     assert "Wait for Leave By Alert" not in HTML + COPY and '"Leave now"' in COPY
-    assert 'id="tile-leave-label" class="leave-tile__label">Leave by<' in HTML  # the label stays
+    # one line, "Leave by: {time}"; the tile keeps the accessible name "Leave by"
+    assert 'id="tile-leave-label" class="leave-tile__label">Leave by:<' in HTML
+    assert 'role="group" aria-label="Leave by"' in HTML
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
@@ -472,8 +474,8 @@ def test_the_pill_shares_a_row_with_the_heading_and_the_heading_wraps_instead_of
     assert "min-width: 0" in between(CSS, ".catch-card__heading {", "}")  # the heading shrinks and wraps beside the pill
     after = HTML.split('id="pc-title"', 1)[1].split('<div class="catch-card__row">', 1)[0]
     assert after.index('id="pc-pill"') < after.index('id="pc-sub"')  # head row (title, pill), then the muted line
-    line = HTML.split('id="catch-line"', 1)[1].split("</p>", 1)[0]
-    assert 'id="catch-pill"' in line  # on Page A the pill sits in the heading row, after the badge and the direction
+    status = HTML.split('id="catch-arrives"', 1)[1].split("</p>", 1)[1].split("</p>", 1)[0]
+    assert 'id="catch-pill"' in status  # on Page A the pill is its own row, after the clock time
 
 
 def test_no_old_heading_remains_in_the_repo():

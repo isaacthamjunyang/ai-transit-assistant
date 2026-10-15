@@ -11,18 +11,21 @@ const READ = `(function () {
     point: hero.probability.point, band: hero.probability.band, action: lastSuccess.chosen_action,
     atStop: hero.probability.at_stop, nearStop: lastSuccess.near_stop,
     top: screenStack[screenStack.length - 1], classes: document.body.className, pageCOpen: !!pageC, entryPending: entryPending, missed: !!missedMode, pageA: document.body.classList.contains("is-page-a"),
-    ring: text("catch-ring-text"), line: text("catch-line"), when: text("catch-when"), arrives: text("catch-arrives"),
+    ring: text("catch-ring-text"), line: text("catch-line"), to: text("catch-to"), direction: shown("catch-direction") ? text("catch-direction") : null,
+    platform: text("catch-to"), arrives: text("catch-arrives"), load: shown("catch-load") ? text("catch-load") : null,
+    pillShown: shown("catch-pill"), walkLine: shown("pace-walk") ? text("pace-walk") : null,
     hasLabel: !!document.querySelector("#catch-arrives .catch-card__arrives-label"),
     hasSub: !!document.getElementById("catch-sub"), hasCaption: !!document.getElementById("catch-caption"),
     pill: text("catch-pill-text"), chip: shown("pace-slot") ? text("pace-slot") : null,
-    tileLeave: shown("tile-leave"), tileLeaveValue: text("tile-leave-by"), tileLeaveWalk: shown("tile-leave-detail") ? text("tile-leave-detail") : null,
+    tileLeave: shown("tile-leave"), tileLeaveValue: text("tile-leave-by"), tileLeaveWalk: shown("pace-walk") ? text("pace-walk") : null, tileLeaveLabelShown: shown("tile-leave-label"),
+    tileLeaveName: document.getElementById("tile-leave").getAttribute("aria-label"), tileLeaveLine: Array.prototype.filter.call(document.querySelectorAll("#tile-leave-line > span"), function (el) { return !el.hidden; }).map(function (el) { return el.textContent; }).join(" "),
     tileArrival: !!document.getElementById("tile-arrival"), tileText: text("leave-tiles"),
     chipHint: !!document.querySelector("#pace-slot .field__hint"), aiNote: !!document.querySelector(".ai-card__note"),
     geo: (function () {
       function box(el) { if (!el) { return null; } var r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; }
       return {
         ring: box(document.getElementById("catch-ring")), leg: box(leg), line: box(document.getElementById("catch-line")),
-        when: box(document.getElementById("catch-when")), arrives: box(document.getElementById("catch-arrives")),
+        to: box(document.getElementById("catch-to")), pill: box(document.getElementById("catch-pill")), paceWalk: box(document.getElementById("pace-walk")), chipBox: box(document.getElementById("pace-slot")), arrives: box(document.getElementById("catch-arrives")),
         card: box(document.getElementById("arrival-card")), tile: box(document.getElementById("tile-leave")),
         tiles: box(document.getElementById("leave-tiles")), walk: box(document.getElementById("walk-open"))
       };

@@ -22,7 +22,7 @@ export default async function (h) {
   out.card = await h.eval("document.getElementById('ai-explanation-text').textContent");
   out.pack = await h.eval("lastExplanationPack ? JSON.parse(JSON.stringify(lastExplanationPack)) : null");
   out.heroEta = await h.eval("(function () { var hero = featuredBus(lastSuccess.buses); return hero ? hero.arrival_time : null; })()");
-  out.tileSub = await h.eval("document.getElementById('catch-when').textContent");
+  out.tileSub = await h.eval("document.getElementById('catch-arrives-time').textContent");
   if (out.pack) {
     out.redrawn = await h.eval(`(function () {
       var pack = lastExplanationPack;
@@ -67,8 +67,8 @@ export default async function (h) {
           var chip = lastSuccess.buses[0].probability && paceChip(paceCategoryFor(lastSuccess.buses[0].probability.pace)) !== null;
           rows[secondsToLeaveBy] = {
             tile: document.getElementById('tile-leave-by').textContent,
-            detail: document.getElementById('tile-leave-detail').textContent,
-            detailHidden: document.getElementById('tile-leave-detail').hidden,
+            detail: document.getElementById('pace-walk').textContent,
+            detailHidden: document.getElementById('pace-walk').hidden,
             card: document.getElementById('ai-explanation-text').textContent,
             banner: leaveNowBanner.shown === true,
             notifications: calls.length,

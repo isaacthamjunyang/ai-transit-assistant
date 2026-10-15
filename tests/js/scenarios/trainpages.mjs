@@ -9,16 +9,17 @@ const A = `(function () {
   var hero = lastSuccess && lastSuccess.buses ? featuredBus(lastSuccess.buses) : null;
   return {
     top: screenStack[screenStack.length - 1], isTrain: isTrain(), service: selectedService,
-    pill: text("catch-pill-text"), title: text("catch-title"), line: text("catch-line"), when: text("catch-when"), legClass: document.getElementById("catch-leg").className,
+    pill: text("catch-pill-text"), title: text("catch-title"), line: text("catch-line"), to: text("catch-to"), direction: shown("catch-direction") ? text("catch-direction") : null, when: null, legClass: document.getElementById("catch-leg").className,
     nodeRing: getComputedStyle(document.getElementById("catch-node")).boxShadow, ring: text("catch-ring-text"),
     hasSub: !!document.getElementById("catch-sub"), hasCaption: !!document.getElementById("catch-caption"), pace: text("pace-slot"), paceHidden: document.getElementById("pace-slot").hidden,
     ringLabel: document.getElementById("catch-ring").getAttribute("aria-label"),
+    cardText: document.getElementById("arrival-card").textContent.replace(/\\s+/g, " "),
     arrives: text("catch-arrives"), hasLabel: !!document.querySelector("#catch-arrives .catch-card__arrives-label"), notLive: !!document.getElementById("catch-not-live"),
-    tileLeaveLabel: text("tile-leave-label"), tileLeave: text("tile-leave-by"), tileLeaveMeta: shown("tile-leave-detail") ? text("tile-leave-detail") : null,
+    tileLeaveLabel: document.getElementById("tile-leave").getAttribute("aria-label"), tileLeave: text("tile-leave-by"), tileLeaveMeta: shown("pace-walk") ? text("pace-walk") : null,
     geo: (function () {
       function box(el) { if (!el) { return null; } var r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; }
       return { ring: box(document.getElementById("catch-ring")), leg: box(document.getElementById("catch-leg")),
-        arrives: box(document.getElementById("catch-arrives")), tile: box(document.getElementById("tile-leave")),
+        arrives: box(document.getElementById("catch-arrives")), line: box(document.getElementById("catch-line")), to: box(document.getElementById("catch-to")), pill: box(document.getElementById("catch-pill")), tile: box(document.getElementById("tile-leave")),
         tiles: box(document.getElementById("leave-tiles")) };
     })(),
     tileDepartsLabel: text("tile-arrival-label"), tileDeparts: text("tile-arrival"), tileRange: shown("tile-arrival-range"),
@@ -113,6 +114,37 @@ export default async function (h) {
   await h.sleep(500);
   out.pageA = await h.eval(A);
   if (c.shots) { await h.screenshot(`${c.shots}/train-a-${c.name || "a"}.png`); }
+  // Page A's heading column for other lines and for a bus whose destination stop is unknown (read, then restored)
+  out.headings = await h.eval(`(function () {
+    function text(id) { var el = document.getElementById(id); return el && !el.hidden ? el.textContent.replace(/\\s+/g, " ").trim() : null; }
+    function read() { return { line: text("catch-line"), direction: text("catch-direction"), to: text("catch-to"),
+      platform: (document.querySelector("#catch-to .catch-card__platform") || {}).textContent || null,
+      arrives: text("catch-arrives"), pill: text("catch-pill-text"), load: text("catch-load") }; }
+    var hero = featuredBus(lastSuccess.buses);
+    var result = {};
+    if (isTrain()) {
+      var leg = trainLeg();
+      var keep = { code: leg.line_code, dir: leg.circle_direction, term: leg.terminus, plat: leg.platform, svc: selectedService, name: lastSuccess.line_name };
+      selectedService = "CC"; lastSuccess.line_name = "Circle Line";
+      leg.line_code = "CC"; leg.circle_direction = "clockwise"; leg.terminus = "HarbourFront"; leg.platform = "A";
+      renderCatchHeading(hero); result.clockwise = read();
+      leg.circle_direction = "anticlockwise"; leg.platform = "";
+      renderCatchHeading(hero); result.anticlockwise = read();
+      leg.circle_direction = ""; leg.terminus = "Jurong East"; leg.platform = "B";
+      renderCatchHeading(hero); result.straight = read();
+      leg.line_code = keep.code; leg.circle_direction = keep.dir; leg.terminus = keep.term; leg.platform = keep.plat;
+      selectedService = keep.svc; lastSuccess.line_name = keep.name;
+      renderCatchHeading(hero);
+    } else {
+      result.known = read();
+      var original = destinationStopName;
+      destinationStopName = function () { return ""; };
+      renderCatchHeading(hero); result.unknown = read();
+      destinationStopName = original;
+      renderCatchHeading(hero);
+    }
+    return result;
+  })()`);
 
   // no leave-now and no 5-minute notification: force a bus-like eligible answer and a 4 minute train
   out.notes = c.bus ? null : await h.eval(`(function () {

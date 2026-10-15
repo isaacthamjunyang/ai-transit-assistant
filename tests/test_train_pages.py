@@ -188,16 +188,18 @@ def test_page_a_for_a_train(missed_light):
     assert a["hero"]["monitored"] is False and a["hero"]["quality"] == "schedule" and a["hero"]["atStop"] is False
     assert a["hero"]["point"] <= 60 and a["hero"]["high"] <= 60  # the schedule cap
     assert a["ring"] == f"{a['hero']['point']}%"
-    # the overview's row: line badge, "To {terminus}" (platform only when known), the pill, then "Scheduled · In n min"
-    assert a["line"].startswith("NS ") and "To Marina South Pier" in a["line"]
-    assert re.fullmatch(r"Scheduled · (In \d+ min|In 1 min|Now)", a["when"].replace(NB, " ")), a["when"]
+    # top down: the line badge and name, the direction (loop lines only), "To {terminus}" (platform when known), the
+    # clock time, the pill. No "Scheduled · In n min".
+    assert a["line"] == "NS North-South Line" and a["direction"] is None
+    assert a["to"].startswith("To Marina South Pier"), a["to"]
+    assert a["when"] is None and "Scheduled \u00b7" not in a["cardText"] and "Arriving in" not in a["cardText"]
     assert "journey-step--rail-ns" in a["legClass"] and a["nodeRing"] != "none"
     assert a["pace"] and a["paceHidden"] is False  # the chip is always on Page A
     assert a["tileLeaveLabel"] == "Leave by" and a["tileDepartsLabel"] is None and a["tileRange"] is False
     assert a["tileDeparts"] is None  # no second tile: the clock time is beside the ring
     geo = a["geo"]  # the ring is larger on the left; the heading then the clock time stack at its right (>= 96 px ring)
     assert geo["ring"]["w"] >= 96 and geo["ring"]["r"] <= geo["leg"]["x"] + 1
-    assert geo["arrives"]["y"] >= geo["leg"]["b"] - 1 and abs(geo["arrives"]["x"] - geo["leg"]["x"]) < 1.5
+    assert geo["line"]["y"] < geo["to"]["y"] < geo["arrives"]["y"] < geo["pill"]["y"], geo
     assert abs(geo["tile"]["w"] - geo["tiles"]["w"]) < 1.5  # Leave by is the full width
     assert a["hasLabel"] is False and re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", a["arrives"])
     assert a["bar"] == "See train times" and a["catchBar"] is False
@@ -308,3 +310,34 @@ def test_a_bus_first_journey_keeps_every_bus_word_and_request(bus_first):
     assert b["cells"]["live"] is None and b["then"] is None
     assert all("leg_kind" not in u and "train_departure" not in u for u in bus_first["allRequests"])
     assert any(u.startswith("/api/arrivals?stop_code=") for u in bus_first["allRequests"])
+
+
+# ---- Page A's heading column: line, direction, "To {place}", clock time, pill ----------------------------------
+
+def test_a_loop_line_shows_the_direction_row_and_a_straight_line_shows_none(missed_light):
+    heads = missed_light["headings"]
+    clockwise = heads["clockwise"]
+    assert clockwise["line"] == "CC Circle Line" and clockwise["direction"] == "Clockwise"
+    assert clockwise["to"] == "To HarbourFront Platform A" and clockwise["platform"] == "Platform A"
+    assert re.fullmatch(r"\d{1,2}:\d{2} [AP]M( [(]tomorrow[)])?", clockwise["arrives"]), clockwise  # the clock time
+    assert clockwise["pill"] == "schedule only" and clockwise["load"] is None  # a train has no crowding label
+    anti = heads["anticlockwise"]
+    assert anti["direction"] == "Anticlockwise" and anti["to"] == "To HarbourFront" and anti["platform"] is None
+    straight = heads["straight"]
+    assert straight["direction"] is None and straight["to"] == "To Jurong East Platform B"
+
+
+def test_a_bus_shows_the_destination_stop_and_falls_back_to_the_terminus(bus_first):
+    heads = bus_first["headings"]
+    assert heads["known"]["to"].startswith("To ") and heads["known"]["direction"] is None
+    assert heads["known"]["platform"] is None and heads["known"]["line"] == "Bus 18"
+    assert heads["known"]["pill"] in ("live", "schedule only")
+    # the destination stop is unknown: the line is never empty, it names the leg's terminus (the headsign)
+    unknown = heads["unknown"]["to"]
+    assert unknown is None or unknown.startswith("To "), unknown
+
+
+def test_page_a_for_a_train_has_no_scheduled_in_line_and_no_walk_line_in_the_tile(missed_light):
+    a = missed_light["pageA"]
+    assert "Scheduled \u00b7" not in a["cardText"] and "In " not in a["cardText"].replace("Instead", "")
+    assert a["tileLeaveMeta"] is None or re.fullmatch(r"\d+" + NB + "min walk", a["tileLeaveMeta"])

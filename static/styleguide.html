@@ -1249,18 +1249,19 @@
     // A train as the first leg (plan_edits_9 4.6, 4.8): the words of Pages A and B and the missed-train card, from copy.js.
     // A train service alert: the warning icon and "{line}: {message}", cut at two lines with an expand control that shows
     // only when the text is cut. expanded shows the whole text.
+    var SG_CROWD_ICONS = {
+        SEA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 4v8h9l2 6M7 12v6M16 12v6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      SDA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"5\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v6M9 21l3-7 3 7M8 11h8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      LSD: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"8\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"16\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M4 20v-5a4 4 0 0 1 8 0v5M12 20v-5a4 4 0 0 1 8 0v5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>"
+    };
+
     // Bus crowding (copy.js crowding): an icon and a word, on the Next 3 buses tiles and under Page A's heading.
     function crowdingSample() {
       var words = copy.crowding;
-      var icons = {
-        SEA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 4v8h9l2 6M7 12v6M16 12v6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
-        SDA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"5\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v6M9 21l3-7 3 7M8 11h8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
-        LSD: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"8\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"16\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M4 20v-5a4 4 0 0 1 8 0v5M12 20v-5a4 4 0 0 1 8 0v5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>"
-      };
       var tiles = ["SEA", "SDA", "LSD"].map(function (code, index) {
         return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + (index + 2) + " min</span>"
           + "<span class=\"bus-tile-card__service\">Bus 174</span><span class=\"crowd-chip\"><span class=\"crowd-chip__icon\" aria-hidden=\"true\">"
-          + icons[code] + "</span><span class=\"crowd-chip__text\">" + words[code] + "</span></span></li>";
+          + SG_CROWD_ICONS[code] + "</span><span class=\"crowd-chip__text\">" + words[code] + "</span></span></li>";
       }).join("");
       return "<h4>Bus crowding: Seats, Standing, Crowded on the Next 3 buses tiles (a blank value draws nothing)</h4><ul class=\"bus-tiles bus-tiles--3\">" + tiles + "</ul>";
     }
@@ -1293,8 +1294,8 @@
     function trainPagesSample() {
       var tp = copy.trainPage;
       var line = "North-South Line";
-      var tiles = "<div class=\"leave-tiles\"><div class=\"leave-tile\"><div><p class=\"leave-tile__label\">Leave by</p><p class=\"leave-tile__value\">8:44" + " AM</p>"
-        + "<p class=\"leave-tile__meta\">3 min walk</p></div></div></div>";
+      var tiles = "<div class=\"leave-tiles\"><div class=\"leave-tile\" role=\"group\" aria-label=\"Leave by\"><div><p class=\"leave-tile__line\"><span class=\"leave-tile__label\">Leave by:</span>"
+        + "<span class=\"leave-tile__value\">8:44" + " AM</span></p></div></div></div>";
       var pageA = sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgPaceChip("steady") + tiles
         + "<div class=\"catch-bar catch-bar--single\"><button type=\"button\" class=\"primary\"><span>" + tp.seeTimes + "</span></button></div>";
       // Page B card header: the tile, then the badge and the name on one row (a wrapped name stays under the name), the pill and
@@ -1531,28 +1532,35 @@
 
     // Page A's heading, from the overview's row components: a marker (ring grey for a bus, the line's colour for a train),
     // the row with the state pill, then the time line. kind: "bus" (default) or "train".
-    function sgCatchHead(state, kind, eta) {
-      var train = kind === "train";
-      var pill = sgPill(state);
-      var row = train
-        ? "<p class=\"journey-step__line catch-card__line\">" + sgBadge("NS") + "<span>" + jo.trainToward.replace("{terminus}", "Jurong East") + " · Platform A</span>" + pill + "</p>"
-        : "<p class=\"journey-step__line catch-card__line\"><span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>11</span><span>"
-          + jo.busToward.replace("{terminus}", "Pasir Ris Int") + "</span>" + pill + "</p>";
-      var when = train
-        ? jo.scheduledIn.replace("{n}", "6")
-        : (eta === undefined ? lc.arrivingIn.replace("{n}", "15") : eta);
-      return "<div class=\"catch-card__leg" + (train ? " journey-step--rail-ns" : "") + "\"><span class=\"step-node\" aria-hidden=\"true\">" + (train ? SG_TRAIN_ICON : BUS_SVG) + "</span>"
-        + "<div class=\"catch-card__heading\">" + row
-        + (when ? "<p class=\"catch-card__when" + (train ? "" : " journey-step__arriving") + "\">" + when + "</p>" : "") + "</div></div>";
+    // Page A's heading column, top down (bus: number badge, "To {destination stop}", clock time, pill, crowding; train: line
+    // badge and name, loop direction, "To {terminus}" with the platform, clock time, pill). usable false: no clock time.
+    function sgCrowdChip(code) {
+      return '<p class="crowd-chip"><span class="crowd-chip__icon" aria-hidden="true">' + SG_CROWD_ICONS[code]
+        + '</span><span class="crowd-chip__text">' + copy.crowding[code] + '</span></p>';
     }
 
-    function sgCatchCard(state, point, low, high, stop, eta, walk, kind) {
+    function sgCatchHead(state, kind, eta, usable, load) {
+      var train = kind === "train";
+      var rows = train
+        ? '<p class="journey-step__line catch-card__line">' + sgBadge("CC") + ' <span class="catch-card__line-name">' + copy.lineNames.CC + '</span></p>'
+          + '<p class="catch-card__direction">' + jo.clockwise + '</p>'
+          + '<p class="catch-card__to"><span class="catch-card__to-place">' + jo.trainToward.replace("{terminus}", "HarbourFront")
+          + '</span> <span class="catch-card__platform">' + jo.platformOnly.replace("{x}", "A") + '</span></p>'
+        : '<p class="journey-step__line catch-card__line"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>11</span></p>'
+          + '<p class="catch-card__to"><span class="catch-card__to-place">' + jo.busToward.replace("{terminus}", "Pasir Ris Int") + '</span></p>';
+      var minutes = train ? 6 : (sgEtaMinutes(eta) === null ? 15 : sgEtaMinutes(eta));
+      var clock = usable && eta !== "" ? sgBusArrivesClock(minutes) : "";
+      return '<div class="catch-card__leg' + (train ? ' journey-step--rail-cc' : '') + '"><span class="step-node" aria-hidden="true">' + (train ? SG_TRAIN_ICON : BUS_SVG) + '</span>'
+        + '<div class="catch-card__heading">' + rows + clock + '<p class="catch-card__status">' + sgPill(state) + '</p>'
+        + (!train && load ? sgCrowdChip(load) : '') + '</div></div>';
+    }
+
+    function sgCatchCard(state, point, low, high, stop, eta, walk, kind, load) {
       var usable = point !== null;
-      return "<section class=\"card catch-card\" aria-live=\"polite\">"
-        + "<div class=\"catch-card__row\">" + sgRing(point, low, high, false, lc.unavailable).replace("class=\"prob-ring", "class=\"prob-ring prob-ring--large")
-        + "<div class=\"catch-card__copy\">" + sgCatchHead(state, kind, eta)
-        + (usable ? sgBusArrivesClock(kind === "train" ? 6 : (sgEtaMinutes(eta) === null ? 15 : sgEtaMinutes(eta))) : "") + "</div></div>"
-        + sgWalkRow(walk && walk.line ? walk.line : lc.walkPaceNormal.replace("{kmh}", "4.5")) + "</section>";
+      return '<section class="card catch-card" aria-live="polite">'
+        + '<div class="catch-card__row">' + sgRing(point, low, high, false, lc.unavailable).replace('class="prob-ring', 'class="prob-ring prob-ring--large')
+        + '<div class="catch-card__copy">' + sgCatchHead(state, kind, eta, usable, load) + '</div></div>'
+        + sgWalkRow(walk && walk.line ? walk.line : lc.walkPaceNormal.replace("{kmh}", "4.5")) + '</section>';
     }
 
     // The four walking-speed sources: the muted pace line (1.25 m/s is 4.5 km/h).
@@ -1561,8 +1569,10 @@
       return { line: map[source].replace("{kmh}", kmh) };
     }
 
-    function sgPaceChip(key) {
-      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p></div></div>";
+    // The walk line sits under the chip: the chip's font, the primary text colour, the AI sentence's walk minutes.
+    function sgPaceChip(key, walkMinutes) {
+      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p></div></div>"
+        + (walkMinutes === null ? "" : "<p class=\"pace-walk\">" + lc.paceWalk.replace("{n}", String(walkMinutes === undefined ? 3 : walkMinutes)) + "</p>");
     }
 
     // ---- consistent sample values: "now" is 9:55:00\u00a0PM and every leave-by value is computed with the app's rule
@@ -1622,8 +1632,10 @@
       var low = sgClockParts((e + 12) * 60);
       var high = sgClockParts((e + 22) * 60);
       var range = low.suffix === high.suffix ? low.hm + "–" + high.hm + SG_NB + low.suffix : low.hm + SG_NB + low.suffix + "–" + high.hm + SG_NB + high.suffix;
-      return "<section class=\"leave-tiles\"><div class=\"leave-tile\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div><p class=\"leave-tile__label\">" + lc.leaveBy + "</p><p class=\"leave-tile__value\"><span class=\"leave-tile__nowrap\">" + state.value + "</span></p>"
-        + (state.meta ? "<p class=\"leave-tile__meta\">" + state.meta + "</p>" : "")
+      // One line: "Leave by: {time}". "Leave now" and "At the stop" stand alone, with no label.
+      var stands = state.value === lc.leaveNow || state.value === copy.atStop.tile;
+      return "<section class=\"leave-tiles\"><div class=\"leave-tile\" role=\"group\" aria-label=\"" + lc.leaveBy + "\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div>"
+        + "<p class=\"leave-tile__line\">" + (stands ? "" : "<span class=\"leave-tile__label\">" + lc.leaveByLabel + "</span>") + "<span class=\"leave-tile__value\"><span class=\"leave-tile__nowrap\">" + state.value + "</span></span></p>"
         + (state.warn ? "<p class=\"leave-tile__meta leave-tile__warn\">" + SG_WARN_ICON + "<span>" + lc.leaveUncertain + "</span></p>" : "")
         + "</div></div>"
         + "</section>";
@@ -1846,9 +1858,9 @@
 
     function catchSample() {
       return ""
-        + "<h4>Probability card: bus, live, with the pace chip</h4>" + sgCatchCard("live", 64, 51, 78) + sgPaceChip("steady")
+        + "<h4>Probability card: bus, live, crowding label, with the pace chip and its walk line</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, undefined, undefined, "SEA") + sgPaceChip("steady")
         + "<h4>Probability card: bus, schedule only, low band, with the pace chip</h4>" + sgCatchCard("schedule", 41, 30, 52) + sgPaceChip("unlikely")
-        + "<h4>Probability card: MRT, schedule only (line badge, To terminus \u00b7 Platform, Scheduled \u00b7 In n min)</h4>" + sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgPaceChip("steady")
+        + "<h4>Probability card: MRT, schedule only (line badge and name, direction, To terminus and Platform, clock time, pill)</h4>" + sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgPaceChip("steady")
         + "<h4>Pace chip before a speed is measured</h4>" + sgPaceChip("neutral")
         + "<h4>Walking pace: from GPS</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("gps", "4.7"))
         + "<h4>Walking pace: from your steps</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("cadence", "4.3"))
@@ -1858,10 +1870,10 @@
         + "<div class=\"pace-debug pace-debug--sample is-open\"><button type=\"button\" class=\"pace-debug__bar\">mode gps &middot; used 1.30 m/s &middot; ok &middot; srv age 3 s</button>"
         + "<div class=\"pace-debug__panel\"><pre class=\"pace-debug__text\">mode gps (walking by gps)\ncadence 1.82 score 0.91 rms 1.20 null 0 cv 0.04\ngps 1.30 m/s reported acc 8 m age 0.4 s\nfix age 0.4 s, stale ignored 0\nlocation age: server 3 s, phone 2 s\ngps-only n 9 in 8 out 0 outliers 1 cv 0.05 ok\npick stride_doubled in 0.00/0.00 all 1.01/0.82 low 1.01/0.82\nstep 0.72 m n=4 learn: ok\nused 1.30 m/s gps smooth 1.29 sent 1.28\nmotion on events 1420\ntrace: trace ready: 90 rows, raw 2250 values</pre>"
         + "<div class=\"pace-debug__actions\"><button type=\"button\" class=\"pace-debug__button\">Record trace</button><button type=\"button\" class=\"pace-debug__button\">Copy trace</button><button type=\"button\" class=\"pace-debug__button\">Copy raw motion</button></div></div></div>"
-        + "<h4>Page A heading with no ETA (no time line)</h4>" + sgCatchCard("schedule", 41, 30, 52, undefined, "")
+        + "<h4>Page A heading with no ETA (no clock time)</h4>" + sgCatchCard("schedule", 41, 30, 52, undefined, "")
         + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
-        + "<h4>Page A, action wait: Leave by tile shows the clock time with the minutes and the walk, with the pace chip</h4>" + sgCatchCard("live", 92, 92, 92, undefined, sgArriving(15)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(15, 300, 1.25))
-        + "<h4>Page A, action leave_now: Leave by tile reads Leave now with the bus and walk minutes, with the pace chip</h4>" + sgCatchCard("live", 70, 44, 76, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.3))
+        + "<h4>Page A, action wait: Leave by tile reads one line, Leave by: {time}; the walk line sits under the pace chip</h4>" + sgCatchCard("live", 92, 92, 92, undefined, sgArriving(15)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(15, 300, 1.25))
+        + "<h4>Page A, action leave_now: Leave by tile reads Leave now alone; the walk line sits under the pace chip</h4>" + sgCatchCard("live", 70, 44, 76, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.3))
         + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, sgTileState(15, 300, 1.25, true))
         + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, sgTileState(6, 250, 1.3, true))
         + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: sgLeave(15, 300, 1.25).time, e: 15 })

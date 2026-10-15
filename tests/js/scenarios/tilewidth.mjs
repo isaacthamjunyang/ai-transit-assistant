@@ -20,8 +20,9 @@ const MEASURE = `(function () {
     valueLines: lines(value), fontPx: parseFloat(getComputedStyle(value).fontSize),
     tileScroll: tile.scrollWidth, tileClient: tile.clientWidth,
     tileRight: Math.round(tile.getBoundingClientRect().right), viewport: document.documentElement.clientWidth,
+    labelHidden: document.getElementById("tile-leave-label").hidden, tileName: tile.getAttribute("aria-label"),
     arrivalGone: document.getElementById("tile-arrival") === null,
-    walkLine: (document.getElementById("tile-leave-detail") || {}).textContent || "",
+    walkLine: (document.getElementById("pace-walk") || {}).textContent || "",
     tileFull: Math.abs(tile.getBoundingClientRect().width - document.getElementById("leave-tiles").getBoundingClientRect().width) < 1.5,
     pageScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     clipped: span.getBoundingClientRect().right > value.getBoundingClientRect().right + 0.5

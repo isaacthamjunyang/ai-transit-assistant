@@ -564,12 +564,14 @@
             <span id="catch-node" class="step-node" aria-hidden="true"></span>
             <div class="catch-card__heading">
               <p id="catch-title" class="visually-hidden">Chance to catch Bus</p>
-              <p id="catch-line" class="journey-step__line catch-card__line"><span id="catch-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="catch-pill-text">live</span></span></p>
-              <p id="catch-when" class="catch-card__when"></p>
+              <p id="catch-line" class="journey-step__line catch-card__line"></p>
+              <p id="catch-direction" class="catch-card__direction" hidden></p>
+              <p id="catch-to" class="catch-card__to" hidden></p>
+              <p id="catch-arrives" class="catch-card__arrives" hidden><span id="catch-arrives-time" class="catch-card__arrives-time"></span></p>
+              <p class="catch-card__status"><span id="catch-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="catch-pill-text">live</span></span></p>
               <p id="catch-load" class="crowd-chip" hidden></p>
             </div>
           </div>
-          <p id="catch-arrives" class="catch-card__arrives" hidden><span id="catch-arrives-time" class="catch-card__arrives-time"></span></p>
         </div>
       </div>
       <button type="button" id="walk-open" class="walk-open-row">
@@ -585,13 +587,12 @@
       <div id="reroute-moment" class="reroute-moment" hidden></div>
     </section>
     <div id="pace-slot" class="pace-slot live-only" hidden></div>
+    <p id="pace-walk" class="pace-walk live-only" hidden></p>
     <section id="leave-tiles" class="leave-tiles live-only" aria-label="Leave by" hidden>
-      <div id="tile-leave" class="leave-tile">
+      <div id="tile-leave" class="leave-tile" role="group" aria-label="Leave by">
         <span class="leave-tile__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div>
-          <p id="tile-leave-label" class="leave-tile__label">Leave by</p>
-          <p id="tile-leave-by" class="leave-tile__value">—</p>
-          <p id="tile-leave-detail" class="leave-tile__meta" hidden></p>
+          <p id="tile-leave-line" class="leave-tile__line"><span id="tile-leave-label" class="leave-tile__label">Leave by:</span><span id="tile-leave-by" class="leave-tile__value">—</span></p>
           <p id="tile-leave-caution" class="leave-tile__meta leave-tile__warn" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span id="tile-leave-caution-text"></span></p>
         </div>
       </div>
@@ -1766,6 +1767,10 @@
     var EXPL_TRAIN_LEAVE_NOW_DEPARTING = "Leave now to try to catch the train departing at {arrival}.";
     var AT_STOP_TEXT = "At the stop";
     var LEAVE_TILE_WALK = "{w}\u00a0min walk";
+    // MIRROR: copy.js liveCatch.leaveByLabel and liveCatch.paceWalk. The walk line under the pace chip states the same
+    // displayed walk minutes (pack.walk_minutes) as the AI sentence. The Leave by tile no longer draws a walk line.
+    var LEAVE_BY_LABEL = "Leave by:";
+    var PACE_WALK_TEXT = "{n}\u00a0min walk";
     var LEAVE_TILE_UNCERTAIN = "Location uncertain: leave a bit earlier to be safe.";
 
     function renderExplanation(view) {
@@ -7811,6 +7816,7 @@
         slot.appendChild(chip);
       }
       slot.hidden = !chip;
+      syncPaceWalk();
     }
 
     function renderCatchCard(hero) {
@@ -7856,20 +7862,48 @@
       var leg = train ? trainLeg() : null;
       var plan = activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan.legs[activeRoutePlan.leg_index - 1] : null;
       var busLeg = { service_no: selectedService || "", headsign: plan && !legIsRail(plan) && plan.service_no === selectedService ? plan.headsign : "" };
-      var row = train ? lineRow(leg) : busRow(busLeg, null);
+      // Top down: the line row (the number badge, or the line badge and the line's name), the loop direction (a train on
+      // a loop line only), "To {place}" with the platform (a train, when known), the clock time, the pill, the crowding.
       var line = document.getElementById("catch-line");
-      var pill = document.getElementById("catch-pill");
-      line.replaceChildren.apply(line, Array.prototype.slice.call(row.childNodes).concat([pill]));
-      var code = train ? String(leg.line_code || "").toLowerCase() : "";
+      line.replaceChildren();
+      var direction = document.getElementById("catch-direction");
+      var to = document.getElementById("catch-to");
+      to.replaceChildren();
+      var way = "";
+      var place = "";
+      if (train) {
+        line.appendChild(lineBadge(String(leg.line_code || "")));
+        line.appendChild(document.createTextNode(" "));
+        var name = document.createElement("span");
+        name.className = "catch-card__line-name";
+        name.textContent = trainLineName();
+        line.appendChild(name);
+        way = leg.circle_direction === "clockwise" ? JO_CLOCKWISE : leg.circle_direction === "anticlockwise" ? JO_ANTICLOCKWISE : "";
+        place = leg.terminus || leg.headsign || "";
+      } else {
+        line.appendChild(busBadge(busLeg.service_no));
+        place = destinationStopName() || busLeg.headsign || "";
+      }
+      direction.textContent = way;
+      direction.hidden = !way;
+      if (place) {
+        var where = document.createElement("span");
+        where.className = "catch-card__to-place";
+        where.textContent = fillText(JO_TOWARD, { terminus: place });
+        to.appendChild(where);
+      }
+      if (train && leg.platform) {
+        to.appendChild(document.createTextNode(" "));
+        var platform = document.createElement("span");
+        platform.className = "catch-card__platform";
+        platform.textContent = fillText(JO_PLATFORM_ONLY, { x: leg.platform });
+        to.appendChild(platform);
+      }
+      to.hidden = !to.hasChildNodes();
+      var ringCode = train ? String(leg.line_code || "").toLowerCase() : "";
       document.getElementById("catch-leg").className = "catch-card__leg"
-        + (train && LINE_BADGE_CODES.indexOf(code.toUpperCase()) !== -1 ? " journey-step--rail-" + code : "");
+        + (train && LINE_BADGE_CODES.indexOf(ringCode.toUpperCase()) !== -1 ? " journey-step--rail-" + ringCode : "");
       document.getElementById("catch-node").innerHTML = train ? TRAIN_SVG : BUS_TILE_SVG;
-      var eta = train ? null : etaParts(hero);
-      var when = train ? railWhenText(hero) : eta ? eta.line : "";
-      var whenEl = document.getElementById("catch-when");
-      whenEl.textContent = when;
-      whenEl.hidden = !when;
-      whenEl.className = "catch-card__when" + (train ? "" : " journey-step__arriving");
       setCrowd(document.getElementById("catch-load"), hero);
     }
 
@@ -7905,13 +7939,31 @@
       }
       leaveTile.hidden = false;
       setLeaveValue(document.getElementById("tile-leave-by"), leave);
-      var leaveMeta = document.getElementById("tile-leave-detail");
-      leaveMeta.textContent = tileView ? tileView.meta : "";
-      leaveMeta.hidden = !(tileView && tileView.meta);
       var leaveWarn = document.getElementById("tile-leave-caution");
       document.getElementById("tile-leave-caution-text").textContent = tileView && tileView.uncertain ? LEAVE_TILE_UNCERTAIN : "";
       leaveWarn.hidden = !(tileView && tileView.uncertain);
-      document.getElementById("tile-leave-label").textContent = "Leave by";
+      // One line: "Leave by: {time}". "Leave now" and "At the stop" stand alone, with no label. The tile keeps the
+      // accessible name "Leave by" in all three states (aria-label on the tile).
+      var showLabel = !tileView || tileView.mode === "by";
+      var label = document.getElementById("tile-leave-label");
+      label.textContent = LEAVE_BY_LABEL;
+      label.hidden = !showLabel;
+      syncPaceWalk();
+    }
+
+    // "{n} min walk" under the pace chip, in the chip's font and the primary text colour: the pack's displayed walk
+    // minutes, the one value the AI sentence states. It hides with the chip (inside 30 m, at the stop, no usable chance).
+    function syncPaceWalk() {
+      var el = document.getElementById("pace-walk");
+      var slot = document.getElementById("pace-slot");
+      if (!el || !slot) {
+        return;
+      }
+      var pack = lastExplanationPack;
+      var w = pack && pack.at_stop !== true && typeof pack.walk_minutes === "number" ? pack.walk_minutes : null;
+      var show = !slot.hidden && w !== null;
+      el.textContent = show ? fillText(PACE_WALK_TEXT, { n: String(w) }) : "";
+      el.hidden = !show;
     }
 
     // ---- Page W: "Walk to your stop". The distance is a client calculation (haversine from the newest fix to the stop);

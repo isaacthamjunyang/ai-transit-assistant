@@ -67,23 +67,51 @@ def test_page_a_card_has_no_subtitle_caption_not_live_or_bus_arrives_label():
     card = INDEX.split('id="arrival-card"', 1)[1].split('id="pace-slot"', 1)[0]
     for gone in ('id="catch-sub', 'id="catch-caption"', "catch-not-live", "catch-card__arrives-label", "Bus arrives", "Train departs"):
         assert gone not in card, gone
-    assert 'id="catch-arrives-time"' in card and 'id="catch-line"' in card and 'id="catch-when"' in card
-    assert 'id="catch-pill"' in card.split('id="catch-line"', 1)[1].split("</p>", 1)[0]  # the pill is in the heading row
+    assert 'id="catch-arrives-time"' in card and 'id="catch-line"' in card and 'id="catch-to"' in card
+    assert 'id="catch-when"' not in card and "Arriving in" not in card and "Scheduled ·" not in card
+    # top down: the line row, the direction, "To {place}", the clock time, the pill, the crowding label
+    order = [card.index(f'id="{name}"') for name in ("catch-line", "catch-direction", "catch-to", "catch-arrives",
+                                                     "catch-pill", "catch-load")]
+    assert order == sorted(order), order
     # the walking-pace button and its card stay as they were
     assert 'id="walk-open"' in card and 'id="catch-pace-line"' in card
 
 
-def test_the_heading_reuses_the_overview_row_components():
+def test_the_heading_is_built_from_the_badges_and_the_rows_top_down():
     heading = _function("renderCatchHeading")
-    assert "lineRow(leg)" in heading and "busRow(busLeg, null)" in heading
+    assert "lineBadge(" in heading and "busBadge(" in heading and "JO_TOWARD" in heading
+    assert "destinationStopName()" in heading and "busLeg.headsign" in heading  # the destination stop, else the terminus
+    assert "JO_CLOCKWISE" in heading and "JO_ANTICLOCKWISE" in heading and "JO_PLATFORM_ONLY" in heading
+    assert "trainLineName()" in heading  # the line's name beside its badge
+    assert "railWhenText" not in heading and "etaParts" not in heading and "catch-when" not in heading
     assert "journey-step--rail-" in heading and "LINE_BADGE_CODES" in heading
-    assert "railWhenText(hero)" in heading and "etaParts(hero)" in heading
-    rail = _function("railWhenText")
-    assert "JO_SCHEDULED_NOW" in rail and "JO_SCHEDULED_IN_ONE" in rail and "JO_SCHEDULED_IN," in rail
-    assert 'var JO_SCHEDULED_IN = "Scheduled · In {n}\\u00a0min";' in INDEX
     css = CSS.split(".catch-card__leg {", 1)[1].split(".catch-card__when[hidden]", 1)[0]
     assert "var(--leg-ring, var(--ring-neutral))" in css  # grey for a bus, the line colour from journey-step--rail-xx
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b|rgb\(|hsl\(", css)
+
+
+def test_the_largest_text_is_the_badge_the_place_and_the_clock_and_the_rest_is_smaller():
+    def size(selector):
+        block = CSS.split(selector + " {", 1)[1].split("}", 1)[0]
+        return float(re.search(r"font-size:\s*([0-9.]+)rem", block).group(1))
+    big = {size(".catch-card__line .line-badge"), size(".catch-card__line-name"), size(".catch-card__to"),
+           size(".catch-card__copy .catch-card__arrives-time")}
+    assert big == {1.25}
+    assert size(".catch-card__platform") < 1.25 and size(".crowd-chip") < 1.25
+    walk = CSS.split(".pace-walk {", 1)[1].split("}", 1)[0]
+    assert "var(--color-ink)" in walk and "var(--type-caption)" in walk  # primary text colour, the chip's own size
+    assert "font-weight: 700;" in walk  # the chip's weight
+
+
+def test_the_leave_by_tile_is_one_line_with_the_label_only_before_a_time():
+    tiles = _function("renderLeaveTiles")
+    assert "tile-leave-detail" not in INDEX and "leaveMeta" not in tiles
+    assert 'id="tile-leave-line"' in INDEX and 'role="group" aria-label="Leave by"' in INDEX
+    assert 'tileView.mode === "by"' in tiles and 'var LEAVE_BY_LABEL = "Leave by:";' in INDEX
+    assert 'leaveByLabel: "Leave by:"' in COPY and 'paceWalk: "{n}\\u00a0min walk"' in COPY
+    assert 'var PACE_WALK_TEXT = "{n}\\u00a0min walk";' in INDEX
+    walk = _function("syncPaceWalk")
+    assert "lastExplanationPack" in walk and "pack.walk_minutes" in walk and "pack.at_stop" in walk and "slot.hidden" in walk
 
 
 def test_the_pace_chip_neutral_state_is_in_copy_and_the_page():
@@ -151,16 +179,26 @@ def _always_there(state, at_stop=False):
     assert abs(tile["w"] - tiles["w"]) < 1.5 and abs(tile["x"] - tiles["x"]) < 1.5, geo  # Leave by is the full width
     assert geo["ring"]["w"] >= 96 and abs(geo["ring"]["w"] - geo["ring"]["h"]) < 1  # the ring keeps at least 96 px
     assert geo["ring"]["r"] <= geo["leg"]["x"] + 1, geo  # the heading is at the right of the ring
-    assert geo["arrives"]["y"] >= geo["leg"]["b"] - 1 and abs(geo["arrives"]["x"] - geo["leg"]["x"]) < 1.5, geo
+    # the heading column, top down, all at the right of the ring: the line row, "To {place}", the clock, the pill
+    assert geo["line"]["y"] < geo["to"]["y"] < geo["arrives"]["y"] < geo["pill"]["y"], geo
+    assert geo["arrives"]["x"] >= geo["leg"]["x"] and geo["arrives"]["r"] <= geo["card"]["r"] + 1, geo
     assert state["bar"] == "See bus arrival times"
+    assert state["tileLeaveName"] == "Leave by"  # the tile's accessible name in every state
+    assert "walk" not in state["tileLeaveLine"]  # no walk line inside the tile
     if at_stop:
-        assert state["tileLeaveValue"] == "At the stop" and state["tileLeaveWalk"] is None
-    else:
-        assert re.fullmatch(r"\d+ min walk", (state["tileLeaveWalk"] or "").replace(" ", " ")), state["tileLeaveWalk"]
-    if at_stop:
-        assert state["chip"] is None  # hidden inside 30 m only
+        # alone, no label; the chip and its walk line are hidden together
+        assert state["tileLeaveValue"] == "At the stop" and state["tileLeaveLabelShown"] is False
+        assert state["tileLeaveLine"] == "At the stop"
+        assert state["tileLeaveWalk"] is None and state["chip"] is None and state["walkLine"] is None
     else:
         assert state["chip"], "the pace chip is on Page A"
+        assert re.fullmatch(r"\d+\u00a0min walk", state["walkLine"] or ""), state["walkLine"]
+        assert geo["paceWalk"]["y"] >= geo["chipBox"]["b"] - 1  # under the pace card
+        if state["tileLeaveValue"] == "Leave now":
+            assert state["tileLeaveLabelShown"] is False and state["tileLeaveLine"] == "Leave now"
+        else:
+            assert state["tileLeaveLabelShown"] is True
+            assert state["tileLeaveLine"].startswith("Leave by: "), state["tileLeaveLine"]
     assert state["scrollWidth"] <= state["innerWidth"]
     for phrase in THRESHOLD:
         assert phrase not in state["body"]
@@ -173,7 +211,8 @@ def test_far_from_the_stop_everything_is_there_and_the_heading_is_the_bus_row(st
     far = states["far"]
     _always_there(far)
     assert far["badgeIsBus"] is True and "18" in far["line"]
-    assert re.fullmatch(r"Arriving in \d+ min|Arriving in <1 min|Arriving now", far["when"].replace(" ", " ")), far["when"]
+    assert far["to"].startswith("To ") and far["direction"] is None  # a bus has no direction row
+    assert "Arriving in" not in far["body"] and "Scheduled \u00b7" not in far["body"]
     assert far["pill"] in ("live", "schedule only")
     assert far["hasSub"] is False and far["hasCaption"] is False and far["hasLabel"] is False
     assert re.fullmatch(r"\d{1,2}:\d{2} [AP]M( \(tomorrow\))?", far["arrives"])
@@ -188,7 +227,7 @@ def test_at_the_stop_97_percent_keeps_everything_but_the_chip(states):
 
 def test_at_a_low_probability_every_element_stays_and_the_unlikely_banner_shows(states):
     low = states["low"]
-    assert low["point"] <= 40 and low["band"] == "low", low["point"]
+    assert low["point"] == 5 and low["band"] == "low", low["point"]
     _always_there(low)
     assert low["banner"] is True
 

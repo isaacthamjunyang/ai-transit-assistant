@@ -481,6 +481,10 @@ var copy = {
     leaveNow: "Leave now",
     /* approved: the Leave by tile shows a clock time or "Leave now", never both, and one walk line; {w} is whole minutes */
     leaveWalk: "{w}\u00a0min walk",
+    /* proposed, needs approval: Page A's Leave by tile is one line, "Leave by: {time}"; "Leave now" and "At the stop"
+       stand alone. The walk line is under the pace chip, the same displayed minutes as the AI sentence ({n}). */
+    leaveByLabel: "Leave by:",
+    paceWalk: "{n}\u00a0min walk",
     leaveUncertain: "Location uncertain: leave a bit earlier to be safe.",
     aiTitle: "AI Explanation"
   },

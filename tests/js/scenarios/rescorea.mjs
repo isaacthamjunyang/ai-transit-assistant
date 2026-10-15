@@ -6,7 +6,7 @@ const VIEW = `({
   ring: document.getElementById('catch-ring-text').textContent,
   aria: document.getElementById('catch-ring').getAttribute('aria-label'),
   tile: document.getElementById('tile-leave-by').textContent,
-  detail: document.getElementById('tile-leave-detail').textContent,
+  detail: document.getElementById('pace-walk').textContent,
   card: document.getElementById('ai-explanation-text').textContent,
   chip: document.getElementById('pace-slot').textContent.trim(),
   pack: lastExplanationPack ? lastExplanationPack.text : null
