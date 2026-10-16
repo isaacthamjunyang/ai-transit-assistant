@@ -211,6 +211,16 @@ def test_next_bus_3_can_qualify():
     assert decision["reroute"]["arrival_time"] == "2026-09-29T14:30:00+08:00"
 
 
+def _has_cards(decision):
+    """The options carry one or two recommended cards, each with tags and one fixed sentence per tag (no codes)."""
+    cards = decision["options"]["cards"]
+    assert 1 <= len(cards) <= 2 and decision["options"]["recommended"] is cards[0]
+    for card in cards:
+        assert card["tags"] and "reasons" not in card
+        assert "reason_code" not in card and "explanation" not in card and "badges" not in card
+    return True
+
+
 def test_the_recommender_picks_the_highest_point_among_those_that_pass_the_improvement_rule():
     calls = []
 
@@ -247,7 +257,7 @@ def test_the_recommender_picks_the_highest_point_among_those_that_pass_the_impro
     # highest point, 95 at the current stop, over the other stop's 40 (it no longer ranks by range_low).
     assert decision["reroute"]["service_no"] == "18"
     assert decision["reroute"]["stop"]["stop_code"] == ORIGIN
-    assert decision["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE"
+    assert _has_cards(decision)
     assert calls == [("01022", "36")]
 
 
@@ -285,7 +295,7 @@ def test_equal_chance_with_arrive_by_takes_the_on_time_option_at_the_current_sto
     # so it is the highest chance on time; the walk tie-break itself is covered in test_recommend.py.
     assert decision["reroute"]["service_no"] == "18"
     assert decision["reroute"]["stop"]["stop_code"] == ORIGIN
-    assert decision["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE_ON_TIME"
+    assert _has_cards(decision)
 
 
 def test_the_highest_point_wins_without_arrive_by_even_at_a_later_arrival():
@@ -319,7 +329,7 @@ def test_the_highest_point_wins_without_arrive_by_even_at_a_later_arrival():
     # Point 99 at the other stop beats point 40 at the current stop; the earlier ETA is no longer a tie-break here.
     assert decision["reroute"]["service_no"] == "36"
     assert decision["reroute"]["stop"]["stop_code"] == "01022"
-    assert decision["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE"
+    assert _has_cards(decision)
 
 
 def test_same_service_at_another_stop_is_allowed():
@@ -423,9 +433,9 @@ def test_a_late_option_is_kept_and_the_recommender_names_none_by_target():
     roomy = _decide(buses, _simple_cache(2.0), arrive_by=NOW + timedelta(hours=2), place=_north(2000))
     tight = _decide(buses, _simple_cache(2.0), arrive_by=NOW + timedelta(minutes=12), place=_north(2000))
     assert roomy["switched"] is True and tight["switched"] is True
-    assert roomy["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE_ON_TIME"
+    assert _has_cards(roomy)
     assert roomy["options"]["recommended"]["after_target"] is False
-    assert tight["options"]["recommended"]["reason_code"] == "NONE_BY_TARGET"
+    assert _has_cards(tight)
     assert tight["options"]["recommended"]["after_target"] is True
 
 
@@ -440,8 +450,8 @@ def test_datetime_local_arrive_by_is_read_as_singapore_time_and_a_blank_value_se
         place=place,
     )
     blank = _decide(buses, cache, arrive_by=None, place=place)
-    assert set_value["options"]["recommended"]["reason_code"] == "NONE_BY_TARGET"
-    assert blank["options"]["recommended"]["reason_code"] == "HIGHEST_CHANCE"
+    assert _has_cards(set_value)
+    assert _has_cards(blank)
 
 
 def test_null_ride_minutes_gives_no_estimate_and_is_not_on_time_when_arrive_by_is_set():
@@ -453,7 +463,7 @@ def test_null_ride_minutes_gives_no_estimate_and_is_not_on_time_when_arrive_by_i
     # Kept in the list with no estimate. Nothing can be on time, so it is the only (unverified) recommendation.
     option = decision["options"]["recommended"]
     assert option["estimated_arrival"] is None
-    assert option["reason_code"] == "NONE_BY_TARGET"
+    assert "reason_code" not in option and option["tags"]
 
 
 def test_without_arrive_by_a_null_ride_can_still_qualify():

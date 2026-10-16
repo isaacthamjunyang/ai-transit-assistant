@@ -234,6 +234,7 @@ def test_page_b_for_a_train(missed_light):
     assert b["cells"]["live"] is None and b["cells"]["monitored"] is None  # the status rows are gone
     assert b["question"] == "Did you catch the train?" and b["seeBar"] is False and b["yes"] and b["no"]
     assert b["scrollWidth"] <= b["innerWidth"]
+    assert b["walkLine"] == 0  # the "{n} min walk" line is Page A's pace card only
 
 
 def test_a_train_never_makes_a_leave_now_or_five_minute_notification(missed_light, yes_dark):

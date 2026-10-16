@@ -654,3 +654,45 @@ def _as_sgt(value: datetime) -> datetime:
 
 def _as_sgt_iso(value: datetime) -> str:
     return _as_sgt(value).replace(microsecond=0).isoformat()
+
+
+def destination_arrival(
+    boarding_time: datetime,
+    *,
+    route_km: float | None = None,
+    transfer_minutes: float = 0.0,
+    end_walk_metres: float = 0.0,
+    walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
+    itinerary_minutes: float | None = None,
+) -> datetime | None:
+    """The one clock time at the destination for a reroute option, whatever its source.
+
+    boarding_time is when the vehicle reaches the boarding stop (the wait is everything before it). Two inputs:
+    - a route from the bus data (same service, other services, nearby stops): route_km is the bus leg's distance;
+      its ride on a free road is route_km at the shared bus speed, and the shared traffic function applies the
+      factor of THIS option's own start time, then
+      transfer_minutes and the final walk are added.
+    - a planner (OneMap) route: itinerary_minutes is the itinerary from its own boarding to its end (each bus leg
+      already carries the factor of its own start). The itinerary is shifted so that its boarding is the real
+      boarding_time, never earlier than it.
+    None when there is no usable input."""
+    from bus_traffic import bus_ride_minutes
+    from config import BUS_SPEED_KM_H
+
+    start = _as_sgt(boarding_time)
+
+    def usable(value) -> float | None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        return float(value) if math.isfinite(value) and value >= 0 else None
+
+    if isinstance(itinerary_minutes, (int, float)) and not isinstance(itinerary_minutes, bool)             and math.isfinite(itinerary_minutes):
+        # the shift: the itinerary's own boarding becomes the real boarding time, never earlier than it
+        return start + timedelta(minutes=max(0.0, float(itinerary_minutes)))
+    km = usable(route_km)
+    if km is None:
+        return None
+    ride = bus_ride_minutes((km / BUS_SPEED_KM_H) * 60, start)
+    extra = usable(transfer_minutes) or 0.0
+    walk = walk_minutes(usable(end_walk_metres) or 0.0, walk_speed_m_s)
+    return start + timedelta(minutes=ride + extra + walk)

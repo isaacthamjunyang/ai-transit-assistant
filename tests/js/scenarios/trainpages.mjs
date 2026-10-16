@@ -42,6 +42,9 @@ const B = `(function () {
   var bg = badge ? getComputedStyle(badge) : null;
   return {
     top: screenStack[screenStack.length - 1], pageB: document.body.classList.contains("is-page-b"),
+    walkLine: Array.prototype.filter.call(document.querySelectorAll("p, span, div"), function (el) {
+      return el.children.length === 0 && /^\\d+\\s*min walk$/.test(el.textContent.trim()) && el.getClientRects().length > 0;
+    }).length,
     card: shown("live-tracking"), title: text(document.getElementById("live-bus-title")),
     badge: badge ? { text: badge.textContent, cls: badge.className, bg: bg.backgroundColor, color: bg.color } : null,
     to: text(document.getElementById("live-bus-to")), then: shown("live-then") ? text(document.getElementById("live-then")) : null,

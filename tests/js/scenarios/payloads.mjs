@@ -67,8 +67,8 @@ export default async function (h) {
           var chip = lastSuccess.buses[0].probability && paceChip(paceCategoryFor(lastSuccess.buses[0].probability.pace)) !== null;
           rows[secondsToLeaveBy] = {
             tile: document.getElementById('tile-leave-by').textContent,
-            detail: document.getElementById('pace-walk').textContent,
-            detailHidden: document.getElementById('pace-walk').hidden,
+            detail: ((document.getElementById('pace-walk') || {}).textContent || ''),
+            detailHidden: (!document.getElementById('pace-walk') || document.getElementById('pace-walk').hidden),
             card: document.getElementById('ai-explanation-text').textContent,
             banner: leaveNowBanner.shown === true,
             notifications: calls.length,

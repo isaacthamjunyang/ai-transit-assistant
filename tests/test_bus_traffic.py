@@ -232,7 +232,7 @@ def test_the_catch_probability_the_ring_and_the_at_stop_rule_do_not_use_the_fact
 def test_every_caller_goes_through_the_one_function_and_nothing_else_does_the_math():
     code = sorted(ROOT.glob("*.py"))
     users = {p.name for p in code if "bus_ride_minutes(" in p.read_text(encoding="utf-8")}
-    assert users == {"bus_traffic.py", "pt_route.py", "pt_plan.py", "route_plan.py", "destination_stops.py"}
+    assert users == {"bus_traffic.py", "pt_route.py", "pt_plan.py", "route_plan.py", "destination_stops.py", "journey.py"}  # journey.py: destination_arrival
     # every place a bus minute is made from the speed is routed (route_plan's _leg holds the scheduled minutes that
     # _attach_duration then passes through the function)
     for path in code:

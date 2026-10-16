@@ -129,11 +129,12 @@ def test_missed_entry_has_no_current_bus_card_and_the_banner_leads():
 
 def test_nothing_eligible_shows_the_current_card_the_no_better_card_and_the_list_without_ai():
     render = _function("renderPageC")
-    assert "OTHER_BUSES_HEADING" in render and "NO_OTHER_OPTIONS" in render and "noBetterText" not in HTML
-    assert "options.recommended ? ALTERNATIVES_HEADING : OTHER_BUSES_HEADING" in render
+    assert "OTHER_BUSES_HEADING" in render and "noOptionsState()" in render and "noBetterText" not in HTML
+    assert "cards.length ? ALTERNATIVES_HEADING : OTHER_BUSES_HEADING" in render
     assert "Other buses at your stop" in HTML and "Other buses at your stop" in COPY
-    # The AI block belongs to the recommended card only.
-    assert "buildOptionExplanation" in _function("buildOptionCard") and "buildOptionExplanation" not in render
+    # No AI block on Page C: each card shows its fixed sentences.
+    assert "buildOptionExplanation" not in HTML and "/api/explain-option" not in HTML
+    assert "row.reasons" not in _function("buildOptionCard") and "option-reason" not in HTML
 
 
 def test_every_probability_names_its_bus_and_appears_once_per_option():

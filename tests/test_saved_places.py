@@ -90,7 +90,7 @@ def test_the_module_has_no_network_url_or_logging_and_one_key(unit):
 def _ui() -> str:
     """The page's saved-places code: from its banner comment to the first render at load."""
     start = INDEX.split("// ---- Saved places", 1)[1]
-    return start.split("// The two muted lines at the bottom of the menu", 1)[0]
+    return start.split(chr(10) + "    renderSavedPlaces();", 1)[0]
 
 
 def test_only_the_estimator_the_theme_and_saved_places_use_storage():

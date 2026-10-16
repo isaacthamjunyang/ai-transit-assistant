@@ -72,17 +72,10 @@
           <button type="button" class="menu-radio" role="radio" aria-checked="false">Dark</button>
         </div>
       </div>
-      <h4>Menu data lines (muted, bottom of the menu; not shown on journey pages)</h4>
+      <h4>Menu: exactly two rows (Appearance, How it works); Demo Controls only in Demo Mode</h4>
       <div class="menu-sheet is-preview">
-        <div class="menu-data">
-          <p class="menu-data__line">Public holidays updated to 2027</p>
-          <p class="menu-data__line">Bus data updated 29 Sep 2026</p>
-          <p class="menu-data__line">Bus data date unknown</p>
-          <p class="menu-data__line">Train timetable updated 10 Oct 2026</p>
-          <p class="menu-data__line">Train timetable date unknown</p>
-          <p class="menu-data__line">Contains information from LTA DataMall under the Singapore Open Data Licence v1.0</p>
-          <p class="menu-data__line">Data status unavailable</p>
-        </div>
+        <button type="button" class="menu-row" aria-expanded="false"><span data-copy="home.appearance">Appearance</span></button>
+        <button type="button" class="menu-row"><span data-copy="firstRun.menu">How it works</span></button>
       </div>
       <div class="back-bar">
         <button type="button" class="icon-button back-bar__button" aria-label="Back">
@@ -973,7 +966,8 @@
         + "<span class=\"first-run__icon\" aria-hidden=\"true\">" + icons[step - 1] + "</span>"
         + "<p class=\"first-run__text\">" + fr["step" + step] + "</p>"
         + "<div class=\"first-run__actions\">" + (last ? "" : "<button type=\"button\" class=\"secondary\">" + fr.skip + "</button>")
-        + "<button type=\"button\" class=\"primary\">" + (last ? fr.done : fr.next) + "</button></div></div>";
+        + "<button type=\"button\" class=\"primary\">" + (last ? fr.done : fr.next) + "</button></div>"
+        + "<p class=\"first-run__attribution\">" + fr.attribution + "</p></div>";
     }
 
     function firstRunSample() {
@@ -1250,20 +1244,26 @@
     // A train service alert: the warning icon and "{line}: {message}", cut at two lines with an expand control that shows
     // only when the text is cut. expanded shows the whole text.
     var SG_CROWD_ICONS = {
-        SEA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 4v8h9l2 6M7 12v6M16 12v6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
-      SDA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"5\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v6M9 21l3-7 3 7M8 11h8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
-      LSD: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"8\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><circle cx=\"16\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M4 20v-5a4 4 0 0 1 8 0v5M12 20v-5a4 4 0 0 1 8 0v5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>"
+      SEA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"9\" cy=\"5\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></circle><path d=\"M9 8.5v5.5h6.5M15.5 14v5.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      SDA: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"5\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></circle><path d=\"M12 8.5v6.5M8.5 11.5h7M9 21l3-6 3 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      LSD: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"7\" r=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></circle><path d=\"M12 10v5M12 11.5L7.5 4M12 11.5l4.5-7.5M9 21l3-6 3 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      UNKNOWN: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"8.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></circle><path d=\"M9 9l6 6M15 9l-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>"
     };
 
     // Bus crowding (copy.js crowding): an icon and a word, on the Next 3 buses tiles and under Page A's heading.
     function crowdingSample() {
       var words = copy.crowding;
-      var tiles = ["SEA", "SDA", "LSD"].map(function (code, index) {
+      function tile(code, index) {
         return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + (index + 2) + " min</span>"
-          + "<span class=\"bus-tile-card__service\">Bus 174</span><span class=\"crowd-chip\"><span class=\"crowd-chip__icon\" aria-hidden=\"true\">"
-          + SG_CROWD_ICONS[code] + "</span><span class=\"crowd-chip__text\">" + words[code] + "</span></span></li>";
-      }).join("");
-      return "<h4>Bus crowding: Seats, Standing, Crowded on the Next 3 buses tiles (a blank value draws nothing)</h4><ul class=\"bus-tiles bus-tiles--3\">" + tiles + "</ul>";
+          + "<span class=\"bus-tile-card__service\">Bus 174</span><span class=\"crowd-chip\" data-load=\"" + code + "\"><span class=\"crowd-chip__icon\" aria-hidden=\"true\">"
+          + SG_CROWD_ICONS[code] + "</span><span class=\"crowd-chip__text\">" + words[code === "UNKNOWN" ? "unknown" : code] + "</span></span></li>";
+      }
+      function lists() {
+        return "<ul class=\"bus-tiles bus-tiles--3\">" + ["SEA", "SDA", "LSD"].map(tile).join("") + "</ul>"
+          + "<ul class=\"bus-tiles bus-tiles--3\">" + tile("UNKNOWN", 0) + "</ul>";
+      }
+      return "<h4>Bus crowding, light: Seats Available, Standing Available, Crowded, No Data (a blank value)</h4>" + lists()
+        + "<h4>Bus crowding, dark</h4><div class=\"place-row-samples theme-sample-dark\">" + lists() + "</div>";
     }
 
     function sgTrainAlert(lineName, message, expanded, cut) {
@@ -1535,8 +1535,8 @@
     // Page A's heading column, top down (bus: number badge, "To {destination stop}", clock time, pill, crowding; train: line
     // badge and name, loop direction, "To {terminus}" with the platform, clock time, pill). usable false: no clock time.
     function sgCrowdChip(code) {
-      return '<p class="crowd-chip"><span class="crowd-chip__icon" aria-hidden="true">' + SG_CROWD_ICONS[code]
-        + '</span><span class="crowd-chip__text">' + copy.crowding[code] + '</span></p>';
+      return '<p class="crowd-chip" data-load="' + code + '"><span class="crowd-chip__icon" aria-hidden="true">' + SG_CROWD_ICONS[code]
+        + '</span><span class="crowd-chip__text">' + copy.crowding[code === "UNKNOWN" ? "unknown" : code] + '</span></p>';
     }
 
     function sgCatchHead(state, kind, eta, usable, load) {
@@ -1571,8 +1571,9 @@
 
     // The walk line sits under the chip: the chip's font, the primary text colour, the AI sentence's walk minutes.
     function sgPaceChip(key, walkMinutes) {
-      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p></div></div>"
-        + (walkMinutes === null ? "" : "<p class=\"pace-walk\">" + lc.paceWalk.replace("{n}", String(walkMinutes === undefined ? 3 : walkMinutes)) + "</p>");
+      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p>"
+        + (walkMinutes === null ? "" : "<p class=\"pace-walk\">" + lc.paceWalk.replace("{n}", String(walkMinutes === undefined ? 3 : walkMinutes)) + "</p>")
+        + "</div></div>";
     }
 
     // ---- consistent sample values: "now" is 9:55:00\u00a0PM and every leave-by value is computed with the app's rule
@@ -1692,30 +1693,26 @@
     var PILL_STAR_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7L12 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path></svg>";
     var PILL_CLOCK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"13\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 9v4l2.5 2M9.5 3h5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
 
-    function sgPills(keys) {
-      if (!keys || !keys.length) {
-        return "";
-      }
-      return '<span class="option-badges">' + keys.map(function (key) {
-        return '<span class="pill pill--best pill--option">' + (key === "fastest" ? PILL_CLOCK_ICON : PILL_STAR_ICON) + '<span>' + (key === "fastest" ? rp.pillQuick : rp.pillHighest) + '</span></span>';
-      }).join("") + '</span>';
-    }
+    // The tag chips of a recommended card, in the order Python names them: fastest, highest_chance, next_best.
+    var SG_TAG_TEXT = { fastest: rp.tagFastest, highest_chance: rp.tagHighest, next_best: rp.tagNextBest };
 
-    function sgReasonSentence(key, service) {
-      return rp[key].replace("{s}", service);
-    }
-
-    function sgMergedCard(chip, reasonKey, pills, service) {
-      return '<div class="reroute-option"><div class="card option-merged"><p class="option-chip"><span class="option-chip__icon" aria-hidden="true">' + SHIELD_ICON + '</span><span>' + chip + '</span></p>'
-        + sgPills(pills)
+    // tags: the keys on the card; opts.destination: the clock text of "Reach destination by: {time}" ("" for no estimate).
+    function sgMergedCard(tags, service, opts) {
+      opts = opts || {};
+      var destination = opts.destination === undefined ? "6:36\u00a0PM" : opts.destination;
+      return '<div class="reroute-option"><div class="card option-merged"><div class="option-tags">'
+        + tags.map(function (tag) {
+          return '<p class="option-chip" data-tag="' + tag + '"><span class="option-chip__icon" aria-hidden="true">' + SHIELD_ICON + '</span><span>' + SG_TAG_TEXT[tag] + '</span></p>';
+        }).join("") + '</div>'
         + '<div class="option-card">'
         + '<div class="option-card__copy"><div class="catch-card__leg option-heading"><span class="step-node" aria-hidden="true">' + BUS_SVG + '</span>'
         + '<div class="catch-card__heading"><p class="journey-step__line catch-card__line"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>' + service + '</span> <span>' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</span></p>'
-        + '<p class="catch-card__when journey-step__arriving">' + lc.arrivingIn.replace("{n}", "6") + '</p></div></div>'
+        + '<p class="catch-card__when journey-step__arriving">' + rp.arrivesIn.replace("{minutes}", "6 min") + '</p></div></div>'
+        + (destination ? '<p class="option-card__destination">' + rp.destination.replace("{time}", destination) + '</p>' : '')
         + '<p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15\u00a0PM") + '</p></div>'
-        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '<p class="option-card__arrive">' + rp.arrive.replace("{time}", "6:36\u00a0PM") + '</p></div></div></div>'
-        + '<section class="ai-card option-explain" aria-live="polite"><p class="ai-card__head"><span class="ai-card__icon" aria-hidden="true">' + SPARKLE_ICON + '</span><span>' + lc.aiTitle + '</span></p>'
-        + '<p class="ai-card__text">' + sgReasonSentence(reasonKey, service) + '</p></section>'
+        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '</div></div>'
+        + (opts.after ? '<p class="alt-row__warn">' + WARN_ICON + '<span>' + rp.afterTarget + '</span></p>' : '')
+        + '</div>'
         + '<button type="button" class="primary primary--icon"><span>' + rp.switchTo.replace("{service}", service).replace("{minutes}", "6 min") + '</span>' + ARROW_ICON + '</button></div>';
     }
 
@@ -1725,7 +1722,7 @@
 
     function sgReroute() {
       return '<div class="reroute-block"><div class="reroute-proposal">' + sgAutoBanner()
-        + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance"], "7")
+        + sgMergedCard(["fastest"], "16") + sgMergedCard(["highest_chance"], "7")
         + '<p class="reroute-alternatives__heading">' + rp.alternatives + '</p><ul class="reroute-alternatives">'
         + sgOptionRow("16", 41, 33, 50, "9 min", "6:40\u00a0PM", "Walk to Bras Basah Complex (183\u00a0m)", {})
         + '</ul></div></div>';
@@ -1735,12 +1732,12 @@
     var CROSS_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 6l12 12M18 6L6 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path></svg>";
     var REFRESH_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
 
-    function sgCurrentBusCard(stop) {
+    function sgCurrentBusCard(stop, none) {
       return '<section class="card catch-card page-c-current" aria-live="polite">'
         + sgCardHead(lc.chanceToCatchPageC.replace("{service}", "11"), sgSub(lc.arrivingIn.replace("{n}", "2"), stop || "Tanjong Rhu Stn Exit 2"), "live")
         + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy">' + sgBusArrives(2) + '</div></div>'
         + '<p class="catch-card__caption">' + lc.caption + '</p>'
-        + '<div class="page-c-warn">' + WARN_ICON + '<p>' + rp.currentWarning + '</p></div>'
+        + '<div class="page-c-warn">' + WARN_ICON + '<p>' + (none ? rp.currentWarningNone : rp.currentWarning) + '</p></div>'
         + '<button type="button" class="secondary">' + cp.seeArrivals + '</button></section>';
     }
 
@@ -1750,7 +1747,7 @@
     }
 
     function sgPageCUnlikely() {
-      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal">' + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance", "fastest"], "7")
+      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal">' + sgMergedCard(["fastest"], "16") + sgMergedCard(["highest_chance"], "7")
         + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
         + sgOptionRow("16", 60, 50, 70, "20 min", "6:54\u00a0PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183\u00a0m"), {})
         + sgOptionRow("11", 35, 25, 39, "31 min", "7:05\u00a0PM", rp.atYourStop, { unlikely: true })
@@ -1765,16 +1762,14 @@
 
     function sgPageCMissed() {
       return '<div class="page-c"><div class="reroute-proposal"><p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "11") + '</p>'
-        + sgMergedCard(rp.recommended, "reasonHighestChanceOnTime", ["highest_chance"], "7")
+        + sgMergedCard(["fastest", "highest_chance"], "7") + sgMergedCard(["next_best"], "16", { destination: "6:48\u00a0PM" })
         + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
         + sgOptionRow("16", 60, 50, 70, "20 min", "6:54\u00a0PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183\u00a0m"), {})
         + '</ul></div></div>';
     }
 
     function sgPageCNone() {
-      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal"><p class="banner banner--quiet reroute-none">' + rp.noOtherOptions + '</p>'
-        + sgRefreshHeader(rp.otherBuses) + '<ul class="reroute-alternatives">'
-        + sgOptionRow("11", 35, 25, 39, "31 min", "7:05\u00a0PM", rp.atYourStop, { unlikely: true }) + '</ul></div></div>';
+      return '<div class="page-c">' + sgCurrentBusCard(undefined, true) + '<div class="reroute-proposal"></div></div>';
     }
 
     function sgUnlikelyBanner() {
@@ -1898,7 +1893,7 @@
         + sgAiCard("normal", { e: 0, band: "ok", action: "wait", atStop: true })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
         + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
-        + "<h4>Options asked for, none found</h4><p class=\"banner banner--quiet reroute-none\">" + rp.noOtherOptions + "</p>";
+        + "<h4>Options asked for after a miss, none found</h4><p class=\"banner banner--info reroute-notice\">" + rp.noOtherOptions + "</p>";
     }
 
     document.getElementById("catch-sample-light").innerHTML = catchSample();
@@ -2017,8 +2012,7 @@
       return '<li class="alt-row' + (opts.unlikely ? " alt-row--unlikely" : "") + '"><button type="button" class="alt-row__hit"><span class="alt-row__icon" aria-hidden="true">' + BUS_SVG + '</span>'
         + '<div class="alt-row__body"><p class="alt-row__top journey-step__line"><span class="alt-row__service"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>' + service + '</span> <span class="alt-row__to">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</span></span>'
         + '<span class="alt-row__chance">' + rp.alternativeChance.replace("{point}", point) + '</span></p>'
-        + sgPills(opts.pills)
-        + '<p class="alt-row__bottom"><span class="alt-row__arrives catch-card__when journey-step__arriving">' + lc.arrivingIn.replace("{n}", String(parseInt(minutes, 10))) + '</span><span class="alt-row__reach">' + rp.reachDestination.replace("{time}", reach) + '</span></p>'
+        + '<p class="alt-row__bottom"><span class="alt-row__arrives catch-card__when journey-step__arriving">' + rp.arrivesIn.replace("{minutes}", minutes) + '</span><span class="alt-row__reach">' + (reach ? rp.destination.replace("{time}", reach) : "") + '</span></p>'
         + '<p class="alt-row__bottom">' + walk + '</p>'
         + (opts.unlikely ? warn(copy.pace.unlikely.title) : '') + (opts.after ? warn(rp.afterTarget) : '') + '</div>'
         + '<span class="alt-row__chevron" aria-hidden="true">' + CHEVRON_SM + '</span></button></li>';
@@ -2042,10 +2036,11 @@
 
     function flowSample() {
       var rows = [
-        sgOptionRow("7", 63, 55, 70, "6 min", "6:36\u00a0PM", rp.atYourStop, { pills: ["highest_chance", "fastest"] }),
-        sgOptionRow("16", 41, 33, 50, "9 min", "6:40\u00a0PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183\u00a0m"), { pills: ["fastest"] }),
+        sgOptionRow("7", 63, 55, 70, "6 min", "6:36\u00a0PM", rp.atYourStop, {}),
+        sgOptionRow("16", 41, 33, 50, "9 min", "6:40\u00a0PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183\u00a0m"), {}),
         sgOptionRow("77", 35, 25, 39, "12 min", "6:44\u00a0PM", rp.walkTo.replace("{stop}", "Bras Basah Complex").replace("{distance}", "183\u00a0m"), { unlikely: true }),
-        sgOptionRow("36", 30, 22, 38, "19 min", "6:50\u00a0PM", rp.atYourStop, { unlikely: true, after: true })
+        sgOptionRow("36", 30, 22, 38, "19 min", "6:50\u00a0PM", rp.atYourStop, { unlikely: true, after: true }),
+        sgOptionRow("21", 28, 20, 36, "25 min", "", rp.atYourStop, { unlikely: true })
       ];
       return ""
         + "<h4>No buses in service (no-service layout)</h4>" + sgStatusCard(copy.status.unavailable, copy.quality.noService) + '<div class="card live-card">' + sgBusCard("unavailable", "", false) + '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>' + '</div>'
@@ -2059,19 +2054,22 @@
         + "<h4>Page C, unlikely entry (current-bus card, recommended card, refresh header, alternatives)</h4>" + sgPageCUnlikely()
         + "<h4>Page C, missed entry (banner first, no current-bus card)</h4>" + sgPageCMissed()
         + "<h4>Page C, missed entry, nothing found (plain text and the ride-app card)</h4>" + sgPageCMissedNone()
-        + "<h4>Page C, nothing eligible (no recommended card, no AI block)</h4>" + sgPageCNone()
+        + "<h4>Page C, unlikely entry, the search found nothing (the shorter banner, nothing beneath)</h4>" + sgPageCNone()
         + "<h4>Compact warning banner on Pages A and B</h4>" + sgUnlikelyBanner()
         + "<h4>Page C current-bus card on its own</h4>" + sgCurrentBusCard()
         + "<h4>Question bar: Yes green, No red</h4>" + sgQuestionBar()
         + "<h4>Entry banners: automatic entry and the No entry</h4>" + sgAutoBanner() + '<p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "36") + '</p>'
-        + "<h4>Merged card: Better option found, highest chance</h4>" + sgMergedCard(rp.betterFound, "reasonHighestChance", ["highest_chance"], "7")
-        + "<h4>Merged card: Recommended option, highest chance on time, both pills</h4>" + sgMergedCard(rp.recommended, "reasonHighestChanceOnTime", ["highest_chance", "fastest"], "7")
-        + "<h4>Merged card: fastest, rushing</h4>" + sgMergedCard(rp.recommended, "reasonFastestRushing", ["fastest"], "16")
-        + "<h4>Merged card: shorter walk</h4>" + sgMergedCard(rp.recommended, "reasonShorterWalk", [], "7")
-        + "<h4>Merged card: none by the target</h4>" + sgMergedCard(rp.recommended, "reasonNoneByTarget", ["fastest"], "16")
-        + "<h4>Pills alone and together</h4>" + sgPills(["highest_chance"]) + sgPills(["fastest"]) + sgPills(["highest_chance", "fastest"])
+        + "<h4>Recommended cards: two cards, Fastest to destination and Highest catch probability</h4>"
+        + sgMergedCard(["fastest"], "16", { destination: "6:30\u00a0PM" }) + sgMergedCard(["highest_chance"], "7")
+        + "<h4>Recommended card: one option wins both tags (the second card is Next best)</h4>"
+        + sgMergedCard(["fastest", "highest_chance"], "7") + sgMergedCard(["next_best"], "16", { destination: "6:48\u00a0PM" })
+        + "<h4>Recommended card: one option only</h4>" + sgMergedCard(["fastest", "highest_chance"], "7")
+        + "<h4>Recommended card: no destination estimate (no Destination line, no Fastest card)</h4>"
+        + sgMergedCard(["highest_chance"], "7", { destination: "" })
+        + "<h4>Recommended card: next day</h4>" + sgMergedCard(["highest_chance"], "7", { destination: "12:05\u00a0AM (tomorrow)" })
+        + "<h4>Recommended card: after your target</h4>" + sgMergedCard(["fastest"], "16", { after: true })
         + "<h4>Rows: same stop, different stop, low chance, after your target</h4>" + sgOptionList(rp.alternatives, rows, true)
-        + "<h4>Rows with no recommendation</h4>" + sgOptionList(rp.otherBuses, rows.slice(2), false)
+        + "<h4>Rows with no recommended card</h4>" + sgOptionList(rp.otherBuses, rows.slice(2), false)
         + "<h4>Reroute notices</h4>" + '<p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "36") + '</p>' + '<p class="banner banner--info reroute-notice">' + rp.alreadyLeft + '</p>'
         + "<h4>New-journey overview</h4>" + sgNewJourney();
     }

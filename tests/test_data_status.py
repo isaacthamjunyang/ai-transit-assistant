@@ -166,47 +166,36 @@ def test_startup_logs_nothing_when_there_is_no_problem(monkeypatch, caplog):
     assert not [r for r in caplog.records if "Out of date" in r.getMessage()]
 
 
-# ---- the menu lines
-
-def test_the_menu_has_the_two_lines_fetched_once_with_the_exact_text():
-    assert 'id="menu-data-holidays"' in INDEX and 'id="menu-data-bus"' in INDEX
-    for text in ('"Public holidays updated to "', '"Bus data updated "', '"Bus data date unknown"', '"/api/data-status"'):
-        assert text in INDEX, text
-    assert INDEX.count('fetch("/api/data-status")') == 1 and "menuDataRequested" in INDEX
-    assert "loadMenuData();" in INDEX.split('getElementById("menu-open").addEventListener("click"', 1)[1][:400]
-    for text in ('holidays: "Public holidays updated to {year}"', 'bus: "Bus data updated {date}"', 'busUnknown: "Bus data date unknown"'):
-        assert text in COPY, text
-    sheet = INDEX.split('id="menu-sheet"', 1)[1].split("</header>", 1)[0]
-    assert sheet.rstrip().endswith("</div>") and sheet.index("menu-data") > sheet.index("demo-reset")  # at the bottom
-
+# ---- the menu: two rows, no data lines; the attribution lives in the "How it works" card
 
 ATTRIBUTION = "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0"
+GONE = ("Public holidays updated", "Bus data updated", "Train timetable updated", "Bus data date unknown",
+        "Train timetable date unknown", "Data status unavailable")
 
 
-def test_the_menu_has_the_train_timetable_and_attribution_lines_with_the_exact_text():
-    assert 'id="menu-data-rail"' in INDEX and 'id="menu-data-attribution"' in INDEX
-    for text in ('"Train timetable updated "', '"Train timetable date unknown"', ATTRIBUTION, "body.rail_data_date"):
-        assert text in INDEX, text
-    assert INDEX.count(ATTRIBUTION) == 1  # one constant, used by the success and the failure state
-    for text in ('rail: "Train timetable updated {date}"', 'railUnknown: "Train timetable date unknown"',
-                 f'attribution: "{ATTRIBUTION}"'):
-        assert text in COPY, text
+def test_the_menu_source_has_two_rows_and_no_data_lines():
     sheet = INDEX.split('id="menu-sheet"', 1)[1].split("</header>", 1)[0]
-    assert sheet.index("menu-data-bus") < sheet.index("menu-data-rail") < sheet.index("menu-data-attribution")
-    assert "Train timetable updated 10 Oct 2026" in GUIDE and "Train timetable date unknown" in GUIDE
-    assert ATTRIBUTION in GUIDE
+    assert sheet.count('class="menu-row"') == 2 and sheet.count("menu-row") == 2
+    assert "Appearance" in sheet and "How it works" in sheet and 'id="demo-controls"' in sheet
+    assert "menu-data" not in INDEX and "menu-data" not in CSS and "menu-data" not in GUIDE
+    for text in GONE:
+        assert text not in INDEX, text
+        assert text not in COPY, text
+        assert text not in GUIDE, text
+    assert "loadMenuData" not in INDEX and 'fetch("/api/data-status")' not in INDEX
+
+
+def test_the_attribution_is_one_string_in_copy_the_explainer_the_guide_and_the_plan():
+    assert f'attribution: "{ATTRIBUTION}"' in COPY
+    block = INDEX.split('id="first-run"', 1)[1].split('id="catch-bar"', 1)[0]
+    assert ATTRIBUTION in block and block.rstrip().index("first-run-attribution") > block.index("first-run-next")
+    assert INDEX.count(ATTRIBUTION) == 1
+    assert "fr.attribution" in GUIDE and "first-run__attribution" in GUIDE
+    rule = CSS.split(".first-run__card .first-run__attribution {", 1)[1].split("}", 1)[0]
+    assert "color: var(--color-muted)" in rule and "font-size: var(--type-caption)" in rule
+    assert not re.search(r"#[0-9A-Fa-f]{3,8}\b|rgb\(|hsl\(|style=", rule)
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
-    assert "`Train timetable updated {d Mon yyyy}`" in plan and ATTRIBUTION in plan and "rail_data_date" in plan
-
-
-def test_the_menu_lines_are_muted_small_hold_their_space_and_hide_on_journey_pages():
-    line = CSS.split(".menu-data__line {", 1)[1].split("}", 1)[0]
-    assert "color: var(--color-muted)" in line and "font-size: var(--type-caption)" in line and "min-height" in line
-    hide = CSS.split("body.is-screen-journey .menu-data", 1)[1].split("}", 1)[0]
-    for screen in ("is-screen-live", "is-screen-newjourney", "is-screen-onway"):
-        assert screen in hide
-    assert "display: none" in hide
-    assert not re.search(r"#[0-9A-Fa-f]{3,8}\b|rgb\(|hsl\(|style=", line)
+    assert ATTRIBUTION in plan and "exactly two rows" in plan and "`GET /api/data-status` and the startup warnings stay" in plan
 
 
 def _luminance(color):
@@ -215,21 +204,19 @@ def _luminance(color):
     return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
 
 
-def test_the_muted_text_has_4_5_to_1_on_the_menu_surface_in_light_and_dark():
+def test_the_muted_text_has_4_5_to_1_on_the_card_surface_in_light_and_dark():
     theme = (ROOT / "static" / "theme.css").read_text(encoding="utf-8")
     muted = re.findall(r"--color-muted:\s*(#[0-9A-Fa-f]{6})", theme)
     card = re.findall(r"--color-card:\s*(#[0-9A-Fa-f]{6})", theme)
-    assert "background: var(--color-card)" in CSS.split(".menu-sheet {", 1)[1].split("}", 1)[0]
+    assert "background: var(--color-card)" in CSS.split(".first-run__card {", 1)[1].split("}", 1)[0]
     for text, surface in zip(muted[:2], card[:2]):
         hi, lo = sorted((_luminance(text), _luminance(surface)), reverse=True)
         assert (hi + 0.05) / (lo + 0.05) >= 4.5
 
 
-def test_the_style_guide_shows_the_lines_and_the_plan_describes_them():
-    assert "Public holidays updated to 2027" in GUIDE and "Bus data updated 29 Sep 2026" in GUIDE
-    assert "Bus data date unknown" in GUIDE and 'class="menu-data__line"' in GUIDE
+def test_the_data_status_endpoint_stays_and_is_documented():
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
-    assert "/api/data-status" in plan and "Public holidays updated to {year}" in plan and "more than 30 days old" in plan
+    assert "GET /api/data-status" in plan and "more than 30 days old" in plan
 
 
 # ---- the menu in a real browser (headless Edge): tests/js/scenarios/menudata.mjs
@@ -237,72 +224,28 @@ def test_the_style_guide_shows_the_lines_and_the_plan_describes_them():
 from page_runner import require_edge, run_scenario, running_app  # noqa: E402
 
 
-def _menu(tmp_path_factory, fail):
+@pytest.fixture(scope="module", params=[(360, False), (1280, True)], ids=["360-light", "1280-dark"])
+def menu(request, tmp_path_factory):
     require_edge()
+    width, dark = request.param
     with running_app(tmp_path_factory.mktemp("menudata"), eta_minutes=[10.3]) as base:
-        return run_scenario("menudata", base, {"fail": fail})["result"]
+        return run_scenario("menudata", base, {"width": width, "height": 800, "dark": dark}, timeout=240)["result"]
 
 
-@pytest.fixture(scope="module")
-def menu_ok(tmp_path_factory):
-    return _menu(tmp_path_factory, "")
+def test_the_open_menu_has_exactly_two_rows_and_no_status_lines(menu):
+    shown = menu["menu"]
+    assert shown["sheetHidden"] is False
+    assert shown["rows"] == ["Appearance", "How it works"]
+    assert shown["dataBox"] is False and shown["demoShown"] is False
+    for text in GONE:
+        assert text not in shown["text"], text
+    assert menu["calls"] == 0  # the page no longer asks for the status
 
 
-@pytest.fixture(scope="module")
-def menu_404(tmp_path_factory):
-    return _menu(tmp_path_factory, "404")
-
-
-@pytest.fixture(scope="module")
-def menu_network(tmp_path_factory):
-    return _menu(tmp_path_factory, "network")
-
-
-def _visible(line):
-    return (
-        line["text"].strip() != "" and line["hidden"] is False and line["display"] != "none"
-        and line["visibility"] == "visible" and float(line["opacity"]) == 1.0
-        and line["height"] > 0 and line["width"] > 0 and line["clipped"] is False
-    )
-
-
-def test_home_menu_shows_the_train_timetable_and_attribution_lines(menu_ok):
-    shown = menu_ok["afterOpen"]
-    assert _visible(shown["rail"]) and _visible(shown["attribution"])
-    assert re.fullmatch(r"Train timetable updated \d{1,2} [A-Z][a-z]{2} \d{4}|Train timetable date unknown",
-                        shown["rail"]["text"])
-    assert shown["attribution"]["text"] == ATTRIBUTION
-    assert shown["rail"]["color"] == shown["bus"]["color"] == shown["attribution"]["color"]  # one muted style
-    assert shown["boxBottom"] <= shown["sheetBottom"]
-
-
-def test_home_menu_shows_both_lines_with_visible_text(menu_ok):
-    shown = menu_ok["afterOpen"]
-    assert shown["bodyClass"].find("is-screen-home") != -1 and shown["sheetHidden"] is False
-    assert _visible(shown["holidays"]) and _visible(shown["bus"])
-    assert shown["holidays"]["text"] == "Public holidays updated to 2027"
-    assert re.fullmatch(r"Bus data updated \d{1,2} [A-Z][a-z]{2} \d{4}", shown["bus"]["text"])
-    assert shown["holidays"]["color"] != shown["surface"] and shown["bus"]["color"] != shown["surface"]
-    assert shown["boxBottom"] <= shown["sheetBottom"]  # inside the panel
-    assert menu_ok["calls"] == 1 and menu_ok["callsAfterReopen"] == 1  # fetched once
-
-
-@pytest.mark.parametrize("fixture", ["menu_404", "menu_network"])
-def test_a_failed_fetch_shows_data_status_unavailable_in_the_same_muted_style(fixture, request, menu_ok):
-    shown = request.getfixturevalue(fixture)["afterOpen"]
-    assert shown["holidays"]["text"] == "Data status unavailable" and _visible(shown["holidays"])
-    assert shown["holidays"]["color"] == menu_ok["afterOpen"]["holidays"]["color"]  # the same muted colour
-    assert shown["holidays"]["fontSize"] == menu_ok["afterOpen"]["holidays"]["fontSize"]
-    assert shown["bus"]["text"] == "" and shown["rail"]["text"] == ""  # one line says it, not three
-    assert shown["attribution"]["text"] == ATTRIBUTION and _visible(shown["attribution"])  # the credit stays
-
-
-def test_after_a_failure_the_next_menu_open_tries_again(menu_404, menu_network):
-    assert menu_404["calls"] == 1 and menu_404["callsAfterReopen"] == 2
-    assert menu_network["calls"] == 1 and menu_network["callsAfterReopen"] == 2
-
-
-def test_the_failure_text_is_in_copy_js_the_page_and_the_style_guide():
-    assert 'unavailable: "Data status unavailable"' in COPY
-    assert INDEX.count('"Data status unavailable"') == 1 and "Data status unavailable" in GUIDE
-    assert ".catch(showMenuDataUnavailable)" in INDEX
+def test_the_attribution_is_the_last_muted_line_inside_the_how_it_works_card(menu):
+    card = menu["card"]
+    assert card["text"] == ATTRIBUTION
+    assert card["isLast"] is True and card["visible"] is True and card["inside"] is True
+    assert card["belowActions"] is True
+    assert card["color"] != card["bodyColor"]  # muted, not the primary text colour
+    assert card["scrollWidth"] <= card["innerWidth"]

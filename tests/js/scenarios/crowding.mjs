@@ -7,10 +7,19 @@ const READ = `(function () {
   var chip = document.getElementById("catch-load");
   var tiles = Array.prototype.map.call(document.querySelectorAll("#next-buses .bus-tile-card"), function (t) {
     var c = t.querySelector(".crowd-chip");
+    var tr = t.getBoundingClientRect(), cr = c ? c.getBoundingClientRect() : null;
+    var svg = c ? c.querySelector("svg") : null;
     return { text: c ? text(c) : null, icon: !!(c && c.querySelector("svg")), code: c ? c.getAttribute("data-load") : null,
-      right: t.getBoundingClientRect().right };
+      right: tr.right, height: tr.height, color: c ? getComputedStyle(c).color : null, svg: svg ? svg.innerHTML : null,
+      inside: !c || (cr.left >= tr.left - 0.5 && cr.right <= tr.right + 0.5 && cr.top >= tr.top - 0.5 && cr.bottom <= tr.bottom + 0.5),
+      clipped: !!c && (c.scrollWidth > c.clientWidth + 1 || c.scrollHeight > c.clientHeight + 1),
+      iconPx: svg ? svg.getBoundingClientRect().width : null };
   });
-  return { catchShown: !!chip && !chip.hidden, catchText: text(chip), catchIcon: !!(chip && chip.querySelector("svg")),
+  var walkLines = Array.prototype.filter.call(document.querySelectorAll("p, span, div"), function (el) {
+    return el.children.length === 0 && /^\\d+\\s*min walk$/.test(el.textContent.trim()) && el.getClientRects().length > 0;
+  }).length;
+  return { walkLines: walkLines, catchShown: !!chip && !chip.hidden, catchCode: chip ? chip.getAttribute("data-load") : null, catchText: text(chip), catchIcon: !!(chip && chip.querySelector("svg")), catchColor: chip ? getComputedStyle(chip).color : null, catchSvg: chip && chip.querySelector("svg") ? chip.querySelector("svg").innerHTML : null,
+    catchInside: !chip || chip.hidden || chip.getBoundingClientRect().right <= window.innerWidth,
     tiles: tiles, scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth,
     probability: lastSuccess && lastSuccess.buses ? lastSuccess.buses.map(function (b) { return b.probability && b.probability.point; }) : null,
     loads: lastSuccess && lastSuccess.buses ? lastSuccess.buses.map(function (b) { return b.load; }) : null };

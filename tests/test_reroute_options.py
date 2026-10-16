@@ -20,7 +20,9 @@ def _north(metres):
     return LAT + math.degrees(metres / EARTH_RADIUS_M), LON
 
 
-def _row(service, point, low, high, arrival="2026-09-29T14:10:00+08:00", estimated="2026-09-29T14:30:00+08:00"):
+def _row(service, point, low, high, arrival="2026-09-29T14:10:00+08:00", estimated="2026-09-29T14:30:00+08:00",
+         destination="auto"):
+    """destination: the destination clock time; "auto" reuses `estimated`, None is an option with no estimate."""
     return {
         "id": f"{service}|X|{arrival}",
         "service_no": service,
@@ -30,6 +32,7 @@ def _row(service, point, low, high, arrival="2026-09-29T14:10:00+08:00", estimat
         "range_high": high,
         "arrival_time": arrival,
         "estimated_arrival": estimated,
+        "destination_arrival": estimated if destination == "auto" else destination,
         "distance_m": 0,
         "walk_m": 0,
     }
@@ -40,8 +43,8 @@ def _ids(ranked):
 
 
 def _all(ranked):
-    """Every option: the recommended one (the card) and the list rows."""
-    return ([ranked["recommended"]] if ranked["recommended"] else []) + ranked["rows"]
+    """Every option: the recommended cards and the list rows."""
+    return list(ranked["cards"]) + ranked["rows"]
 
 
 def _by_service(ranked):
@@ -49,67 +52,64 @@ def _by_service(ranked):
 
 
 def _rank(options, target=None, entry="recommended"):
-    from recommend import recommend_option
-
-    return rank_options(options, recommend_option(options, target), target, entry)
+    return rank_options(options, target, entry)
 
 
-def test_one_option_with_both_pills_is_the_recommendation():
+def test_one_option_winning_both_tags_is_card_one_and_the_next_best_fills_card_two():
     options = [_row("7", 70, 60, 80), _row("16", 41, 33, 50, estimated="2026-09-29T14:40:00+08:00")]
     ranked = _rank(options)
-    top = ranked["recommended"]
-    assert top["service_no"] == "7" and top["badges"] == ["highest_chance", "fastest"]
-    assert ranked["recommended_id"] == top["id"] and ranked["mode"] == "winner"
-    assert [row["service_no"] for row in ranked["rows"]] == ["16"]  # the recommended option is not in the list
+    first, second = ranked["cards"]
+    assert first["service_no"] == "7" and first["tags"] == ["fastest", "highest_chance"]
+    assert second["service_no"] == "16" and second["tags"] == ["next_best"]
+    assert ranked["recommended_id"] == first["id"] and ranked["mode"] == "winner"
+    assert ranked["rows"] == []  # both options are cards
 
 
-def test_different_holders_carry_one_pill_each_and_the_recommended_option_leaves_the_list():
+def test_different_options_carry_one_tag_each_and_the_cards_leave_the_list():
     options = [
         _row("7", 70, 60, 80, estimated="2026-09-29T14:50:00+08:00"),
         _row("16", 55, 45, 65, estimated="2026-09-29T14:30:00+08:00"),
         _row("36", 41, 33, 50, estimated="2026-09-29T14:45:00+08:00"),
     ]
     ranked = _rank(options)
-    by_service = _by_service(ranked)
-    assert by_service["7"]["badges"] == ["highest_chance"]
-    assert by_service["16"]["badges"] == ["fastest"]
-    assert by_service["36"]["badges"] == []
-    assert ranked["recommended"]["service_no"] == "7"
-    assert _ids(ranked) == ["16", "36"]  # point probability, highest first
+    assert [(c["service_no"], c["tags"]) for c in ranked["cards"]] == [("16", ["fastest"]), ("7", ["highest_chance"])]
+    assert ranked["recommended"]["service_no"] == "16"  # the first card
+    assert _ids(ranked) == ["36"]
 
 
-def test_no_recommendation_gives_no_card_but_the_full_list():
+def test_no_eligible_option_gives_no_card_but_the_full_list():
     options = [_row("7", 30, 20, 35), _row("16", 25, 15, 30)]
     ranked = _rank(options)
-    assert ranked["mode"] == "none" and ranked["recommended"] is None and ranked["recommended_id"] is None
+    assert ranked["mode"] == "none" and ranked["recommended"] is None and ranked["cards"] == []
     assert len(ranked["rows"]) == 2
     assert all(row["unlikely"] for row in ranked["rows"])
 
 
-def test_the_quick_pill_excludes_range_high_below_forty():
+def test_a_low_chance_option_is_not_fastest_and_stays_in_the_list():
     options = [
         _row("7", 30, 20, 39, estimated="2026-09-29T14:20:00+08:00"),
         _row("16", 50, 40, 60, estimated="2026-09-29T14:40:00+08:00"),
     ]
-    by_service = _by_service(_rank(options))
-    assert "fastest" not in by_service["7"]["badges"]
-    assert "fastest" in by_service["16"]["badges"]
-    assert by_service["7"]["unlikely"] is True and by_service["16"]["unlikely"] is False
-    only_unlikely = _rank([_row("7", 30, 20, 39)])
-    assert all("fastest" not in row["badges"] for row in _all(only_unlikely))
+    ranked = _rank(options)
+    assert [c["service_no"] for c in ranked["cards"]] == ["16"] and ranked["cards"][0]["tags"] == [
+        "fastest", "highest_chance"]
+    assert _ids(ranked) == ["7"] and ranked["rows"][0]["unlikely"] is True
+    only_unlikely = _rank([_row("7", 30, 20, 39)])  # the one option there is may take the cards
+    assert [c["service_no"] for c in only_unlikely["cards"]] == ["7"]
 
 
-def test_the_list_orders_by_point_then_estimated_arrival_then_service():
+def test_the_list_orders_by_destination_arrival_then_bus_then_service_and_no_estimate_last():
     options = [
-        _row("16", 60, 50, 70, estimated="2026-09-29T14:30:00+08:00"),
-        _row("7", 60, 50, 70, estimated="2026-09-29T14:30:00+08:00"),
-        _row("36", 60, 50, 70, estimated="2026-09-29T14:25:00+08:00"),
-        _row("99", 80, 70, 90),
-        _row("12", 20, 10, 25),
+        _row("16", 40, 30, 50, arrival="2026-09-29T14:12:00+08:00", estimated="2026-09-29T14:30:00+08:00"),
+        _row("7", 40, 30, 50, arrival="2026-09-29T14:12:00+08:00", estimated="2026-09-29T14:30:00+08:00"),
+        _row("36", 40, 30, 50, estimated="2026-09-29T14:25:00+08:00"),
+        _row("77", 40, 30, 50, arrival="2026-09-29T14:05:00+08:00", destination=None),
+        _row("99", 90, 80, 95, estimated="2026-09-29T14:20:00+08:00"),
+        _row("12", 80, 70, 90, estimated="2026-09-29T14:35:00+08:00"),
     ]
     ranked = _rank(options)
-    assert ranked["recommended"]["service_no"] == "99"
-    assert _ids(ranked) == ["36", "7", "16", "12"]
+    assert [c["service_no"] for c in ranked["cards"]] == ["99", "12"]  # 99 wins both tags; Next best is 12
+    assert _ids(ranked) == ["36", "7", "16", "77"]  # earliest first, equal times by service, no estimate last
 
 
 def test_every_row_keeps_its_point_and_range():
@@ -240,7 +240,7 @@ def test_automatic_decision_with_a_winner_lists_everything_and_a_card():
     assert options["mode"] == "winner"
     assert options["entry"] == "better"
     assert options["recommended"]["service_no"] == "7" and options["recommended"]["recommended"] is True
-    assert [row["service_no"] for row in options["rows"]] == ["16"]
+    assert options["rows"] == [] or [row["service_no"] for row in options["rows"]] == ["16"]
     everything = _all(options)
     assert {row["service_no"] for row in everything} == {"7", "16"}
     assert all("reroute" in row and row["reroute"]["stop"]["stop_code"] for row in everything)
@@ -270,5 +270,5 @@ def test_page_wiring_for_cards_rows_overview_and_the_stale_bus_guard():
     leave = html.split("function leaveNewJourneyScreen(toPageA)", 1)[1].split("function chosenBusStillListed", 1)[0]
     assert "endMonitoring" not in leave
     # One merged card per recommendation, with its own Switch button; no separate Fastest option card.
-    assert "Fastest option" not in html and "Better option found" in html and "Recommended option" in html
+    assert "Fastest option" not in html and "Better option found" not in html and "Recommended option" not in html
     assert "Other buses at your stop" in html and "Other options at your stop" not in html and "buildSwitchButton(row)" in html

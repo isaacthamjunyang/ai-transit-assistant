@@ -133,7 +133,7 @@ def test_reroute_is_a_pending_proposal_until_the_tap():
     for effect in ("lastRerouteAt = new Date().toISOString()", "pinnedEtaTimestamp", "renderRerouteCard(reroute)",
                    "notifyReroute(reroute)", "clearLeaveNowState()", "startMonitoring(reroute.service_no)"):
         assert effect in switch
-    card = _between(html, "function buildOptionCard(kind, row)", "function buildOptionRow")
+    card = _between(html, "function buildOptionCard(row)", "function buildOptionRow")
     assert "buildSwitchButton(row)" in card and "option-merged" in card
 
 
@@ -157,7 +157,7 @@ def test_option_rows_are_buttons_that_carry_a_point():
     assert 'createElement("button")' in row and "alt-row__hit" in row
     assert "CHANCE_TEXT" in row and "CHANCE_RANGE_TEXT" not in row  # "{point}% chance", no range
     assert "formatDistance(row.distance_m)" in row and "WALK_TO_TEXT" in row
-    assert "AT_YOUR_STOP_TEXT" in row and "REACH_DESTINATION_TEXT" in row and "AFTER_TARGET_TEXT" in row
+    assert "AT_YOUR_STOP_TEXT" in row and "destinationText(row)" in row and "AFTER_TARGET_TEXT" in row
     assert "Next Bus" not in row
     assert "PACE_TEXT.unlikely.title" in row and "WARN_SVG_SMALL" in row
     shown = _between(html, "function renderPageC()", "function updatePageCUpdated")

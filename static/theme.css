@@ -21,6 +21,11 @@
   --status-uncertain: #8A5A00;
   --status-stale: #B42318;
   --status-unavailable: #B42318;
+  /* Bus crowding label: the icon and the text share the colour; each is 4.5:1 or better on --color-card */
+  --crowd-seats: #0B7A4E;
+  --crowd-standing: #8A5A00;
+  --crowd-crowded: #B42318;
+  --crowd-nodata: #B42318;
   --status-no-history: #475467;
   --status-simulated: #5B3FD0;
 
@@ -205,6 +210,10 @@
     --status-uncertain: #F5C76A; /* derived, not in mockup */
     --status-stale: #FF9AA0; /* derived, not in mockup */
     --status-unavailable: #FF9AA0; /* derived, not in mockup */
+    --crowd-seats: #5FE0A0; /* derived, not in mockup */
+    --crowd-standing: #F5C76A; /* derived, not in mockup */
+    --crowd-crowded: #FF9AA0; /* derived, not in mockup */
+    --crowd-nodata: #FF9AA0; /* derived, not in mockup */
     --status-no-history: #AEB9CB; /* derived, not in mockup */
     --status-simulated: #B9A6FF; /* derived, not in mockup */
 
@@ -337,6 +346,11 @@
   --status-uncertain: #8A5A00;
   --status-stale: #B42318;
   --status-unavailable: #B42318;
+  /* Bus crowding label: the icon and the text share the colour; each is 4.5:1 or better on --color-card */
+  --crowd-seats: #0B7A4E;
+  --crowd-standing: #8A5A00;
+  --crowd-crowded: #B42318;
+  --crowd-nodata: #B42318;
   --status-no-history: #475467;
   --status-simulated: #5B3FD0;
 
@@ -468,6 +482,10 @@
   --status-uncertain: #F5C76A; /* derived, not in mockup */
   --status-stale: #FF9AA0; /* derived, not in mockup */
   --status-unavailable: #FF9AA0; /* derived, not in mockup */
+  --crowd-seats: #5FE0A0; /* derived, not in mockup */
+  --crowd-standing: #F5C76A; /* derived, not in mockup */
+  --crowd-crowded: #FF9AA0; /* derived, not in mockup */
+  --crowd-nodata: #FF9AA0; /* derived, not in mockup */
   --status-no-history: #AEB9CB; /* derived, not in mockup */
   --status-simulated: #B9A6FF; /* derived, not in mockup */
 

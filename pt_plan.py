@@ -211,9 +211,28 @@ def plan_multi_leg(
         "itineraries": [entry["itinerary"] for entry in options],
         "boarding_stop": best["boarding_stop"],
         "journey": _journey(cache, chosen, destination_stop_code, arrive_by, moment, walk_speed_m_s),
+        "starts": _starts(usable, walk_speed_m_s),
         "planning_warning": warning,
         "dropped": dropped,
     }
+
+
+def _starts(usable: list[dict], speed: float) -> list[dict]:
+    """Every usable itinerary (the hours verdict already covers every leg of it) as a first bus and the minutes from
+    its own boarding to its end, bus legs with the traffic factor. The reroute search shifts these minutes to the real
+    boarding time of that bus. Not capped like `options`."""
+    found = []
+    for assessed in usable:
+        transit = _transit(assessed["itinerary"])
+        first = transit[0] if transit else None
+        if not first or first["kind"] != KIND_BUS or not first.get("service_no") or not first.get("boarding_stop_code"):
+            continue
+        found.append({
+            "boarding_stop_code": first["boarding_stop_code"],
+            "service_no": first["service_no"],
+            "after_boarding_minutes": assessed["ride_min"] + walk_minutes(assessed["end_walk_m"], speed),
+        })
+    return found
 
 
 FALLBACK_REASONS = frozenset({"no_credentials", "auth", "timeout", "network", "rate_limited", "http_error",

@@ -41,7 +41,11 @@ const READ = `(function () {
       line: line ? line.textContent.replace(/\\s+/g, " ").trim() : null, when: when ? when.textContent.trim() : null,
       ring: node ? getComputedStyle(node).boxShadow : null,
       leave: (card.querySelector(".option-card__leave") || {}).textContent || null,
-      arrive: (card.querySelector(".option-card__arrive") || {}).textContent || null,
+      destination: card.querySelector(".option-card__destination") ? card.querySelector(".option-card__destination").textContent : null,
+      tags: Array.prototype.map.call(card.querySelectorAll(".option-chip"), function (el) { return el.textContent.trim(); }),
+      sentences: card.querySelectorAll(".option-reason").length,
+      button: (card.parentNode.querySelector(".primary") || {}).textContent || null,
+      oldBlocks: !!card.parentNode.querySelector(".option-explain, .ai-card, .option-badges, .pill--best"),
       ringEl: !!card.querySelector(".prob-ring"),
       oldTitle: !!card.querySelector(".option-card__title, .option-card__meta, .option-card__live"),
       right: card.getBoundingClientRect().right };
@@ -63,9 +67,10 @@ const READ = `(function () {
 function row(id, service, minutes, point, group) {
   const at = new Date(Date.now() + minutes * 60000).toISOString();
   return { id, service_no: service, stop_code: "90041", stop_name: "Here", point, band: "high", range_low: point - 5,
-    range_high: point + 5, arrival_time: at, estimated_arrival: at, distance_m: 0, walk_m: 0, at_current_stop: true,
-    next_of_same_service: group === 1, monitored: true, group, badges: [], unlikely: false, after_target: false,
-    recommended: false, leave_by: at };
+    range_high: point + 5, arrival_time: at, estimated_arrival: at,
+    destination_arrival: new Date(Date.now() + (minutes + 25) * 60000).toISOString(), distance_m: 0, walk_m: 0,
+    at_current_stop: true, next_of_same_service: group === 1, monitored: true, group, tags: [],
+    unlikely: false, after_target: false, recommended: false, leave_by: at };
 }
 
 export default async function (h) {
@@ -80,8 +85,9 @@ export default async function (h) {
   await h.eval(`confirmedDestinationStop = { stop_code: "90021", stop_name: "Pebble Bay (90021)", lat: 1.3, lon: 103.8 }; true`);
   const best = row("r", "36", 6, 72, 2);
   best.recommended = true;
+  best.tags = ["highest_chance"];
   best.leave_by = new Date(Date.now() + 120000).toISOString();
-  await h.eval(SHOW(true, { mode: "none", entry: "recommended", recommended: best, rows: listed }, 76));
+  await h.eval(SHOW(true, { mode: "winner", entry: "recommended", recommended: best, cards: [best], rows: listed }, 76));
   out.withCard = await h.eval(READ);
   await h.eval(SHOW(true, { mode: "none", entry: "recommended", recommended: null, rows: [] }, 76));
   out.empty = await h.eval(READ);

@@ -3,15 +3,6 @@
    The constants object is `copy`. */
 
 var copy = {
-  menuData: {
-    holidays: "Public holidays updated to {year}",
-    bus: "Bus data updated {date}",
-    busUnknown: "Bus data date unknown",
-    rail: "Train timetable updated {date}",
-    railUnknown: "Train timetable date unknown",
-    attribution: "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0",
-    unavailable: "Data status unavailable"
-  },
   notificationCard: {
     title: "Notifications Optional",
     description: "Get an audio/visual alert 60 seconds before your walk deadline.",
@@ -434,6 +425,7 @@ var copy = {
   firstRun: {
     title: "How it works",
     menu: "How it works",
+    attribution: "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0",
     stepOf: "Step {n} of {total}",
     step1: "Pick where you're going.",
     step2: "We show when to leave, and your chance of catching the bus or train.",
@@ -482,7 +474,7 @@ var copy = {
     /* approved: the Leave by tile shows a clock time or "Leave now", never both, and one walk line; {w} is whole minutes */
     leaveWalk: "{w}\u00a0min walk",
     /* proposed, needs approval: Page A's Leave by tile is one line, "Leave by: {time}"; "Leave now" and "At the stop"
-       stand alone. The walk line is under the pace chip, the same displayed minutes as the AI sentence ({n}). */
+       stand alone. The walk line is inside the pace card, the same displayed minutes as the AI sentence ({n}). */
     leaveByLabel: "Leave by:",
     paceWalk: "{n}\u00a0min walk",
     leaveUncertain: "Location uncertain: leave a bit earlier to be safe.",
@@ -494,12 +486,16 @@ var copy = {
     /* proposed, needs approval */
     warningTimedTitle: "You're unlikely to catch the Bus {service} arriving in {minutes}",
     warningLine: "Catch probability: about {point}%",
-    betterFound: "Better option found",
-    recommended: "Recommended option",
     arrivesIn: "Arrives in {minutes}",
+    /* proposed, needs approval: "Reach destination by: {time}" is the estimated destination arrival, 12-hour
+       Singapore time with a no-break space before AM or PM, "(tomorrow)" on the next day; no line without an estimate */
+    destination: "Reach destination by: {time}",
+    /* proposed, needs approval: the tag of a recommended card. Python names the tag; mirrored in index.html (TAG_TEXT) */
+    tagFastest: "Fastest to destination",
+    tagHighest: "Highest catch probability",
+    tagNextBest: "Next best",
     toDestination: "To {destination}",
-    leaveBy: "Leave by {time}",
-    arrive: "Destination arrival {time}",
+    leaveBy: "Leave by: {time}",
     switchTo: "Switch to Bus {service} in {minutes}",
     alternatives: "Alternative options",
     alternativeChance: "{point}% chance",
@@ -509,17 +505,14 @@ var copy = {
     seeOtherBuses: "See other buses",
     /* proposed, needs approval */
     currentWarning: "Catching this bus is unlikely. Here are your other options.",
+    /* proposed, needs approval: the same banner once the search completed and found no option */
+    currentWarningNone: "Catching this bus is unlikely.",
     /* proposed, needs approval */
     updated: "Updated {time}",
     /* proposed, needs approval */
     refreshLabel: "Refresh other buses",
     /* proposed, needs approval */
     optionsFailed: "Could not load other buses. Try the refresh button.",
-    /* approved wording */
-    pillHighest: "Highest catch probability",
-    /* approved wording */
-    pillQuick: "Reach your destination quickly",
-    reachDestination: "Reach destination about {time}",
     atYourStop: "At your stop",
     walkTo: "Walk to {stop} ({distance})",
     afterTarget: "After your target",
@@ -538,20 +531,15 @@ var copy = {
     /* proposed, needs approval: browser notification while a proposal is pending */
     pendingNotificationTitle: "Better option — Bus {new_service}",
     /* proposed, needs approval: browser notification while a proposal is pending */
-    pendingNotificationBody: "A better option is available. Open the app to switch.",
-    /* proposed, needs approval: written by Python (recommend.py REASON_TEXT), shown here for the style guide only */
-    reasonFastestRushing: "Your arrive-by time is close, so Bus {s} is recommended: it should get you to your destination first.",
-    reasonHighestChanceOnTime: "Bus {s} is recommended: it has the highest chance of catching, and it should still get you there by your arrive-by time.",
-    reasonHighestChance: "Bus {s} is recommended: it has the highest chance of catching.",
-    reasonShorterWalk: "Bus {s} has a similar chance to the other options, and the walk to its stop is shorter.",
-    reasonNoneByTarget: "No option should reach your destination by your arrive-by time. Bus {s} should get you there earliest."
+    pendingNotificationBody: "A better option is available. Open the app to switch."
   },
   /* proposed, needs approval: bus crowding from the LTA Load field. Text and icon on the Next 3 buses tiles and Page A.
      Display only. Mirrored in index.html (CROWD_TEXT). SEA seats available, SDA standing available, LSD limited standing. */
   crowding: {
-    SEA: "Seats",
-    SDA: "Standing",
-    LSD: "Crowded"
+    SEA: "Seats Available",
+    SDA: "Standing Available",
+    LSD: "Crowded",
+    unknown: "No Data"
   },
   liveTracking: {
     refresh: "Refresh live arrivals",

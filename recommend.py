@@ -153,3 +153,61 @@ def pills(options: list[dict]) -> dict[str, str | None]:
             key=lambda o: (arrival_key(o), -o["point"], natural_key(o.get("service_no", ""))),
         )["id"]
     return holders
+
+
+# ---- the two recommended cards of the reroute page (Page C) -----------------------------------------------------
+# Tags are written here, never by the model; copy.js mirrors them (rerouteProposal). The cards carry no sentence.
+TAG_FASTEST = "fastest"
+TAG_HIGHEST = "highest_chance"
+TAG_NEXT_BEST = "next_best"
+TAGS = (TAG_FASTEST, TAG_HIGHEST, TAG_NEXT_BEST)
+TAG_LABEL = {
+    TAG_FASTEST: "Fastest to destination",
+    TAG_HIGHEST: "Highest catch probability",
+    TAG_NEXT_BEST: "Next best",
+}
+def _has_estimate(option: dict) -> bool:
+    return _when(option.get("destination_arrival")) is not None
+
+
+def _wait_key(option: dict) -> tuple:
+    return arrival_key(option, "arrival_time")
+
+
+def _fastest_key(option: dict) -> tuple:
+    return (arrival_key(option, "destination_arrival"), _wait_key(option), -option["point"],
+            natural_key(option.get("service_no", "")))
+
+
+def _chance_key(option: dict) -> tuple:
+    return (-option["point"], arrival_key(option, "destination_arrival"), _wait_key(option),
+            natural_key(option.get("service_no", "")))
+
+
+def choose_cards(options: list[dict]) -> list[dict]:
+    """The recommended cards, in order: [{"id", "tags": [...]}], at most two.
+
+    Card 1 "Fastest to destination": the earliest destination arrival; ties to the shorter bus wait, then the higher
+    catch probability. Card 2 "Highest catch probability": the highest point probability; ties to the earlier
+    destination arrival, then the shorter bus wait. An option whose range_high is below
+    MIN_REAL_CHANCE_RANGE_HIGH takes a card only when it is the one option there is (it is always listed under
+    Alternative options otherwise). No option with an estimate: no Fastest card. When one option wins both,
+    it carries both tags and the second card is the next best by catch probability ("Next best"). One option: one
+    card. No blended score."""
+    if not options:
+        return []
+    pool = options if len(options) == 1 else [o for o in options if _is_eligible(o)]
+    if not pool:
+        return []
+    estimated = [o for o in pool if _has_estimate(o)]
+    fastest = min(estimated, key=_fastest_key) if estimated else None
+    highest = min(pool, key=_chance_key)
+    if fastest is None:
+        return [{"id": highest["id"], "tags": [TAG_HIGHEST]}]
+    if fastest is not highest:
+        return [{"id": fastest["id"], "tags": [TAG_FASTEST]}, {"id": highest["id"], "tags": [TAG_HIGHEST]}]
+    cards = [{"id": highest["id"], "tags": [TAG_FASTEST, TAG_HIGHEST]}]
+    rest = [o for o in pool if o is not highest]
+    if rest:
+        cards.append({"id": min(rest, key=_chance_key)["id"], "tags": [TAG_NEXT_BEST]})
+    return cards

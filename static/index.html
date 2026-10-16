@@ -62,12 +62,6 @@
       <button type="button" id="demo-run">Run Scenario</button>
       <button type="button" id="demo-reset">Reset to Live</button>
     </details>
-      <div class="menu-data" id="menu-data">
-        <p class="menu-data__line" id="menu-data-holidays"></p>
-        <p class="menu-data__line" id="menu-data-bus"></p>
-        <p class="menu-data__line" id="menu-data-rail"></p>
-        <p class="menu-data__line" id="menu-data-attribution"></p>
-      </div>
     </div>
   </header>
   <div class="back-bar" id="back-bar" hidden>
@@ -520,7 +514,7 @@
           </div>
         </div>
         <p class="catch-card__caption">if you leave now and walk at a normal pace</p>
-        <div id="pc-warn" class="page-c-warn" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><p>Catching this bus is unlikely. Here are your other options.</p></div>
+        <div id="pc-warn" class="page-c-warn" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><p id="pc-warn-text">Catching this bus is unlikely. Here are your other options.</p></div>
         <button type="button" id="pc-see-arrivals" class="secondary">See bus arrival times</button>
       </section>
       <div id="reroute-proposal" class="reroute-proposal">
@@ -587,7 +581,6 @@
       <div id="reroute-moment" class="reroute-moment" hidden></div>
     </section>
     <div id="pace-slot" class="pace-slot live-only" hidden></div>
-    <p id="pace-walk" class="pace-walk live-only" hidden></p>
     <section id="leave-tiles" class="leave-tiles live-only" aria-label="Leave by" hidden>
       <div id="tile-leave" class="leave-tile" role="group" aria-label="Leave by">
         <span class="leave-tile__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
@@ -708,6 +701,7 @@
         <button type="button" class="secondary" id="first-run-skip">Skip</button>
         <button type="button" class="primary" id="first-run-next">Next</button>
       </div>
+      <p id="first-run-attribution" class="first-run__attribution">Contains information from LTA DataMall under the Singapore Open Data Licence v1.0</p>
     </div>
   </div>
   <div id="catch-bar" class="catch-bar" role="group" aria-labelledby="catch-bar-title" hidden>
@@ -1767,7 +1761,7 @@
     var EXPL_TRAIN_LEAVE_NOW_DEPARTING = "Leave now to try to catch the train departing at {arrival}.";
     var AT_STOP_TEXT = "At the stop";
     var LEAVE_TILE_WALK = "{w}\u00a0min walk";
-    // MIRROR: copy.js liveCatch.leaveByLabel and liveCatch.paceWalk. The walk line under the pace chip states the same
+    // MIRROR: copy.js liveCatch.leaveByLabel and liveCatch.paceWalk. The walk line inside the pace card states the same
     // displayed walk minutes (pack.walk_minutes) as the AI sentence. The Leave by tile no longer draws a walk line.
     var LEAVE_BY_LABEL = "Leave by:";
     var PACE_WALK_TEXT = "{n}\u00a0min walk";
@@ -2353,6 +2347,12 @@
       title.textContent = text.title;
       badge.appendChild(title);
       chip.appendChild(badge);
+      // The walk line lives inside the card, so it is only ever where the card is (never on Page B or another page).
+      var walk = document.createElement("p");
+      walk.id = "pace-walk";
+      walk.className = "pace-walk";
+      walk.hidden = true;
+      chip.appendChild(walk);
       return chip;
     }
 
@@ -4755,22 +4755,28 @@
       "Walk, and we'll keep the chance updated."
     ];
     // Crowding on the bus (LTA Load): text and icon, never colour alone. MIRROR of copy.js crowding. Display only: it is
-    // never read by the probability, the ring or the ranking. A blank or unknown value draws nothing.
-    var CROWD_TEXT = { SEA: "Seats", SDA: "Standing", LSD: "Crowded" };
+    // never read by the probability, the ring or the ranking. A blank or unknown value reads "No Data".
+    var CROWD_TEXT = { SEA: "Seats Available", SDA: "Standing Available", LSD: "Crowded" };
+    var CROWD_UNKNOWN_TEXT = "No Data";
     var CROWD_LABEL = "Bus crowding: {label}";
     var CROWD_ICONS = {
-      SEA: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v8h9l2 6M7 12v6M16 12v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
-      SDA: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v6M9 21l3-7 3 7M8 11h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
-      LSD: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2"></circle><circle cx="16" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M4 20v-5a4 4 0 0 1 8 0v5M12 20v-5a4 4 0 0 1 8 0v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>'
+      SEA: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle><path d="M9 8.5v5.5h6.5M15.5 14v5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+      SDA: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle><path d="M12 8.5v6.5M8.5 11.5h7M9 21l3-6 3 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+      LSD: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle><path d="M12 10v5M12 11.5L7.5 4M12 11.5l4.5-7.5M9 21l3-6 3 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+      UNKNOWN: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
     };
 
     // Fills a crowding element from a bus's load code, or hides it. Only a bus (never a train) has a load.
     function setCrowd(el, bus) {
-      var code = bus && !bus.is_missed && !isTrain() && typeof bus.load === "string" ? bus.load : "";
-      var known = Object.prototype.hasOwnProperty.call(CROWD_TEXT, code);
-      el.hidden = !known;
+      var shown = !!bus && !bus.is_missed && !isTrain();
+      var code = shown && typeof bus.load === "string" ? bus.load : "";
+      // A blank, missing or unknown value on a bus that can be boarded reads "No Data" (red, a circle with a cross).
+      if (shown && !Object.prototype.hasOwnProperty.call(CROWD_TEXT, code)) {
+        code = "UNKNOWN";
+      }
+      el.hidden = !shown;
       el.replaceChildren();
-      if (!known) {
+      if (!shown) {
         el.removeAttribute("data-load");
         return;
       }
@@ -4781,7 +4787,7 @@
       icon.innerHTML = CROWD_ICONS[code];
       var text = document.createElement("span");
       text.className = "crowd-chip__text";
-      text.textContent = CROWD_TEXT[code];
+      text.textContent = code === "UNKNOWN" ? CROWD_UNKNOWN_TEXT : CROWD_TEXT[code];
       el.appendChild(icon);
       el.appendChild(text);
     }
@@ -5835,51 +5841,10 @@
     renderSavedPlaces();
 
 
-    // The two muted lines at the bottom of the menu: fetched once, the first time the menu opens.
-    var MENU_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    var menuDataRequested = false;
-    var MENU_ATTRIBUTION = "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0";
-    function formatDataDate(iso) {
-      var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
-      if (!parts) {
-        return null;
-      }
-      return Number(parts[3]) + " " + MENU_MONTHS[Number(parts[2]) - 1] + " " + parts[1];
-    }
-    function loadMenuData() {
-      if (menuDataRequested) {
-        return;
-      }
-      menuDataRequested = true;
-      fetch("/api/data-status")
-        .then(function (response) { return response.ok ? response.json() : null; })
-        .then(function (body) {
-          if (!body || typeof body.holidays_year !== "number") {
-            showMenuDataUnavailable();
-            return;
-          }
-          var shown = formatDataDate(body.bus_data_date);
-          document.getElementById("menu-data-holidays").textContent = "Public holidays updated to " + body.holidays_year;
-          document.getElementById("menu-data-bus").textContent = shown ? "Bus data updated " + shown : "Bus data date unknown";
-          var railShown = formatDataDate(body.rail_data_date);
-          document.getElementById("menu-data-rail").textContent = railShown ? "Train timetable updated " + railShown : "Train timetable date unknown";
-          document.getElementById("menu-data-attribution").textContent = MENU_ATTRIBUTION;
-        })
-        .catch(showMenuDataUnavailable);
-    }
-    // A failed or non-200 answer shows one muted line instead of a blank gap, and the next menu open tries again.
-    function showMenuDataUnavailable() {
-      menuDataRequested = false;
-      document.getElementById("menu-data-holidays").textContent = "Data status unavailable";
-      document.getElementById("menu-data-bus").textContent = "";
-      document.getElementById("menu-data-rail").textContent = "";
-      document.getElementById("menu-data-attribution").textContent = MENU_ATTRIBUTION;
-    }
     document.getElementById("menu-open").addEventListener("click", function () {
       var sheet = document.getElementById("menu-sheet");
       var open = sheet.hasAttribute("hidden");
       if (open) {
-        loadMenuData();
         sheet.removeAttribute("hidden");
         this.setAttribute("aria-expanded", "true");
       } else {
@@ -7951,7 +7916,7 @@
       syncPaceWalk();
     }
 
-    // "{n} min walk" under the pace chip, in the chip's font and the primary text colour: the pack's displayed walk
+    // "{n} min walk" inside the pace card, in the chip's font and the primary text colour: the pack's displayed walk
     // minutes, the one value the AI sentence states. It hides with the chip (inside 30 m, at the stop, no usable chance).
     function syncPaceWalk() {
       var el = document.getElementById("pace-walk");
@@ -8707,25 +8672,17 @@
     var CHEVRON_SVG_SMALL = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var WARN_SVG_SMALL = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 4 3 20h18L12 4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M12 10v4M12 17h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var SHIELD_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l7 3v6c0 4.2-3 7.6-7 9-4-1.4-7-4.8-7-9V6l7-3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M9 12l2 2 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
-    var PILL_TEXT = { highest_chance: "Highest catch probability", fastest: "Reach your destination quickly" };
-    var PILL_ICON = {
-      highest_chance: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7L12 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path></svg>",
-      fastest: "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"13\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 9v4l2.5 2M9.5 3h5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>"
-    };
-    var AI_SPARK_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path></svg>";
-    var CHIP_TEXT = { better: "Better option found", recommended: "Recommended option" };
+    // MIRROR: copy.js rerouteProposal (tag*, destination, leaveBy). Python names the tags; there are no reason sentences.
+    var TAG_TEXT = { fastest: "Fastest to destination", highest_chance: "Highest catch probability", next_best: "Next best" };
     var ARRIVES_IN_TEXT = "Arrives in {minutes}";
     var TO_DESTINATION_TEXT = "To {destination}";
-    var LEAVE_BY_TEXT = "Leave by {time}";
-    var ARRIVE_TEXT = "Destination arrival {time}";
+    var LEAVE_BY_TEXT = "Leave by: {time}";
+    var DESTINATION_TEXT = "Reach destination by: {time}";
     var SWITCH_TO_TEXT = "Switch to Bus {service} in {minutes}";
     var CHANCE_TEXT = "{point}% chance";
-    var REACH_DESTINATION_TEXT = "Reach destination about {time}";
     var AT_YOUR_STOP_TEXT = "At your stop";
     var WALK_TO_TEXT = "Walk to {stop} ({distance})";
     var AFTER_TARGET_TEXT = "After your target";
-    var optionExplainCache = {};
-    var optionExplainPending = {};
 
     function fillText(template, values) {
       return template.replace(/\{(\w+)\}/g, function (whole, key) {
@@ -8745,10 +8702,18 @@
         return [];
       }
       var rows = Array.isArray(options.rows) ? options.rows.slice() : [];
-      if (options.recommended) {
-        rows.push(options.recommended);
-      }
+      optionCards(options).forEach(function (card) {
+        rows.push(card);
+      });
       return rows;
+    }
+
+    // The recommended cards, in order (one or two rows with their tags).
+    function optionCards(options) {
+      if (options && Array.isArray(options.cards)) {
+        return options.cards;
+      }
+      return options && options.recommended ? [options.recommended] : [];
     }
 
     function optionRowById(id) {
@@ -8777,21 +8742,6 @@
       text.textContent = chance.point + "%";
       ring.appendChild(text);
       return ring;
-    }
-
-    function badgePills(row) {
-      var wrap = document.createElement("span");
-      wrap.className = "option-badges";
-      (row.badges || []).forEach(function (key) {
-        var pill = document.createElement("span");
-        pill.className = "pill pill--best pill--option";
-        pill.insertAdjacentHTML("beforeend", PILL_ICON[key]);
-        var label = document.createElement("span");
-        label.textContent = PILL_TEXT[key];
-        pill.appendChild(label);
-        wrap.appendChild(pill);
-      });
-      return wrap;
     }
 
     function refreshProposalCountdown() {
@@ -8832,121 +8782,70 @@
       return button;
     }
 
-    // The two sentences come from Python. The model only ever supplies the advice clause, once per reason.
-    function optionExplainKey(row) {
-      return (row.explanation ? row.explanation.reason_code : "") + "|" + row.service_no;
-    }
-
-    function buildOptionExplanation(row) {
-      var block = document.createElement("section");
-      block.className = "ai-card option-explain";
-      block.setAttribute("aria-live", "polite");
-      var head = document.createElement("p");
-      head.className = "ai-card__head";
-      var icon = document.createElement("span");
-      icon.className = "ai-card__icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.innerHTML = AI_SPARK_SVG;
-      var title = document.createElement("span");
-      title.textContent = "AI Explanation";
-      head.appendChild(icon);
-      head.appendChild(title);
-      var text = document.createElement("p");
-      text.className = "ai-card__text option-explain__text";
-      var key = optionExplainKey(row);
-      text.setAttribute("data-explain-key", key);
-      text.textContent = optionExplainCache[key] || row.explanation.text;
-      block.appendChild(head);
-      block.appendChild(text);
-      return block;
-    }
-
-    function requestOptionExplanation(row) {
-      var key = optionExplainKey(row);
-      if (AI_EXPLANATION_ENABLED !== true || !row.explanation || optionExplainCache[key] || optionExplainPending[key]) {
-        return;
-      }
-      optionExplainPending[key] = true;
-      var controller = new AbortController();
-      var timer = setTimeout(function () {
-        controller.abort();
-      }, 4000);
-      fetch("/api/explain-option", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fact_sheet: { reason_code: row.explanation.reason_code, chosen_action: row.explanation.action },
-          service_no: row.service_no
-        }),
-        signal: controller.signal
-      })
-        .then(function (response) {
-          return response.ok ? response.json() : null;
-        })
-        .then(function (body) {
-          if (body && typeof body.text === "string") {
-            optionExplainCache[key] = body.text;
-            document.querySelectorAll(".option-explain__text").forEach(function (node) {
-              if (node.getAttribute("data-explain-key") === key) {
-                node.textContent = body.text;
-              }
-            });
-          }
-        })
-        .catch(function () {
-          return;
-        })
-        .then(function () {
-          clearTimeout(timer);
-          delete optionExplainPending[key];
-        });
-    }
-
-    function buildOptionCard(kind, row) {
+    // A recommended card: its tag chips, the heading (logo, badge, "To {destination stop}", "Arrives in {n} min"),
+    // "Reach destination by: {time}", "Leave by: {time}", the chance ring, and its own Switch button.
+    function buildOptionCard(row) {
       var wrap = document.createElement("div");
       wrap.className = "reroute-option";
       var card = document.createElement("div");
       card.className = "card option-merged";
-      var chip = document.createElement("p");
-      chip.className = "option-chip";
-      var chipIcon = document.createElement("span");
-      chipIcon.className = "option-chip__icon";
-      chipIcon.setAttribute("aria-hidden", "true");
-      chipIcon.innerHTML = SHIELD_SVG;
-      var chipText = document.createElement("span");
-      chipText.textContent = CHIP_TEXT[kind] || CHIP_TEXT.recommended;
-      chip.appendChild(chipIcon);
-      chip.appendChild(chipText);
-      card.appendChild(chip);
-      if ((row.badges || []).length) {
-        card.appendChild(badgePills(row));
-      }
+      var tags = document.createElement("div");
+      tags.className = "option-tags";
+      (row.tags || []).forEach(function (tag) {
+        var chip = document.createElement("p");
+        chip.className = "option-chip";
+        chip.setAttribute("data-tag", tag);
+        var chipIcon = document.createElement("span");
+        chipIcon.className = "option-chip__icon";
+        chipIcon.setAttribute("aria-hidden", "true");
+        chipIcon.innerHTML = SHIELD_SVG;
+        var chipText = document.createElement("span");
+        chipText.textContent = TAG_TEXT[tag] || "";
+        chip.appendChild(chipIcon);
+        chip.appendChild(chipText);
+        tags.appendChild(chip);
+      });
+      card.appendChild(tags);
       var main = document.createElement("div");
       main.className = "option-card";
       var body = document.createElement("div");
       body.className = "option-card__copy";
+      body.appendChild(optionHeading(row));
+      var destination = document.createElement("p");
+      destination.className = "option-card__destination";
+      destination.textContent = destinationText(row);
+      destination.hidden = !destination.textContent;
+      body.appendChild(destination);
       var leave = document.createElement("p");
       leave.className = "option-card__leave";
       leave.textContent = row.leave_by ? fillText(LEAVE_BY_TEXT, { time: formatClock(row.leave_by, true) }) : "";
-      body.appendChild(optionHeading(row));
       body.appendChild(leave);
       var aside = document.createElement("div");
       aside.className = "option-card__aside";
       aside.appendChild(buildProbRing(row));
-      var arrive = document.createElement("p");
-      arrive.className = "option-card__arrive";
-      arrive.textContent = row.estimated_arrival ? fillText(ARRIVE_TEXT, { time: formatClock(row.estimated_arrival, true) }) : "";
-      aside.appendChild(arrive);
       main.appendChild(body);
       main.appendChild(aside);
       card.appendChild(main);
-      wrap.appendChild(card);
-      if (row.explanation) {
-        wrap.appendChild(buildOptionExplanation(row));
-        requestOptionExplanation(row);
+      if (row.after_target) {
+        var warn = document.createElement("p");
+        warn.className = "alt-row__warn";
+        warn.insertAdjacentHTML("beforeend", WARN_SVG_SMALL);
+        var warnText = document.createElement("span");
+        warnText.textContent = AFTER_TARGET_TEXT;
+        warn.appendChild(warnText);
+        card.appendChild(warn);
       }
+      wrap.appendChild(card);
       wrap.appendChild(buildSwitchButton(row));
       return wrap;
+    }
+
+    // "Reach destination by: {time}" (12-hour Singapore time, "(tomorrow)" on the next day); nothing without an estimate.
+    function destinationText(row) {
+      if (!row || !row.destination_arrival || !isFinite(new Date(row.destination_arrival).getTime())) {
+        return "";
+      }
+      return fillText(DESTINATION_TEXT, { time: formatClock(row.destination_arrival, true) });
     }
 
     function buildOptionRow(row) {
@@ -8987,9 +8886,6 @@
       top.appendChild(name);
       top.appendChild(odds);
       body.appendChild(top);
-      if ((row.badges || []).length) {
-        body.appendChild(badgePills(row));
-      }
       var timing = document.createElement("p");
       timing.className = "alt-row__bottom";
       var arrives = document.createElement("span");
@@ -8997,10 +8893,11 @@
       arrives.setAttribute("data-option-id", row.id);
       arrives.textContent = optionWhenText(row);
       timing.appendChild(arrives);
-      if (row.estimated_arrival) {
+      var reachText = destinationText(row);
+      if (reachText) {
         var reach = document.createElement("span");
         reach.className = "alt-row__reach";
-        reach.textContent = fillText(REACH_DESTINATION_TEXT, { time: formatClock(row.estimated_arrival, true) });
+        reach.textContent = reachText;
         timing.appendChild(reach);
       }
       body.appendChild(timing);
@@ -9110,8 +9007,8 @@
         : { line: fillText(ARRIVING_IN_TEXT, { n: n }), ring: fillText(RING_ETA_TEXT, { n: n }) };
     }
 
-    // The time line of an option heading on Page C, in the style of Page A's: "Arriving in N min" for a bus,
-    // "Scheduled · In N min" for a train (an option with a line_code).
+    // The time line of an option on Page C: "Arrives in N min" for a bus (the minutes until the vehicle reaches the
+    // boarding stop), "Scheduled · In N min" for a train (an option with a line_code).
     function optionWhenText(row) {
       if (!row || !row.arrival_time || !isFinite(new Date(row.arrival_time).getTime())) {
         return "";
@@ -9119,11 +9016,7 @@
       if (row.line_code) {
         return railWhenText(row);
       }
-      var seconds = Math.round((new Date(row.arrival_time).getTime() - Date.now()) / 1000);
-      if (seconds <= 30) {
-        return ARRIVING_NOW_TEXT;
-      }
-      return seconds < 60 ? ARRIVING_SOON_TEXT : fillText(ARRIVING_IN_TEXT, { n: Math.round(seconds / 60) });
+      return fillText(ARRIVES_IN_TEXT, { minutes: arrivalMinutes(row.arrival_time) });
     }
 
     // One heading for a Page C option, the same components as Page A's: the marker (ring grey for a bus, the line's own
@@ -9340,9 +9233,9 @@
       var notice = document.getElementById("reroute-notice");
       var loading = !!pageC && pageC.loading;
       var options = pageC && pageC.options ? pageC.options : null;
-      var hasOptions = !!(options && (options.recommended || (Array.isArray(options.rows) && options.rows.length)));
-      // After a miss with nothing found: the plain no-options text and the ride-app card, never the threshold sentence.
-      var emptyMiss = !!pageC && pageC.entry === "missed" && !loading && !pageC.failed && !!options && !hasOptions;
+      var hasOptions = !!(options && (optionCards(options).length || (Array.isArray(options.rows) && options.rows.length)));
+      // After a miss with the search completed and nothing found: the plain no-options text and the ride-app card.
+      var emptyMiss = noOptionsState() === "missed";
       var noticeText = emptyMiss ? NO_OTHER_OPTIONS : rerouteNotice;
       var showNotice = !!pageC && pageC.entry === "missed" && !!noticeText;
       notice.textContent = showNotice ? noticeText : "";
@@ -9368,13 +9261,15 @@
         head.hidden = !pageC || (loading && !options);
         none.textContent = pageC && pageC.failed ? OPTIONS_FAILED_TEXT : "";
         heading.textContent = ALTERNATIVES_HEADING;
+        syncPageCWarning();
         syncPageCRefresh();
         updatePageCUpdated();
         return;
       }
-      if (options.recommended) {
-        host.appendChild(buildOptionCard(options.entry, options.recommended));
-      }
+      var cards = optionCards(options);
+      cards.forEach(function (card) {
+        host.appendChild(buildOptionCard(card));
+      });
       var rows = Array.isArray(options.rows) ? options.rows : [];
       list.replaceChildren();
       rows.forEach(function (row, index) {
@@ -9382,14 +9277,15 @@
         item.hidden = index >= OPTIONS_VISIBLE && more.getAttribute("aria-expanded") !== "true";
         list.appendChild(item);
       });
-      heading.textContent = options.recommended ? ALTERNATIVES_HEADING : OTHER_BUSES_HEADING;
+      heading.textContent = cards.length ? ALTERNATIVES_HEADING : OTHER_BUSES_HEADING;
       list.hidden = !rows.length;
       heading.hidden = !rows.length;
       head.hidden = false;
       more.hidden = rows.length <= OPTIONS_VISIBLE;
       more.textContent = more.getAttribute("aria-expanded") === "true" ? "Show fewer" : "Show more";
-      // Options were asked for and none exist: the one plain sentence. There is no threshold or probability sentence.
-      none.textContent = unlikelyEntry && !hasOptions && pageC.noBuses !== true ? NO_OTHER_OPTIONS : "";
+      // The unlikely entry never shows the none sentence: its banner changes instead (syncPageCWarning).
+      none.textContent = "";
+      syncPageCWarning();
       syncPageCRefresh();
       updatePageCUpdated();
     }
@@ -9416,6 +9312,29 @@
       setCatchSub("pc", hero);
       setBusArrives("pc", hero, usable);
       document.getElementById("pc-warn").hidden = !(usable && isUnlikely(hero));
+      syncPageCWarning();
+    }
+
+    // The one decision for "No other buses or routes are available right now.": only after the search for this entry
+    // has completed with zero options (no cards and no rows), and only after a miss. Never while loading, never after
+    // a failed request, never on the unlikely entry. Returns "missed", "unlikely" (a completed empty search, for the
+    // banner wording) or "".
+    function noOptionsState() {
+      if (!pageC || pageC.loading || pageC.failed || !pageC.options) {
+        return "";
+      }
+      var options = pageC.options;
+      var found = optionCards(options).length || (Array.isArray(options.rows) && options.rows.length);
+      return found ? "" : (pageC.entry === "missed" ? "missed" : "unlikely");
+    }
+
+    // The unlikely entry's banner: "Catching this bus is unlikely." once the search found nothing, else with
+    // "Here are your other options." (also while loading or after a failure).
+    function syncPageCWarning() {
+      var text = document.getElementById("pc-warn-text");
+      if (text) {
+        text.textContent = noOptionsState() === "unlikely" ? CURRENT_WARNING_NONE_TEXT : CURRENT_WARNING_TEXT;
+      }
     }
 
     // The compact warning on Pages A and B once the scenario has been decided. It clears when the bus is catchable again.
@@ -9531,6 +9450,9 @@
     var NEW_JOURNEY_REASON = "Switching because your current bus is unlikely to be caught.";
     var BUS_LEFT_NOTICE = "Bus {service} has left. Here are your other options.";
     var NO_OTHER_OPTIONS = "No other buses or routes are available right now.";
+    // MIRROR: copy.js rerouteProposal.currentWarning and currentWarningNone
+    var CURRENT_WARNING_TEXT = "Catching this bus is unlikely. Here are your other options.";
+    var CURRENT_WARNING_NONE_TEXT = "Catching this bus is unlikely.";
     var BUS_ALREADY_LEFT = "That bus has already left. Choose another option.";
     var OPTIONS_CACHE_MAX_AGE_MS = 20000;
 
@@ -10455,7 +10377,7 @@
 
     function showMissedOptions(body, service) {
       // Kept for the failure and empty paths: Page C itself draws the options.
-      var hasRows = !!(body && body.options && (body.options.recommended || (Array.isArray(body.options.rows) && body.options.rows.length)));
+      var hasRows = !!(body && body.options && (optionCards(body.options).length || (Array.isArray(body.options.rows) && body.options.rows.length)));
       missedMode = { noBuses: !hasRows && !!(body && body.no_buses === true), loading: false, point: lastKnownPoint };
       syncQuality();
       syncAlertSlot();

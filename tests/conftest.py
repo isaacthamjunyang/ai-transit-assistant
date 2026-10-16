@@ -45,3 +45,77 @@ def _no_reroute_planner(request):
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(main, "_reroute_planner_starts", lambda *args, **kwargs: [])
         yield
+
+
+# ---- no real network from any test ----------------------------------------------------------------------------------
+# A test that reaches LTA DataMall, OneMap, data.gov.sg or any other outside host fails, even when the code under test
+# swallows the error. Only loopback is allowed (the in-process servers the browser tests start). The browser itself is
+# a separate process; its page only talks to those loopback servers.
+import ipaddress
+import socket
+
+NETWORK_LEAKS: list[str] = []
+_LOCAL_NAMES = {"", "localhost", "testserver", "0.0.0.0", "::", "::1"}
+
+
+def _is_local(host) -> bool:
+    if isinstance(host, bytes):
+        host = host.decode("ascii", "ignore")
+    if host is None or str(host).lower() in _LOCAL_NAMES:
+        return True
+    try:
+        return ipaddress.ip_address(str(host).split("%")[0]).is_loopback
+    except ValueError:
+        return False
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _block_real_network():
+    real_getaddrinfo = socket.getaddrinfo
+    real_connect = socket.socket.connect
+    real_connect_ex = socket.socket.connect_ex
+
+    def guarded_getaddrinfo(host, *args, **kwargs):
+        if not _is_local(host):
+            NETWORK_LEAKS.append(f"DNS lookup {host}")
+            raise OSError(f"tests may not reach the network: {host}")
+        return real_getaddrinfo(host, *args, **kwargs)
+
+    def _address_host(self, address):
+        if self.family in (socket.AF_INET, socket.AF_INET6) and isinstance(address, tuple):
+            return address[0]
+        return None
+
+    def guarded_connect(self, address):
+        host = _address_host(self, address)
+        if host is not None and not _is_local(host):
+            NETWORK_LEAKS.append(f"connect {host}")
+            raise OSError(f"tests may not reach the network: {host}")
+        return real_connect(self, address)
+
+    def guarded_connect_ex(self, address):
+        host = _address_host(self, address)
+        if host is not None and not _is_local(host):
+            NETWORK_LEAKS.append(f"connect {host}")
+            return 10061
+        return real_connect_ex(self, address)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(socket, "getaddrinfo", guarded_getaddrinfo)
+        patch.setattr(socket.socket, "connect", guarded_connect)
+        patch.setattr(socket.socket, "connect_ex", guarded_connect_ex)
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _fail_on_network_leak(request, _block_real_network):
+    before = len(NETWORK_LEAKS)
+    yield
+    found = NETWORK_LEAKS[before:]
+    if found:
+        pytest.fail("real network attempt in this test: " + "; ".join(sorted(set(found))), pytrace=False)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if NETWORK_LEAKS and session.exitstatus == 0:
+        session.exitstatus = 1  # a leak in a module-scoped fixture, outside any single test body

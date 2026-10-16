@@ -85,7 +85,7 @@ def _loader(table):
 
 
 def _everything(result):
-    return ([result["recommended"]] if result["recommended"] else []) + result["rows"]
+    return list(result["cards"]) + result["rows"]
 
 
 def test_the_same_service_comes_first_then_other_services_then_nearby_stops_each_by_arrival():
@@ -102,7 +102,8 @@ def test_the_same_service_comes_first_then_other_services_then_nearby_stops_each
     assert {r["service_no"] for r in groups[1]} == {"174"} and all(r["stop_code"] == HERE for r in groups[1])
     assert {r["service_no"] for r in groups[2]} == {"36"}
     assert {r["stop_code"] for r in groups[3]} == {NEAR}
-    keys = [(r["group"], r["arrival_time"]) for r in result["rows"]]
+    # the alternatives are ordered by destination arrival (no estimate last), not by group
+    keys = [(r["destination_arrival"] is None, r["destination_arrival"] or "", r["arrival_time"]) for r in result["rows"]]
     assert keys == sorted(keys)
 
 
@@ -120,9 +121,8 @@ def test_at_most_five_rows_are_listed_with_the_nearest_first_in_each_group():
     loader = _loader({(HERE, "36"): many, (NEAR, "174"): many, (NEAR, "61"): many})
     result = _search(loader)
     assert len(result["rows"]) == MISS_ROW_LIMIT == 5
-    keys = [(r["group"], r["arrival_time"]) for r in result["rows"]]
-    assert keys == sorted(keys)
-    assert result["rows"][0]["group"] == 1  # the later arrivals of the same service lead
+    keys = [(r["destination_arrival"] is None, r["destination_arrival"] or "", r["arrival_time"]) for r in result["rows"]]
+    assert keys == sorted(keys)  # earliest destination arrival first, no estimate last
 
 
 def test_a_planner_pair_the_plan_already_covers_is_looked_up_once():
@@ -165,12 +165,13 @@ def test_a_failing_planner_changes_nothing():
     assert [r["id"] for r in _everything(with_failure)] == [r["id"] for r in _everything(without)]
 
 
-def test_the_unlikely_entry_keeps_its_old_order_and_ignores_the_planner():
+def test_the_unlikely_entry_orders_by_destination_arrival_and_ignores_the_planner():
     loader = _loader({(HERE, "36"): [_bus("NextBus", 14, 50)], (ROAD, "190"): [_bus("NextBus", 8, 65)]})
     calls = []
     result = _search(loader, planner=lambda: calls.append(1) or [(ROAD, "190")], after_miss=False)
     assert calls == []
-    keys = [(-r["point"], r["estimated_arrival"], int(r["service_no"])) for r in result["rows"]]
+    keys = [(r["destination_arrival"] is None, r["destination_arrival"] or "", int(r["service_no"]))
+            for r in result["rows"]]
     assert keys == sorted(keys)
 
 
@@ -203,7 +204,10 @@ def test_the_improvement_threshold_still_decides_the_automatic_switch_before_a_m
 # ---- the planner helper (OneMap stubbed: no live call) -------------------------------------------------------
 
 def _plan_result(*first_legs):
-    return {"status": "ok", "options": [{"legs": [leg]} for leg in first_legs]}
+    """A planner answer: each bus first leg is one usable itinerary (`starts`, as plan_multi_leg returns them)."""
+    return {"status": "ok", "starts": [
+        {"boarding_stop_code": leg["boarding_stop_code"], "service_no": leg["service_no"],
+         "after_boarding_minutes": 20.0} for leg in first_legs if leg.get("kind") == "bus"]}
 
 
 def _start(dest_lat, dest_lon):
@@ -226,7 +230,7 @@ def test_the_planner_helper_keeps_only_routes_whose_first_leg_is_a_bus(monkeypat
     monkeypatch.setattr(pt_plan, "plan_multi_leg", fake)
     monkeypatch.setattr(main, "read_onemap_credentials", lambda: ("", "", ""))
     monkeypatch.setattr(main.demo, "destination_is_simulated", lambda: False)
-    assert _start(*_north(3000)) == [(NEAR, "61"), (ROAD, "190")]
+    assert _start(*_north(3000)) == [(NEAR, "61", 20.0), (NEAR, "61", 20.0), (ROAD, "190", 20.0)]
     assert [kw["origin_stop_code"] for kw in seen] == [NEAR, ROAD]
     assert all(kw["priority"] == pt_plan.PRIORITY_BUS_ONLY for kw in seen)
 
@@ -262,7 +266,7 @@ def test_the_strings_come_from_copy_js_and_are_mirrored_exactly():
 def test_no_threshold_text_after_a_miss():
     assert "noBetterText" not in INDEX and "NO_BETTER" not in INDEX and "improvement threshold" not in INDEX
     render = _function("renderPageC")
-    assert "emptyMiss" in render and "NO_OTHER_OPTIONS" in render
+    assert "emptyMiss" in render and "noOptionsState()" in render and "NO_OTHER_OPTIONS" in render
     assert 'document.getElementById("pc-ride-apps")' in render
     assert 'id="pc-ride-apps" class="ride-apps" hidden' in INDEX
 
@@ -319,18 +323,72 @@ def test_page_c_rows_use_the_shared_row_format(report):
     for row in shown["rows"]:
         assert row["badgeBus"] is True  # the bus number badge, "Bus" for a screen reader
         assert row["to"] == "To Pebble Bay"  # the destination stop, its name only
-        assert re.fullmatch(r"Arriving in \d+ min|Arriving soon|Arriving now", row["when"].replace(" ", " ")), row["when"]
+        assert re.fullmatch(r"Arrives in (\d+ min|under 1 min)", row["when"].replace(chr(160), " ")), row["when"]
         assert row["ring"] and row["ring"] != "none"  # the marker's ring (grey for a bus)
-        assert "Arrives in" not in row["text"]
+        assert re.search(r"Reach destination by: \d{1,2}:\d{2}\s[AP]M", row["text"]), row["text"]
     (card,) = shown["cardRows"]
     assert card["badge"] == "36" and card["badgeBus"] is True and card["oldTitle"] is False
     assert card["line"].endswith("To Pebble Bay") and "90021" not in card["line"]
-    assert re.fullmatch(r"Arriving in \d+ min|Arriving soon|Arriving now", card["when"].replace(" ", " "))
+    assert re.fullmatch(r"Arrives in (\d+ min|under 1 min)", card["when"].replace(chr(160), " "))
     assert card["ring"] and card["ring"] != "none" and card["ringEl"] is True  # the chance ring stays
-    assert card["leave"].startswith("Leave by ") and card["arrive"].startswith("Destination arrival ")
+    assert card["leave"].startswith("Leave by: ")
+    assert re.fullmatch(r"Reach destination by: \d{1,2}:\d{2} [AP]M( \(tomorrow\))?", card["destination"])
+    assert card["tags"] == ["Highest catch probability"]
+    assert card["sentences"] == 0
+    assert card["button"].startswith("Switch to Bus 36 in ") and card["oldBlocks"] is False
     assert card["right"] <= shown["innerWidth"] and shown["scrollWidth"] <= shown["innerWidth"]
 
 
 def test_page_c_shows_no_bus_stop_code(report):
     for key in ("withOptions", "withCard", "empty", "unlikely"):
         assert not re.search(r"\(\d{5}\)", report[key]["page"]), key
+
+
+# ---- the none sentence has one gate (noOptionsState) ------------------------------------------------------------
+
+SHORT = "Catching this bus is unlikely."
+LONG = "Catching this bus is unlikely. Here are your other options."
+
+
+def test_the_none_sentence_is_decided_in_one_function_and_the_strings_are_mirrored():
+    gate = _function("noOptionsState")
+    assert "pageC.loading || pageC.failed || !pageC.options" in gate and '"missed"' in gate
+    assert f'currentWarning: "{LONG}"' in COPY and f'currentWarningNone: "{SHORT}"' in COPY
+    assert f'var CURRENT_WARNING_TEXT = "{LONG}";' in INDEX and f'var CURRENT_WARNING_NONE_TEXT = "{SHORT}";' in INDEX
+    assert "currentWarningNone" in GUIDE and "unlikely entry" in PLAN and SHORT in PLAN
+
+
+@pytest.fixture(scope="module", params=[("n360", 360, 800, False), ("n1280", 1280, 900, True)],
+                ids=["360-light", "1280-dark"])
+def states(request, tmp_path_factory):
+    name, width, height, dark = request.param
+    require_edge()
+    with running_app(tmp_path_factory.mktemp(name)) as base:
+        return run_scenario("nonesentence", base, {"name": name, "width": width, "height": height, "dark": dark},
+                            timeout=300)["result"]
+
+
+def test_unlikely_entry_never_shows_the_none_sentence_and_shortens_the_banner_only_when_nothing_was_found(states):
+    empty = states["unlikely_empty"]
+    assert empty["warn"] == SHORT and empty["occurrences"] == 0 and empty["none"] == "" and empty["ride"] is False
+    assert empty["notice"] is None and empty["cards"] == 0 and empty["rows"] == 0
+    found = states["unlikely_found"]
+    assert found["warn"] == LONG and found["rows"] == 1 and found["occurrences"] == 0
+    for name in ("unlikely_loading", "unlikely_failed"):
+        assert states[name]["warn"] == LONG and states[name]["occurrences"] == 0 and states[name]["ride"] is False
+    assert states["unlikely_failed"]["none"] == "Could not load other buses. Try the refresh button."
+
+
+def test_missed_entry_shows_the_sentence_and_ride_apps_only_after_a_completed_empty_search(states):
+    empty = states["missed_empty"]
+    assert empty["notice"] == NONE and empty["occurrences"] == 1 and empty["ride"] is True
+    found = states["missed_found"]
+    assert found["notice"] == LEFT and found["occurrences"] == 0 and found["ride"] is False and found["rows"] == 1
+    for name in ("missed_loading", "missed_failed"):
+        assert states[name]["occurrences"] == 0 and states[name]["ride"] is False
+        assert states[name]["notice"] == LEFT
+    assert states["missed_failed"]["none"] == "Could not load other buses. Try the refresh button."
+
+
+def test_no_state_overflows_the_page(states):
+    assert all(state["scrollWidth"] <= state["innerWidth"] for state in states.values())

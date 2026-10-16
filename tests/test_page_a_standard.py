@@ -108,6 +108,9 @@ def test_the_leave_by_tile_is_one_line_with_the_label_only_before_a_time():
     assert "tile-leave-detail" not in INDEX and "leaveMeta" not in tiles
     assert 'id="tile-leave-line"' in INDEX and 'role="group" aria-label="Leave by"' in INDEX
     assert 'tileView.mode === "by"' in tiles and 'var LEAVE_BY_LABEL = "Leave by:";' in INDEX
+    assert 'id="pace-walk"' not in INDEX  # built inside the pace card, not a static element beside it
+    chip = _function("paceChip")
+    assert 'walk.id = "pace-walk";' in chip and "chip.appendChild(walk);" in chip
     assert 'leaveByLabel: "Leave by:"' in COPY and 'paceWalk: "{n}\\u00a0min walk"' in COPY
     assert 'var PACE_WALK_TEXT = "{n}\\u00a0min walk";' in INDEX
     walk = _function("syncPaceWalk")
@@ -129,7 +132,7 @@ def test_no_threshold_sentence_is_emitted_or_drawn_anywhere():
     assert "no_better_option" not in PY["reroute.py"] + PY["main.py"] + INDEX
     assert "NO_BETTER_OPTION" not in PY["reroute.py"] and "POST_REROUTE_NO_BETTER" not in PY["reroute.py"]
     # where options were asked for and none exist the page says the one plain sentence
-    assert "unlikelyEntry && !hasOptions" in _function("renderPageC") and "NO_OTHER_OPTIONS" in _function("renderPageC")
+    assert 'noOptionsState() === "missed"' in _function("renderPageC") and "NO_OTHER_OPTIONS" in _function("renderPageC")
 
 
 def test_the_plan_no_longer_carries_the_removed_wording():
@@ -193,7 +196,9 @@ def _always_there(state, at_stop=False):
     else:
         assert state["chip"], "the pace chip is on Page A"
         assert re.fullmatch(r"\d+\u00a0min walk", state["walkLine"] or ""), state["walkLine"]
-        assert geo["paceWalk"]["y"] >= geo["chipBox"]["b"] - 1  # under the pace card
+        # inside the pace card: within its box, below the pace label, nothing under the card
+        assert geo["paceWalk"]["y"] >= geo["chipBox"]["y"] and geo["paceWalk"]["b"] <= geo["chipBox"]["b"] + 1
+        assert geo["paceWalk"]["r"] <= geo["chipBox"]["r"] + 1
         if state["tileLeaveValue"] == "Leave now":
             assert state["tileLeaveLabelShown"] is False and state["tileLeaveLine"] == "Leave now"
         else:

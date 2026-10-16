@@ -89,7 +89,13 @@ def test_a_bad_json_body_is_not_echoed_either(client):
     assert "secret-value" not in response.text and "1.2345" not in response.text
 
 
-def test_a_valid_request_is_untouched(client):
+def test_a_valid_request_is_untouched(client, monkeypatch):
+    import arrivals
+    import httpx
+
+    real = httpx.Client  # LTA is a stub: no test reaches the real service
+    monkeypatch.setattr(arrivals.httpx, "Client", lambda *args, **kwargs: real(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json={"Services": []}))))
     response = client.get("/api/arrivals", params={"stop_code": "01011", "service_no": "18"})
     assert response.status_code in (200, 503)  # not a validation error
 

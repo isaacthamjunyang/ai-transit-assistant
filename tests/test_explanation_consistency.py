@@ -160,9 +160,9 @@ def test_page_c_explanation_is_unaffected():
     )
     assert status == 200 and payload["action"] == "switch_route" and payload["reason_code"] == "HIGHEST_CHANCE"
     assert "snapshot" not in payload and payload["text"].endswith(".")  # its own endpoint, cache and wording
-    page_c = _between(INDEX, "function requestOptionExplanation(row)", "function ")
-    assert "/api/explain-option" in INDEX and "lastExplanationPack" not in page_c and "explanationClause" not in page_c
-    assert "snapshot" not in _between(INDEX, "function buildOptionExplanation(row)", "function requestOptionExplanation")
+    # Page C no longer shows an AI block: its cards carry fixed Python sentences, and the page never calls the endpoint.
+    assert "requestOptionExplanation" not in INDEX and "buildOptionExplanation" not in INDEX
+    assert "/api/explain-option" not in INDEX
 
 
 # ---- the mirror against Python on a boundary grid, on every minute, and on seeded random cases

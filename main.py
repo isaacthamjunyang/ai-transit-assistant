@@ -728,8 +728,9 @@ def _alternate_loader(
 
 def _reroute_planner_starts(
     cache, lat, lon, current_stop, destination_code, dest_lat, dest_lon, arrive_by, speed, moment
-) -> list[tuple[str, str]]:
-    """Routes from the nearest stops by the OneMap planner (bus only), as (stop code, service) first legs.
+) -> list[tuple[str, str, float | None]]:
+    """Routes from the nearest stops by the OneMap planner (bus only), as (stop code, service, minutes) first legs:
+    the minutes run from that itinerary's own boarding to its end (the reroute search shifts them).
 
     The user's position only measures the walk to the first stop inside the planner; it is never sent, stored
     or logged. Each route's bus legs were already checked with service_runs_at there. A planner failure of any
@@ -748,7 +749,7 @@ def _reroute_planner_starts(
     end = cache.stop_by_code(destination_code)
     end_lat = end.get("Latitude") if isinstance(end, dict) else None
     end_lon = end.get("Longitude") if isinstance(end, dict) else None
-    found: list[tuple[str, str]] = []
+    found: list[tuple[str, str, float | None]] = []
     with httpx.Client(timeout=pt_route.ROUTE_TIMEOUT_SECONDS) as client:
         for stop in nearest_stops(cache, lat, lon, current_stop, ALTERNATE_STOP_LIMIT):
             try:
@@ -762,14 +763,12 @@ def _reroute_planner_starts(
                     token=token, email=email, password=password)
             except (pt_route.RouteUnavailable, pt_route.RouteRejected, pt_route.BudgetExhausted):
                 continue
-            for option in planned.get("options") or []:
-                legs = option.get("legs") or []
-                first = legs[0] if legs else None
-                if not isinstance(first, dict) or first.get("kind") != pt_route.KIND_BUS:
-                    continue
-                start = (str(first.get("boarding_stop_code") or ""), str(first.get("service_no") or ""))
-                if all(start) and start not in found:
-                    found.append(start)
+            for item in planned.get("starts") or []:
+                code = str(item.get("boarding_stop_code") or "")
+                service = str(item.get("service_no") or "")
+                minutes = item.get("after_boarding_minutes")
+                if code and service:
+                    found.append((code, service, minutes))
     return found
 
 

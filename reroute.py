@@ -12,12 +12,12 @@ from arrivals import BUS_POSITIONS, ArrivalUnavailable
 from catch_heuristic import MISSED_AFTER_S, is_location_uncertain, location_age_seconds, ring_band
 from config import MIN_REAL_CHANCE_RANGE_HIGH, WALK_SPEED_DEFAULT_MPS, display_stop_name
 from destination_stops import _arrival_terms, _hops, _links, _total_minutes
-from journey import bus_arrival_window, leave_by_for_buses, leave_by_time
+from journey import bus_arrival_window, destination_arrival, leave_by_for_buses, leave_by_time
 from leave_now import leave_now_notice, notification_time_iso
 from nearby import BOARDING_RADIUS_M, haversine_m, walk_minutes
 from observations import record_observation
 from service_hours import live_is_recent, service_runs_at
-from recommend import arrival_key, natural_key, pills, reason_text, recommend_option
+from recommend import arrival_key, choose_cards, natural_key, recommend_option
 
 SGT = timezone(timedelta(hours=8))
 NORMAL_MARGIN = 15
@@ -342,7 +342,7 @@ def _decide(
     if recommendation is None:
         # No sentence is sent: the page says nothing when no option clears the margin.
         decision = _hold()
-        decision["options"] = rank_options(rows, None, arrive_by, "better")
+        decision["options"] = rank_options(rows, arrive_by, "better")
         return _logged(
             decision, cache, current, primary, user_lat, user_lon, accuracy_m, now,
             False, "", destination_stop_code,
@@ -380,7 +380,7 @@ def _decide(
             "leave_by": _leave_by_iso(winner["eta"], stop.get("distance_m"), walk_speed_m_s),
         },
         "alternatives": _alternatives(cache, candidates, winner, arrive_by is not None, user_lat, user_lon),
-        "options": rank_options(rows, recommendation, arrive_by, "better"),
+        "options": rank_options(rows, arrive_by, "better"),
     }
     return _logged(
         decision,
@@ -418,6 +418,13 @@ def _candidates(
     found = []
     current_stop = current.get("stop_code") or ""
     current_service = current.get("service_no") or ""
+    # The missed or current bus leg's own base ride minutes: every same-service bus reuses them, in both entries.
+    current_leg = _quickest_link(
+        cache,
+        _service_links(cache, current_stop, current_service, destination_stop_code, user_lat, user_lon),
+        destination_stop_code, place_lat, place_lon, now, walk_speed_m_s,
+    )
+    current_route_km = None if current_leg is None else current_leg[0]["route_km"]
     for bus in current.get("buses") or []:
         if include_primary:
             # On-demand search: every listed bus of this service, except the one the user missed.
@@ -444,6 +451,7 @@ def _candidates(
             arrive_by=arrive_by,
             now=now,
             walk_speed_m_s=walk_speed_m_s,
+            route_km=current_route_km,
         )
         if candidate is not None:
             candidate["group"] = GROUP_SAME_SERVICE
@@ -470,15 +478,24 @@ def _candidates(
     # Planner routes (OneMap, bus first leg) are looked up after the stops above, one lookup per stop and
     # service not already in the plan. A failed planner call is the same as no planner routes.
     planned: list[tuple[str, str]] = []
+    planned_minutes: dict[tuple[str, str], float | None] = {}
     if planner is not None:
         covered = {(code, service) for code, services in plan for service in services}
         try:
             starts = planner()
         except Exception:  # noqa: BLE001 - the planner is optional; it never fails the search
             starts = []
-        for start in starts or []:
-            if start not in covered and start not in planned:
+        for item in starts or []:
+            start = (item[0], item[1])
+            minutes = item[2] if len(item) > 2 else None
+            if start in covered:
+                continue
+            if start not in planned:
                 planned.append(start)
+                planned_minutes[start] = minutes
+            elif isinstance(minutes, (int, float)) and not isinstance(minutes, bool) and (
+                    planned_minutes[start] is None or minutes < planned_minutes[start]):
+                planned_minutes[start] = minutes  # the earliest-ending itinerary of that first bus
     lookups = [
         (code, service, GROUP_SAME_STOP if code == current_stop else GROUP_NEARBY, False)
         for code, services in plan
@@ -508,6 +525,7 @@ def _candidates(
                 now=now,
                 walk_speed_m_s=walk_speed_m_s,
                 allow_unlinked=unlinked,
+                itinerary_minutes=planned_minutes.get((code, service)) if unlinked else None,
             )
             if candidate is not None:
                 candidate["group"] = group
@@ -531,8 +549,12 @@ def _candidate_from_bus(
     walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS,
     fetched_at=None,
     allow_unlinked: bool = False,
+    route_km: float | None = None,
+    itinerary_minutes: float | None = None,
 ) -> dict | None:
-    """allow_unlinked: a planner route may reach the destination by a transfer, so no direct link is needed."""
+    """allow_unlinked: a planner route may reach the destination by a transfer, so no direct link is needed.
+    route_km: the current bus leg's distance, for a same-service bus. itinerary_minutes: a planner route's
+    own boarding-to-end minutes. Both feed the one destination_arrival function."""
     if bus.get("is_missed"):
         return None
     chance = bus.get("probability")
@@ -570,6 +592,17 @@ def _candidate_from_bus(
         now, terms, eta, live=monitored is True, arrive_by=arrive_by, walk_speed_m_s=walk_speed_m_s
     )
     estimated = None if window is None else window["estimated_arrival"]
+    # The destination clock time, from the vehicle's arrival at the boarding stop. One function for every source.
+    quickest = _quickest_link(cache, links, destination_stop_code, place_lat, place_lon, now, walk_speed_m_s)
+    if route_km is None and quickest is not None:
+        route_km = quickest[0]["route_km"]
+    reaches = destination_arrival(
+        eta,
+        route_km=route_km,
+        end_walk_metres=0.0 if quickest is None else quickest[1],
+        walk_speed_m_s=walk_speed_m_s,
+        itinerary_minutes=itinerary_minutes,
+    )
     return {
         "service_no": service_no,
         "stop_code": stop_code,
@@ -579,6 +612,7 @@ def _candidate_from_bus(
         "range_high": high,
         "eta": eta,
         "estimated_arrival": estimated,
+        "destination_arrival": reaches,
         "slack_seconds": slack if type(slack) is int else None,
         "monitored": monitored if type(monitored) is bool else None,
         "data_quality": quality if isinstance(quality, str) else None,
@@ -632,60 +666,46 @@ def _option_id(candidate: dict) -> str:
 
 def rank_options(
     rows: list[dict],
-    recommendation: dict | None,
     arrive_by: datetime | None,
     entry: str,
     after_miss: bool = False,
 ) -> dict:
-    """Name the pills and order the list. Pure; there is no blended score.
+    """Pick the recommended cards and order the alternatives. Pure; there is no blended score.
 
-    `recommendation` is the recommend_option result ({"id", "reason"}) or None. The recommended
-    option is the card and is not in the list. The list is ordered by point probability (high
-    first), then the earlier estimated arrival, then the service number. `entry` is "better"
-    (the automatic entry) or "recommended" (the "No, I missed it" entry).
-
-    after_miss orders the list by source group (the same service at the stop, the other services at
-    the stop, nearby stops and planner routes), then by the nearest arrival, and keeps at most
-    MISS_ROW_LIMIT rows. The recommended card is not a row.
+    `cards` holds one or two option rows, each with its `tags` (no sentence; see
+    recommend.choose_cards). `rows` is every other option, ordered by destination arrival (earliest first, an option
+    with no estimate last), then the earlier bus, then the service number. after_miss keeps at most MISS_ROW_LIMIT of
+    them. `entry` is "better" (the unlikely entry) or "recommended" (the "No, I missed it" entry).
     """
-    holders = pills(rows)
     deadline = None if arrive_by is None else _as_sgt(arrive_by)
     for row in rows:
-        row["badges"] = [
-            key for key in ("highest_chance", "fastest") if holders.get(key) == row["id"]
-        ]
         row["unlikely"] = row["range_high"] < MIN_REAL_CHANCE_RANGE_HIGH
-        estimate = _parse_eta(row["estimated_arrival"], deadline or datetime.now(SGT))
+        estimate = _parse_eta(row.get("destination_arrival") or row.get("estimated_arrival"), deadline or datetime.now(SGT))
         row["after_target"] = bool(deadline is not None and estimate is not None and estimate > deadline)
         row["recommended"] = False
-    chosen = next((row for row in rows if recommendation and row["id"] == recommendation["id"]), None)
-    recommended = None
-    if chosen is not None:
-        chosen["recommended"] = True
-        code = recommendation["reason"]
-        chosen["reason_code"] = code
-        chosen["reason_text"] = reason_text(code, chosen["service_no"])
-        chosen["explanation"] = {
-            "reason_code": code,
-            "action": "switch_route",
-            "text": chosen["reason_text"],
-        }
-        recommended = chosen
+        row["tags"] = []
+    by_id = {row["id"]: row for row in rows}
+    cards = []
+    for card in choose_cards(rows):
+        row = by_id[card["id"]]
+        row["recommended"] = True
+        row["tags"] = list(card["tags"])
+        cards.append(row)
 
     def row_key(row: dict):
-        return (-row["point"], arrival_key(row), natural_key(row["service_no"]))
+        return (arrival_key(row, "destination_arrival"), arrival_key(row, "arrival_time"), natural_key(row["service_no"]))
 
-    def miss_key(row: dict):
-        return (row.get("group", GROUP_NEARBY), arrival_key(row, "arrival_time"), natural_key(row["service_no"]))
-
-    others = (row for row in rows if row is not recommended)
-    listed = sorted(others, key=miss_key)[:MISS_ROW_LIMIT] if after_miss else sorted(others, key=row_key)
+    others = sorted((row for row in rows if not row["recommended"]), key=row_key)
+    if after_miss:
+        others = others[:MISS_ROW_LIMIT]
+    first = cards[0] if cards else None
     return {
-        "mode": "winner" if recommended is not None else "none",
+        "mode": "winner" if cards else "none",
         "entry": entry,
-        "recommended_id": recommended["id"] if recommended else None,
-        "recommended": recommended,
-        "rows": listed,
+        "recommended_id": first["id"] if first else None,
+        "recommended": first,
+        "cards": cards,
+        "rows": others,
     }
 
 
@@ -716,6 +736,7 @@ def _option_row(
         "range_high": candidate["range_high"],
         "arrival_time": _iso_or_none(candidate["eta"]),
         "estimated_arrival": _iso_or_none(candidate.get("estimated_arrival")),
+        "destination_arrival": _iso_or_none(candidate.get("destination_arrival")),
         "distance_m": stop.get("distance_m"),
         "walk_m": 0 if at_current else stop.get("distance_m"),
         "at_current_stop": at_current,
@@ -779,7 +800,7 @@ def plan_options(
     planner is a callable returning (stop code, service) pairs for routes whose first leg is a bus."""
     moment = _as_sgt(now)
     if current.get("status") != "ok":
-        return {"mode": "none", "entry": entry, "recommended_id": None, "recommended": None, "rows": []}
+        return {"mode": "none", "entry": entry, "recommended_id": None, "recommended": None, "cards": [], "rows": []}
     candidates = _candidates(
         cache=cache,
         current=current,
@@ -798,7 +819,7 @@ def plan_options(
         planner=planner if after_miss else None,
     )
     rows = build_rows(cache, candidates, user_lat, user_lon, current, walk_speed_m_s)
-    return rank_options(rows, recommend_option(rows, arrive_by), arrive_by, entry, after_miss)
+    return rank_options(rows, arrive_by, entry, after_miss)
 
 
 def _required_margin(now: datetime, last_reroute_at: datetime | None) -> int | None:
@@ -836,6 +857,15 @@ def _option_terms(
     cache, links, dest_code, place_lat, place_lon, now, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS
 ) -> dict | None:
     """The four Step 9 terms of the quickest usable link, as the overview chooses it."""
+    chosen = _quickest_link(cache, links, dest_code, place_lat, place_lon, now, walk_speed_m_s)
+    if chosen is None:
+        return None
+    link, place_m = chosen
+    return _arrival_terms(cache, link, place_m, now, walk_speed_m_s)
+
+
+def _quickest_link(cache, links, dest_code, place_lat, place_lon, now, walk_speed_m_s: float = WALK_SPEED_DEFAULT_MPS):
+    """(link, metres from the destination stop to the place) of the quickest usable link, or None."""
     usable = [link for link in links if link.get("route_km") is not None]
     if not usable:
         return None
@@ -847,7 +877,9 @@ def _option_terms(
     def duration(link: dict) -> float:
         return _total_minutes(cache, link, place_m, now, walk_speed_m_s)
 
-    return _arrival_terms(cache, min(usable, key=duration), place_m, now, walk_speed_m_s)
+    return min(usable, key=duration), place_m
+
+
 
 
 def _stop_payload(

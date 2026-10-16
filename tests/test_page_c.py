@@ -88,7 +88,7 @@ def _search(arrive_by=None, current_buses=None, loader=_default_loader):
 
 
 def _all(result):
-    return ([result["recommended"]] if result["recommended"] else []) + result["rows"]
+    return list(result["cards"]) + result["rows"]
 
 
 def _tile(row, monitored=True, arrive_by=None):
@@ -115,9 +115,9 @@ def test_screenshot_case_has_no_duplicate_rows_and_never_shows_the_missed_arriva
     assert len(rows) == 6  # the current stop's later arrivals and each alternate stop's two
     missed = (NOW + timedelta(minutes=2)).replace(microsecond=0).isoformat()
     assert all(row["arrival_time"] != missed for row in rows)
-    assert result["recommended"]["id"] not in [row["id"] for row in result["rows"]]
-    keys = [(-r["point"], r["estimated_arrival"], r["service_no"]) for r in result["rows"]]
-    assert keys == sorted(keys)
+    assert not {card["id"] for card in result["cards"]} & {row["id"] for row in result["rows"]}
+    keys = [(r["destination_arrival"] is None, r["destination_arrival"] or "") for r in result["rows"]]
+    assert keys == sorted(keys)  # the alternatives are ordered by destination arrival
 
 
 def test_two_arrivals_of_one_service_at_one_stop_get_different_estimates():
@@ -162,22 +162,24 @@ def test_a_bus_that_leaves_before_the_user_can_reach_the_stop_is_not_eligible():
     chance = scored[0]["probability"]
     assert chance["range_high"] < 40
     unreachable = dict(_bus("NextBus2", 5, 5), probability=chance)
-    result = _search(loader=lambda code, service: _loaded(code, service, []), current_buses=[_bus("NextBus", 1, 5), unreachable])
-    assert result["recommended"] is None and result["mode"] == "none"
-    assert result["rows"][0]["unlikely"] is True
+    second = dict(_bus("NextBus3", 9, 5), probability=chance)
+    result = _search(loader=lambda code, service: _loaded(code, service, []),
+                     current_buses=[_bus("NextBus", 1, 5), unreachable, second])
+    # two options, both below 40%: neither takes a card, both stay in the list
+    assert result["recommended"] is None and result["mode"] == "none" and result["cards"] == []
+    assert len(result["rows"]) == 2 and all(row["unlikely"] is True for row in result["rows"])
 
 
 def test_a_late_option_stays_and_is_labelled_after_the_target():
     result = _search(arrive_by=NOW + timedelta(minutes=5))
-    assert result["recommended"]["reason_code"] == "NONE_BY_TARGET"
+    assert result["recommended"]["tags"] and "reason_code" not in result["recommended"]
     assert all(row["after_target"] for row in _all(result))
 
 
-def test_the_recommended_row_carries_the_reason_sentence_only():
-    row = _search()["recommended"]
-    text = row["explanation"]["text"]
-    assert text == row["reason_text"] and "It is advisable" not in text
-    assert row["explanation"]["action"] == "switch_route"
+def test_each_card_carries_tags_only_no_sentence_and_no_model_block():
+    for row in _search()["cards"]:
+        assert row["tags"] and "reasons" not in row
+        assert "explanation" not in row and "reason_text" not in row and "reason_code" not in row
 
 
 def test_the_model_sees_the_reason_code_and_the_action_only():
@@ -219,6 +221,6 @@ def test_page_rows_show_stop_name_distance_and_arrival_minutes_without_next_bus(
 def test_the_banner_and_the_card_name_the_arrival_and_the_card_has_no_probability_text_line():
     assert "You're unlikely to catch the Bus {service} arriving in {minutes}" in INDEX
     assert "Bus {service} has left. Here are your other options." in INDEX
-    card = INDEX.split("function buildOptionCard(kind, row)", 1)[1].split("function buildOptionRow", 1)[0]
+    card = INDEX.split("function buildOptionCard(row)", 1)[1].split("function buildOptionRow", 1)[0]
     assert "Catch probability" not in card
     assert 'SWITCH_TO_TEXT = "Switch to Bus {service} in {minutes}"' in INDEX
