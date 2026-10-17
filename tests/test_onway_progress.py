@@ -99,7 +99,7 @@ def test_the_style_guide_shows_the_on_way_legs_the_next_line_and_the_alert_in_bo
     section = GUIDE.split('id="legs-heading"', 1)[1].split("</section>", 1)[0]
     assert "onWayLegsSample" in GUIDE and "on-way-sample-light" in section and "on-way-sample-dark" in section
     sample = GUIDE.split("function onWayLegsSample()", 1)[1]
-    assert "on-way-next" in sample and "journey-step--leg-done" in sample and "on-way-alert" in sample
+    assert "on-way-next" in sample and "journey-step--leg-done" in sample and "alert alert--info" in sample
 
 
 # ---- the page in a browser ----------------------------------------------------------------------------------------

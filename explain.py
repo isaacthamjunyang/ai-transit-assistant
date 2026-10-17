@@ -276,11 +276,12 @@ S1_SPEED = {
 S2_LEAVE_BY = "Leave by {time} to reach your stop in {w} and catch the bus arriving at {arrival}."
 S2_LEAVE_NOW = "Leave now to reach your stop in {w} and catch the bus arriving at {arrival}."
 S2_LEAVE_NOW_ARRIVING = "Leave now to try to catch the bus arriving at {arrival}."
-S2_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe."
-S2_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off."
+S2_UNCERTAIN_BY = "Location uncertain: leave a little earlier to be safe."
+S2_UNCERTAIN_NOW = "Location uncertain: the walk time may be off."
 # At the stop (the probability carries at_stop): the whole card, nothing after it.
-S_AT_STOP = "You are at the stop. You have {e} to wait."
-S_AT_STOP_ARRIVING = "You are at the stop. The bus is arriving now."
+S_AT_STOP = "You're here. {e} to wait."
+S_AT_STOP_ARRIVING = "You're here. The bus is arriving."
+S_AT_STOP_TRAIN_ARRIVING = "You're here. The train is arriving."
 # A train as the first leg (scheduled, not live): the whole of sentence one, with the existing leave sentence after it.
 # {line} is the line's name ("North-South Line"), {e} the whole minutes. The page mirror copies these (EXPL_TRAIN*).
 S_TRAIN = "The {line} train is scheduled in {e}\u00a0min. Live train times are not available."
@@ -400,7 +401,9 @@ def sentence_one(numbers: dict, *, band: str | None, uncertain: bool = False) ->
     instead of the speed."""
     e = numbers["bus_minutes"]
     if numbers.get("at_stop"):
-        return S_AT_STOP_ARRIVING if e < 1 else S_AT_STOP.replace("{e}", minutes_text(e))
+        if e < 1:
+            return S_AT_STOP_TRAIN_ARRIVING if numbers.get("train_line") else S_AT_STOP_ARRIVING
+        return S_AT_STOP.replace("{e}", minutes_text(e))
     line = numbers.get("train_line")
     if line:
         if is_unlikely(numbers, band=band):

@@ -54,6 +54,7 @@
   --space-3: 16px; /* derived, not in mockup */
   --space-4: 24px; /* derived, not in mockup */
   --space-5: 32px; /* derived, not in mockup */
+  --space-6: 36px; /* derived: the gap between the Home blocks (search, saved places, Your location) */
   --font-stack: system-ui, sans-serif;
   --type-caption: 0.75rem; /* derived, not in mockup */
   --type-body: 1rem; /* derived, not in mockup */
@@ -77,6 +78,51 @@
   --illus-bus: #1B6FE7;
   --illus-bus-window: #E4F0FC;
   --illus-ground: #C9E2F6;
+  /* Home hero (approved design tmp/design/home-v2.html): a sunset sky and a flat city that look the same in both
+     themes, so these are set once here.
+     The ground, the rail and the start pin reuse --illus-ground, --illus-building-alt and --marker-start. */
+  --hero-sky-1: #93A6EA;
+  --hero-sky-2: #C9A5E2;
+  --hero-sky-3: #F7B6CA;
+  --hero-sky-4: #FFD3A6;
+  --hero-sky-5: #FFE4B0;
+  --hero-cloud-1: #FFFFFF;
+  --hero-cloud-2: #FFB3C7;
+  --hero-cloud-3: #7A64C8;
+  --hero-wheel: #FFFFFF;
+  --hero-pod: #2A2F3A;
+  --hero-stand: #D9DEE6;
+  --hero-tower-blue: #2F6FB5;
+  --hero-tower-blue-lit: #7DB7EC;
+  --hero-tower-teal: #2A9D9A;
+  --hero-tower-teal-lit: #8EDAD6;
+  --hero-tower-navy: #28507F;
+  --hero-tower-navy-lit: #6F9AD0;
+  --hero-tower-slate: #2E3F52;
+  --hero-tower-slate-lit: #6E839B;
+  --hero-tower-pale: #EAF0F5;
+  --hero-tower-pale-lit: #B7C3CF;
+  --hero-mbs: #2B3C55;
+  --hero-mbs-lit: #F6B24A;
+  --hero-mbs-deck: #E4E9F0;
+  --hero-mbs-base: #D5DCE6;
+  --hero-train: #EEF1F4;
+  --hero-train-edge: #B3BCC6;
+  --hero-train-yellow: #F7B500;
+  --hero-train-orange: #F26B1D;
+  --hero-train-glass: #2F3B45;
+  --hero-train-frame: #2A2F36;
+  --hero-bus: #B5D333;
+  --hero-bus-dark: #97B027;
+  --hero-bus-glass: #27323F;
+  --hero-bus-band: #FFFFFF;
+  --hero-tyre: #1A1F26;
+  --hero-hub: #8B96A1;
+  /* The Home heading's gradient. Every stop is 4.5:1 or more on --color-card in this theme. */
+  --heading-g1: #C2410C; /* 5.2:1 on white */
+  --heading-g2: #C2255C; /* 5.7:1 */
+  --heading-g3: #6741D9; /* 6.3:1 */
+  --heading-g4: #1556B8; /* 6.9:1 */
 
   --map-destination: #D23A40; /* derived from --fill-danger; 4.1:1 on light map land, 4.7:1 on the ring */
   --map-marker-ring: #FFFFFF; /* derived, not in mockup */
@@ -245,6 +291,10 @@
     --illus-bus: #6AA6FF;
     --illus-bus-window: #E6ECF5;
     --illus-ground: #12263F;
+    --heading-g1: #FFD98A; /* 11.7:1 on --color-card */
+    --heading-g2: #FFB0C8; /* 9.3:1 */
+    --heading-g3: #E2C6FF; /* 10.4:1 */
+    --heading-g4: #B5D5FF; /* 10.5:1 */
 
     --map-destination: #E5484D; /* derived from --fill-danger; 3.9:1 on the ring, ring 3.8:1 on darkened land */
     --map-marker-ring: #FFFFFF; /* derived, not in mockup */
@@ -382,6 +432,11 @@
   --illus-bus: #1B6FE7;
   --illus-bus-window: #E4F0FC;
   --illus-ground: #C9E2F6;
+  /* The Home heading's gradient. Every stop is 4.5:1 or more on --color-card in this theme. */
+  --heading-g1: #C2410C; /* 5.2:1 on white */
+  --heading-g2: #C2255C; /* 5.7:1 */
+  --heading-g3: #6741D9; /* 6.3:1 */
+  --heading-g4: #1556B8; /* 6.9:1 */
 
   --map-destination: #D23A40; /* derived from --fill-danger; 4.1:1 on light map land, 4.7:1 on the ring */
   --map-marker-ring: #FFFFFF; /* derived, not in mockup */
@@ -517,6 +572,10 @@
   --illus-bus: #6AA6FF;
   --illus-bus-window: #E6ECF5;
   --illus-ground: #12263F;
+  --heading-g1: #FFD98A; /* 11.7:1 on --color-card */
+  --heading-g2: #FFB0C8; /* 9.3:1 */
+  --heading-g3: #E2C6FF; /* 10.4:1 */
+  --heading-g4: #B5D5FF; /* 10.5:1 */
 
   --map-destination: #E5484D; /* derived from --fill-danger; 3.9:1 on the ring, ring 3.8:1 on darkened land */
   --map-marker-ring: #FFFFFF; /* derived, not in mockup */

@@ -22,7 +22,8 @@ PLAN = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
 
 ALL = ["fastest", "fewest_transfers", "least_walking", "bus_only", "mrt_only"]
 HEADING = "No transit right now. Open a ride app:"
-NOTE = "These links open each app's own site. Your trip is not sent."
+NOTE = "Links open each app's site. Your trip isn't sent."  # the overview card
+NOTE_PC = "These links open each app's own site. Your trip is not sent."  # Page C (bus-only) keeps the old line
 PREFILL_LINE = "Opens the app with your trip. We don't see your location."
 # exactly as sourced (see the link report): each is the operator's own site, with no query string or trip data
 LINKS = [
@@ -43,7 +44,7 @@ def _ride_block() -> str:
 
 def test_copy_js_has_the_words_and_the_links_exactly_as_sourced():
     block = _ride_block()
-    assert f'heading: "{HEADING}"' in block and f'note: "{NOTE}"' in block
+    assert f'heading: "{HEADING}"' in block and f'note: "{NOTE}"' in block and f'notePageC: "{NOTE_PC}"' in block
     assert 'distance: "About {km} km in a straight line"' in block
     pairs = re.findall(r'\{ name: "([^"]+)", url: "([^"]+)" \}', block)
     assert pairs == LINKS
@@ -52,6 +53,8 @@ def test_copy_js_has_the_words_and_the_links_exactly_as_sourced():
 def test_the_page_mirrors_copy_js_character_for_character():
     markup = INDEX.split('<div id="ride-apps"', 1)[1].split("</div>", 1)[0]
     assert HEADING in markup and NOTE in markup
+    page_c = INDEX.split('<div id="pc-ride-apps"', 1)[1].split("</div>", 1)[0]
+    assert HEADING in page_c and NOTE_PC in page_c and NOTE not in page_c  # Page C keeps its own wording
     anchors = re.findall(r'<a class="secondary ride-apps__link" href="([^"]+)" target="_blank" rel="noopener noreferrer">([^<]+)</a>', markup)
     assert [(name, url) for url, name in anchors] == LINKS
     assert markup.count("<a ") == 5
@@ -108,7 +111,7 @@ def test_no_price_words_in_copy_js_the_card_the_function_or_the_style_guide():
 
 
 def test_the_style_guide_shows_the_card_with_and_without_the_distance():
-    assert "function sgRideApps(withDistance)" in GUIDE
+    assert "function sgRideApps(withDistance, pageC)" in GUIDE
     assert "sgRideApps(true)" in GUIDE and "sgRideApps(false)" in GUIDE
     assert "copy.rideApps" in GUIDE
 

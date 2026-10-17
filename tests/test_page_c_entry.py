@@ -84,7 +84,7 @@ def test_start_journey_shows_a_loading_state_then_decides_once():
         assert "resolveEntry(null)" in _function(name), name
     assert "resolveEntry(body)" in _function("applySuccess")
     # The decision is the only automatic way into Page C, and it never navigates afterwards.
-    assert HTML.count('openPageC("unlikely")') == 2  # the decision and the banner button
+    assert HTML.count('openPageC("unlikely")') == 1  # the decision only: the banner has no button now
     assert "openPageC(" not in _function("applySuccess") and "openPageC(" not in _function("renderUnlikelyBanner")
     assert "pushScreen" not in resolve and "pushScreen" not in _function("renderUnlikelyBanner")
 
@@ -92,9 +92,8 @@ def test_start_journey_shows_a_loading_state_then_decides_once():
 def test_a_later_change_shows_only_the_compact_banner_and_it_clears():
     banner = _function("renderUnlikelyBanner")
     assert "!entryPending && !pageC && !missedMode && !displayFrozen && isUnlikely(hero)" in banner
-    assert "See other buses" in HTML and 'id="unlikely-see"' in HTML
-    assert 'addEventListener("click", openPageCFromBanner)' in HTML
-    assert "UNLIKELY_BANNER_TITLE" in banner and "probabilityText(hero.probability)" in banner
+    assert "See other buses" not in HTML and 'id="unlikely-see"' not in HTML and "openPageCFromBanner" not in HTML
+    assert "CURRENT_WARNING_TEXT" in banner and "probabilityText" not in banner  # the banner is just the sentence
     order = between(HTML, "var occupants = [", "];")
     ids = re.findall(r'byId\("([a-z-]+)"\)', order)
     assert ids.index("end-card") < ids.index("unlikely-banner") < ids.index("leave-now-banner") < ids.index("reroute-block") < ids.index("catch-warning")
@@ -112,7 +111,7 @@ def test_becoming_catchable_on_page_c_hides_the_warning_and_does_not_navigate():
 def test_unlikely_entry_has_the_current_bus_card_first_and_no_page_a_cards():
     page_c = between(HTML, 'id="page-c"', 'id="arrival-card"')
     assert page_c.index('id="reroute-current"') < page_c.index('id="reroute-proposal"') < page_c.index('id="reroute-cards"')
-    for text in ("Catching this bus is unlikely. Here are your other options.", "See bus arrival times", 'id="pc-pill"', 'id="pc-ring"'):
+    for text in ("Catching this bus is unlikely.", "See bus arrival times", 'id="pc-pill"', 'id="pc-ring"'):
         assert text in page_c
     hidden = between(CSS, "body.is-page-c #arrival-card,", "{")
     for needed in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#see-arrivals-bar", "#unlikely-banner", "#catch-warning"):
@@ -149,7 +148,7 @@ def test_every_probability_names_its_bus_and_appears_once_per_option():
     assert "renderCatchHeading(hero)" in _function("renderCatchCard") and 'setCatchSub("pc", hero)' in _function("updatePageCCurrent")
     assert 'aria-label", ringLabel(chance,' in _function("setRing")
     card = _function("buildOptionCard")
-    assert "optionHeading(row)" in card and "busBadge(row.service_no)" in _function("optionHeading") and "Catch probability" not in card and card.count("buildProbRing(row)") == 1
+    assert "optionHeading(row)" in card and "busBadge(row.service_no)" in _function("optionHeading") and "Catch probability" not in card and card.count("buildLargeRing(row)") == 1
     row = _function("buildOptionRow")
     assert "busBadge(row.service_no)" in row and "CHANCE_TEXT" in row and "Catch probability" not in row.replace("probabilityText(row)", "")
     assert "chance to catch" not in HTML.replace("Chance to catch", "") and "chance to catch\"" not in COPY
@@ -463,7 +462,7 @@ def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title__():
     assert "overflow: hidden" in stop and "text-overflow: ellipsis" in stop and "min-width: 0" in stop
     assert "flex: 0 0 auto" in between(CSS, ".catch-card__eta,", "}")
     assert 'id="pc-sub-stop"' in HTML and 'id="pc-sub-eta"' in HTML
-    assert 'id="catch-sub' not in HTML  # Page A's card has no muted stop line any more
+    assert 'id="catch-sub" class="catch-card__sub-line"' in HTML  # Layout B: Page A's muted line is a train's line name
     assert "Arriving in {n} min" in COPY and "Chance to catch your Bus {service}" in COPY
     assert 'ringLabel: "about {p} percent chance of catching Bus {service}{eta}{at}"' in COPY
 

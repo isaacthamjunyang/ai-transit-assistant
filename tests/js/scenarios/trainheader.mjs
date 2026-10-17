@@ -10,13 +10,13 @@ const MEASURE = `(function () {
     var r = el.getBoundingClientRect();
     return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
   }
-  var card = document.getElementById("live-tracking");
+  var card = document.getElementById("live-vehicle");
   var badge = document.querySelector("#live-bus-title .line-badge");
   var row = document.querySelector("#live-tracking .bus-card__line");
   var pill = document.getElementById("live-bus-pill");
   var to = document.getElementById("live-bus-to");
   var refresh = document.getElementById("live-refresh");
-  var hero = document.querySelector("#live-tracking .bus-tile--hero");
+  var hero = document.getElementById("live-node");
   var tiles = Array.prototype.map.call(document.querySelectorAll("#next-buses > li"), function (li) {
     var s = getComputedStyle(li);
     return { text: li.textContent, aria: li.getAttribute("aria-label"), height: li.getBoundingClientRect().height,

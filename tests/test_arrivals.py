@@ -147,14 +147,14 @@ def test_http_ok_with_no_buses_is_an_empty_arrival_not_a_failed_poll(tmp_path, m
     assert "handleEmptyBuses(result.body)" in branch
     assert "handlePollFailure" not in branch
     empty = html.split("function handleEmptyBuses(body)", 1)[1].split("function showFirstFailure", 1)[0]
-    assert 'arrivalWarning.textContent = "No buses currently in service at this stop."' in empty
+    assert 'setAlertText(arrivalWarning, "No buses currently in service at this stop.");' in empty
     assert "No previous successful update." not in empty
     assert "handlePollFailure" not in empty
     assert "syncLeaveNow" not in empty
     assert "applyRouteSwitch" not in empty
     assert "appendScore" not in empty
     failure = html.split("function handlePollFailure()", 1)[1].split("function handleEmptyBuses", 1)[0]
-    assert 'showFirstFailure("No live arrival data available. No previous successful update.")' in failure
+    assert 'showFirstFailure("No live arrival data. No earlier update.")' in failure
 
 
 def test_no_valid_buses_returns_an_empty_list_without_a_fake_eta():

@@ -10,8 +10,8 @@ from test_train_pages import _table
 
 ALL = ["fastest", "fewest_transfers", "least_walking", "bus_only", "mrt_only"]
 ANY = ALL[:3]
-OLD = "No buses are running to this destination at this time."
-GENERIC = "No bus or MRT services are running to this destination at this time."
+OLD = "No service to this destination right now."
+GENERIC = "No services to this destination right now."
 TEXT = {
     "bus_only": ("No bus-only route found. Try another priority.", "Bus services have stopped for now. Try another priority."),
     "mrt_only": ("No MRT or LRT route found. Try another priority.", "MRT and LRT services have stopped for now. Try another priority."),
@@ -76,7 +76,7 @@ def test_the_static_planner_keeps_its_bus_only_sentence_and_its_own_no_route_sen
     words = walk_only["words"]
     assert words["static|service"] == OLD
     assert words["static|service|bus_only"] == OLD  # the bus planner is bus only: the old sentence is accurate
-    assert words["static|route"] == "No direct or 1-transfer bus connection available for this trip."
+    assert words["static|route"] == "No direct or 1-transfer route for this trip."
 
 
 # ---- the Arrive by card is not drawn in an empty answer (tests/test_arrive_hidden.py checks it with a route) -----------

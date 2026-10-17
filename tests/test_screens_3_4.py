@@ -10,18 +10,17 @@ THEME = ROOT / "static" / "theme.css"
 CSS = ROOT / "static" / "components.css"
 
 STRINGS = (
-    "Nearby destination MRT stations / bus stops",
-    "Bus stops and MRT or LRT stations within 600 m of your destination, nearest walk first. If no station is that close, the nearest one within 1.5 km is shown. The first one is chosen for you.",
+    "Nearby stops and stations",
+    "Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km. The first is pre-selected.",
     "Best option",
     "Centre map on your location",
     "About these stops",
     "Selected destination",
-    "Destination bus stop",
+    "Destination stop",
     "Edit destination",
-    "Edit destination bus stop",
-    "We'll find the best route from here by bus and MRT and work out your leave-by time.",
+    "Edit destination stop",
+    "We'll find your best route and leave-by time.",
     "Confirm",
-    "no direct bus from near you — a transfer may still work",
 )
 
 
@@ -68,7 +67,7 @@ def test_screen_four_reuses_the_single_arrive_by_component():
     place = html.split("function placeArriveBy(inConfirm)", 1)[1].split("function backToScreen", 1)[0]
     assert "appendChild(arriveWrapElement)" in place
     edits = html.split('getElementById("edit-destination")', 1)[1].split('getElementById("dest-stops-info")', 1)[0]
-    assert 'backToScreen("results")' in edits
+    assert 'addEventListener("click", editDestination)' in edits
     assert 'backToScreen("stops")' in edits
 
 
@@ -137,7 +136,7 @@ def test_stop_markers_share_one_circle_class_with_a_ring_stack():
     assert "width: 40px" in ring
     label = _rule(css, ".map-stop.is-selected .map-stop__label,\n.map-stop-label.is-selected")
     assert stack in label
-    assert "scale(" not in css.split("/* Screen 3:", 1)[1]
+    assert "scale(" not in css.split("/* Screen 3:", 1)[1].split("/* Pulse every 2 seconds:", 1)[0]  # the markers never scale (the button pulse is after)
     assert ".leaflet-marker-icon.map-stop" not in css.replace(".leaflet-div-icon.map-stop", "")
 
 

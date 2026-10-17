@@ -516,7 +516,7 @@ def test_the_bus_planner_fallback_shows_its_note_and_disables_the_options_it_can
 
 def test_the_bus_planner_finding_nothing_shows_the_static_sentence_and_the_fallback_note(fallback_no_route):
     first = fallback_no_route["first"]
-    assert first["noRoute"] == "No direct or 1-transfer bus connection available for this trip."
+    assert first["noRoute"] == "No direct or 1-transfer route for this trip."
     assert first["fallbackNote"] == "Showing bus routes only. The route service is unavailable."
     assert first["timelineVisible"] is False and first["startDisabled"] is True
 

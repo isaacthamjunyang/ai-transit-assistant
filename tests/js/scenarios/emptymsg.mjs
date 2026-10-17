@@ -20,7 +20,6 @@ const READ = `(function () {
     startTop: Math.round(document.getElementById("start-journey").getBoundingClientRect().top + window.scrollY),
     cardGap: Math.round(document.getElementById("start-journey").getBoundingClientRect().top
       - document.getElementById("overview-card").getBoundingClientRect().bottom),
-    privacy: !!document.getElementById("overview-motion-note"),
     scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth
   };
 })()`;

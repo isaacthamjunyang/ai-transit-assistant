@@ -40,7 +40,7 @@ def test_no_service_and_unavailable_use_the_status_card_layout():
     for target in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#reroute-block"):
         assert target in block
     status = _between(html, 'id="stale-status"', "</section>")
-    for needle in ("bus-tile--hero", "pill pill--schedule", "info-box", 'id="stale-info"'):
+    for needle in ("bus-tile--hero", "pill pill--schedule", "alert alert--info", 'id="stale-info"'):
         assert needle in status
     assert "%" not in status
     assert 'id="next-buses-empty"' in html
@@ -62,14 +62,14 @@ def test_legs_panel_and_its_controls_are_gone():
     copy = COPY.read_text(encoding="utf-8")
     for gone in ("Start Next Leg", "start-next-leg", "Next action:", "I'm On Board", "im-on-board", "on-board-note", "onBoard",
                  "The chosen route is drawn on the map", "route-motif", "route-strip-part", "id=\"route-plan\"", "route-plan-body",
-                 "renderRouteStrip", "function startNextLeg", "function activateLeg2", "function checkMissedStop",
+                 "function startNextLeg", "function activateLeg2", "function checkMissedStop",
                  "function findReanchorStop", "function noteTransferFix", "function onJourneyFix", "function startJourneyWatch",
                  "missed-stop", "You passed your stop", "TRANSFER_WAIT_MS", "track-leg-2", "transfer-prompt", "leg2-prompt",
                  "Activate Leg 2 Live Tracking"):
         assert gone not in html, gone
-    # "Arrived at " belonged to the removed missed-stop UI; Page W's state line "Arrived at the stop" is the only use now
+    # "Arrived at " belonged to the removed missed-stop UI; Page W's state line "Arrived" is the only use now
     # (a train says "the station": TRAIN_PAGE.walkArrived)
-    assert html.count("Arrived at ") == 2 and 'arrived: "Arrived at the stop"' in html and 'walkArrived: "Arrived at the station"' in html
+    assert html.count("Arrived at ") == 1 and 'arrived: "Arrived"' in html and 'walkArrived: "Arrived at the station"' in html
     for gone in ("live-card__board", "route-motif", "leg2-banner", "journey-timeline", "service-plate", "#track-leg-2"):
         assert gone not in css, gone
     assert "live-card__board" not in guide and "onBoard" not in copy

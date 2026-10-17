@@ -86,17 +86,17 @@ def test_every_style_guide_page_w_trend_line_agrees_with_its_state_line():
         if not trend:
             continue
         seen.add(trend)
-        if trend == "Rising as you get closer":
+        if trend == "Rising as you near":
             assert state == "On your way", (state, trend)
         elif trend == "Rising":
             assert state != "On your way", (state, trend)
         elif trend == "Falling as you move away":
-            assert state == "Moving away from the stop", (state, trend)
+            assert state == "Moving away", (state, trend)
         elif trend == "Falling as time passes":
-            assert state != "Moving away from the stop", (state, trend)
+            assert state != "Moving away", (state, trend)
         else:
             assert trend == "Steady", (state, trend)
-    assert seen == {"Rising as you get closer", "Rising", "Falling as you move away", "Falling as time passes", "Steady"}
+    assert seen == {"Rising as you near", "Rising", "Falling as you move away", "Falling as time passes", "Steady"}
     assert ["Not moving", "Falling as time passes"] in samples  # the "Not moving, falling" sample
 
 
@@ -121,21 +121,25 @@ def test_every_style_guide_near_the_stop_sample_is_a_real_near_stop_state():
     near = [s for s in _guide_texts()["sensorSamples"] if s["why"] == "Near the stop"]
     assert near
     for sample in near:
-        match = re.fullmatch(r"(\d+)" + NBSP + r"m to the stop", sample["distance"])
+        match = re.fullmatch(r"(\d+)" + NBSP + r"m to go", sample["distance"])
         assert match and int(match.group(1)) <= 30, sample  # near the stop means within 30 m
-        assert sample["state"] == "Arrived at the stop", sample
+        assert sample["state"] == "Arrived", sample
         assert sample["progress"] == 100 and sample["chip"] == "Range: 20" + NBSP + "m", sample  # full bar, zoom 19
 
 
 def test_the_style_guide_shows_the_at_stop_card_and_tile():
     NB = " "
     texts = _guide_texts()
-    assert "You are at the stop. You have 4 minutes to wait." in texts["cards"]
-    assert "You are at the stop. You have 1 minute to wait." in texts["cards"]
-    assert "You are at the stop. The bus is arriving now." in texts["cards"]
+    assert "You're here. 4 minutes to wait." in texts["cards"]
+    assert "You're here. 1 minute to wait." in texts["cards"]
+    assert "You're here. The bus is arriving." in texts["cards"]
+    assert "You're here. The train is arriving." in texts["cards"]
     tiles = [tuple(t) for t in texts["tiles"]]
     assert ("At the stop", "") in tiles  # no subline under "At the stop"
-    assert not any(t[0] == "At the stop" and t[1] for t in tiles)
+    assert ("At the station", "") in tiles
+    assert not any(t[0] in ("At the stop", "At the station") and t[1] for t in tiles)
+    train_cards = [c for c in texts["cards"] if "train" in c and c.startswith("You're here")]
+    assert train_cards and not any("bus" in c.lower() or "stop" in c.lower() for c in train_cards)
     for card in texts["cards"]:
-        if card.startswith("You are at the stop"):
+        if card.startswith("You're here"):
             assert "km/h" not in card and "Leave" not in card

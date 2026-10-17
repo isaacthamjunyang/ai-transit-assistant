@@ -15,8 +15,9 @@ INDEX = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
 def test_the_header_markup_is_one_row_and_has_no_arrival_line():
     card = INDEX.split('id="live-tracking"', 1)[1].split('id="next-buses-label"', 1)[0]
+    assert card.index('id="live-back"') < card.index('id="live-bus-to"') < card.index('id="live-vehicle"')  # the title row, then the card
     row = card.split('class="journey-step__line bus-card__line"', 1)[1].split("</p>", 1)[0]
-    assert row.index('id="live-bus-title"') < row.index('id="live-bus-to"') < row.index('id="live-bus-pill"')
+    assert row.index('id="live-bus-title"') < row.index('id="live-bus-pill"') and 'id="live-bus-to"' not in row
     for gone in ("Arriving", "live-bus-arriving", "bus-card__title", "live-then", "status-grid"):
         assert gone not in card, gone
 
@@ -38,7 +39,9 @@ def test_the_bus_header_has_the_tile_the_badge_to_destination_and_the_pill(run):
     assert fresh["pill"] in ("live", "schedule only")
     assert "Arriving in" not in fresh["header"] and "Arriving now" not in fresh["header"]
     assert fresh["badge"]["left"] >= fresh["tile"]["right"] - 0.5  # beside the logo tile
-    assert fresh["toBox"]["left"] >= fresh["badge"]["right"] - 0.5 or fresh["toBox"]["top"] >= fresh["badge"]["bottom"] - 1
+    assert fresh["toBox"]["bottom"] <= fresh["vehicleBox"]["top"] + 0.5  # "To {destination}" is the title above the card
+    assert fresh["pillBox"]["top"] >= fresh["badge"]["bottom"] - 1  # the pill is under the badge
+    assert fresh["backBox"]["bottom"] - fresh["backBox"]["top"] >= 44 and fresh["backBox"]["right"] - fresh["backBox"]["left"] >= 44 and fresh["backBar"] == "none"  # its own back button
     assert fresh["scrollWidth"] <= fresh["innerWidth"]
 
 

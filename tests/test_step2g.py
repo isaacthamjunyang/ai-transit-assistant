@@ -12,15 +12,9 @@ COPY = ROOT / "static" / "copy.js"
 
 STALE_HEADING = "LTA data is stale"
 STALE_UPDATED = "Last update: {time}"
-STALE_BODY = (
-    "Due to stale data, we cannot give a catch probability or recommend leaving now. "
-    "Please wait for live data or try again later."
-)
+STALE_BODY = "Stale data: no catch chance or leave advice until live data returns."
 LOCATION_HEADING = "Location uncertain"
-LOCATION_BODY = (
-    "Your GPS accuracy is {accuracy}. We'll show a wider range for the catch "
-    'probability and won\'t suggest \\"leave now\\" from this fix.'
-)
+LOCATION_BODY = "GPS accuracy is {accuracy}. The range is wider and we won't suggest leaving now."
 
 
 def test_arrive_by_sits_on_step_one_and_a_blank_value_omits_the_query():
@@ -71,8 +65,8 @@ def test_quality_cards_use_the_locked_copy_and_existing_tints():
     for text in (STALE_HEADING, STALE_UPDATED, STALE_BODY, LOCATION_HEADING, LOCATION_BODY):
         assert text in html
         assert text in copy
-    assert "banner--denied" in html.split('id="quality-banner"', 1)[1].split(">", 1)[0]
-    assert "card--caution" in html.split('id="location-card"', 1)[1].split(">", 1)[0]
+    assert "alert--error" in html.split('id="quality-banner"', 1)[1].split(">", 1)[0]
+    assert "alert--warning" in html.split('id="location-card"', 1)[1].split(">", 1)[0]
     sync = html.split("function syncQuality()", 1)[1].split("function activePlannedLeg", 1)[0]
     assert "displayFrozen" in html.split("function qualityState()", 1)[1].split("function staleArrivingText", 1)[0]
     assert 'chance.data_quality === "location uncertain"' in html.split("function locationCardApplies()", 1)[1].split("function syncQuality", 1)[0]

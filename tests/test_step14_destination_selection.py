@@ -39,7 +39,7 @@ def test_destination_stop_selection_does_not_require_reachability_or_a_boarding_
     assert 'id="confirm-destination-stop"' in screen4
     assert "<span>Confirm</span>" in screen4 and "Confirm and find buses" not in html
     assert "Confirm destination stop" not in html
-    assert "No direct or 1-transfer bus connection available for this trip." in html
+    assert "No direct or 1-transfer route for this trip." in html
     assert "No direct destination stop is reachable from your current boarding area." not in html
 
 

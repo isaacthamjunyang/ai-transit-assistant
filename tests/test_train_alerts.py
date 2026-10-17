@@ -195,8 +195,8 @@ def test_the_alerts_never_reach_ranking_probability_or_reroute():
 
 def test_the_plan_and_the_style_guide_describe_the_alert_banner():
     assert "TrainServiceAlerts" in PLAN and "`EWL`" in PLAN and "60 seconds" in PLAN
-    assert "sgTrainAlert(" in GUIDE and "train-alert__text" in GUIDE
-    assert ".train-alert__text {" in CSS and "-webkit-line-clamp: 2;" in CSS
+    assert "sgTrainAlert(" in GUIDE and "alert--clamp" in GUIDE and "alert__text" in GUIDE
+    assert ".alert--clamp .alert__text {" in CSS and "-webkit-line-clamp: 2;" in CSS
 
 
 VIEWPORTS = [("l360", 360, 800, False), ("d1280", 1280, 900, True)]

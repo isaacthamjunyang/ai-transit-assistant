@@ -84,15 +84,15 @@ def test_the_three_general_priorities_never_name_a_single_mode():
     for priority in ANY:
         for now in (OPEN, CLOSED):
             message = _walk_only(priority, now)["message"]
-            assert message == "No bus or MRT services are running to this destination at this time."
+            assert message == "No services to this destination right now."
             assert "buses are running" not in message and "stopped" not in message
 
 
 def test_the_old_bus_only_sentence_is_gone_from_the_onemap_planner():
-    assert pt_plan.NO_SERVICE_MESSAGE != "No buses are running to this destination at this time."
+    assert pt_plan.NO_SERVICE_MESSAGE != "No service to this destination right now."
     for priority in ALL:
         for result in (_walk_only(priority, OPEN), _walk_only(priority, CLOSED), _no_route(priority, OPEN)):
-            assert result["message"] != "No buses are running to this destination at this time."
+            assert result["message"] != "No service to this destination right now."
 
 
 def _late(keep):
@@ -186,8 +186,8 @@ def test_python_copy_js_and_the_page_say_the_same_words():
 
 def test_the_static_planner_keeps_its_bus_only_sentence_in_copy_js_and_the_page():
     jo = COPY.split("journeyOverview: {", 1)[1].split("\n  },", 1)[0]
-    assert 'noService: "No buses are running to this destination at this time."' in jo
-    assert 'var JO_NO_SERVICE_STATIC = "No buses are running to this destination at this time.";' in INDEX
+    assert 'noService: "No service to this destination right now."' in jo
+    assert 'var JO_NO_SERVICE_STATIC = "No service to this destination right now.";' in INDEX
     text = INDEX.split("function noServiceText(body) {", 1)[1].split("function syncOverviewArrive", 1)[0]
     assert 'body.planner !== "onemap"' in text and "JO_NO_SERVICE_STATIC" in text and "JO_NO_SERVICE_ANY" in text
 

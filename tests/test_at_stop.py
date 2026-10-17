@@ -155,7 +155,7 @@ def test_the_rescore_card_is_the_at_stop_text_with_the_tile_minutes(client):
     body = client.get("/api/rescore", params=dict(params, explanation_rendered=1)).json()
     pack = body["explanation"]
     assert pack["at_stop"] is True and pack["action"] == "wait" and pack["call"] is False and pack["pending"] is False
-    assert re.fullmatch(r"You are at the stop\. You have \d+ minutes to wait\.", pack["text"]), pack["text"]
+    assert re.fullmatch(r"You're here\. \d+ minutes to wait\.", pack["text"]), pack["text"]
 
 
 # ---- the notifications and the reroute decision

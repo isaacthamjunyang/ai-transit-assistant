@@ -44,7 +44,7 @@ def test_every_group_is_run(results):
 def test_the_estimator_is_the_only_file_that_uses_local_storage():
     source = SCRIPT.read_text(encoding="utf-8")
     assert "localStorage" in source
-    for name in ("index.html", "copy.js", "format-distance.js", "place-icons.js", "sw.js"):
+    for name in ("index.html", "copy.js", "format-distance.js", "sw.js"):
         assert "localStorage" not in (ROOT / "static" / name).read_text(encoding="utf-8")
 
 

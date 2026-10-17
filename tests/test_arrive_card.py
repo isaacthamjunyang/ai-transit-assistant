@@ -68,9 +68,10 @@ def test_the_card_is_fed_by_one_function_in_all_three_places():
     assert "Date.UTC(" in INDEX.split("function clockMinutes(stamp) {", 1)[1].split("function arriveGapText", 1)[0]  # midnight lives in the date
 
 
-def test_the_pill_and_the_edit_link_are_where_they_were():
-    card = INDEX.split('<p id="overview-arrive-value"', 1)[1].split("</div>", 1)[0]
-    ids = ["overview-arrive-estimate", "overview-arrive-note", "overview-arrive-status"]
+def test_the_alerts_and_the_edit_link_are_where_they_were():
+    # the note stays in the copy column; the two alerts follow the Edit link, full width under the card's row
+    card = INDEX.split('<p id="overview-arrive-value"', 1)[1].split('<section id="on-way"', 1)[0]
+    ids = ["overview-arrive-note", "overview-arrive-edit", "overview-arrive-estimate", "overview-arrive-status"]
     positions = [card.index(f'id="{name}"') for name in ids]
     assert positions == sorted(positions)
     assert 'id="overview-arrive-edit"' in INDEX and "Edit</button>" in INDEX
@@ -78,7 +79,7 @@ def test_the_pill_and_the_edit_link_are_where_they_were():
         assert f'"{text}"' in COPY
     status = INDEX.split("function syncOverviewArrive() {", 1)[1].split("// Screen 6", 1)[0]
     assert "journeyComparison.textContent" in status and "/On track/.test(label)" in status
-    assert "badge--track" in status and "badge--risk" in status and "badge--na" in status
+    assert '"success"' in status and '"warning"' in status and '"neutral"' in status
 
 
 def test_the_label_markup_and_css_are_gone_and_each_card_is_a_named_group():
@@ -86,11 +87,12 @@ def test_the_label_markup_and_css_are_gone_and_each_card_is_a_named_group():
         assert "arrive-box__label" not in text, name
     assert INDEX.count('class="arrive-box" role="group" aria-label="Arrive by" hidden>') == 3
     assert 'role=\\"group\\" aria-label=\\"" + copy.home.arriveBy' in GUIDE
-    # the gap is the check pill's own component: the same classes, so the same font, size, padding, radius and tokens
-    assert INDEX.count('-arrive-estimate" class="badge arrive-box__status badge--na" hidden></p>') == 3
-    assert 'gap.className = "badge arrive-box__status badge--" + arriveTone();' in INDEX
-    for tone, token in (("track", "--status-live"), ("risk", "--status-uncertain"), ("na", "--status-no-history")):
-        assert f"color: var({token});" in CSS.split(".badge--" + tone + " {", 1)[1].split("}", 1)[0]
+    # the gap is the check's own component: the shared alert, so the same font, size, padding, radius and tokens
+    assert INDEX.count('-arrive-estimate" class="alert alert--neutral" hidden>') == 3
+    assert "setAlertKind(gap, ARRIVE_ALERT_KIND[arriveTone()]);" in INDEX
+    assert 'var ARRIVE_ALERT_KIND = { track: "success", risk: "warning", na: "neutral" };' in INDEX
+    for kind, token in (("success", "--status-live"), ("warning", "--status-uncertain"), ("neutral", "--status-no-history")):
+        assert f"--alert-ink: var({token});" in CSS.split(".alert--" + kind + " {", 1)[1].split("}", 1)[0]
 
 
 def test_the_style_guide_shows_before_after_on_target_hours_midnight_next_day_and_no_target():
@@ -202,7 +204,8 @@ def _contrast(foreground, background):
                                        ("afterOne", "risk"), ("notAvailable", "na")])
 def test_the_gap_colour_follows_the_pill_state_and_reads_on_the_card(report, case, tone):
     card = report["cases"][case]
-    assert f"badge--{tone}" in card["gapClass"] and "arrive-box__status" in card["gapClass"], card["gapClass"]
+    kind = {"track": "success", "risk": "warning", "na": "neutral"}[tone]
+    assert f"alert--{kind}" in card["gapClass"] and card["gapClass"].startswith("alert "), card["gapClass"]
     assert card["gapColour"] == card["pillColour"] or card["pillColour"] is None, card  # the pill's own text token
     if card["pillLook"]:
         assert card["gapLook"].split("|")[:8] == card["pillLook"].split("|")[:8], card  # font, size, padding, radius

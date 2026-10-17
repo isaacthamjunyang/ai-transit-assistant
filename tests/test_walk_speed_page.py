@@ -134,14 +134,9 @@ def test_a_remembered_pace_goes_with_the_planning_request_and_the_page_shows_the
     assert "walk_speed=0.9" in r["arrivalsUrl"] and r["after"]["last"] == 0.9
 
 
-PRIVACY = "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before."
-SENSOR_OFF = "Motion sensor is off, so your steps are not used."
-CAPTIONS = {  # Page A's card has no caption any more: only the pace line
-    "gps": "Walking pace: 4.7 km/h · from GPS",
-    "cadence": "Walking pace: 4.3 km/h · from your steps",
-    "remembered": "Walking pace: 3.2 km/h · your usual pace",
-    "default": "Walking pace: 4.5 km/h · normal pace",
-}
+PRIVACY_OLD = "Motion data stays on your phone. Only"  # the start of the removed overview sentence
+ROW = "Current location and walking pace"  # Page A's button row: one centred line, no pace subtitle
+SOURCES = ("gps", "cadence", "remembered", "default")
 
 
 @pytest.fixture(scope="module")
@@ -158,30 +153,31 @@ def ui(app):
         return {name: future.result()["result"] for name, future in futures.items()}
 
 
-@pytest.mark.parametrize("source", list(CAPTIONS))
-def test_the_card_shows_the_caption_and_pace_line_for_the_servers_source(ui, source):
+@pytest.mark.parametrize("source", SOURCES)
+def test_the_row_has_no_pace_subtitle_for_any_source_of_the_servers_pace(ui, source):
     card = ui["captions"]["sources"][source]
-    assert card["hasCaption"] is False and card["line"] == CAPTIONS[source]
-    assert card["live"] == "off" and card["visible"] is True
+    assert card["hasCaption"] is False and card["hasPaceLine"] is False
+    assert card["row"] == ROW and card["visible"] is True
+    assert card["tap"] >= 44 and card["align"] == "center"
 
 
 def test_the_real_poll_with_no_value_is_the_normal_pace(ui):
     real = ui["captions"]["real"]
     assert real["server"] == {"used": 1.25, "source": "default"}
-    assert real["card"]["line"] == "Walking pace: 4.5 km/h · normal pace"
-    assert real["card"]["hasCaption"] is False
+    assert real["card"]["row"] == ROW and real["card"]["hasPaceLine"] is False
 
 
-def test_an_unknown_source_falls_back_to_the_normal_pace(ui):
+def test_an_unknown_source_still_shows_the_one_line_row(ui):
     bogus = ui["captions"]["bogus"]
-    assert bogus["hasCaption"] is False and bogus["line"] == "Walking pace: 4.5 km/h · normal pace"
+    assert bogus["hasCaption"] is False and bogus["hasPaceLine"] is False and bogus["row"] == ROW
 
 
-def test_the_overview_shows_the_privacy_line_or_the_sensor_off_line(ui):
-    assert ui["notes_granted"]["onOverview"] == {"overview": PRIVACY, "newJourney": PRIVACY}
-    assert ui["notes_missing"]["onOverview"]["overview"] == SENSOR_OFF
-    assert ui["notes_denied"]["afterDenied"]["newJourney"] == SENSOR_OFF
-    assert ui["notes_demo"]["inDemo"] == {"overview": "", "newJourney": ""}
+def test_no_motion_or_privacy_line_is_on_the_overview_or_the_new_journey_screen(ui):
+    gone = {"overview": False, "newJourney": False, "text": False}  # no note elements, no such text on the page
+    assert ui["notes_granted"]["onOverview"] == gone
+    assert ui["notes_missing"]["onOverview"] == gone
+    assert ui["notes_denied"]["afterDenied"] == gone
+    assert ui["notes_demo"]["inDemo"] == gone
 
 
 def test_yes_on_a_transfer_route_shows_the_overview_and_stops_everything(stop_reports):
@@ -274,9 +270,9 @@ def test_the_location_card_states_the_reason_the_server_gave_and_no_card_when_th
     cards = report["cards"]
     # The phone thinks its fix is fresh and accurate (the old fall-through printed "GPS accuracy is 22 m" here).
     assert report["phone"]["accuracy"] < 100 and report["phone"]["ageMs"] < 60000
-    assert cards["age"]["hidden"] is False and "hasn't updated for 95 s" in cards["age"]["body"]
+    assert cards["age"]["hidden"] is False and "not updated for 95 s" in cards["age"]["body"]
     assert "GPS accuracy" not in cards["age"]["body"]
-    assert cards["accuracy"]["hidden"] is False and "Your GPS accuracy is 140 m" in cards["accuracy"]["body"]
-    assert cards["both"]["hidden"] is False and "Your GPS accuracy is 140 m" in cards["both"]["body"]
+    assert cards["accuracy"]["hidden"] is False and "GPS accuracy is 140 m" in cards["accuracy"]["body"]
+    assert cards["both"]["hidden"] is False and "GPS accuracy is 140 m" in cards["both"]["body"]
     assert cards["neither-uncertain"]["hidden"] is True and cards["neither-live"]["hidden"] is True
     assert cards["age"]["title"] == "Location uncertain"

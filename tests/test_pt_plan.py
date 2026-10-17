@@ -255,7 +255,7 @@ def test_bus_59_at_00_55_is_dropped_because_it_is_after_its_last_bus():
     assert [leg["route"] for leg in legs] == ["143", "59"]
     result = plan(server, fixture="late", now=now)
     assert result["route_status"] == "no_service" and result["option"] is None
-    assert result["message"] == pt_plan.NO_SERVICE_MESSAGE == "No bus or MRT services are running to this destination at this time."
+    assert result["message"] == pt_plan.NO_SERVICE_MESSAGE == "No services to this destination right now."
     assert result["dropped"]["hours"] == 1 and result["calls"] == 1
 
 

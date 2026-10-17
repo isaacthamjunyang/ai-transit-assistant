@@ -36,7 +36,7 @@ const READ = `(function () {
     return [c.fontFamily, c.fontSize, c.fontWeight, c.paddingTop, c.paddingRight, c.paddingBottom, c.paddingLeft,
       c.borderTopLeftRadius, c.backgroundColor, c.color, c.minHeight].join("|");
   }
-  var lines = Array.prototype.filter.call(box.querySelectorAll(".arrive-box__copy > p"), shown);
+  var lines = Array.prototype.filter.call(box.querySelectorAll(".arrive-box__copy > p, .arrive-box > .alert"), shown);
   return {
     label: box.querySelector(".arrive-box__label") ? text(box.querySelector(".arrive-box__label")) : null,
     visibleText: text(box.querySelector(".arrive-box__copy")),

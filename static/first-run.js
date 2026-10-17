@@ -6,8 +6,8 @@
 (function (root) {
   "use strict";
 
-  var KEY = "bus-catch-first-run-v1";
-  var VERSION = 1;
+  var KEY = "bus-catch-first-run-v2";
+  var VERSION = 2;
   var memoryDone = false;
 
   function storage() {
@@ -18,7 +18,7 @@
     }
   }
 
-  // Valid only as the exact object this module writes: {"v":1,"done":true}. Anything else counts as "not seen".
+  // Valid only as the exact object this module writes: {"v":2,"done":true}. Anything else counts as "not seen".
   function validStored(raw) {
     if (typeof raw !== "string" || raw.length > 64) {
       return false;

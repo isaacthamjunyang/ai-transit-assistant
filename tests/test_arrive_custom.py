@@ -37,7 +37,7 @@ def report(tmp_path_factory):
 # ---- the controls
 
 def test_no_date_control_or_datetime_local_input_anywhere():
-    assert "datetime-local" not in INDEX and 'type="date"' not in INDEX and "showPicker" not in INDEX
+    assert "datetime-local" not in INDEX and 'type="date"' not in INDEX
     assert "datetime-local" not in CSS
 
 
@@ -53,27 +53,32 @@ def test_the_toggle_has_only_today_and_tomorrow_and_is_a_labelled_radiogroup(rep
     assert controls["options"] == ["Today", "Tomorrow"]
     assert controls["group"] == "radiogroup|Arrive by day"
     assert controls["labels"] == ["Arrive today", "Arrive tomorrow"]
-    assert controls["state"]["day"] == "today" and controls["state"]["today"] == "true" and controls["state"]["tomorrow"] == "false"
+    # neither day is chosen when Custom is first tapped: no option is checked
+    assert controls["state"]["day"] == "" and controls["state"]["today"] == "false" and controls["state"]["tomorrow"] == "false"
 
 
 def test_each_option_and_the_time_input_are_at_least_44_px_high(report):
     assert all(height >= 44 for height in report["controls"]["heights"]), report["controls"]["heights"]
 
 
-def test_the_selected_day_has_a_thicker_border_and_bold_text_and_no_tick(report):
+def test_the_selected_day_has_the_chips_ring_bold_text_and_no_tick(report):
     selected = CSS.split(".arrive-day__option.is-selected {", 1)[1].split("}", 1)[0]
-    assert "font-weight: 700" in selected and "border-color: var(--color-selected-outline)" in selected
-    assert "box-shadow: 0 0 0 2px var(--color-selected-outline)" in selected  # on top of the 1 px border
+    assert "font-weight: 700" in selected and "border-color" not in selected and "box-shadow" not in selected
+    shared = CSS.split(".saved-chip__main.is-selected {", 1)[1].split("}", 1)[0]  # the one rule that gives chips and days a ring
+    assert "box-shadow: 0 0 0 2px var(--color-selected-outline);" in shared
     for tick in ("2713", "2714", "\u2713", "\u2714", "\u2705"):
         assert tick not in CSS and tick not in INDEX and tick not in COPY, tick
     assert "::before" not in CSS.split(".arrive-day {", 1)[1].split(".arrive-chip {", 1)[0]
     sample = GUIDE.split('class="arrive-day"', 1)[1].split("</div>", 1)[0]
     assert "\u2713" not in sample and "✓" not in sample and "✔" not in sample
-    assert report["afterArrow"] == {"day": "tomorrow", "focus": "arrive-day-tomorrow"}
+    assert report["afterArrow"] == {"day": "", "focus": "arrive-day-tomorrow"}  # the arrow keys only move the focus
 
 
 def test_aria_checked_follows_the_selection_and_the_weight_and_ring_change(report):
     toggle = report["toggle"]
+    assert toggle["fresh"]["today"]["checked"] == "false" and toggle["fresh"]["tomorrow"]["checked"] == "false"
+    assert toggle["fresh"]["today"]["ring"] is False and toggle["fresh"]["tomorrow"]["ring"] is False  # nothing outlined
+    assert toggle["fresh"]["today"]["weight"] == "400" and toggle["fresh"]["tomorrow"]["weight"] == "400"
     assert toggle["today"] == {"checked": "true", "weight": "700", "ring": True, "content": "none"}
     assert toggle["tomorrow"] == {"checked": "false", "weight": "400", "ring": False, "content": "none"}
     assert toggle["afterTomorrow"]["tomorrow"]["checked"] == "true" and toggle["afterTomorrow"]["tomorrow"]["weight"] == "700"
@@ -102,7 +107,7 @@ def test_at_11_50_pm_tomorrow_12_10_am_works_and_reads_tomorrow(report):
     assert case["confirmDisabled"] is False and case["picked"] is True
     assert report["cases"]["midnightClock"] == f"12:10{NB}AM (tomorrow)"
     assert case["chosen"] == f"Arrive by: 12:10{NB}AM (tomorrow)"  # the overview line keeps its "(tomorrow)"
-    assert "(tomorrow)" in case["display"]  # the header line keeps its "(tomorrow)"
+    assert "(Tomorrow)" in case["display"] and "(tomorrow)" not in case["display"]  # the dropdown: capital T
 
 
 def test_today_with_a_passed_time_shows_the_message_and_keeps_confirm_disabled(report):
@@ -141,19 +146,21 @@ def test_an_empty_time_keeps_confirm_disabled_without_a_message(report):
 
 # ---- presets
 
-def test_a_preset_after_midnight_selects_tomorrow_and_custom_shows_it(report):
+def test_a_preset_after_midnight_clears_the_day_and_custom_starts_unselected(report):
     p30, p60 = report["cases"]["preset30"], report["cases"]["preset60"]
-    assert p30["value"] == "2026-10-09T00:20" and p30["day"] == "tomorrow" and p30["time"] == "00:20"
-    assert p60["value"] == "2026-10-09T00:50" and p60["day"] == "tomorrow" and p60["time"] == "00:50"
-    shown = report["cases"]["preset30InCustom"]  # opening Custom afterwards
-    assert shown["customVisible"] is True and shown["time"] == "00:20" and shown["tomorrow"] == "true"
-    assert shown["value"] == "2026-10-09T00:20" and shown["confirmDisabled"] is False
+    assert p30["value"] == "2026-10-09T00:20" and p30["day"] == "" and p30["time"] == "00:20"
+    assert p60["value"] == "2026-10-09T00:50" and p60["day"] == "" and p60["time"] == "00:50"
+    assert p30["today"] == "false" and p30["tomorrow"] == "false"
+    shown = report["cases"]["preset30InCustom"]  # opening Custom afterwards: the time stays, no day is chosen
+    assert shown["customVisible"] is True and shown["time"] == "00:20" and shown["day"] == ""
+    assert shown["today"] == "false" and shown["tomorrow"] == "false"
+    assert shown["value"] == "" and shown["confirmDisabled"] is True and shown["picked"] is False
 
 
-def test_a_preset_in_the_afternoon_selects_today(report):
+def test_a_preset_in_the_afternoon_clears_the_day_too(report):
     case = report["cases"]["preset30Afternoon"]
-    assert case["value"] == "2026-10-08T15:30" and case["day"] == "today" and case["time"] == "15:30"
-    assert case["today"] == "true" and case["tomorrow"] == "false"
+    assert case["value"] == "2026-10-08T15:30" and case["day"] == "" and case["time"] == "15:30"
+    assert case["today"] == "false" and case["tomorrow"] == "false"
 
 
 # ---- Singapore date, not the phone's
@@ -178,8 +185,9 @@ def test_the_page_never_builds_the_value_from_the_phones_date():
 def test_the_messages_and_labels_are_in_copy_js_and_the_page():
     for text in (PAST, FAR):
         assert text in COPY and text in INDEX, text
-    for text in ('dayToday: "Today"', 'dayTomorrow: "Tomorrow"', 'timeLabel: "Time"'):
+    for text in ('dayToday: "Today"', 'dayTomorrow: "Tomorrow"', 'timeAria: "Arrive by time"', 'chooseTime: "Choose time"', 'in90: "In 1 hr 30 min"'):
         assert text in COPY, text
+    assert "timeLabel" not in COPY and "arrive-custom__label" not in INDEX + CSS + GUIDE
 
 
 def test_the_style_guide_shows_the_custom_control_with_both_messages():
@@ -203,32 +211,32 @@ def test_the_server_never_echoes_a_bad_arrive_by(tmp_path, monkeypatch):
     assert response.status_code == 422 and secret not in response.text and "9731" not in response.text
 
 
-# ---- the prefill: Singapore now + 5 minutes, rounded up to the whole minute, valid at once
+# ---- the prefill: Singapore now + 5 minutes, rounded up to the whole minute; no day is chosen
 
 def test_custom_opens_prefilled_with_singapore_now_plus_5_rounded_up(report):
     mid = report["prefill"]["mid"]  # 6:00:10 PM + 5 min = 6:05:10 PM, rounded up to 6:06 PM
-    assert mid["time"] == "18:06" and mid["day"] == "today" and mid["value"] == "2026-10-08T18:06"
+    assert mid["time"] == "18:06" and mid["day"] == "" and mid["value"] == ""
     assert report["prefill"]["lateInMinute"]["time"] == "18:06"  # 6:05:45 PM rounds up to 6:06 PM
 
 
 def test_the_prefill_uses_singapore_time_when_the_phone_is_in_los_angeles(report):
     shown = report["prefill"]["singapore"]  # 7:30:10 AM on Oct 9 in Singapore, 4:30 PM on Oct 8 in Los Angeles
     assert report["browserZone"] == "America/Los_Angeles"
-    assert shown["time"] == "07:36" and shown["value"] == "2026-10-09T07:36" and shown["day"] == "today"
+    assert shown["time"] == "07:36" and shown["value"] == "" and shown["day"] == ""
 
 
-def test_crossing_midnight_the_prefill_selects_tomorrow(report):
+def test_crossing_midnight_the_prefill_is_just_the_time_and_selects_no_day(report):
     shown = report["prefill"]["midnight"]  # 11:58:10 PM + 5 min = 12:03:10 AM, rounded up to 12:04 AM
-    assert shown["time"] == "00:04" and shown["day"] == "tomorrow" and shown["value"] == "2026-10-09T00:04"
-    assert shown["tomorrow"] == "true" and shown["today"] == "false"
+    assert shown["time"] == "00:04" and shown["day"] == "" and shown["value"] == ""
+    assert shown["tomorrow"] == "false" and shown["today"] == "false"
 
 
-def test_the_prefilled_value_is_valid_and_the_buttons_are_enabled_on_open(report):
+def test_confirm_and_find_my_route_stay_disabled_until_a_day_is_chosen(report):
     for name in ("mid", "lateInMinute", "singapore", "midnight"):
         shown = report["prefill"][name]
-        assert shown["errorHidden"] is True and shown["confirmDisabled"] is False, name
-        assert shown["picked"] is True and shown["customVisible"] is True, name
-        assert shown["display"].startswith("Custom") and ":" in shown["display"], name  # the header line shows the time again
+        assert shown["errorHidden"] is True and shown["confirmDisabled"] is True, name  # no message, just not chosen yet
+        assert shown["picked"] is False and shown["customVisible"] is True and shown["findRoute"] == "true", name
+        assert shown["display"] == "Custom", name  # the header reads "Custom" until a day is chosen
 
 
 def test_the_old_arrive_by_line_is_gone_and_the_hint_is_gone_everywhere():
@@ -261,9 +269,10 @@ def test_no_from_now_wording_remains_in_the_page_copy_style_guide_css_or_plan():
 
 
 def test_the_time_input_has_no_wrapper_or_in_field_span_and_describes_itself_with_the_message_only():
-    assert re.search(r'<div class="arrive-custom">\s*<label[^>]*>[^<]*</label>\s*<input id="arrive-by-time" class="arrive-time" type="time"[^>]*aria-describedby="arrive-by-error">\s*<div id="arrive-day"', INDEX)
+    assert re.search(r'<div class="arrive-custom">\s*<div class="arrive-time-field">\s*<input id="arrive-by-time" class="arrive-time" type="time"[^>]*aria-describedby="arrive-by-error">\s*<button type="button" id="arrive-time-picker"[^>]*>.*?</button>\s*</div>\s*<div id="arrive-day"', INDEX, re.S)
+    assert "<label" not in INDEX.split('id="arrive-by-custom"', 1)[1].split('id="arrive-by-error"', 1)[0]  # no visible Time label
     block = CSS.split(".arrive-time {", 1)[1].split("}", 1)[0]
-    assert "min-height: var(--tap-min)" in block and "padding" not in block
+    assert "min-height: var(--tap-min)" in block
     assert not re.search(r"(?<![-a-z])width:\s*[\d.]+(px|rem|em)", block)  # no fixed width, only 100%
 
 
@@ -282,14 +291,15 @@ def test_the_passed_time_message_still_works_and_the_minute_recheck_is_kept_for_
 def test_a_presets_time_and_a_time_the_user_chose_are_not_overwritten(report):
     prefill = report["prefill"]
     assert prefill["preset"]["time"] != "" and prefill["presetKept"]["time"] == prefill["preset"]["time"]
-    assert prefill["presetKept"]["value"] == prefill["preset"]["value"] and prefill["presetKept"]["day"] == "today"
+    assert prefill["presetKept"]["value"] == "" and prefill["presetKept"]["day"] == ""  # Custom starts with no day
     assert prefill["userKept"]["time"] == "16:45" and prefill["userKept"]["value"] == "2026-10-08T16:45"
+    assert prefill["userKept"]["day"] == "today"  # a Custom already chosen keeps its day
 
 
 def test_no_target_clears_the_time_and_the_next_custom_prefills_again(report):
     prefill = report["prefill"]
     assert prefill["none"]["time"] == "" and prefill["none"]["value"] == ""
-    assert prefill["afterNone"]["time"] == "15:06" and prefill["afterNone"]["value"] == "2026-10-08T15:06"
+    assert prefill["afterNone"]["time"] == "15:06" and prefill["afterNone"]["value"] == "" and prefill["afterNone"]["day"] == ""
     assert prefill["afterClear"]["time"] == "15:06"  # an emptied time is prefilled when Custom is opened
 
 
@@ -348,3 +358,103 @@ def test_the_time_value_is_left_aligned_unstyled_and_at_least_44_px_high(fit, wi
     shown = fit[width]
     assert shown["textAlign"] in ("left", "start") and shown["appearance"] == "none"
     assert shown["time"]["height"] >= 44
+
+
+# ---- the panel: Custom opens it with no day chosen; a tap on a valid day closes it; a problem keeps it open
+
+
+def test_custom_opens_the_panel_with_the_suggested_time_and_nothing_outlined(report):
+    opened = report["panel"]["customOpened"]
+    assert opened["hidden"] is False and opened["expanded"] == "true"
+    assert opened["timeBox"]["height"] >= 44 and opened["todayBox"]["height"] >= 44 and opened["tomorrowBox"]["height"] >= 44
+    assert opened["customSelected"] is True and opened["errorShown"] is False
+    assert opened["todayChecked"] == "false" and opened["tomorrowChecked"] == "false"  # no option checked
+    assert "0px 0px 0px 2px" not in opened["todayRing"] and "0px 0px 0px 2px" not in opened["tomorrowRing"]  # nothing outlined
+    assert opened["time"] == "18:06"  # the suggested time: now + 5 minutes
+    assert opened["display"] == "Custom" and opened["confirmDisabled"] is True and opened["findRoute"] == "true"
+
+
+def test_typing_a_time_with_no_day_chosen_changes_nothing_and_never_closes(report):
+    typed = report["panel"]["timeTyped"]
+    assert typed["hidden"] is False and typed["display"] == "Custom" and typed["confirmDisabled"] is True
+    assert typed["errorShown"] is False and typed["todayChecked"] == "false" and typed["tomorrowChecked"] == "false"
+
+
+def test_a_tap_on_today_with_a_valid_time_closes_the_panel_and_the_dropdown_reads_custom_dot_time(report):
+    closed = report["panel"]["todayValid"]
+    assert closed["hidden"] is True and closed["expanded"] == "false"
+    assert closed["display"] == "Custom \u00b7 7:00 PM"
+    assert closed["confirmDisabled"] is False  # a day is chosen and valid
+    reopened = report["panel"]["reopened"]  # the dropdown opens it again, with Today outlined
+    assert reopened["hidden"] is False and reopened["todayChecked"] == "true" and reopened["tomorrowChecked"] == "false"
+    assert "0px 0px 0px 2px" in reopened["todayRing"]
+
+
+def test_a_past_time_today_keeps_the_message_with_its_gap_and_the_panel_open(report):
+    for name in ("todayPast",):
+        past = report["panel"][name]
+        assert past["hidden"] is False and past["errorShown"] is True and past["errorText"] == PAST
+        assert past["display"] == "Custom" and past["confirmDisabled"] is True
+        gap = past["errorBox"]["top"] - max(past["todayBox"]["bottom"], past["tomorrowBox"]["bottom"])
+        assert gap >= 12, gap
+    tapped = report["cases"]["midnightToday"]  # tapping Today with a passed time: the same message
+    assert tapped["error"] == PAST and tapped["confirmDisabled"] is True
+    assert report["panel"]["midnightToday"]["hidden"] is False
+
+
+def test_retyping_a_valid_time_with_a_day_chosen_revalidates_but_does_not_close(report):
+    retyped = report["panel"]["retyped"]
+    assert retyped["hidden"] is False and retyped["errorShown"] is False and retyped["todayChecked"] == "true"
+    assert retyped["display"] == "Custom \u00b7 7:30 PM" and retyped["confirmDisabled"] is False  # chosen, still open
+
+
+def test_a_valid_tomorrow_closes_the_panel_and_the_dropdown_ends_with_a_capital_t(report):
+    closed = report["panel"]["tomorrowValid"]
+    assert closed["hidden"] is True and closed["errorShown"] is False
+    assert closed["display"] == "Custom \u00b7 5:30 PM (Tomorrow)"
+    assert "(tomorrow)" not in closed["display"]
+    midnight = report["panel"]["midnightTomorrow"]  # 11:58 PM: the suggested 12:04 AM is tomorrow's
+    assert midnight["hidden"] is True and midnight["display"] == "Custom \u00b7 12:04 AM (Tomorrow)"
+    assert report["panel"]["midnightOpen"]["todayChecked"] == "false" and report["panel"]["midnightOpen"]["time"] == "00:04"
+
+
+def test_more_than_24_hours_away_keeps_the_panel_open_with_the_message_12px_under_the_buttons(report):
+    for name in ("tomorrowFar", "tomorrowFarTap"):
+        far = report["panel"][name]
+        assert far["hidden"] is False and far["errorShown"] is True and far["errorText"] == FAR, name
+        assert far["confirmDisabled"] is True and far["display"] == "Custom" and far["tomorrowChecked"] == "true", name
+        assert "alert alert--error" in far["errorClass"]  # the shared alert style
+        gap = far["errorBox"]["top"] - max(far["todayBox"]["bottom"], far["tomorrowBox"]["bottom"])
+        assert gap >= 12, gap
+    back = report["panel"]["backToToday"]
+    assert back["errorShown"] is False or back["errorText"] != FAR  # the message follows the choice
+
+
+def test_a_preset_or_no_target_clears_the_chosen_day(report):
+    for name in ("afterPreset", "afterNone"):
+        shown = report["panel"][name]
+        assert shown["hidden"] is False and shown["todayChecked"] == "false" and shown["tomorrowChecked"] == "false", name
+        assert shown["display"] == "Custom" and shown["confirmDisabled"] is True, name
+
+
+def test_the_keyboard_keeps_a_radio_group_with_nothing_checked_and_enter_or_space_selects_and_closes(report):
+    arrow = report["panel"]["keyArrow"]
+    assert arrow["checked"] == ["false", "false"] and arrow["focus"] == "arrive-day-tomorrow"
+    assert arrow["state"]["hidden"] is False  # the arrow keys only move the focus
+    enter = report["panel"]["keyEnter"]
+    assert enter["hidden"] is True and enter["display"] == "Custom \u00b7 6:06 PM"  # Enter on Today
+    space = report["panel"]["keySpace"]
+    assert space["hidden"] is True and space["display"] == "Custom \u00b7 12:00 PM (Tomorrow)"  # Space on Tomorrow
+    assert 'role="radio"' in INDEX.split('id="arrive-day"', 1)[1][:600] and 'role="radiogroup"' in INDEX
+
+
+def test_the_selected_chip_and_the_selected_day_use_one_outline_token(report):
+    panel = report["panel"]["reopened"]  # Today is chosen and outlined
+    for ring in (panel["customRing"], panel["todayRing"]):
+        assert re.search(r"0px 0px 0px 2px", ring), ring  # a 2 px ring on both
+    colour = lambda ring: re.search(r"rgb\([^)]*\)", ring).group(0)
+    assert colour(panel["customRing"]) == colour(panel["todayRing"])  # the same colour on the chip and the day button
+    assert panel["todayWeight"] == "700"
+    rule = CSS.split(".saved-chip__main.is-selected {", 1)[1].split("}", 1)[0]
+    assert "var(--color-selected-outline)" in rule  # the one token
+    assert "selected-outline" not in CSS.split(".arrive-day__option.is-selected {", 1)[1].split("}", 1)[0]

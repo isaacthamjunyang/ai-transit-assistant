@@ -79,9 +79,9 @@ def test_the_card_names_the_reason_the_server_gave():
     rule = _between(html, "function locationCardApplies()", "function syncQuality")
     assert 'chance.location_reason === "accuracy" || chance.location_reason === "age"' in rule
     copy = (STATIC / "copy.js").read_text(encoding="utf-8")
-    age = "Your location hasn't updated for {seconds} s. We'll show a wider range for the catch probability and won't suggest"
+    age = "Location not updated for {seconds} s. The range is wider and we won't suggest leaving now."
     assert age in html and age in copy
-    assert "Your GPS accuracy is {accuracy}. We'll show a wider range for the catch probability" in html
+    assert "GPS accuracy is {accuracy}. The range is wider and we won't suggest leaving now." in html
     assert "/* proposed, needs approval */\n      ageBody" in copy
 
 

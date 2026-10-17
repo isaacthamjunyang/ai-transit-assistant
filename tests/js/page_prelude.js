@@ -7,8 +7,8 @@
     for (var key in preset) { window.localStorage.setItem(key, preset[key]); }
     // The first-run explainer is a modal card: every browser test starts with it already seen, unless the test asks for it
     // (config.firstRun === true) or presets the key itself.
-    if (CONFIG.firstRun !== true && !("bus-catch-first-run-v1" in preset)) {
-      window.localStorage.setItem("bus-catch-first-run-v1", JSON.stringify({ v: 1, done: true }));
+    if (CONFIG.firstRun !== true && !("bus-catch-first-run-v2" in preset)) {
+      window.localStorage.setItem("bus-catch-first-run-v2", JSON.stringify({ v: 2, done: true }));
     }
   } catch (e) { /* storage blocked */ }
   if (CONFIG.blockStorage === true) {

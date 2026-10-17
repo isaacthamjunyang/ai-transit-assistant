@@ -2,9 +2,11 @@ import { poll, toLive } from "./common.mjs";
 
 const CARD = `({
   hasCaption: !!document.getElementById("catch-caption"),
-  line: document.getElementById("catch-pace-line").textContent,
-  live: document.getElementById("catch-pace-line").getAttribute("aria-live"),
-  visible: !!document.getElementById("catch-pace-line").offsetParent
+  hasPaceLine: !!document.getElementById("catch-pace-line") || /Walking pace:/.test(document.getElementById("arrival-card").textContent),
+  row: document.getElementById("walk-open").textContent.trim().replace(/\s+/g, " "),
+  visible: !!document.getElementById("walk-open").offsetParent,
+  tap: document.getElementById("walk-open").getBoundingClientRect().height,
+  align: getComputedStyle(document.getElementById("walk-open")).textAlign
 })`;
 
 export default async function (h) {

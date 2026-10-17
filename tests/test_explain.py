@@ -227,11 +227,11 @@ def test_the_leave_now_sentence():
 
 def test_the_uncertain_location_sentence_follows_the_leave_sentence():
     by = card_text(sheet(10, 3, leave_in=300), band="ok", uncertain=True)
-    assert by.endswith("arriving at 2:10 PM. Your location is uncertain, so leave a little earlier than that to be safe.")
+    assert by.endswith("arriving at 2:10 PM. Location uncertain: leave a little earlier to be safe.")
     now = card_text(sheet(10, 3, leave_in=60), band="ok", uncertain=True)
-    assert now.endswith("arriving at 2:10 PM. Your location is uncertain, so the walking time may be off.")
+    assert now.endswith("arriving at 2:10 PM. Location uncertain: the walk time may be off.")
     arriving = card_text(sheet(0, 3, leave_in=0), band="ok", uncertain=True)
-    assert arriving.endswith("arriving at 2:00 PM. Your location is uncertain, so the walking time may be off.")
+    assert arriving.endswith("arriving at 2:00 PM. Location uncertain: the walk time may be off.")
 
 
 def test_distance_and_clock_formats():
@@ -486,7 +486,7 @@ def test_context_chooses_the_sentence_two_variant_and_the_model_never_sees_it():
     low = _poll(_payload(600, band="low", high=30))
     assert "catching this bus is unlikely" in low["text"] and low["action"] == "do_not_rely"
     unc = _poll(_payload(600, quality="location uncertain"))
-    assert "Your location is uncertain" in unc["text"]
+    assert "Location uncertain" in unc["text"]
     assert unc["fact_sheet"] == {"reason_code": "LOCATION_UNCERTAIN", "chosen_action": unc["action"]}
     stale = _poll(_payload(600, quality="stale"))
     assert stale["call"] is False  # no model call for stale or unavailable data

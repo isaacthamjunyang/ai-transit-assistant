@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Beat the Bus and MRT</title>
+  <title>Just-In-Time</title>
   <script src="theme-boot.js"></script>
   <!-- Leaflet 1.9.4 from the unpkg CDN. OpenStreetMap tiles need no API key. -->
   <link
@@ -18,7 +18,7 @@
 <body class="is-screen-home">
   <header class="app-header">
     <h1 class="app-header__heading">
-      <button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Beat the Bus and MRT, go to home" aria-current="page">
+      <button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Just-In-Time, go to home" aria-current="page">
         <span class="app-header__logo" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24" focusable="false">
             <rect x="3" y="7" width="18" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
@@ -27,7 +27,7 @@
           </svg>
         </span>
         <span class="app-header__text">
-          <span class="app-header__title">Beat the Bus and MRT</span>
+          <span class="app-header__title">Just-In-Time</span>
         </span>
       </button>
     </h1>
@@ -62,6 +62,7 @@
       <button type="button" id="demo-run">Run Scenario</button>
       <button type="button" id="demo-reset">Reset to Live</button>
     </details>
+      <p id="menu-attribution" class="menu-sheet__attribution">Contains information from LTA DataMall under the Singapore Open Data Licence v1.0</p>
     </div>
   </header>
   <div class="back-bar" id="back-bar" hidden>
@@ -70,12 +71,12 @@
     </button>
   </div>
   <div class="wrap wrap--notices">
-    <p id="demo-banner" class="demo-banner" hidden>SIMULATED DEMO MODE</p>
+    <div id="demo-banner" class="alert alert--simulated" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">SIMULATED DEMO MODE</p></div>
     <div id="leave-dialog" class="leave-dialog" role="dialog" aria-labelledby="leave-dialog-title" hidden>
       <p id="leave-dialog-title">Leave this journey? Live tracking will stop.</p>
-      <div class="leave-dialog__actions">
-        <button type="button" class="button button--secondary" id="leave-stay">Stay</button>
-        <button type="button" class="button button--secondary" id="leave-leave">Leave</button>
+      <div class="leave-dialog__actions saved-panel__actions saved-panel__actions--form">
+        <button type="button" class="primary" id="leave-stay">Stay</button>
+        <button type="button" class="secondary" id="leave-leave">Leave</button>
       </div>
     </div>
   </div>
@@ -93,36 +94,8 @@
     <section class="card" id="search-card" aria-labelledby="destination-heading">
       <form id="destination-form">
         <div class="hero home-only">
-          <svg class="hero__art" viewBox="0 0 440 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-            <rect class="illus-sky" x="0" y="0" width="440" height="160"></rect>
-            <rect class="illus-ground" x="0" y="124" width="440" height="36"></rect>
-            <rect class="illus-building-alt" x="292" y="78" width="36" height="58" rx="2"></rect>
-            <rect class="illus-building" x="298" y="88" width="8" height="8"></rect>
-            <rect class="illus-building" x="312" y="88" width="8" height="8"></rect>
-            <rect class="illus-building" x="298" y="104" width="8" height="8"></rect>
-            <rect class="illus-building" x="312" y="104" width="8" height="8"></rect>
-            <rect class="illus-building" x="338" y="52" width="24" height="84"></rect>
-            <rect class="illus-building" x="368" y="52" width="24" height="84"></rect>
-            <rect class="illus-building" x="398" y="52" width="24" height="84"></rect>
-            <rect class="illus-building-alt" x="346" y="60" width="6" height="8"></rect>
-            <rect class="illus-building-alt" x="376" y="60" width="6" height="8"></rect>
-            <rect class="illus-building-alt" x="406" y="60" width="6" height="8"></rect>
-            <rect class="illus-building" x="332" y="40" width="96" height="16" rx="8"></rect>
-            <rect class="illus-ink" x="248" y="108" width="6" height="20"></rect>
-            <circle class="illus-tree" cx="251" cy="98" r="16"></circle>
-            <rect class="illus-bus" x="168" y="108" width="78" height="26" rx="6"></rect>
-            <rect class="illus-bus-window" x="176" y="114" width="14" height="8" rx="2"></rect>
-            <rect class="illus-bus-window" x="194" y="114" width="14" height="8" rx="2"></rect>
-            <rect class="illus-bus-window" x="212" y="114" width="14" height="8" rx="2"></rect>
-            <circle class="illus-ink" cx="186" cy="134" r="6"></circle>
-            <circle class="illus-ink" cx="228" cy="134" r="6"></circle>
-          </svg>
-          <p class="hero__copy">
-            <span class="hero__line">Know when to leave.</span>
-            <span class="hero__line">Catch your bus.</span>
-          </p>
+          <svg class="hero__art" viewBox="0 30 360 120" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><g class="hero-cloud"><ellipse class="hero-cloud__a" cx="70" cy="46" rx="46" ry="5"/><ellipse class="hero-cloud__b" cx="250" cy="56" rx="60" ry="6"/><ellipse class="hero-cloud__c" cx="170" cy="40" rx="40" ry="4"/></g><g class="hero-wheel"><path class="hero-wheel__spokes" d="M66 80L66.0 47.0M66 80L78.6 49.5M66 80L89.3 56.7M66 80L96.5 67.4M66 80L99.0 80.0M66 80L96.5 92.6M66 80L89.3 103.3M66 80L78.6 110.5M66 80L66.0 113.0M66 80L53.4 110.5M66 80L42.7 103.3M66 80L35.5 92.6M66 80L33.0 80.0M66 80L35.5 67.4M66 80L42.7 56.7M66 80L53.4 49.5"/><circle class="hero-wheel__rim" cx="66" cy="80" r="33"/><circle class="hero-wheel__pods" cx="66" cy="80" r="35.5"/><path class="hero-wheel__stand" d="M64 80L53 124M68 80L81 124M57 104H75M59 96H73"/><rect class="hero-wheel__base" x="44" y="117" width="44" height="7" rx="1.5"/></g><g class="hero-skyline"><rect class="hero-tower hero-tower--blue" x="104" y="84" width="14" height="42"/><path class="hero-windows hero-windows--blue" d="M106.5 87V124M110.5 87V124M114.5 87V124"/><rect class="hero-tower hero-tower--blue" x="120" y="62" width="16" height="64"/><path class="hero-windows hero-windows--blue" d="M122.5 65V124M126.5 65V124M130.5 65V124M134.5 65V124"/><rect class="hero-tower hero-tower--teal" x="138" y="52" width="14" height="74"/><path class="hero-windows hero-windows--teal" d="M140.5 55V124M144.5 55V124M148.5 55V124"/><rect class="hero-tower hero-tower--navy" x="154" y="72" width="12" height="54"/><path class="hero-windows hero-windows--navy" d="M156.5 75V124M160.5 75V124M164.5 75V124"/><rect class="hero-tower hero-tower--pale" x="168" y="44" width="12" height="82"/><path class="hero-windows hero-windows--pale" d="M170.5 47V124M174.5 47V124M178.5 47V124"/><rect class="hero-tower hero-tower--pale" x="182" y="60" width="14" height="66"/><path class="hero-windows hero-windows--pale" d="M184.5 63V124M188.5 63V124M192.5 63V124"/><rect class="hero-tower hero-tower--slate" x="198" y="68" width="14" height="58"/><path class="hero-windows hero-windows--slate" d="M200.5 71V124M204.5 71V124M208.5 71V124"/><rect class="hero-tower hero-tower--blue" x="214" y="76" width="14" height="50"/><path class="hero-windows hero-windows--blue" d="M216.5 79V124M220.5 79V124M224.5 79V124"/><rect class="hero-tower hero-tower--navy" x="230" y="86" width="12" height="40"/><path class="hero-windows hero-windows--navy" d="M232.5 89V124M236.5 89V124M240.5 89V124"/><rect class="hero-tower hero-tower--blue" x="244" y="92" width="14" height="34"/><path class="hero-windows hero-windows--blue" d="M246.5 95V124M250.5 95V124M254.5 95V124"/><rect class="hero-tower hero-tower--slate" x="260" y="98" width="12" height="28"/><path class="hero-windows hero-windows--slate" d="M262.5 101V124M266.5 101V124M270.5 101V124"/><rect class="hero-tower hero-tower--teal" x="141" y="48" width="8" height="5"/><path class="hero-mast" d="M145 38V48"/><path class="hero-tower hero-tower--navy" d="M154 72L166 66V72Z"/><path class="hero-tower hero-tower--pale" d="M182 60L189 54L196 60Z"/></g><g class="hero-mbs"><path class="hero-mbs__tower" d="M301 55H316L318 124H299Z"/><path class="hero-mbs__lit" d="M303.5 60V124M308 60V124M312.5 60V124"/><path class="hero-mbs__tower" d="M320 57H335L337 124H318Z"/><path class="hero-mbs__lit" d="M322.5 62V124M327 62V124M331.5 62V124"/><path class="hero-mbs__tower" d="M339 59H354L356 124H337Z"/><path class="hero-mbs__lit" d="M341.5 64V124M346 64V124M350.5 64V124"/><path class="hero-mbs__deck" d="M289 50Q295 45 320 46L364 44V53Q338 57 314 55Q296 55 289 50Z"/><path class="hero-mbs__trim" d="M295 52Q320 55 362 50"/><path class="hero-mbs__base" d="M286 124Q310 109 364 113V124Z"/></g><g class="hero-rail"><rect x="0" y="87" width="360" height="3"/><rect x="60" y="90" width="3" height="36"/><rect x="170" y="90" width="3" height="36"/><rect x="270" y="90" width="3" height="36"/></g><rect class="hero-rail__edge" x="0" y="86" width="360" height="1.2"/><rect class="hero-ground" x="0" y="124" width="360" height="26"/><path class="hero-road" d="M0 140H360"/><g class="hero-tree"><rect class="hero-tree__trunk" x="279" y="108" width="3" height="18"/><circle class="hero-tree__crown" cx="280.5" cy="102" r="10"/></g><g class="hero-move hero-move--train"><g transform="translate(0 54)"><rect class="hero-train__body" x="1" y="1" width="60" height="30" rx="6"/><rect class="hero-train__yellow" x="2" y="19" width="58" height="2"/><rect class="hero-train__orange" x="2" y="21" width="58" height="6"/><rect class="hero-train__glass" x="6" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="13" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="46" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="53" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="22" y="7" width="10" height="8" rx="1.5"/><rect class="hero-train__glass" x="34" y="7" width="10" height="8" rx="1.5"/><rect class="hero-train__frame" x="1" y="28" width="60" height="3"/><rect class="hero-train__body" x="67" y="1" width="60" height="30" rx="6"/><rect class="hero-train__yellow" x="68" y="19" width="58" height="2"/><rect class="hero-train__orange" x="68" y="21" width="58" height="6"/><rect class="hero-train__glass" x="72" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="79" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="112" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="119" y="6" width="5" height="16" rx="1"/><rect class="hero-train__glass" x="88" y="7" width="10" height="8" rx="1.5"/><rect class="hero-train__glass" x="100" y="7" width="10" height="8" rx="1.5"/><rect class="hero-train__frame" x="67" y="28" width="60" height="3"/><rect class="hero-train__joint" x="62" y="8" width="5" height="18"/></g></g><g class="hero-move hero-move--bus"><g transform="translate(12 90)"><rect class="hero-bus__roof" x="30" y="-3" width="30" height="4" rx="1.5"/><rect class="hero-bus__body" x="0" y="0" width="94" height="34" rx="6"/><rect class="hero-bus__glass" x="3" y="3" width="88" height="11" rx="2"/><path class="hero-bus__mullion" d="M14.7 3V14M26.7 3V14M38.7 3V14M50.7 3V14M62.7 3V14M74.7 3V14"/><rect class="hero-bus__band" x="0" y="15" width="94" height="7"/><rect class="hero-bus__tag" x="76" y="16.5" width="12" height="4" rx="1"/><rect class="hero-bus__glass" x="4" y="24" width="20" height="7" rx="1.5"/><rect class="hero-bus__glass" x="27" y="24" width="20" height="7" rx="1.5"/><rect class="hero-bus__door" x="52" y="23" width="12" height="11" rx="1.5"/><rect class="hero-bus__door" x="74" y="23" width="12" height="11" rx="1.5"/><circle class="hero-bus__tyre" cx="20" cy="34" r="7"/><circle class="hero-bus__tyre" cx="72" cy="34" r="7"/><circle class="hero-bus__hub" cx="20" cy="34" r="2.8"/><circle class="hero-bus__hub" cx="72" cy="34" r="2.8"/></g></g></svg>
         </div>
-        <p class="hero-support home-only">Get real-time bus information, catch probability and personalised leave-by time.</p>
         <h2 id="destination-heading" class="home-heading home-only">Where do you want to go?</h2>
         <div class="search-row">
           <div class="field">
@@ -138,7 +111,6 @@
                 name="destination"
                 type="text"
                 autocomplete="off"
-                placeholder="e.g. Marina Bay Sands, NUS, Orchard Road"
               >
               <button type="button" class="field__clear" id="destination-clear" aria-label="Clear" hidden>
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -148,39 +120,38 @@
             </div>
           </div>
         </div>
-        <p id="destination-required" class="field-help home-only" aria-live="polite"><svg class="icon field-help__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7.5v5.5M12 16.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span class="field-help__text"></span></p>
+        <div id="destination-required" class="alert alert--error home-only" aria-live="polite" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text"></p></div>
+        <template id="saved-plus-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path></svg></template>
         <div class="quick-picks home-only" id="quick-picks" role="group" aria-label="Saved places">
-          <button type="button" class="quick-pick quick-pick--add" data-saved-action="add" aria-label="Add a saved place">+</button>
+          <button type="button" class="quick-pick quick-pick--add" data-saved-action="add" aria-label="Add place"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path></svg><span>Add place</span></button>
         </div>
         <div class="saved-places home-only" id="saved-places">
           <p class="saved-places__note" id="saved-places-count" hidden></p>
-          <p class="saved-places__note is-concealed" id="saved-places-note">Saved on this phone only.</p>
-          <p class="saved-places__note saved-places__note--warn" id="saved-places-storage" role="status" hidden>Can't save on this device.</p>
+          <div id="saved-places-storage" class="alert alert--warning" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Can't save on this device.</p></div>
           <div class="saved-panel" id="saved-panel" role="group" hidden></div>
         </div>
         <hr class="hairline home-only">
-        <section id="location-status" class="info-row home-only" role="status">
-          <span class="icon-tile" aria-hidden="true">
-            <svg class="icon" viewBox="0 0 24 24" focusable="false">
-              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle>
-              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-            </svg>
+        <section id="location-status" class="info-row info-row--location home-only" role="status">
+          <span class="icon-tile icon-tile--start" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="2"></circle></svg>
           </span>
           <span class="info-row__copy">
             <span class="info-row__title">Your location</span>
-            <span id="location-state" class="info-row__meta">Using your current location…</span>
-          </span>
-          <span id="location-indicator" class="location-indicator is-waiting" aria-hidden="true">
-            <span class="spinner"><span class="spinner__dot"></span><span class="spinner__dot"></span><span class="spinner__dot"></span></span>
-            <span class="status-dot status-dot--ok"></span>
-            <span class="status-dot status-dot--warn"></span>
+            <span class="info-row__status">
+              <span id="location-indicator" class="location-indicator is-waiting" aria-hidden="true">
+                <span class="spinner"><span class="spinner__dot"></span><span class="spinner__dot"></span><span class="spinner__dot"></span></span>
+                <span class="status-dot status-dot--ok"></span>
+                <span class="status-dot status-dot--warn"></span>
+              </span>
+              <span id="location-state" class="info-row__meta">Using your current location…</span>
+            </span>
           </span>
         </section>
         <hr class="hairline home-only">
-        <div class="arrive-block home-only" id="arrive-by-wrap">
+        <div class="arrive-block arrive-band home-only" id="arrive-by-wrap">
           <div class="info-row__head">
-            <span class="icon-tile" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+            <span class="icon-tile icon-tile--bare" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
             </span>
             <span class="info-row__title">Arrive by</span>
             <span id="arrive-required-tag" class="required-tag">Required</span>
@@ -191,32 +162,41 @@
           </button>
           <div id="arrive-by-panel" class="arrive-panel" hidden>
             <div class="arrive-chips" role="radiogroup" aria-label="Arrive by">
-              <button type="button" class="arrive-chip" id="arrive-none" role="radio" aria-checked="false">No target</button>
-              <button type="button" class="arrive-chip" id="arrive-30" role="radio" aria-checked="false">In 30 min</button>
-              <button type="button" class="arrive-chip" id="arrive-60" role="radio" aria-checked="false">In 1 hour</button>
-              <button type="button" class="arrive-chip" id="arrive-custom" role="radio" aria-checked="false">Custom</button>
+              <div class="arrive-chips__row">
+                <button type="button" class="arrive-chip" id="arrive-30" role="radio" aria-checked="false">In 30 min</button>
+                <button type="button" class="arrive-chip" id="arrive-60" role="radio" aria-checked="false">In 1 hour</button>
+                <button type="button" class="arrive-chip" id="arrive-90" role="radio" aria-checked="false">In 1 hr 30 min</button>
+              </div>
+              <div class="arrive-chips__row">
+                <button type="button" class="arrive-chip" id="arrive-none" role="radio" aria-checked="false">No target</button>
+                <button type="button" class="arrive-chip" id="arrive-custom" role="radio" aria-checked="false">Custom</button>
+              </div>
             </div>
             <div id="arrive-by-custom" hidden>
               <input id="arrive-by" type="hidden">
               <div class="arrive-custom">
-                <label class="arrive-custom__label" for="arrive-by-time">Time</label>
-                <input id="arrive-by-time" class="arrive-time" type="time" step="60" aria-label="Arrive by time" aria-describedby="arrive-by-error">
+                <div class="arrive-time-field">
+                  <input id="arrive-by-time" class="arrive-time" type="time" step="60" aria-label="Arrive by time" aria-describedby="arrive-by-error">
+                  <button type="button" id="arrive-time-picker" class="arrive-time-picker" aria-label="Choose time"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+                </div>
                 <div id="arrive-day" class="arrive-day" role="radiogroup" aria-label="Arrive by day">
                   <button type="button" class="arrive-chip arrive-day__option is-selected" id="arrive-day-today" role="radio" aria-checked="true" aria-label="Arrive today">Today</button>
                   <button type="button" class="arrive-chip arrive-day__option" id="arrive-day-tomorrow" role="radio" aria-checked="false" aria-label="Arrive tomorrow">Tomorrow</button>
                 </div>
               </div>
-              <p id="arrive-by-error" class="field-error" role="alert" hidden>That time has already passed today. Choose Tomorrow or a later time.</p>
+              <div id="arrive-by-error" class="alert alert--error" role="alert" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">That time has already passed today. Choose Tomorrow or a later time.</p></div>
             </div>
           </div>
-          <p id="arrive-required" class="field-help" aria-live="polite"><svg class="icon field-help__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7.5v5.5M12 16.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span class="field-help__text"></span></p>
+          <div id="arrive-required" class="alert alert--error" aria-live="polite" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text"></p></div>
         </div>
-        <button type="submit" class="primary primary--icon home-only" id="find-route" aria-disabled="true">
-          <span>Find my route</span>
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-        </button>
+        <div class="home-footer home-only">
+          <button type="submit" class="primary primary--icon find-route pulse-button" id="find-route" aria-disabled="true">
+            <span>Find my route</span>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </div>
         <p id="destination-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
-        <p class="note" id="destination-status" role="status" hidden></p>
+        <div id="destination-status" class="alert alert--neutral" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><p id="destination-status-text" class="alert__text"></p></div>
         <h2 id="destination-results-heading" class="results-heading" hidden><span class="results-heading__title">Results from OneMap</span><span class="results-heading__hint"> (Choose a place)</span></h2>
         <ul id="destination-results" class="destination-results" hidden></ul>
       </form>
@@ -231,19 +211,19 @@
       </div>
       <div class="dest-sheet">
         <div class="dest-sheet__head">
-          <h2 id="dest-stops-title" class="dest-sheet__title">Nearby destination MRT stations / bus stops</h2>
+          <h2 id="dest-stops-title" class="dest-sheet__title">Nearby stops and stations</h2>
           <button type="button" class="info-button" id="dest-stops-info" aria-label="About these stops" aria-expanded="false" aria-controls="dest-stops-note">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           </button>
         </div>
-        <p id="dest-stops-note" class="info-popover" role="note" hidden>Bus stops and MRT or LRT stations within 600 m of your destination, nearest walk first. If no station is that close, the nearest one within 1.5 km is shown. The first one is chosen for you.</p>
-        <p id="destination-stop-status" class="note" role="status" hidden></p>
+        <p id="dest-stops-note" class="info-popover" role="note" hidden>Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km. The first is pre-selected.</p>
+        <div id="destination-stop-status" class="alert alert--neutral" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><p id="destination-stop-status-text" class="alert__text"></p></div>
         <ul id="reachable-stops" class="destination-stop-list"></ul>
         <h3 id="other-destination-stops" hidden>Other stops within 600m (No direct service)</h3>
         <ul id="unreachable-stops" class="destination-stop-list" hidden></ul>
         <div class="dest-sheet__footer">
-          <button type="button" id="select-destination-stop" class="primary primary--icon" disabled>
-            <span>Select destination stop</span>
+          <button type="button" id="select-destination-stop" class="primary primary--icon pulse-button" disabled>
+            <span>Select stop</span>
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           </button>
         </div>
@@ -267,8 +247,8 @@
         <hr class="hairline">
         <div class="summary-section">
           <div class="summary-head">
-            <h3 class="summary-head__title" id="confirm-stop-heading">Destination bus stop</h3>
-            <button type="button" class="link-button" id="edit-destination-stop" aria-label="Edit destination bus stop">Edit</button>
+            <h3 class="summary-head__title" id="confirm-stop-heading">Destination stop</h3>
+            <button type="button" class="link-button" id="edit-destination-stop" aria-label="Edit destination stop">Edit</button>
           </div>
           <div class="summary-item summary-item--stop">
             <span id="confirm-stop-tile" class="bus-tile bus-tile--large" aria-hidden="true">
@@ -284,24 +264,18 @@
         <hr class="hairline">
         <div id="confirm-arrive-slot" class="summary-section"></div>
       </div>
-      <div class="info-box">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-        <p id="confirm-info-text">We'll find the best route from here by bus and MRT and work out your leave-by time.</p>
-      </div>
-      <button type="button" id="confirm-destination-stop" class="primary primary--icon">
+      <div class="alert alert--info"><span class="alert__icon" aria-hidden="true"></span><p id="confirm-info-text" class="alert__text">We'll find your best route and leave-by time.</p></div>
+      <button type="button" id="confirm-destination-stop" class="primary primary--icon pulse-button">
         <span>Confirm</span>
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
       </button>
     </section>
     <section id="journey-overview" class="overview-screen" aria-labelledby="overview-title" hidden>
-      <div id="overview-planning-warning" class="banner banner--caution planning-banner" hidden>
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-        <p id="overview-planning-warning-text"></p>
-        <button type="button" class="secondary" id="overview-change-time">Change time</button>
-      </div>
+      <div id="overview-planning-warning" class="alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p id="overview-planning-warning-text" class="alert__text"></p><div class="alert__actions"><button type="button" class="secondary" id="overview-change-time">Change time</button></div></div></div>
       <div class="card overview-card" id="overview-card" aria-busy="false">
         <h2 id="overview-title" class="overview-title">Your journey</h2>
         <div id="overview-priority" class="overview-priority">
+          <div class="priority-select-wrap">
           <select id="priority-select" class="priority-select" aria-label="Priority">
             <option value="fastest" selected>Fastest</option>
             <option value="fewest_transfers">Fewest transfers</option>
@@ -309,15 +283,17 @@
             <option value="bus_only">Bus only</option>
             <option value="mrt_only">MRT only</option>
           </select>
-          <p id="overview-fallback-note" class="overview-note" hidden></p>
-          <p id="overview-priority-note" class="overview-note" hidden></p>
+          <span class="priority-select-wrap__chevron" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+          </div>
+          <div id="overview-fallback-note" class="alert alert--info" hidden><span class="alert__icon" aria-hidden="true"></span><p id="overview-fallback-note-text" class="alert__text"></p></div>
+          <div id="overview-priority-note" class="alert alert--info" hidden><span class="alert__icon" aria-hidden="true"></span><p id="overview-priority-note-text" class="alert__text"></p></div>
         </div>
         <div id="overview-summary" class="overview-summary" role="group" aria-label="" hidden>
           <p class="overview-summary__cell"><span class="overview-summary__label">Total time</span><span id="summary-time" class="overview-summary__value"></span></p>
           <p class="overview-summary__cell"><span class="overview-summary__label">Transfers</span><span id="summary-transfers" class="overview-summary__value"></span></p>
           <p class="overview-summary__cell"><span class="overview-summary__label">Walking</span><span id="summary-walking" class="overview-summary__value"></span></p>
         </div>
-        <div id="overview-train-alerts" class="train-alerts" hidden></div>
+        <div id="overview-train-alerts" class="alert-stack" hidden></div>
         <p id="overview-traffic-note" class="overview-note" hidden>Bus times can vary with traffic.</p>
         <ol id="overview-skeleton" class="journey-steps journey-steps--skeleton" aria-hidden="true" hidden>
           <li class="journey-step"><span class="step-node step-node--skeleton"></span><span class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></span></li>
@@ -327,25 +303,25 @@
         </ol>
         <p id="overview-loading-text" class="visually-hidden" role="status"></p>
         <div id="overview-no-location" class="overview-state" hidden>
-          <p class="banner banner--caution">Location unavailable. Destination stops need your current location.</p>
+          <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Location unavailable. We need it to find stops.</p></div>
           <button type="button" class="secondary" id="overview-retry">Try again</button>
         </div>
         <div id="overview-no-route" class="overview-state" hidden>
-          <p id="overview-no-route-text" class="banner banner--caution">No direct or 1-transfer bus connection available for this trip.</p>
+          <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><p id="overview-no-route-text" class="alert__text">No direct or 1-transfer route for this trip.</p></div>
           <div class="overview-state__actions">
             <button type="button" class="secondary" id="overview-edit-destination">Edit destination</button>
             <button type="button" class="secondary" id="overview-edit-time">Edit arrive-by time</button>
           </div>
         </div>
         <div id="overview-no-service" class="overview-state" hidden>
-          <p id="overview-no-service-text" class="banner banner--caution">No bus or MRT services are running to this destination at this time.</p>
+          <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><p id="overview-no-service-text" class="alert__text">No services to this destination right now.</p></div>
           <div class="overview-state__actions">
             <button type="button" class="secondary" id="overview-edit-destination-service">Edit destination</button>
             <button type="button" class="secondary" id="overview-edit-time-service">Edit arrive-by time</button>
           </div>
         </div>
         <div id="overview-unavailable" class="overview-state" hidden>
-          <p class="banner banner--denied">Nearby stops are unavailable.</p>
+          <div class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Stops unavailable.</p></div>
         </div>
         <div id="ride-apps" class="ride-apps" hidden>
           <h3 class="ride-apps__heading">No transit right now. Open a ride app:</h3>
@@ -357,7 +333,7 @@
             <li><a class="secondary ride-apps__link" href="https://tada.global" target="_blank" rel="noopener noreferrer">TADA</a></li>
             <li><a class="secondary ride-apps__link" href="https://rydesharing.com/" target="_blank" rel="noopener noreferrer">Ryde</a></li>
           </ul>
-          <p class="overview-note ride-apps__note">These links open each app's own site. Your trip is not sent.</p>
+          <p class="overview-note ride-apps__note">Links open each app's site. Your trip isn't sent.</p>
         </div>
         <ol id="overview-timeline" class="journey-steps"></ol>
       </div>
@@ -365,26 +341,19 @@
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div class="arrive-box__copy">
           <p id="overview-arrive-value" class="arrive-box__value" hidden></p>
-          <p id="overview-arrive-estimate" class="badge arrive-box__status badge--na" hidden></p>
           <p id="overview-arrive-note" class="arrive-box__meta" hidden></p>
-          <p id="overview-arrive-status" class="badge arrive-box__status" hidden></p>
         </div>
         <button type="button" class="link-button" id="overview-arrive-edit" aria-label="Edit arrive by time">Edit</button>
+        <div id="overview-arrive-estimate" class="alert alert--neutral" hidden><span class="alert__icon" aria-hidden="true"></span><p id="overview-arrive-estimate-text" class="alert__text"></p></div>
+        <div id="overview-arrive-status" class="alert alert--neutral" hidden><span class="alert__icon" aria-hidden="true"></span><p id="overview-arrive-status-text" class="alert__text"></p></div>
       </div>
-      <p id="overview-motion-note" class="note" aria-live="off"></p>
-      <button type="button" id="start-journey" class="primary primary--icon" disabled>
+      <button type="button" id="start-journey" class="primary primary--icon pulse-button" disabled>
         <span>Start journey</span>
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
       </button>
     </section>
     <section id="on-way" class="overview-screen" aria-labelledby="on-way-title" hidden>
-      <div id="on-way-alert" class="banner banner--info alert-row on-way-alert" role="status" hidden>
-        <span class="alert-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 17h12l-1.5-2V11a4.5 4.5 0 0 0-9 0v4L6 17zM10 20h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
-        <div class="alert-row__copy">
-          <p id="on-way-alert-text" class="alert-row__title"></p>
-          <button type="button" id="on-way-alert-dismiss" class="secondary">Dismiss</button>
-        </div>
-      </div>
+      <div id="on-way-alert" class="alert alert--info" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p id="on-way-alert-text" class="alert__text"></p><div class="alert__actions"><button type="button" id="on-way-alert-dismiss" class="secondary">Dismiss</button></div></div></div>
       <div class="card overview-card">
         <h2 id="on-way-title" class="overview-title">On your way</h2>
         <p id="on-way-next" class="on-way-next" aria-live="off" hidden></p>
@@ -396,25 +365,24 @@
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div class="arrive-box__copy">
           <p id="on-way-arrive-value" class="arrive-box__value" hidden></p>
-          <p id="on-way-arrive-estimate" class="badge arrive-box__status badge--na" hidden></p>
         </div>
+        <div id="on-way-arrive-estimate" class="alert alert--neutral" hidden><span class="alert__icon" aria-hidden="true"></span><p id="on-way-arrive-estimate-text" class="alert__text"></p></div>
       </div>
       <button type="button" id="on-way-plan-new" class="primary">Plan a new journey</button>
     </section>
     <section id="new-journey" class="overview-screen" aria-labelledby="new-journey-title" hidden>
       <div class="card overview-card">
         <h2 id="new-journey-title" class="overview-title">Your new journey</h2>
-        <p id="new-journey-reason" class="overview-reason"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span>Switching because your current bus is unlikely to be caught.</span></p>
+        <div id="new-journey-reason" class="alert alert--info"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Switching because your current bus is unlikely to be caught.</p></div>
         <ol id="new-journey-timeline" class="journey-steps"></ol>
       </div>
       <div id="new-journey-arrive-box" class="arrive-box" role="group" aria-label="Arrive by" hidden>
         <span class="arrive-box__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
         <div class="arrive-box__copy">
           <p id="new-journey-arrive-value" class="arrive-box__value" hidden></p>
-          <p id="new-journey-arrive-estimate" class="badge arrive-box__status badge--na" hidden></p>
         </div>
+        <div id="new-journey-arrive-estimate" class="alert alert--neutral" hidden><span class="alert__icon" aria-hidden="true"></span><p id="new-journey-arrive-estimate-text" class="alert__text"></p></div>
       </div>
-      <p id="new-journey-motion-note" class="note" aria-live="off"></p>
       <button type="button" id="new-journey-start" class="primary primary--icon"><span>Start journey</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
     </section>
     <div class="stage">
@@ -422,20 +390,8 @@
       <div id="map"></div>
     </div>
     <div id="alert-slot" class="alert-slot live-only">
-      <div id="end-card" class="alert-occupant is-suppressed banner banner--info alert-row end-card" role="status" hidden>
-        <span class="alert-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <div class="alert-row__copy">
-          <p id="end-card-text" class="alert-row__title"></p>
-          <button type="button" id="end-plan-new" class="primary">Plan a new journey</button>
-        </div>
-      </div>
-      <div id="quality-banner" class="alert-occupant is-suppressed banner banner--denied alert-row" hidden>
-        <span class="alert-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M10.3 4.2a2 2 0 0 1 3.4 0l8 14A2 2 0 0 1 20 21.2H4a2 2 0 0 1-1.7-3zM11 9.5v4.5h2V9.5zM12 15.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"></path></svg></span>
-        <div class="alert-row__copy">
-          <p id="quality-banner-title" class="alert-row__title"></p>
-          <p id="quality-banner-updated" class="alert-row__meta" aria-live="off" hidden><span id="quality-banner-prefix"></span><time id="quality-banner-time" datetime=""></time></p>
-        </div>
-      </div>
+      <div id="end-card" class="alert-occupant is-suppressed alert alert--info" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p id="end-card-text" class="alert__text"></p><div class="alert__actions"><button type="button" id="end-plan-new" class="primary">Plan a new journey</button></div></div></div>
+      <div id="quality-banner" class="alert-occupant is-suppressed alert alert--error" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p id="quality-banner-title" class="alert__text"></p><p id="quality-banner-updated" class="alert__meta" aria-live="off" hidden><span id="quality-banner-prefix"></span><time id="quality-banner-time" datetime=""></time></p></div></div>
       <section id="stale-status" class="alert-occupant is-suppressed card stale-status" aria-labelledby="stale-bus-title" hidden>
         <div class="bus-card">
           <span class="bus-tile bus-tile--hero" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M5 11h14M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8.5" cy="14.5" r="1" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1" fill="currentColor"></circle></svg></span>
@@ -445,45 +401,15 @@
           </div>
         </div>
         <p id="stale-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
-        <div class="info-box">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-          <p id="stale-info">Due to stale data, we cannot give a catch probability or recommend leaving now. Please wait for live data or try again later.</p>
-        </div>
+        <div class="alert alert--info"><span class="alert__icon" aria-hidden="true"></span><p id="stale-info" class="alert__text">Stale data: no catch chance or leave advice until live data returns.</p></div>
       </section>
-      <section id="location-card" class="alert-occupant is-suppressed card card--caution alert-row" hidden>
-        <span class="alert-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M10.3 4.2a2 2 0 0 1 3.4 0l8 14A2 2 0 0 1 20 21.2H4a2 2 0 0 1-1.7-3zM11 9.5v4.5h2V9.5zM12 15.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"></path></svg></span>
-        <div class="alert-row__copy">
-          <h3 id="location-card-title" class="alert-row__title"></h3>
-          <p id="location-card-body" class="alert-row__body"></p>
-        </div>
-      </section>
-      <div id="unlikely-banner" class="alert-occupant is-suppressed banner banner--caution unlikely-banner" hidden>
-        <div class="reroute-warning"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><div><p id="unlikely-banner-title" class="reroute-warning__title"></p><p id="unlikely-banner-line"></p></div></div>
-        <button type="button" id="unlikely-see" class="secondary">See other buses</button>
-      </div>
-      <section id="leave-now-banner" class="alert-occupant is-suppressed card leave-now-banner" aria-labelledby="leave-now-title" hidden>
-        <div class="leave-now-banner__head">
-          <span class="bus-tile bus-tile--small" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M5 11h14M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8.5" cy="14.5" r="1" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1" fill="currentColor"></circle></svg></span>
-          <span class="leave-now-banner__app">Beat the Bus and MRT</span>
-          <span class="leave-now-banner__time">now</span>
-        </div>
-        <h3 id="leave-now-title" class="leave-now-banner__title"></h3>
-        <p id="leave-now-body" class="leave-now-banner__body"></p>
-        <p id="leave-now-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
-        <div class="leave-now-banner__actions">
-          <button type="button" id="leave-now-details" class="primary">View details</button>
-          <button type="button" id="leave-now-dismiss" class="secondary">Dismiss</button>
-        </div>
-      </section>
+      <section id="location-card" class="alert-occupant is-suppressed alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><h3 id="location-card-title" class="alert__text"></h3><p id="location-card-body" class="alert__detail"></p></div></section>
+      <div id="unlikely-banner" class="alert-occupant is-suppressed alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p id="unlikely-banner-title" class="alert__text">Catching this bus is unlikely.</p></div>
+      <section id="leave-now-banner" class="alert-occupant is-suppressed alert alert--info" aria-labelledby="leave-now-title" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p class="alert__meta"><span>Just-In-Time</span> &middot; <span>now</span></p><h3 id="leave-now-title" class="alert__text"></h3><p id="leave-now-body" class="alert__detail"></p><p id="leave-now-simulated" class="simulated-badge" hidden>[SIMULATED]</p><div class="alert__actions"><button type="button" id="leave-now-details" class="primary">View details</button><button type="button" id="leave-now-dismiss" class="secondary">Dismiss</button></div></div></section>
       <div id="reroute-block" class="alert-occupant is-suppressed reroute-block" hidden>
-        <div id="reroute-card" class="banner banner--success reroute-confirm" hidden>
-          <p id="reroute-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
-          <h3 id="reroute-title"></h3>
-          <p id="reroute-message"></p>
-          <p id="reroute-probability"></p>
-        </div>
+        <div id="reroute-card" class="alert alert--success" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p id="reroute-simulated" class="simulated-badge" hidden>[SIMULATED]</p><h3 id="reroute-title" class="alert__text"></h3><p id="reroute-message" class="alert__detail"></p><p id="reroute-probability" class="alert__detail"></p></div></div>
       </div>
-      <p id="catch-warning" class="alert-occupant is-suppressed banner banner--caution catch-warning" hidden></p>
+      <div id="catch-warning" class="alert-occupant is-suppressed alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p id="catch-warning-text" class="alert__text"></p></div>
       <div id="notification-panel" class="alert-occupant is-suppressed"></div>
     </div>
     <section id="entry-skeleton" class="card entry-skeleton" aria-busy="true" aria-label="Loading your journey" hidden>
@@ -511,14 +437,13 @@
           </div>
           <div class="catch-card__copy">
             <p id="pc-arrives" class="catch-card__arrives" hidden><span class="catch-card__arrives-label">Bus arrives</span><span id="pc-arrives-time" class="catch-card__arrives-time"></span></p>
-          </div>
+              </div>
         </div>
-        <p class="catch-card__caption">if you leave now and walk at a normal pace</p>
-        <div id="pc-warn" class="page-c-warn" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><p id="pc-warn-text">Catching this bus is unlikely. Here are your other options.</p></div>
+        <div id="pc-warn" class="alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p id="pc-warn-text" class="alert__text">Catching this bus is unlikely. Here are your other options.</p></div>
         <button type="button" id="pc-see-arrivals" class="secondary">See bus arrival times</button>
       </section>
       <div id="reroute-proposal" class="reroute-proposal">
-        <p id="reroute-notice" class="banner banner--info reroute-notice" role="status" hidden></p>
+        <div id="reroute-notice" class="alert alert--info" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><p id="reroute-notice-text" class="alert__text"></p></div>
         <div id="reroute-loading" class="card page-c-skeleton" aria-busy="true" aria-label="Finding other buses" hidden>
           <div class="skeleton-lines"><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span><span class="skeleton-line"></span></div>
         </div>
@@ -530,7 +455,7 @@
         </div>
         <ul id="reroute-alternatives" class="reroute-alternatives" hidden></ul>
         <button type="button" id="reroute-more" class="link-button reroute-more" aria-expanded="false" hidden>Show more</button>
-        <p id="page-c-none" class="banner banner--quiet reroute-none"></p>
+        <div id="page-c-none" class="alert alert--info" hidden><span class="alert__icon" aria-hidden="true"></span><p id="page-c-none-text" class="alert__text"></p></div>
         <div id="pc-ride-apps" class="ride-apps" hidden>
           <h3 class="ride-apps__heading">No transit right now. Open a ride app:</h3>
           <p id="pc-ride-apps-distance" class="ride-apps__distance" hidden></p>
@@ -545,7 +470,18 @@
         </div>
       </div>
     </section>
-    <div id="live-train-alerts" class="train-alerts live-only" hidden></div>
+    <div id="live-train-alerts" class="alert-stack live-only" hidden></div>
+    <section id="leave-tiles" class="leave-tiles live-only" aria-label="Leave by" hidden>
+      <div id="tile-leave" class="leave-tile" role="group" aria-label="Leave by">
+        <span class="leave-tile__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
+        <div>
+          <p id="tile-leave-line" class="leave-tile__line"><span id="tile-leave-label" class="leave-tile__label">Leave by:</span><span id="tile-leave-by" class="leave-tile__value">—</span></p>
+        </div>
+      </div>
+      <div id="tile-leave-caution" class="alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p id="tile-leave-caution-text" class="alert__text"></p></div>
+      </div>
+    </section>
+    <div id="pace-slot" class="pace-slot live-only" hidden></div>
     <section class="card catch-card" id="arrival-card" tabindex="-1" hidden aria-labelledby="catch-title" aria-live="polite">
       <p id="arrival-heading" class="visually-hidden">Live arrivals</p>
       <div class="catch-card__row">
@@ -559,8 +495,8 @@
             <div class="catch-card__heading">
               <p id="catch-title" class="visually-hidden">Chance to catch Bus</p>
               <p id="catch-line" class="journey-step__line catch-card__line"></p>
-              <p id="catch-direction" class="catch-card__direction" hidden></p>
               <p id="catch-to" class="catch-card__to" hidden></p>
+              <p id="catch-sub" class="catch-card__sub-line" hidden></p>
               <p id="catch-arrives" class="catch-card__arrives" hidden><span id="catch-arrives-time" class="catch-card__arrives-time"></span></p>
               <p class="catch-card__status"><span id="catch-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="catch-pill-text">live</span></span></p>
               <p id="catch-load" class="crowd-chip" hidden></p>
@@ -568,29 +504,27 @@
           </div>
         </div>
       </div>
-      <button type="button" id="walk-open" class="walk-open-row">
-        <span class="walk-open-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="13" cy="4.5" r="2" fill="currentColor"></circle><path d="M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
-        <span class="walk-open-row__copy"><span class="walk-open-row__title">See current location and walking pace</span><span id="catch-pace-line" class="walk-open-row__sub" aria-live="off"></span></span>
-        <span class="walk-open-row__chevron" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
-      </button>
       <p id="arrival-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
       <p id="arrival-status" class="note"></p>
-      <p id="arrival-warning" class="arrival-warning" hidden></p>
+      <div id="arrival-warning" class="alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p id="arrival-warning-text" class="alert__text"></p></div>
       <ul id="arrival-list" class="arrival-list" hidden></ul>
       <p id="arrival-updated" class="note" hidden></p>
       <div id="reroute-moment" class="reroute-moment" hidden></div>
     </section>
-    <div id="pace-slot" class="pace-slot live-only" hidden></div>
-    <section id="leave-tiles" class="leave-tiles live-only" aria-label="Leave by" hidden>
-      <div id="tile-leave" class="leave-tile" role="group" aria-label="Leave by">
-        <span class="leave-tile__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <div>
-          <p id="tile-leave-line" class="leave-tile__line"><span id="tile-leave-label" class="leave-tile__label">Leave by:</span><span id="tile-leave-by" class="leave-tile__value">—</span></p>
-          <p id="tile-leave-caution" class="leave-tile__meta leave-tile__warn" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span id="tile-leave-caution-text"></span></p>
-        </div>
-      </div>
-      </div>
+    <section id="route-strip" class="route-strip live-only" aria-label="Route" hidden>
+      <div class="route-strip__node"><span class="route-strip__dot route-strip__dot--from" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="2"></circle></svg></span><span class="route-strip__label">From</span></div>
+      <span class="route-strip__line" aria-hidden="true"></span>
+      <div class="route-strip__node"><span class="route-strip__dot" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="13" cy="4.5" r="2" fill="currentColor"></circle><path d="M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span id="route-walk" class="route-strip__label">Walk</span></div>
+      <span class="route-strip__line" aria-hidden="true"></span>
+      <div class="route-strip__node"><span id="route-vehicle-node" class="step-node route-strip__vehicle" aria-hidden="true"></span><span id="route-vehicle-label" class="route-strip__label"></span></div>
+      <span class="route-strip__line" aria-hidden="true"></span>
+      <div class="route-strip__node"><span class="route-strip__dot route-strip__dot--to" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 21V4M5 4h12l-2.5 4L17 12H5" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="route-strip__label">Destination</span></div>
     </section>
+    <button type="button" id="walk-open" class="walk-open-row live-only" hidden>
+      <span class="walk-open-row__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="13" cy="4.5" r="2" fill="currentColor"></circle><path d="M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+      <span class="walk-open-row__title">Current location and walking pace</span>
+      <span class="walk-open-row__chevron" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+    </button>
     <section id="ai-explanation" class="ai-card live-only" aria-labelledby="ai-title" aria-live="polite">
       <p class="ai-card__head"><span class="ai-card__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path></svg></span><span id="ai-title">AI Explanation</span></p>
       <p id="ai-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
@@ -598,17 +532,11 @@
       <p id="ai-explanation-text" class="ai-card__text"></p>
     </section>
     <section id="walk-page" class="walk-page" aria-labelledby="walk-title" hidden>
-      <h2 id="walk-title" class="walk-title">Walk to your stop</h2>
-      <p id="walk-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
-      <div id="walk-map-slot" class="live-map walk-map">
-        <button type="button" id="walk-recentre" class="map-recentre" aria-label="Recentre map"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="currentColor"></circle><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      <div class="walk-top">
+        <button type="button" id="walk-back" class="icon-button walk-back" aria-label="Back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        <h2 id="walk-title" class="walk-title">Walk to your stop</h2>
       </div>
-      <section class="card walk-status" aria-live="polite">
-        <p id="walk-distance" class="walk-status__distance">—</p>
-        <p id="walk-minutes" class="walk-status__minutes" hidden></p>
-        <progress id="walk-progress" class="walk-progress" max="100" value="0" aria-hidden="true"></progress>
-        <p id="walk-state" class="walk-status__state">Waiting for your location…</p>
-      </section>
+      <p id="walk-simulated" class="simulated-badge" hidden>[SIMULATED]</p>
       <section class="card catch-card walk-chance" aria-live="polite" aria-labelledby="walk-chance-title">
         <div class="catch-card__head">
           <div class="catch-card__heading">
@@ -617,20 +545,36 @@
           <span id="walk-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="walk-pill-text">live</span></span>
         </div>
         <div class="catch-card__row">
-          <div id="walk-ring" class="prob-ring" role="img" aria-label="Catch probability unavailable">
+          <div id="walk-ring" class="prob-ring prob-ring--large" role="img" aria-label="Catch probability unavailable">
             <svg class="prob-ring__svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="prob-ring__track" cx="50" cy="50" r="43" pathLength="100"></circle><circle id="walk-ring-value" class="prob-ring__value" cx="50" cy="50" r="43" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 50 50)"></circle></svg>
             <span id="walk-ring-text" class="prob-ring__text"></span>
           </div>
           <div class="catch-card__copy">
+            <div id="walk-leg" class="catch-card__leg">
+              <span id="walk-node" class="step-node" aria-hidden="true"></span>
+              <p id="walk-line" class="journey-step__line catch-card__line"></p>
+            </div>
             <p id="walk-arrives" class="catch-card__arrives" hidden><span class="catch-card__arrives-label">Bus arrives</span><span id="walk-arrives-time" class="catch-card__arrives-time"></span></p>
-            <p id="walk-trend" class="walk-chance__trend" hidden></p>
+            <p id="walk-trend" class="walk-chance__trend" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17l6-6 4 4 8-8M15 7h6v6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg><span id="walk-trend-text"></span></p>
           </div>
         </div>
       </section>
+      <section class="card walk-status" aria-live="polite">
+        <div class="walk-band">
+          <svg class="icon walk-band__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="13" cy="4.5" r="1.8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M9 21l2-6 3 1.5V21M11 15l-1-5 3-1.5 2 3 3 1M10 10l-2 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <p id="walk-distance" class="walk-status__distance"><span id="walk-distance-value" class="walk-status__value">—</span><span id="walk-distance-label" class="walk-status__label"></span></p>
+        </div>
+        <p id="walk-minutes" class="walk-status__minutes is-empty"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span id="walk-minutes-text"></span></p>
+        <progress id="walk-progress" class="walk-progress" max="100" value="0" aria-hidden="true"></progress>
+        <div id="walk-state-alert" class="alert alert--neutral"><span class="alert__icon" aria-hidden="true"></span><p id="walk-state" class="alert__text">Waiting for your location…</p></div>
+      </section>
+      <div id="walk-map-slot" class="live-map walk-map">
+        <button type="button" id="walk-recentre" class="map-recentre" aria-label="Recentre map"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="currentColor"></circle><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      </div>
       <section id="walk-sensors" class="card walk-sensors">
         <button type="button" id="walk-sensors-toggle" class="walk-sensors__toggle" aria-expanded="false" aria-controls="walk-sensors-panel"><span>Sensor details</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
         <div id="walk-sensors-panel" class="walk-sensors__panel" hidden>
-          <p id="walk-sensor-why" class="walk-sensors__why" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v5M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span id="walk-sensor-why-text"></span></p>
+          <div id="walk-sensor-why" class="alert alert--info" hidden><span class="alert__icon" aria-hidden="true"></span><p id="walk-sensor-why-text" class="alert__text"></p></div>
           <dl class="walk-sensors__list">
             <div><dt>Walking pace</dt><dd id="walk-sensor-pace">—</dd></div>
             <div><dt>GPS speed</dt><dd id="walk-sensor-gpsSpeed">—</dd></div>
@@ -642,17 +586,21 @@
         </div>
       </section>
     </section>
-    <section class="card live-card" id="live-tracking" hidden aria-labelledby="live-bus-title">
-      <div class="bus-card">
-        <span class="bus-tile bus-tile--hero" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M5 11h14M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8.5" cy="14.5" r="1" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1" fill="currentColor"></circle></svg></span>
+    <section class="live-page" id="live-tracking" hidden aria-labelledby="live-bus-to">
+      <div class="live-top">
+        <button type="button" id="live-back" class="icon-button live-back" aria-label="Back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        <h2 id="live-bus-to" class="live-title"></h2>
+      </div>
+      <section id="live-vehicle" class="card bus-card live-vehicle">
+        <span id="live-node" class="step-node live-node" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect><path d="M5 11h14M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="8.5" cy="14.5" r="1" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1" fill="currentColor"></circle></svg></span>
         <div class="bus-card__copy">
-          <p class="journey-step__line bus-card__line"><span id="live-bus-title" class="bus-card__badge">Bus</span><span id="live-bus-to" class="bus-card__to"></span><span id="live-bus-pill" class="pill pill--live"><span class="pill__dot" aria-hidden="true"></span><span id="live-bus-pill-text">live</span></span></p>
+          <p class="journey-step__line bus-card__line"><span id="live-bus-title" class="bus-card__badge">Bus</span><span id="live-bus-pill" class="pill pill--live"><span class="pill__dot" aria-hidden="true"></span><span id="live-bus-pill-text">live</span></span></p>
         </div>
         <button type="button" class="refresh-button" id="live-refresh" aria-label="Refresh live arrivals"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
-      </div>
+      </section>
       <p class="live-label" id="next-buses-label">Next 3 buses</p>
       <ul id="next-buses" class="bus-tiles" role="list" aria-labelledby="next-buses-label"></ul>
-      <p id="next-buses-empty" class="live-label next-buses-empty" hidden></p>
+      <div id="next-buses-empty" class="alert alert--neutral" hidden><span class="alert__icon" aria-hidden="true"></span><p id="next-buses-empty-text" class="alert__text"></p></div>
       <div id="live-map-slot" class="live-map">
         <button type="button" id="live-full-route" class="map-toggle" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20 10 8l4 6 6-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span id="live-full-route-text">Full route</span></button>
       </div>
@@ -670,11 +618,7 @@
           <a id="arrive-by-edit" href="#arrive-by">Edit</a>
         </p>
         <p id="journey-arrival-estimate" hidden></p>
-        <div id="journey-planning-warning" class="banner banner--caution planning-banner" hidden>
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-          <p id="journey-planning-warning-text"></p>
-          <button type="button" class="secondary" id="journey-change-time">Change time</button>
-        </div>
+        <div id="journey-planning-warning" class="alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p id="journey-planning-warning-text" class="alert__text"></p><div class="alert__actions"><button type="button" class="secondary" id="journey-change-time">Change time</button></div></div></div>
         <p id="journey-comparison"></p>
         <p id="journey-note"></p>
         <p id="journey-leave-by"></p>
@@ -690,7 +634,10 @@
     </div>
   </main>
   <div id="see-arrivals-bar" class="catch-bar catch-bar--single" hidden>
-    <button type="button" id="see-arrivals" class="primary primary--icon"><span>See bus arrival times</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+    <button type="button" id="see-arrivals" class="primary primary--icon pulse-button"><span>See bus arrival times</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+    <div id="other-bus-actions" class="other-bus-actions saved-panel__actions saved-panel__actions--form">
+      <button type="button" id="other-bus-options" class="primary"><span>Other bus options</span></button>
+    </div>
   </div>
   <div id="first-run" class="first-run" role="dialog" aria-modal="true" aria-label="How it works" hidden>
     <div class="first-run__card">
@@ -701,7 +648,6 @@
         <button type="button" class="secondary" id="first-run-skip">Skip</button>
         <button type="button" class="primary" id="first-run-next">Next</button>
       </div>
-      <p id="first-run-attribution" class="first-run__attribution">Contains information from LTA DataMall under the Singapore Open Data Licence v1.0</p>
     </div>
   </div>
   <div id="catch-bar" class="catch-bar" role="group" aria-labelledby="catch-bar-title" hidden>
@@ -717,10 +663,10 @@
     crossorigin=""
   ></script>
   <script src="format-distance.js"></script>
-  <script src="place-icons.js"></script>
   <script src="walk-speed.js"></script>
   <script src="saved-places.js"></script>
   <script src="first-run.js"></script>
+  <script src="alert.js"></script>
   <script>
     var AI_EXPLANATION_ENABLED = true;
     (function applyAiExplanationFlag() {
@@ -731,18 +677,18 @@
     })();
     var STALE_HEADING = "LTA data is stale";
     var STALE_UPDATED = "Last update: {time}";
-    var UNAVAILABLE_TEXT = "No live arrival data available. No previous successful update.";
+    var UNAVAILABLE_TEXT = "No live arrival data. No earlier update.";
     var STALE_ARRIVING = "Arriving in {minutes} min (estimated)";
     var NO_SERVICE_TEXT = "No buses currently in service at this stop.";
     var STALE_PILL_TEXT = "schedule only";
     var UNAVAILABLE_PILL_TEXT = "unavailable";
-    var STALE_BODY = "Due to stale data, we cannot give a catch probability or recommend leaving now. Please wait for live data or try again later.";
+    var STALE_BODY = "Stale data: no catch chance or leave advice until live data returns.";
     var LOCATION_HEADING = "Location uncertain";
-    var LOCATION_AGE_BODY = "Your location hasn't updated for {seconds} s. We'll show a wider range for the catch probability and won't suggest \"leave now\" from this fix.";
+    var LOCATION_AGE_BODY = "Location not updated for {seconds} s. The range is wider and we won't suggest leaving now.";
     var FIX_MAX_AGE_MS = 15000;
     var FIX_TIMEOUT_MS = 10000;
     var UNCERTAIN_AGE_S = 60;
-    var LOCATION_BODY = "Your GPS accuracy is {accuracy}. We'll show a wider range for the catch probability and won't suggest \"leave now\" from this fix.";
+    var LOCATION_BODY = "GPS accuracy is {accuracy}. The range is wider and we won't suggest leaving now.";
     var UNCERTAIN_ACCURACY_M = 100;
     var FALLBACK_LAT = 1.3521;
     var FALLBACK_LON = 103.8198;
@@ -753,7 +699,7 @@
     var STALE_MS = 60000;
     var UNANSWERED_END_MINUTES = 10;
     var MAX_MONITOR_MINUTES = 60;
-    var END_UNANSWERED_TEXT = "Tracking ended. Your bus's expected arrival time has passed.";
+    var END_UNANSWERED_TEXT = "Tracking ended: arrival time has passed.";
     var TRACKING_STOPPED_TEXT = "Tracking stopped";
     var trackingStopped = false;
     var DEST_BUS_LABEL = "Bus stop";
@@ -761,8 +707,8 @@
     var DEST_LRT_LABEL = "LRT station";
     var DEST_STATION_HEADING = "Destination station";
     var DEST_STATION_EDIT = "Edit destination station";
-    var DEST_BUS_HEADING = "Destination bus stop";
-    var DEST_BUS_EDIT = "Edit destination bus stop";
+    var DEST_BUS_HEADING = "Destination stop";
+    var DEST_BUS_EDIT = "Edit destination stop";
     var confirmBusTileHtml = null;
     var END_MAX_TEXT = "Tracking stopped after 60 minutes.";
     var ON_BOARD_TEXT = "On board";
@@ -803,14 +749,15 @@
     var paceRenderKey = "";
     var paceFresh = true;
     var PACE_RANK = { unlikely: 0, faster: 1, slightly_faster: 2, steady: 3, slightly_slower: 4, slower: 5 };
-    var PACE_BADGE = {
-      slower: "badge badge--live",
-      slightly_slower: "badge badge--live",
-      steady: "badge badge--no-history",
-      slightly_faster: "badge badge--uncertain",
-      faster: "badge badge--uncertain",
-      unlikely: "badge badge--unavailable",
-      neutral: "badge badge--no-history"
+    // Each pace message is one severity of the shared alert; the words say the advice, so colour is never the only signal.
+    var PACE_ALERT_KIND = {
+      slower: "success",
+      slightly_slower: "success",
+      steady: "neutral",
+      slightly_faster: "warning",
+      faster: "warning",
+      unlikely: "error",
+      neutral: "neutral"
     };
     var PACE_TEXT = {
       slower: { title: "Walk slower" },
@@ -826,7 +773,7 @@
     var rerouteMomentTimer = null;
     var activeRoutePlan = null;
     var routePlanGeneration = 0;
-    var NO_FEASIBLE_ROUTE = "No direct or 1-transfer bus connection available for this trip.";
+    var NO_FEASIBLE_ROUTE = "No direct or 1-transfer route for this trip.";
     var UNRANKABLE_ROUTE = "Route found, but travel time could not be estimated.";
     var routePlanStatus = null;
 
@@ -1269,14 +1216,21 @@
       syncPaceEstimator();
     }
 
+    // The route strip and the "Current location and walking pace" card sit below the probability card and show with it.
+    function syncCatchSiblings(hidden) {
+      document.getElementById("route-strip").hidden = hidden;
+      document.getElementById("walk-open").hidden = hidden;
+    }
+
     function clearArrivalPanel() {
       clearLiveBusTag();
       clearRerouteProposal();
       arrivalCard.hidden = true;
+      syncCatchSiblings(true);
       arrivalStatus.textContent = "";
       arrivalWarning.hidden = true;
-      arrivalWarning.textContent = "";
-      arrivalWarning.className = "arrival-warning";
+      setAlertText(arrivalWarning, "");
+      setAlertKind(arrivalWarning, "warning");
       arrivalList.replaceChildren();
       clearPrimaryBus();
       arrivalUpdated.textContent = "";
@@ -1369,13 +1323,14 @@
       setEntryLoading(true);
       highlightService(serviceNo);
       arrivalCard.hidden = false;
+      syncCatchSiblings(false);
       setArrivalTone("is-loading");
       arrivalHeading.textContent = "Live arrivals · " + displayStopName(selectedBoardingStop.description) + " · " + serviceNo;
       arrivalList.replaceChildren();
       clearPrimaryBus();
       arrivalStatus.textContent = "Loading arrivals…";
       arrivalWarning.hidden = true;
-      arrivalWarning.textContent = "";
+      setAlertText(arrivalWarning, "");
       arrivalUpdated.textContent = "";
       liveFit = { done: false, withBus: false };
       renderLiveTracking();
@@ -1526,7 +1481,7 @@
           if (result.failed) {
             if (result.simulated) {
               lastSuccess = null;
-              showFirstFailure("No live arrival data available. No previous successful update.");
+              showFirstFailure("No live arrival data. No earlier update.");
               setArrivalSimulated(true);
               return;
             }
@@ -1598,7 +1553,7 @@
       }
       setArrivalTone("");
       arrivalWarning.hidden = true;
-      arrivalWarning.textContent = "";
+      setAlertText(arrivalWarning, "");
       arrivalStatus.textContent = "";
       renderBusCards(body);
       arrivalUpdated.textContent = "Last updated: " + formatTime(body.fetched_at, true);
@@ -1746,11 +1701,12 @@
     var EXPL_LEAVE_BY = "Leave by {time} to reach your stop in {w} and catch the bus arriving at {arrival}.";
     var EXPL_LEAVE_NOW = "Leave now to reach your stop in {w} and catch the bus arriving at {arrival}.";
     var EXPL_LEAVE_NOW_ARRIVING = "Leave now to try to catch the bus arriving at {arrival}.";
-    var EXPL_UNCERTAIN_BY = "Your location is uncertain, so leave a little earlier than that to be safe.";
-    var EXPL_UNCERTAIN_NOW = "Your location is uncertain, so the walking time may be off.";
+    var EXPL_UNCERTAIN_BY = "Location uncertain: leave a little earlier to be safe.";
+    var EXPL_UNCERTAIN_NOW = "Location uncertain: the walk time may be off.";
     // At the stop (the probability carries at_stop): the whole card and the Leave by tile. MIRROR of explain.S_AT_STOP*.
-    var EXPL_AT_STOP = "You are at the stop. You have {e} to wait.";
-    var EXPL_AT_STOP_ARRIVING = "You are at the stop. The bus is arriving now.";
+    var EXPL_AT_STOP = "You're here. {e} to wait.";
+    var EXPL_AT_STOP_ARRIVING = "You're here. The bus is arriving.";
+    var EXPL_AT_STOP_TRAIN_ARRIVING = "You're here. The train is arriving.";
     // A train as the first leg (the pack carries train_line): the whole of sentence one. MIRROR of explain.S_TRAIN*.
     var EXPL_TRAIN = "The {line} train is scheduled in {e}\u00a0min. Live train times are not available.";
     var EXPL_TRAIN_NOW = "The {line} train is scheduled to leave now. Live train times are not available.";
@@ -1760,11 +1716,15 @@
     var EXPL_TRAIN_LEAVE_NOW = "Leave now to reach your station in {w} and catch the train departing at {arrival}.";
     var EXPL_TRAIN_LEAVE_NOW_DEPARTING = "Leave now to try to catch the train departing at {arrival}.";
     var AT_STOP_TEXT = "At the stop";
+    var AT_STATION_TEXT = "At the station";
     var LEAVE_TILE_WALK = "{w}\u00a0min walk";
     // MIRROR: copy.js liveCatch.leaveByLabel and liveCatch.paceWalk. The walk line inside the pace card states the same
     // displayed walk minutes (pack.walk_minutes) as the AI sentence. The Leave by tile no longer draws a walk line.
     var LEAVE_BY_LABEL = "Leave by:";
     var PACE_WALK_TEXT = "{n}\u00a0min walk";
+    // MIRROR: copy.js liveCatch.routeWalk and routeSeparator (the route strip's walk label with no minutes, and the " · " of the train sub line)
+    var ROUTE_WALK_TEXT = "Walk";
+    var ROUTE_SEPARATOR = " · ";
     var LEAVE_TILE_UNCERTAIN = "Location uncertain: leave a bit earlier to be safe.";
 
     function renderExplanation(view) {
@@ -1826,7 +1786,10 @@
     // MIRROR of explain.sentence_one: the bus and the walk in one sentence.
     function explanationSentenceOne(pack, e) {
       if (pack.at_stop === true) {
-        return e < 1 ? EXPL_AT_STOP_ARRIVING : EXPL_AT_STOP.replace("{e}", explanationMinutesWord(e));
+        if (e < 1) {
+          return typeof pack.train_line === "string" && pack.train_line ? EXPL_AT_STOP_TRAIN_ARRIVING : EXPL_AT_STOP_ARRIVING;
+        }
+        return EXPL_AT_STOP.replace("{e}", explanationMinutesWord(e));
       }
       if (typeof pack.train_line === "string" && pack.train_line) {
         if (explanationIsUnlikely(pack)) {
@@ -1889,7 +1852,8 @@
     function leaveTileView(body, pack, arrivalIso, nowMs) {
       if (pack && pack.at_stop === true) {
         // at the stop: no time, no "Leave now", no walk line, no location caution (the rule needs a good fix)
-        return { mode: "at", value: AT_STOP_TEXT, uncertain: false, meta: "" };
+        var rail = typeof pack.train_line === "string" && pack.train_line;
+        return { mode: "at", value: rail ? AT_STATION_TEXT : AT_STOP_TEXT, uncertain: false, meta: "" };
       }
       var mode = leaveMode(body && body.leave_by, body && body.leave_now_threshold_s, nowMs);
       if (mode === null) {
@@ -2038,7 +2002,7 @@
 
     function handlePollFailure() {
       if (!lastSuccess) {
-        showFirstFailure("No live arrival data available. No previous successful update.");
+        showFirstFailure("No live arrival data. No earlier update.");
         return;
       }
       var age = successAgeMs();
@@ -2060,8 +2024,8 @@
       arrivalStatus.textContent = "";
       setArrivalTone("is-empty");
       arrivalWarning.hidden = false;
-      arrivalWarning.className = "arrival-warning";
-      arrivalWarning.textContent = "No buses currently in service at this stop.";
+      setAlertKind(arrivalWarning, "warning");
+      setAlertText(arrivalWarning, "No buses currently in service at this stop.");
       arrivalUpdated.textContent = body && body.fetched_at
         ? "Last updated: " + formatTime(body.fetched_at, true)
         : "";
@@ -2091,8 +2055,8 @@
       renderCatchCard(null);
       arrivalStatus.textContent = "Status: Unavailable";
       arrivalWarning.hidden = false;
-      arrivalWarning.className = "arrival-warning stale";
-      arrivalWarning.textContent = message;
+      setAlertKind(arrivalWarning, "error");
+      setAlertText(arrivalWarning, message);
       arrivalUpdated.textContent = "Last updated: N/A";
       renderJourneyLeaveBy();
       clearLeaveNowTimer();
@@ -2102,8 +2066,8 @@
 
     function showUpdating() {
       arrivalWarning.hidden = false;
-      arrivalWarning.className = "arrival-warning";
-      arrivalWarning.textContent = "Updating...";
+      setAlertKind(arrivalWarning, "info");
+      setAlertText(arrivalWarning, "Updating...");
     }
 
     function freezeStale() {
@@ -2114,8 +2078,8 @@
       setArrivalTone("is-stale");
       arrivalStatus.textContent = "Status: Stale / Unavailable";
       arrivalWarning.hidden = true;
-      arrivalWarning.className = "arrival-warning";
-      arrivalWarning.textContent = "";
+      setAlertKind(arrivalWarning, "warning");
+      setAlertText(arrivalWarning, "");
       if (lastSuccess) {
         renderBusCards(lastSuccess);
       }
@@ -2255,8 +2219,7 @@
       }
       var emptyLine = state === "no-service" ? NO_SERVICE_TEXT : state === "unavailable" ? UNAVAILABLE_TEXT : "";
       var emptyNote = document.getElementById("next-buses-empty");
-      emptyNote.textContent = emptyLine;
-      emptyNote.hidden = !emptyLine;
+      setAlertText(emptyNote, emptyLine);
       if (emptyLine) {
         document.getElementById("next-buses-label").hidden = true;
         document.getElementById("next-buses").hidden = true;
@@ -2339,20 +2302,13 @@
       if (!text) {
         return null;
       }
-      var chip = document.createElement("div");
-      chip.className = "pace-chip";
-      var badge = document.createElement("p");
-      badge.className = PACE_BADGE[category];
-      var title = document.createElement("span");
-      title.textContent = text.title;
-      badge.appendChild(title);
-      chip.appendChild(badge);
-      // The walk line lives inside the card, so it is only ever where the card is (never on Page B or another page).
+      var chip = buildAlert(PACE_ALERT_KIND[category], text.title, { body: true });
+      // The walk line lives inside the alert, so it is only ever where the alert is (never on Page B or another page).
       var walk = document.createElement("p");
       walk.id = "pace-walk";
-      walk.className = "pace-walk";
+      walk.className = "alert__meta";
       walk.hidden = true;
-      chip.appendChild(walk);
+      chip.querySelector(".alert__body").appendChild(walk);
       return chip;
     }
 
@@ -2424,7 +2380,7 @@
     var journeyRide = document.getElementById("journey-ride");
     var arriveByInput = document.getElementById("arrive-by");
     var arriveTimeInput = document.getElementById("arrive-by-time");
-    var arriveDay = "today";
+    var arriveDay = "";  // "", "today" or "tomorrow": nothing is chosen until the user taps a day
     var arriveByBlocked = false;
     var ARRIVE_PAST_TEXT = "That time has already passed today. Choose Tomorrow or a later time.";
     var ARRIVE_FAR_TEXT = "That time is more than 24 hours away. Choose an earlier time.";
@@ -2437,6 +2393,7 @@
       "arrive-none": "No target",
       "arrive-30": "In 30 min",
       "arrive-60": "In 1 hour",
+      "arrive-90": "In 1 hr 30 min",  // MIRROR: copy.js arriveBy.in90
       "arrive-custom": "Custom"
     };
     var journeyComparison = document.getElementById("journey-comparison");
@@ -2531,7 +2488,7 @@
         var icon = document.createElement("span");
         icon.className = "place-tile";
         icon.setAttribute("aria-hidden", "true");
-        icon.innerHTML = placeIconSvg(placeIconId(result.label_display || result.label || ""));
+        icon.innerHTML = FLAG_SVG;  // the destination's green flag (--marker-end), the map's icon
         var body = document.createElement("span");
         body.className = "place-row__body";
         var topline = document.createElement("span");
@@ -2586,14 +2543,13 @@
     }
 
     function setDestinationStatus(text) {
-      destinationStatus.textContent = text;
-      destinationStatus.hidden = text === "";
+      setAlertText(destinationStatus, text);
       if (text === "Destination search unavailable.") {
-        destinationStatus.className = "banner banner--denied";
+        setAlertKind(destinationStatus, "error");
       } else if (text === "No matches found. Try a building, road, or postal code.") {
-        destinationStatus.className = "banner banner--caution";
+        setAlertKind(destinationStatus, "warning");
       } else {
-        destinationStatus.className = text === "Searching…" ? "note searching" : "note";
+        setAlertKind(destinationStatus, "neutral");
       }
     }
 
@@ -2606,8 +2562,7 @@
       if (!help) {
         return;
       }
-      help.classList.toggle("is-shown", text !== "");
-      help.querySelector(".field-help__text").textContent = text;
+      setAlertText(help, text);
     }
 
     function syncSearchReadiness() {
@@ -2702,7 +2657,6 @@
     var TRAIN_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"13\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><rect x=\"8.5\" y=\"6\" width=\"7\" height=\"4\" rx=\"1\" fill=\"currentColor\"></rect><circle cx=\"9.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><circle cx=\"14.5\" cy=\"13\" r=\"0.9\" fill=\"currentColor\"></circle><path d=\"M8 21l2-5M16 21l-2-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var BUS_TILE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"5\" y=\"3\" width=\"14\" height=\"15\" rx=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></rect><path d=\"M5 11h14M8 18v2M16 18v2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><circle cx=\"8.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle><circle cx=\"15.5\" cy=\"14.5\" r=\"1\" fill=\"currentColor\"></circle></svg>";
     var WALK_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"1.8\" fill=\"currentColor\"></circle><path d=\"M10 21l2-6 2.5 2.5V21M8 12l2.5-4.5h3l2 3.5 2.5 1M12.5 7.5L11 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
-    var NOTE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 11v6M12 7.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var CHEVRON_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var destLayer = L.layerGroup().addTo(map);
     var destStopOrder = [];
@@ -2770,9 +2724,8 @@
     }
 
     function setDestinationStopStatus(text, kind) {
-      destinationStopStatus.textContent = text;
-      destinationStopStatus.hidden = text === "";
-      destinationStopStatus.className = kind ? "banner banner--" + kind : "note";
+      setAlertText(destinationStopStatus, text);
+      setAlertKind(destinationStopStatus, kind === "denied" ? "error" : kind === "caution" ? "warning" : "neutral");
     }
 
     function showDestinationPin() {
@@ -3007,7 +2960,7 @@
       }
       var name = selectedDestination.label_display || selectedDestination.label || "";
       var address = selectedDestination.address_display || selectedDestination.address || "";
-      document.getElementById("confirm-place-icon").innerHTML = placeIconSvg(placeIconId(name));
+      document.getElementById("confirm-place-icon").innerHTML = FLAG_SVG;
       document.getElementById("confirm-place-name").textContent = name;
       var addressEl = document.getElementById("confirm-place-address");
       addressEl.textContent = address;
@@ -3075,13 +3028,6 @@
         body.appendChild(lines);
       }
       body.appendChild(walk);
-      if (!station && !stop.is_reachable) {
-        var reach = document.createElement("span");
-        reach.className = "dest-stop-row__meta dest-stop-row__note";
-        reach.innerHTML = NOTE_SVG;
-        reach.appendChild(document.createTextNode("no direct bus from near you — a transfer may still work"));
-        body.appendChild(reach);
-      }
       row.appendChild(radio);
       row.appendChild(tile);
       row.appendChild(body);
@@ -3160,9 +3106,9 @@
         selectDestinationStop(all[0]);
       }
       if (body.no_service && !all.some(function (stop) { return destKind(stop) === "station"; })) {
-        setDestinationStopStatus("No buses are running to this destination at this time.", "caution");
+        setDestinationStopStatus("No service to this destination right now.", "caution");
       } else if (all.length === 0) {
-        setDestinationStopStatus("No destination stops were found within 600 m.", "caution");
+        setDestinationStopStatus("No stops within 600 m.", "caution");
       } else {
         setDestinationStopStatus("");
       }
@@ -3177,12 +3123,12 @@
       }
       if (userLat === null || userLon === null) {
         destinationStopPanel.hidden = false;
-        setDestinationStopStatus("Location unavailable. Destination stops need your current location.", "caution");
+        setDestinationStopStatus("Location unavailable. We need it to find stops.", "caution");
         return;
       }
       var generation = ++destStopGeneration;
       destinationStopPanel.hidden = false;
-      setDestinationStopStatus("Finding destination stops…");
+      setDestinationStopStatus("Finding stops…");
       var url = "/api/destination-stops?dest_lat=" + encodeURIComponent(selectedDestination.latitude)
         + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude)
         + "&user_lat=" + encodeURIComponent(userLat)
@@ -3209,7 +3155,7 @@
             return;
           }
           if (result.failed) {
-            setDestinationStopStatus("Destination stops are unavailable.", "denied");
+            setDestinationStopStatus("Stops unavailable.", "denied");
             return;
           }
           noteServerWalkSpeed(result.body);
@@ -3217,7 +3163,7 @@
         })
         .catch(function () {
           if (generation === destStopGeneration) {
-            setDestinationStopStatus("Destination stops are unavailable.", "denied");
+            setDestinationStopStatus("Stops unavailable.", "denied");
           }
         });
     }
@@ -3664,6 +3610,9 @@
       if (!/^\d{2}:\d{2}$/.test(time)) {
         return { value: "", problem: "empty" };
       }
+      if (arriveDay !== "today" && arriveDay !== "tomorrow") {
+        return { value: "", problem: "no-day" };  // Custom with no day chosen is not a choice yet: no message, Confirm disabled
+      }
       var value = singaporeDay(arriveDay === "tomorrow" ? 1 : 0) + "T" + time;
       var at = new Date(value + ":00+08:00").getTime();
       if (!isFinite(at)) {
@@ -3683,16 +3632,11 @@
       markChoice(document.getElementById("arrive-day-tomorrow"), arriveDay === "tomorrow", true);
     }
 
-    // A preset (or any value) shows its time and day in the Custom control.
+    // A preset (or No target) shows its time in the Custom control's field and clears the chosen day, so the next Custom
+    // starts with neither Today nor Tomorrow selected.
     function reflectArriveInControls(value) {
-      if (!value) {
-        arriveTimeInput.value = "";
-        arriveDay = "today";
-      } else {
-        var parts = String(value).split("T");
-        arriveTimeInput.value = parts[1] || "";
-        arriveDay = parts[0] === singaporeDay(0) ? "today" : "tomorrow";
-      }
+      arriveTimeInput.value = value ? String(value).split("T")[1] || "" : "";
+      arriveDay = "";
       renderArriveDay();
     }
 
@@ -3713,8 +3657,7 @@
       if (!error) {
         return;
       }
-      error.textContent = problem === "past" ? ARRIVE_PAST_TEXT : problem === "far" ? ARRIVE_FAR_TEXT : "";
-      error.hidden = problem !== "past" && problem !== "far";
+      setAlertText(error, problem === "past" ? ARRIVE_PAST_TEXT : problem === "far" ? ARRIVE_FAR_TEXT : "");
     }
 
     // Confirm stays disabled while Custom has no valid time.
@@ -3792,7 +3735,10 @@
       return (gap > 0 ? ARRIVE_GAP_BEFORE : ARRIVE_GAP_AFTER).replace("{amount}", amount);
     }
 
-    // The pill's state: On track, Risk of delay, or N/A (also when there is no check). The gap line follows it.
+    // The check's state: On track, Risk of delay, or N/A (also when there is no check). The gap line follows it. Each state
+    // is one severity of the shared alert (words say the state, so colour is never the only signal).
+    var ARRIVE_ALERT_KIND = { track: "success", risk: "warning", na: "neutral" };
+
     function arriveTone() {
       var hasTarget = !!(arriveByInput && arriveByInput.value);
       var label = hasTarget && journeyComparison ? journeyComparison.textContent : "";
@@ -3810,7 +3756,31 @@
         return;
       }
       var line = iso ? ARRIVE_LINE.replace("{time}", formatClock(iso, true)) : "";
-      main.textContent = line;
+      // The locked line "Arrive by: {time}" is kept whole for readers; the label and the time are two spans so the time
+      // can be the large one (the text content is still "Arrive by: 1:04 PM").
+      main.textContent = "";
+      if (line) {
+        var cut = ARRIVE_LINE.indexOf("{time}");
+        var leadEl = document.createElement("span");
+        leadEl.className = "arrive-box__lead";
+        leadEl.textContent = ARRIVE_LINE.slice(0, cut).trim();
+        var timeEl = document.createElement("span");
+        timeEl.className = "arrive-box__time";
+        var clock = formatClock(iso, true);
+        var nextAt = clock.indexOf(" (");
+        timeEl.textContent = nextAt === -1 ? clock : clock.slice(0, nextAt);
+        main.appendChild(leadEl);
+        main.appendChild(document.createTextNode(" "));
+        main.appendChild(timeEl);
+        if (nextAt !== -1) {
+          // "(tomorrow)" is its own smaller span, so the large clock never breaks
+          var nextEl = document.createElement("span");
+          nextEl.className = "arrive-box__next";
+          nextEl.textContent = clock.slice(nextAt + 1);
+          main.appendChild(document.createTextNode(" "));
+          main.appendChild(nextEl);
+        }
+      }
       main.hidden = !line;
       // The whole card needs its main line, so it is never drawn blank; the overview also hides it in every empty
       // answer (no service, no route, ride apps, unavailable) and shows it once a route is displayed.
@@ -3819,11 +3789,10 @@
         box.hidden = !line || (prefix === "overview" && OVERVIEW_EMPTY_STATES.indexOf(overviewState) !== -1);
       }
       var gapText = line ? arriveGapText(iso) : "";
-      gap.textContent = gapText;
-      gap.hidden = !gapText;
-      // the gap is a pill, the same component as the Arrive-by check pill, in the same state (never colour alone:
-      // the words say before or after target)
-      gap.className = "badge arrive-box__status badge--" + arriveTone();
+      // the gap is an alert, the same component as the Arrive-by check, in the same severity (the words say before or
+      // after target)
+      setAlertText(gap, gapText);
+      setAlertKind(gap, ARRIVE_ALERT_KIND[arriveTone()]);
     }
 
     function renderArrivalViews(estimate) {
@@ -3917,7 +3886,7 @@
     }
 
     function selectArriveChip(id) {
-      ["arrive-none", "arrive-30", "arrive-60", "arrive-custom"].forEach(function (chipId) {
+      ["arrive-30", "arrive-60", "arrive-90", "arrive-none", "arrive-custom"].forEach(function (chipId) {
         var chip = document.getElementById(chipId);
         if (chip) {
           markChoice(chip, chipId === id, true);
@@ -4044,7 +4013,9 @@
           if (arriveByChoice !== "arrive-none" && arriveByInput.value) {
             var time = document.createElement("span");
             time.className = "select-field__time";
-            time.textContent = " · " + formatArriveByClock(arriveByInput.value);
+            var clock = formatArriveByClock(arriveByInput.value);
+            // The dropdown names a later day with a capital T, for Custom and for every preset: "In 1 hr 30 min · 12:40 AM (Tomorrow)"
+            time.textContent = " · " + clock.replace(" (tomorrow)", " (Tomorrow)");
             display.appendChild(time);
           }
         }
@@ -4200,7 +4171,7 @@
     });
 
     // The Custom time or day changed: one Singapore value, or a message and a disabled Confirm.
-    function onArriveCustomEdit() {
+    function onArriveCustomEdit(closeWhenValid) {
       var result = arriveCustomResult();
       var changed = result.value !== arriveByCommitted;
       showArriveProblem(result.problem);
@@ -4212,6 +4183,9 @@
       selectArriveChip("arrive-custom");
       syncArriveBySummary();
       syncArriveGate();
+      if (closeWhenValid === true && result.problem === null) {
+        closeArrivePanel();  // a valid Custom time closes the panel, like a preset; a problem keeps it open with its message
+      }
       if (!changed || !result.value) {
         return;
       }
@@ -4224,13 +4198,13 @@
       refreshPlanningWarning();
     }
 
-    arriveTimeInput.addEventListener("input", onArriveCustomEdit);
-    arriveTimeInput.addEventListener("change", onArriveCustomEdit);
+    arriveTimeInput.addEventListener("input", function () { onArriveCustomEdit(false); });
+    arriveTimeInput.addEventListener("change", function () { onArriveCustomEdit(false); });
     ["today", "tomorrow"].forEach(function (day) {
       document.getElementById("arrive-day-" + day).addEventListener("click", function () {
         arriveDay = day;
         renderArriveDay();
-        onArriveCustomEdit();
+        onArriveCustomEdit(true);  // a tap on a day validates and, when valid, closes the panel
       });
     });
     document.getElementById("arrive-day").addEventListener("keydown", function (event) {
@@ -4238,10 +4212,9 @@
         return;
       }
       event.preventDefault();
-      arriveDay = arriveDay === "today" ? "tomorrow" : "today";
-      renderArriveDay();
-      document.getElementById("arrive-day-" + arriveDay).focus();
-      onArriveCustomEdit();
+      // the arrow keys only move the focus between the two buttons; Enter or Space (a click) selects and closes
+      var other = document.activeElement && document.activeElement.id === "arrive-day-today" ? "tomorrow" : "today";
+      document.getElementById("arrive-day-" + other).focus();
     });
 
     document.getElementById("arrive-by-field").addEventListener("click", function () {
@@ -4263,20 +4236,43 @@
     document.getElementById("arrive-60").addEventListener("click", function () {
       applyArriveValue(singaporeStamp(resolveChipDate(60)), "arrive-60");
     });
-    // An empty time opens prefilled with the Singapore time 5 minutes ahead, rounded up to the whole minute. It is in the
-    // future, so it is valid and Confirm is enabled at once. Past midnight it is on the next Singapore day and the toggle
-    // follows. A time already chosen, or set by a preset, is kept.
+    document.getElementById("arrive-90").addEventListener("click", function () {
+      applyArriveValue(singaporeStamp(resolveChipDate(90)), "arrive-90");  // 90 minutes on, in Singapore time, like the other presets
+    });
+    // The clock button replaces the native icon (hidden: iPhone Safari does not show it). It opens the picker where the browser
+    // can (showPicker), else it focuses the input, which opens the keyboard or the native wheel. A tap on the field does the same.
+    function openArriveTimePicker() {
+      if (typeof arriveTimeInput.showPicker === "function") {
+        try {
+          arriveTimeInput.showPicker();
+          return;
+        } catch (error) {
+          // not allowed here (no user gesture, or a frame): fall through to the focus
+        }
+      }
+      arriveTimeInput.focus();
+    }
+    document.getElementById("arrive-time-picker").addEventListener("click", openArriveTimePicker);
+    arriveTimeInput.addEventListener("click", openArriveTimePicker);
+    // An empty time opens prefilled with the Singapore time 5 minutes ahead, rounded up to the whole minute. Only the
+    // time is suggested: no day is chosen, so Confirm and Find my route stay disabled until the user taps Today or
+    // Tomorrow. A time already chosen, or set by a preset, is kept.
     function prefillArriveTime() {
       if (arriveTimeInput.value) {
         return;
       }
       var at = Math.ceil((Date.now() + ARRIVE_PREFILL_MIN * 60000) / 60000) * 60000;
-      reflectArriveInControls(singaporeStamp(new Date(at)));
+      arriveTimeInput.value = (singaporeStamp(new Date(at)).split("T")[1] || "");
     }
 
     document.getElementById("arrive-custom").addEventListener("click", function () {
+      var fresh = arriveByChoice !== "arrive-custom";
       openArrivePanel();
       selectArriveChip("arrive-custom");
+      if (fresh) {
+        arriveDay = "";  // neither Today nor Tomorrow is selected until the user taps one
+        renderArriveDay();
+      }
       prefillArriveTime();
       onArriveCustomEdit();
     });
@@ -4355,32 +4351,31 @@
         return;
       }
       if (Notification.permission === "denied") {
-        var banner = document.createElement("p");
-        banner.id = "notification-banner";
-        banner.textContent = "Browser notifications are blocked. Keep this page open to see live leave-by alerts.";
-        notificationPanel.appendChild(banner);
+        notificationPanel.appendChild(buildAlert("warning",
+          "Browser notifications are blocked. Keep this page open to see live leave-by alerts.", { id: "notification-banner" }));
         return;
       }
       if (Notification.permission === "granted") {
-        var active = document.createElement("p");
-        active.id = "notification-status";
-        active.textContent = "Notifications active — Leave-now alert set";
-        var fiveMinuteNote = document.createElement("p");
-        fiveMinuteNote.textContent = "A reminder also appears when about 5 minutes remain on your locked bus.";
-        notificationPanel.appendChild(active);
-        notificationPanel.appendChild(fiveMinuteNote);
+        notificationPanel.appendChild(buildAlert("success", "Notifications active — Leave-now alert set", { id: "notification-status" }));
+        notificationPanel.appendChild(buildAlert("info", "A reminder also appears when about 5 minutes remain on your locked bus."));
         return;
       }
       if (Notification.permission === "default") {
         var card = document.createElement("div");
-        card.className = "card card--info notification-card";
+        card.className = "alert alert--info";
         card.id = "notification-card";
+        var cardIcon = document.createElement("span");
+        cardIcon.className = "alert__icon";
+        cardIcon.setAttribute("aria-hidden", "true");
+        var cardBody = document.createElement("div");
+        cardBody.className = "alert__body";
         var title = document.createElement("p");
         title.id = "notification-card-title";
-        title.className = "notification-card__title";
+        title.className = "alert__text";
         title.textContent = "Notifications Optional";
         var description = document.createElement("p");
         description.id = "notification-card-description";
+        description.className = "alert__detail";
         description.textContent = "Get an audio/visual alert 60 seconds before your walk deadline. After you lock a bus and stop, a reminder also appears when about 5 minutes remain.";
         var button = document.createElement("button");
         button.type = "button";
@@ -4388,9 +4383,15 @@
         button.className = "primary";
         button.textContent = "Enable Notifications";
         button.addEventListener("click", onEnableNotifications);
-        card.appendChild(title);
-        card.appendChild(description);
-        card.appendChild(button);
+        var cardActions = document.createElement("div");
+        cardActions.className = "alert__actions";
+        cardActions.appendChild(button);
+        cardBody.appendChild(title);
+        cardBody.appendChild(description);
+        cardBody.appendChild(cardActions);
+        card.appendChild(cardIcon);
+        card.appendChild(cardBody);
+        paintAlert(card);
         notificationPanel.appendChild(card);
       }
     }
@@ -4633,8 +4634,7 @@
       var chance = bus && bus.probability;
       var legOne = activeRoutePlan && activeRoutePlan.leg_index === 1 && !displayFrozen && !isTrain();
       if (legOne && chance && typeof chance.point === "number" && chance.point < 50 && !bus.is_missed) {
-        banner.hidden = false;
-        banner.textContent = "⚠ Catch chance dropping (" + chance.point + "%). Tap to enable Leave-Now Alert.";
+        setAlertText(banner, "⚠ Catch chance dropping (" + chance.point + "%). Tap to enable Leave-Now Alert.");
         return;
       }
       banner.hidden = true;
@@ -4745,14 +4745,16 @@
     startDemoControls();
     window.setTimeout(function () { decideFirstRun(false); }, 2500);
 
-    // ---- First-run explainer: three short steps over Home, once per phone, reopened from the menu ("How it works").
+    // ---- First-run explainer: five short steps over Home, once per phone, reopened from the menu ("How it works").
     // static/first-run.js keeps the one flag on this phone only; nothing is sent. Skip, Done and Escape all set it.
     // Not shown in Demo Mode. MIRROR: copy.js firstRun (tests: tests/test_first_run.py).
     var FIRST_RUN_STEP_OF = "Step {n} of {total}";
     var FIRST_RUN_STEPS = [
       "Pick where you're going.",
-      "We show when to leave, and your chance of catching the bus or train.",
-      "Walk, and we'll keep the chance updated."
+      "We show when to leave and your chance of catching it.",
+      "Walk, and we keep the chance updated.",
+      "Missed it? We find other options.",
+      "Get alerts during your journey."
     ];
     // Crowding on the bus (LTA Load): text and icon, never colour alone. MIRROR of copy.js crowding. Display only: it is
     // never read by the probability, the ring or the ranking. A blank or unknown value reads "No Data".
@@ -4799,7 +4801,9 @@
     var FIRST_RUN_ICONS = [
       null,
       "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>",
-      "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"2\" fill=\"currentColor\"></circle><path d=\"M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>"
+      "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><circle cx=\"13\" cy=\"4.5\" r=\"2\" fill=\"currentColor\"></circle><path d=\"M12 8l-3 3 1 4-3 5M12 8l3 3 2 1M12 8l1 5 3 3 1 4M10 15l2-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M10 20.5a2 2 0 0 0 4 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>"
     ];
     var firstRunStep = 0;
     var firstRunReturnFocus = null;
@@ -4910,7 +4914,6 @@
       banner.hidden = enabled !== true;
       controls.hidden = enabled !== true;
       syncPaceEstimator();
-      renderMotionNote();
     }
 
     function setArrivalSimulated(on) {
@@ -5137,6 +5140,12 @@
       }
     }
 
+    // "Edit destination" (the overview's rows and empty states, and the confirm page): back to the search results when the user came
+    // through them, else to the destination stops page. A saved place goes straight to the stops, so "results" is not in the stack.
+    function editDestination() {
+      backToScreen(screenStack.indexOf("results") !== -1 ? "results" : "stops");
+    }
+
     function backToScreen(name) {
       var index = screenStack.lastIndexOf(name);
       var steps = screenStack.length - 1 - index;
@@ -5233,7 +5242,6 @@
       syncCatchBar();
       syncPaceEstimator();
       syncWalkTimers();
-      renderMotionNote();
     }
 
     function syncHomeButton() {
@@ -5310,6 +5318,7 @@
       var dialog = document.getElementById("leave-dialog");
       if (dialog) {
         dialog.hidden = false;
+        document.getElementById("leave-stay").focus();  // Stay is the default keyboard focus
       }
     }
 
@@ -5385,9 +5394,7 @@
       markChoice(document.getElementById("theme-dark"), theme === "dark", true);
     }
 
-    document.getElementById("edit-destination").addEventListener("click", function () {
-      backToScreen("results");
-    });
+    document.getElementById("edit-destination").addEventListener("click", editDestination);
     document.getElementById("edit-destination-stop").addEventListener("click", function () {
       backToScreen("stops");
     });
@@ -5411,15 +5418,14 @@
     // except that tap (which loads the destination stops like any picked result) and the add panel's own search, which
     // is the ordinary destination search with what the user typed.
     var SP = {
-      note: "Saved on this phone only.",
-      add: "+", addLabel: "Add a saved place",
+      add: "Add place", addLabel: "Add place",
       count: "{n} of {max} saved",
       chipLabel: "{name}, saved place", chipLabelAddress: "{name}, saved place, {address}",
       menuLabel: "Rename {name}",
       editToggle: "Edit", editToggleLabel: "Edit saved places", doneToggle: "Done",
       doneToggleLabel: "Done editing saved places", deleteMark: "×", deleteMarkLabel: "Delete {name}",
       addTitle: "Add a saved place", searchLabel: "Search for the place", searchPlaceholder: "Search for a place",
-      searchAction: "Search", pickHint: "Pick a place from the results, then name it.",
+      searchAction: "Search",
       nameLabel: "Your name for this place", nameHint: "Up to {max} characters",
       save: "Save", cancel: "Cancel", editTitle: "Edit name",
       deleteConfirm: "Delete {name}?", deleteYes: "Delete",
@@ -5449,6 +5455,11 @@
         node.textContent = text;
       }
       return node;
+    }
+
+    // The plus mark in front of "Add place": a copy of the one in the page's template (nothing is set as markup).
+    function spPlusIcon() {
+      return document.getElementById("saved-plus-icon").content.firstElementChild.cloneNode(true);
     }
 
     function spButton(className, text, action, id, label) {
@@ -5506,7 +5517,10 @@
         row.appendChild(wrap);
       });
       if (list.length < SavedPlaces.MAX) {
-        row.appendChild(spButton("quick-pick quick-pick--add", SP.add, "add", "", SP.addLabel));
+        var add = spButton("quick-pick quick-pick--add", "", "add", "", SP.addLabel);
+        add.appendChild(spPlusIcon());
+        add.appendChild(spEl("span", "", SP.add));
+        row.appendChild(add);
       }
       if (list.length) {
         var toggle = spButton("quick-pick saved-edit-toggle", savedEditMode ? SP.doneToggle : SP.editToggle,
@@ -5519,7 +5533,6 @@
       count.textContent = full ? spFill(SP.count, { n: list.length, max: SavedPlaces.MAX }) : "";
       count.hidden = !full;
       var addOpen = !!(savedPanelState && savedPanelState.kind === "add");
-      document.getElementById("saved-places-note").classList.toggle("is-concealed", !(list.length || addOpen));
     }
 
     // A tap on a saved place: the same step a search result goes to (the destination stops), with the stored point. Like
@@ -5681,12 +5694,11 @@
       }
       var field = spField("saved-edit-name", SP.nameLabel, place.name, SavedPlaces.NAME_MAX,
         spFill(SP.nameHint, { max: SavedPlaces.NAME_MAX }));
-      var error = spEl("p", "saved-panel__error");
-      error.setAttribute("role", "alert");
+      var error = buildAlert("error", "", { role: "alert" });
       error.hidden = true;
       var save = spButton("primary", SP.save, "save", id);
       var cancel = spButton("secondary", SP.cancel, "cancel", id);
-      var actions = spEl("div", "saved-panel__actions");
+      var actions = spEl("div", "saved-panel__actions saved-panel__actions--form");
       actions.appendChild(save);
       actions.appendChild(cancel);
       var nodes = [spEl("h3", "saved-panel__title", SP.editTitle)];
@@ -5697,8 +5709,7 @@
       save.addEventListener("click", function () {
         var result = SavedPlaces.rename(id, field.input.value);
         if (!result.ok) {
-          error.textContent = spErrorText(result.error);
-          error.hidden = false;
+          setAlertText(error, spErrorText(result.error));
           field.input.focus();
           return;
         }
@@ -5716,7 +5727,7 @@
       }
       var yes = spButton("primary", SP.deleteYes, "confirm-delete", id);
       var no = spButton("secondary", SP.cancel, "keep", id);
-      var actions = spEl("div", "saved-panel__actions");
+      var actions = spEl("div", "saved-panel__actions saved-panel__actions--delete");
       actions.appendChild(yes);
       actions.appendChild(no);
       var title = spFill(SP.deleteConfirm, { name: place.name });
@@ -5737,13 +5748,14 @@
     function openAddPanel() {
       var search = spField("saved-search", SP.searchLabel, "", 0, "");
       search.input.placeholder = SP.searchPlaceholder;
+      search.wrap.firstChild.classList.add("visually-hidden");  // the field keeps its label for assistive technology
       var searchButton = spButton("secondary", SP.searchAction, "", "");
       searchButton.type = "submit";
       var form = spEl("form", "saved-panel__search");
       form.setAttribute("novalidate", "");
       form.appendChild(search.wrap);
       form.appendChild(searchButton);
-      var status = spEl("p", "saved-places__note", SP.pickHint);
+      var status = spEl("p", "saved-places__note saved-panel__status", "");
       status.setAttribute("aria-live", "polite");
       var results = spEl("ul", "saved-panel__results");
       var picked = spEl("p", "saved-panel__picked");
@@ -5751,12 +5763,11 @@
       var name = spField("saved-name", SP.nameLabel, "", SavedPlaces.NAME_MAX,
         spFill(SP.nameHint, { max: SavedPlaces.NAME_MAX }));
       name.wrap.hidden = true;
-      var error = spEl("p", "saved-panel__error");
-      error.setAttribute("role", "alert");
+      var error = buildAlert("error", "", { role: "alert" });
       error.hidden = true;
       var save = spButton("primary", SP.save, "", "");
       var cancel = spButton("secondary", SP.cancel, "", "");
-      var actions = spEl("div", "saved-panel__actions");
+      var actions = spEl("div", "saved-panel__actions saved-panel__actions--form");
       actions.appendChild(save);
       actions.appendChild(cancel);
       savedPicked = null;
@@ -5788,7 +5799,7 @@
               status.textContent = "No matches found. Try a building, road, or postal code.";
               return;
             }
-            status.textContent = SP.pickHint;
+            status.textContent = "";
             body.results.slice(0, 5).forEach(function (result) {
               var item = spEl("li", "saved-panel__result");
               var title = result.label_display || result.label || "";
@@ -5814,8 +5825,7 @@
       });
       save.addEventListener("click", function () {
         if (!savedPicked) {
-          error.textContent = SP.errorPick;
-          error.hidden = false;
+          setAlertText(error, SP.errorPick);
           search.input.focus();
           return;
         }
@@ -5824,8 +5834,7 @@
           latitude: savedPicked.latitude, longitude: savedPicked.longitude
         });
         if (!result.ok) {
-          error.textContent = spErrorText(result.error === "invalid" ? "pick" : result.error);
-          error.hidden = false;
+          setAlertText(error, spErrorText(result.error === "invalid" ? "pick" : result.error));
           name.input.focus();
           return;
         }
@@ -6021,12 +6030,12 @@
     var JO_TRANSFERS_MANY = "{t} transfers";
     var JO_TRANSFERS_ONE = "1 transfer";
     var JO_TRANSFERS_NONE = "No transfers";
-    var JO_NO_ROUTE_STATIC = "No direct or 1-transfer bus connection available for this trip.";
+    var JO_NO_ROUTE_STATIC = "No direct or 1-transfer route for this trip.";
     var JO_NO_ROUTE_FOUND = "No route found for this trip.";
     var JO_NO_BUS_ONLY = "No bus-only route found. Try another priority.";
     var JO_NO_MRT_ONLY = "No MRT or LRT route found. Try another priority.";
-    var JO_NO_SERVICE_STATIC = "No buses are running to this destination at this time.";
-    var JO_NO_SERVICE_ANY = "No bus or MRT services are running to this destination at this time.";
+    var JO_NO_SERVICE_STATIC = "No service to this destination right now.";
+    var JO_NO_SERVICE_ANY = "No services to this destination right now.";
     var JO_NO_BUS_CLOSED = "Bus services have stopped for now. Try another priority.";
     var JO_NO_MRT_CLOSED = "MRT and LRT services have stopped for now. Try another priority.";
     var JO_NEEDS_ROUTE_SERVICE = "Needs the route service.";
@@ -6510,14 +6519,14 @@
       say("next-buses-label", TRAIN_PAGE.nextTrains, "Next 3 buses");
       var see = document.querySelector("#see-arrivals span");
       if (see) {
-        see.textContent = on ? TRAIN_PAGE.seeTimes : "See bus arrival times";
+        see.textContent = on ? TRAIN_PAGE.seeTimes : SEE_BUS_ARRIVALS_TEXT;
       }
       // Page A's ring card has no label beside the clock time; Page W's still names it
       var walkLabel = document.querySelector("#walk-arrives .catch-card__arrives-label");
       if (walkLabel) {
         walkLabel.textContent = on ? TRAIN_PAGE.departsLabel : "Bus arrives";
       }
-      var heroTile = document.querySelector("#live-tracking .bus-tile--hero");
+      var heroTile = document.getElementById("live-node");
       if (heroTile) {
         if (busHeroIcon === null) {
           busHeroIcon = heroTile.innerHTML;
@@ -6903,23 +6912,22 @@
       var cleaned = typeof alert.message === "string" ? cleanTrainAlertMessage(alert.message) : "";
       var message = cleaned || (alert.status === "disrupted" ? TRAIN_ALERT_NO_MESSAGE_DISRUPTED : TRAIN_ALERT_NO_MESSAGE_MINOR);
       var box = document.createElement("div");
-      box.className = "banner banner--caution alert-row train-alert";
+      box.className = "alert alert--warning alert--clamp";
       box.setAttribute("role", "status");
       box.setAttribute("data-line", alert.line);
       box.setAttribute("data-status", alert.status === "disrupted" ? "disrupted" : "minor");
       var icon = document.createElement("span");
-      icon.className = "alert-row__icon";
+      icon.className = "alert__icon";
       icon.setAttribute("aria-hidden", "true");
-      icon.innerHTML = WARN_SVG_SMALL;
       var copy = document.createElement("div");
-      copy.className = "alert-row__copy";
+      copy.className = "alert__body";
       var text = document.createElement("p");
-      text.className = "alert-row__title train-alert__text";
+      text.className = "alert__text";
       text.id = prefix + "-text-" + index;
       text.textContent = fillText(TRAIN_ALERT_TEXT, { line: name, message: message });
       var toggle = document.createElement("button");
       toggle.type = "button";
-      toggle.className = "link-button train-alert__toggle";
+      toggle.className = "link-button alert__toggle";
       toggle.setAttribute("aria-expanded", "false");
       toggle.setAttribute("aria-controls", text.id);
       toggle.textContent = TRAIN_ALERT_MORE;
@@ -6933,6 +6941,7 @@
       copy.appendChild(toggle);
       box.appendChild(icon);
       box.appendChild(copy);
+      paintAlert(box);
       return box;
     }
 
@@ -6953,12 +6962,12 @@
         });
       }
       host.hidden = list.length === 0;
-      Array.prototype.forEach.call(host.querySelectorAll(".train-alert"), function (box) {
+      Array.prototype.forEach.call(host.querySelectorAll(".alert--clamp"), function (box) {
         if (box.classList.contains("is-expanded")) {
           return;
         }
-        var text = box.querySelector(".train-alert__text");
-        var toggle = box.querySelector(".train-alert__toggle");
+        var text = box.querySelector(".alert__text");
+        var toggle = box.querySelector(".alert__toggle");
         toggle.hidden = !(text.scrollHeight > text.clientHeight + 1);
       });
     }
@@ -7048,7 +7057,7 @@
       }
       list.appendChild(stepItem("destination", "Destination", [
         stepLine(destinationDisplayName())
-      ], { label: "Edit destination", action: function () { backToScreen("results"); } }));
+      ], { label: "Edit destination", action: editDestination }));
       renderOverviewSummary(overviewSummaryData(transit, toBoard), transit.some(function (leg) { return !legIsRail(leg); }));
       syncArriveBySummary();
       syncOverviewArrive();
@@ -7090,10 +7099,8 @@
     function showPlanNotes(body) {
       var fallback = document.getElementById("overview-fallback-note");
       var note = document.getElementById("overview-priority-note");
-      fallback.textContent = planFallback ? JO_FALLBACK_NOTE : "";
-      fallback.hidden = !planFallback;
-      note.textContent = planFallback ? JO_NEEDS_ROUTE_SERVICE : "";
-      note.hidden = !note.textContent;
+      setAlertText(fallback, planFallback ? JO_FALLBACK_NOTE : "");
+      setAlertText(note, planFallback ? JO_NEEDS_ROUTE_SERVICE : "");
     }
 
     // Bus only and MRT only name their own mode when nothing is found, and say "stopped for now" when the server knows that
@@ -7142,11 +7149,8 @@
       var status = document.getElementById("overview-arrive-status");
       var label = hasTarget && journeyComparison ? journeyComparison.textContent : "";
       if (status) {
-        status.textContent = label;
-        status.hidden = !label;
-        status.className = "badge arrive-box__status " + (/On track/.test(label)
-          ? "badge--track"
-          : /Risk/.test(label) ? "badge--risk" : "badge--na");
+        setAlertText(status, label);
+        setAlertKind(status, /On track/.test(label) ? "success" : /Risk/.test(label) ? "warning" : "neutral");
       }
     }
 
@@ -7237,6 +7241,7 @@
         var when = document.createElement("span");
         when.className = "bus-tile-card__minutes";
         when.textContent = formatClock(iso, true);  // the plain time: "8:16 PM", no "about"
+        tile.classList.add("bus-tile-card--time-only");
         tile.setAttribute("aria-label", fillText(TRAIN_PAGE.tileLabel, { line: trainLineName(), time: formatClock(iso, true) }));
         tile.appendChild(when);
         list.appendChild(tile);
@@ -7245,6 +7250,8 @@
       list.hidden = !times.length;
       document.getElementById("next-buses-label").hidden = !times.length;
     }
+
+    var ARRIVING_CHECK_SVG = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"></circle><path d="M8 12l3 3 5-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
     function renderNextBuses(buses, hero) {
       var list = document.getElementById("next-buses");
@@ -7266,19 +7273,31 @@
         var service = document.createElement("span");
         service.className = "bus-tile-card__service";
         service.textContent = "Bus " + (selectedService || "");
-        tile.appendChild(minutes);
-        tile.appendChild(service);
+        // The row: the time and the service at the left; the crowding label and the Arriving chip stacked at the right.
+        var main = document.createElement("span");
+        main.className = "bus-tile-card__main";
+        main.appendChild(minutes);
+        main.appendChild(service);
+        tile.appendChild(main);
+        var side = document.createElement("span");
+        side.className = "bus-tile-card__side";
         var crowd = document.createElement("span");
         crowd.className = "crowd-chip";
         setCrowd(crowd, bus);
         if (!crowd.hidden) {
-          tile.appendChild(crowd);
+          side.appendChild(crowd);
         }
         if (bus === hero) {
           var arriving = document.createElement("span");
           arriving.className = "bus-tile-card__arriving";
-          arriving.textContent = "(Arriving)";
-          tile.appendChild(arriving);
+          arriving.innerHTML = ARRIVING_CHECK_SVG;
+          var arrivingText = document.createElement("span");
+          arrivingText.textContent = "Arriving";  // MIRROR: copy.js liveTracking.arriving
+          arriving.appendChild(arrivingText);
+          side.appendChild(arriving);
+        }
+        if (side.hasChildNodes()) {
+          tile.appendChild(side);
         }
         list.appendChild(tile);
       });
@@ -7649,6 +7668,11 @@
         titleEl.replaceChildren(busBadge(selectedService));
         document.getElementById("live-bus-to").textContent = destination ? "To " + destination : "";
       }
+      // The vehicle marker: a ring (grey for a bus, the line's own colour for a train), as on Page A.
+      var ringCode = train ? String(trainLeg().line_code || "").toLowerCase() : "";
+      var ringClass = train && LINE_BADGE_CODES.indexOf(ringCode.toUpperCase()) !== -1 ? " journey-step--rail-" + ringCode : "";
+      document.getElementById("live-vehicle").className = "card bus-card live-vehicle" + ringClass;
+      document.getElementById("live-node").innerHTML = train ? TRAIN_SVG : BUS_TILE_SVG;
       var state = !hero ? "unavailable" : dataIsStale() ? "stale" : hero.monitored ? "live" : "schedule";
       var pill = document.getElementById("live-bus-pill");
       pill.className = "pill pill--" + state;
@@ -7670,6 +7694,9 @@
     }
 
     document.getElementById("live-refresh").addEventListener("click", manualRefresh);
+    document.getElementById("live-back").addEventListener("click", function () {
+      requestBack();  // the same Back as the page's own back row, which Page B replaces with this button beside the title
+    });
     document.getElementById("live-full-route").addEventListener("click", function () {
       if (liveFull) {
         setLiveFull(false);
@@ -7693,12 +7720,8 @@
     document.getElementById("overview-arrive-edit").addEventListener("click", openArriveSheet);
     document.getElementById("overview-edit-time").addEventListener("click", openArriveSheet);
     document.getElementById("overview-edit-time-service").addEventListener("click", openArriveSheet);
-    document.getElementById("overview-edit-destination").addEventListener("click", function () {
-      backToScreen("results");
-    });
-    document.getElementById("overview-edit-destination-service").addEventListener("click", function () {
-      backToScreen("results");
-    });
+    document.getElementById("overview-edit-destination").addEventListener("click", editDestination);
+    document.getElementById("overview-edit-destination-service").addEventListener("click", editDestination);
     document.getElementById("overview-retry").addEventListener("click", function () {
       requestLocation();
       planJourney();
@@ -7792,9 +7815,6 @@
       setPillState(document.getElementById("catch-pill"), document.getElementById("catch-pill-text"), state);
       setRing("catch-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
       setBusArrives("catch", hero, usable);
-      var walkPace = catchWalkPace();
-      // The pace line shows what the server used for this poll, whatever the source, including the normal pace.
-      document.getElementById("catch-pace-line").textContent = usable ? walkPace.line : "";
       document.getElementById("catch-title").textContent = catchHeading(false);
       renderCatchHeading(hero);
       // The pace chip is on Page A in every probability band and action while the probability is usable. It is hidden only
@@ -7827,49 +7847,54 @@
       var leg = train ? trainLeg() : null;
       var plan = activeRoutePlan && activeRoutePlan.legs ? activeRoutePlan.legs[activeRoutePlan.leg_index - 1] : null;
       var busLeg = { service_no: selectedService || "", headsign: plan && !legIsRail(plan) && plan.service_no === selectedService ? plan.headsign : "" };
-      // Top down: the line row (the number badge, or the line badge and the line's name), the loop direction (a train on
-      // a loop line only), "To {place}" with the platform (a train, when known), the clock time, the pill, the crowding.
+      // Layout B, top down: the vehicle marker with its badge, "To {place}", a muted line for a train (the line's name, the
+      // loop direction on a loop line, the platform when known), the clock time, the pill, the crowding.
       var line = document.getElementById("catch-line");
       line.replaceChildren();
-      var direction = document.getElementById("catch-direction");
       var to = document.getElementById("catch-to");
       to.replaceChildren();
-      var way = "";
+      var sub = document.getElementById("catch-sub");
       var place = "";
+      var parts = [];
       if (train) {
         line.appendChild(lineBadge(String(leg.line_code || "")));
-        line.appendChild(document.createTextNode(" "));
-        var name = document.createElement("span");
-        name.className = "catch-card__line-name";
-        name.textContent = trainLineName();
-        line.appendChild(name);
-        way = leg.circle_direction === "clockwise" ? JO_CLOCKWISE : leg.circle_direction === "anticlockwise" ? JO_ANTICLOCKWISE : "";
+        parts.push(trainLineName());
+        if (leg.circle_direction === "clockwise") {
+          parts.push(JO_CLOCKWISE);
+        } else if (leg.circle_direction === "anticlockwise") {
+          parts.push(JO_ANTICLOCKWISE);
+        }
+        if (leg.platform) {
+          parts.push(fillText(JO_PLATFORM_ONLY, { x: leg.platform }));
+        }
         place = leg.terminus || leg.headsign || "";
       } else {
         line.appendChild(busBadge(busLeg.service_no));
         place = destinationStopName() || busLeg.headsign || "";
       }
-      direction.textContent = way;
-      direction.hidden = !way;
       if (place) {
         var where = document.createElement("span");
         where.className = "catch-card__to-place";
         where.textContent = fillText(JO_TOWARD, { terminus: place });
         to.appendChild(where);
       }
-      if (train && leg.platform) {
-        to.appendChild(document.createTextNode(" "));
-        var platform = document.createElement("span");
-        platform.className = "catch-card__platform";
-        platform.textContent = fillText(JO_PLATFORM_ONLY, { x: leg.platform });
-        to.appendChild(platform);
-      }
       to.hidden = !to.hasChildNodes();
+      sub.textContent = parts.join(ROUTE_SEPARATOR);
+      sub.hidden = !parts.length;
       var ringCode = train ? String(leg.line_code || "").toLowerCase() : "";
-      document.getElementById("catch-leg").className = "catch-card__leg"
-        + (train && LINE_BADGE_CODES.indexOf(ringCode.toUpperCase()) !== -1 ? " journey-step--rail-" + ringCode : "");
+      var ringClass = train && LINE_BADGE_CODES.indexOf(ringCode.toUpperCase()) !== -1 ? " journey-step--rail-" + ringCode : "";
+      document.getElementById("catch-leg").className = "catch-card__leg" + ringClass;
       document.getElementById("catch-node").innerHTML = train ? TRAIN_SVG : BUS_TILE_SVG;
       setCrowd(document.getElementById("catch-load"), hero);
+      renderRouteStrip(train, leg, busLeg, ringClass);
+    }
+
+    // The route strip: From, the walk, the vehicle's badge, Destination. The walk label is set by syncPaceWalk.
+    function renderRouteStrip(train, leg, busLeg, ringClass) {
+      var node = document.getElementById("route-vehicle-node");
+      node.className = "step-node route-strip__vehicle" + ringClass;
+      node.innerHTML = train ? TRAIN_SVG : BUS_TILE_SVG;
+      document.getElementById("route-vehicle-label").textContent = train ? String(leg.line_code || "") : busLeg.service_no;
     }
 
     // The clock time or "Leave now" stays on one line; a trailing " (tomorrow)" may wrap by itself.
@@ -7907,7 +7932,7 @@
       var leaveWarn = document.getElementById("tile-leave-caution");
       document.getElementById("tile-leave-caution-text").textContent = tileView && tileView.uncertain ? LEAVE_TILE_UNCERTAIN : "";
       leaveWarn.hidden = !(tileView && tileView.uncertain);
-      // One line: "Leave by: {time}". "Leave now" and "At the stop" stand alone, with no label. The tile keeps the
+      // One line: "Leave by: {time}". "Leave now" and "At the stop" ("At the station" for a train) stand alone, with no label. The tile keeps the
       // accessible name "Leave by" in all three states (aria-label on the tile).
       var showLabel = !tileView || tileView.mode === "by";
       var label = document.getElementById("tile-leave-label");
@@ -7929,6 +7954,10 @@
       var show = !slot.hidden && w !== null;
       el.textContent = show ? fillText(PACE_WALK_TEXT, { n: String(w) }) : "";
       el.hidden = !show;
+      var strip = document.getElementById("route-walk");
+      if (strip) {
+        strip.textContent = w !== null ? fillText(PACE_WALK_TEXT, { n: String(w) }) : ROUTE_WALK_TEXT;
+      }
     }
 
     // ---- Page W: "Walk to your stop". The distance is a client calculation (haversine from the newest fix to the stop);
@@ -7939,14 +7968,17 @@
       waiting: "Waiting for your location…",
       checking: "Checking your movement…",
       onway: "On your way",
-      away: "Moving away from the stop",
+      away: "Moving away",
       still: "Not moving",
-      arrived: "Arrived at the stop"
+      arrived: "Arrived"
     };
-    var WALK_DISTANCE_TEXT = "{distance} to the stop";
+    // The state line is the shared alert: info while it is waiting or checking, success on the way and arrived, an error moving away,
+    // a warning while not moving. The words say it too, so the colour is never the only signal.
+    var WALK_STATE_KIND = { waiting: "neutral", checking: "info", onway: "success", away: "error", still: "warning", arrived: "success" };
+    var WALK_DISTANCE_TEXT = "{distance} to go";
     var WALK_MINUTES_TEXT = "about {n}\u00a0min walk";
     var WALK_TREND_TEXT = {
-      risingCloser: "Rising as you get closer",
+      risingCloser: "Rising as you near",
       rising: "Rising",
       fallingAway: "Falling as you move away",
       falling: "Falling as time passes",
@@ -8566,10 +8598,15 @@
       var hasFix = distance !== null;
       var state = walkStateOf(hasFix, walkChanceSource.nearStop, walkSamples, now);
       document.getElementById("walk-state").textContent = state === "arrived" && isTrain() ? TRAIN_PAGE.walkArrived : WALK_STATE_TEXT[state];
-      document.getElementById("walk-distance").textContent = hasFix ? (isTrain() ? TRAIN_PAGE.walkDistance : WALK_DISTANCE_TEXT).replace("{distance}", formatDistance(distance)) : "—";
+      setAlertKind(document.getElementById("walk-state-alert"), WALK_STATE_KIND[state]);
+      // The distance is the big number; "to go" (or "to the station") is its label. Together they read as the old line.
+      var distanceText = (isTrain() ? TRAIN_PAGE.walkDistance : WALK_DISTANCE_TEXT).replace("{distance}", "\u0001");
+      var distanceParts = distanceText.split("\u0001");
+      document.getElementById("walk-distance-value").textContent = hasFix ? distanceParts[0] + formatDistance(distance) : "—";
+      document.getElementById("walk-distance-label").textContent = hasFix ? distanceParts[1] : "";
       var minutes = document.getElementById("walk-minutes");
-      minutes.textContent = hasFix ? WALK_MINUTES_TEXT.replace("{n}", String(walkMinutesOf(distance, serverWalkSpeed))) : "";
-      minutes.hidden = !hasFix;
+      document.getElementById("walk-minutes-text").textContent = hasFix ? WALK_MINUTES_TEXT.replace("{n}", String(walkMinutesOf(distance, serverWalkSpeed))) : "";
+      minutes.classList.toggle("is-empty", !hasFix);  // the row keeps its height while there is no fix
       var progress = document.getElementById("walk-progress");
       progress.value = walkProgressOf(distance, walkOpenedDistance, state === "arrived");
       markSimulated("walk-simulated", demoModeOn() || (lastSuccess && lastSuccess.simulated === true));
@@ -8583,8 +8620,22 @@
       setBusArrives("walk", hero, usable);
       document.getElementById("walk-chance-title").textContent = catchHeading(false);
       var trend = document.getElementById("walk-trend");
-      trend.textContent = usable && walkTrend.text ? WALK_TREND_TEXT[walkTrendKey(walkTrend.text, state)] : "";
-      trend.hidden = !(usable && walkTrend.text);
+      var trendKey = usable && walkTrend.text ? walkTrendKey(walkTrend.text, state) : "";
+      document.getElementById("walk-trend-text").textContent = trendKey ? WALK_TREND_TEXT[trendKey] : "";
+      trend.hidden = !trendKey;
+      trend.classList.toggle("is-rising", trendKey === "rising");
+      trend.classList.toggle("is-falling", trendKey === "falling");
+      // The vehicle marker and badge: a grey ring and the service number for a bus, the line's colour and code for a train.
+      var train = isTrain();
+      var leg = train ? trainLeg() : null;
+      var code = train && leg ? String(leg.line_code || "") : "";
+      var ringCode = code.toLowerCase();
+      var ringClass = train && LINE_BADGE_CODES.indexOf(code.toUpperCase()) !== -1 ? " journey-step--rail-" + ringCode : "";
+      document.getElementById("walk-leg").className = "catch-card__leg" + ringClass;
+      document.getElementById("walk-node").innerHTML = train ? TRAIN_SVG : BUS_TILE_SVG;
+      var lineBox = document.getElementById("walk-line");
+      lineBox.replaceChildren();
+      lineBox.appendChild(train ? lineBadge(code) : busBadge(selectedService || ""));
       renderWalkSensors();
       renderWalkMap();
     }
@@ -8625,6 +8676,9 @@
     }
 
     document.getElementById("walk-open").addEventListener("click", openWalkPage);
+    document.getElementById("walk-back").addEventListener("click", function () {
+      requestBack();  // the same Back as the page's own back row, which Page W replaces with this button beside the title
+    });
     document.getElementById("walk-recentre").addEventListener("click", function () {
       walkUserMoved = false;
       walkFitMap(true);
@@ -8670,6 +8724,9 @@
     var newJourneyFetchedAt = 0;
     var OPTIONS_VISIBLE = 6;
     var CHEVRON_SVG_SMALL = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    // Page C's time tiles reuse Page A's Leave by tile: the label above, the time large. The text of each tile stays the one
+    // locked line ("Leave by: {time}", "Reach destination by: {time}"), split into two spans.
+    var CLOCK_TILE_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var WARN_SVG_SMALL = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 4 3 20h18L12 4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M12 10v4M12 17h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var SHIELD_SVG = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 3l7 3v6c0 4.2-3 7.6-7 9-4-1.4-7-4.8-7-9V6l7-3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M9 12l2 2 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     // MIRROR: copy.js rerouteProposal (tag*, destination, leaveBy). Python names the tags; there are no reason sentences.
@@ -8811,41 +8868,81 @@
       var body = document.createElement("div");
       body.className = "option-card__copy";
       body.appendChild(optionHeading(row));
-      var destination = document.createElement("p");
-      destination.className = "option-card__destination";
-      destination.textContent = destinationText(row);
-      destination.hidden = !destination.textContent;
-      body.appendChild(destination);
-      var leave = document.createElement("p");
-      leave.className = "option-card__leave";
-      leave.textContent = row.leave_by ? fillText(LEAVE_BY_TEXT, { time: formatClock(row.leave_by, true) }) : "";
-      body.appendChild(leave);
       var aside = document.createElement("div");
       aside.className = "option-card__aside";
-      aside.appendChild(buildProbRing(row));
-      main.appendChild(body);
+      aside.appendChild(buildLargeRing(row));
       main.appendChild(aside);
+      main.appendChild(body);
       card.appendChild(main);
-      if (row.after_target) {
-        var warn = document.createElement("p");
-        warn.className = "alt-row__warn";
-        warn.insertAdjacentHTML("beforeend", WARN_SVG_SMALL);
-        var warnText = document.createElement("span");
-        warnText.textContent = AFTER_TARGET_TEXT;
-        warn.appendChild(warnText);
-        card.appendChild(warn);
+      // "Leave by" first (the one to act on), then "Reach destination by"; each hides when it has no time.
+      var leaveTime = row.leave_by ? formatClock(row.leave_by, true) : "";
+      if (leaveTime) {
+        card.appendChild(buildTimeTile(CLOCK_TILE_SVG, LEAVE_BY_TEXT, leaveTime, "option-card__leave", ""));
       }
+      var reachTime = destinationTime(row);
+      if (reachTime) {
+        card.appendChild(buildTimeTile(FLAG_SVG, DESTINATION_TEXT, reachTime, "option-card__destination", " leave-tile--reach"));
+      }
+      if (row.after_target) {
+        card.appendChild(buildAlert("warning", AFTER_TARGET_TEXT));
+      }
+      card.appendChild(buildSwitchButton(row));
       wrap.appendChild(card);
-      wrap.appendChild(buildSwitchButton(row));
       return wrap;
+    }
+
+    // A time tile: the icon, the label ("Leave by:") above and the large time. The line keeps the whole locked text.
+    function buildTimeTile(iconSvg, template, time, lineClass, extraClass) {
+      var tile = document.createElement("div");
+      tile.className = "leave-tile leave-tile--option" + extraClass;
+      var icon = document.createElement("span");
+      icon.className = "leave-tile__icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = iconSvg;
+      var copy = document.createElement("div");
+      var line = document.createElement("p");
+      line.className = "leave-tile__line " + lineClass;
+      var label = document.createElement("span");
+      label.className = "leave-tile__label";
+      label.textContent = template.split("{time}")[0].trim();
+      var value = document.createElement("span");
+      value.className = "leave-tile__value";
+      var nowrap = document.createElement("span");
+      nowrap.className = "leave-tile__nowrap";
+      var cut = time.indexOf(" (");
+      nowrap.textContent = cut === -1 ? time : time.slice(0, cut);
+      value.appendChild(nowrap);
+      if (cut !== -1) {
+        value.appendChild(document.createTextNode(time.slice(cut)));
+      }
+      line.appendChild(label);
+      line.appendChild(document.createTextNode(" "));
+      line.appendChild(value);
+      copy.appendChild(line);
+      tile.appendChild(icon);
+      tile.appendChild(copy);
+      return tile;
+    }
+
+    // The big ring of a recommended card: Page A's ring component at the left of the heading.
+    function buildLargeRing(chance) {
+      var ring = buildProbRing(chance);
+      ring.classList.remove("prob-ring--small");
+      ring.classList.add("prob-ring--large");
+      return ring;
     }
 
     // "Reach destination by: {time}" (12-hour Singapore time, "(tomorrow)" on the next day); nothing without an estimate.
     function destinationText(row) {
+      var time = destinationTime(row);
+      return time ? fillText(DESTINATION_TEXT, { time: time }) : "";
+    }
+
+    function destinationTime(row) {
       if (!row || !row.destination_arrival || !isFinite(new Date(row.destination_arrival).getTime())) {
         return "";
       }
-      return fillText(DESTINATION_TEXT, { time: formatClock(row.destination_arrival, true) });
+      return formatClock(row.destination_arrival, true);
     }
 
     function buildOptionRow(row) {
@@ -8869,6 +8966,7 @@
       body.className = "alt-row__body";
       var top = document.createElement("p");
       top.className = "alt-row__top journey-step__line";
+      top.appendChild(icon);
       var name = document.createElement("span");
       name.className = "alt-row__service";
       name.appendChild(rail ? lineBadge(row.line_code) : busBadge(row.service_no));
@@ -8884,8 +8982,8 @@
       odds.className = "alt-row__chance";
       odds.textContent = fillText(CHANCE_TEXT, row);
       top.appendChild(name);
-      top.appendChild(odds);
       body.appendChild(top);
+      body.appendChild(odds);
       var timing = document.createElement("p");
       timing.className = "alt-row__bottom";
       var arrives = document.createElement("span");
@@ -8897,7 +8995,13 @@
       if (reachText) {
         var reach = document.createElement("span");
         reach.className = "alt-row__reach";
-        reach.textContent = reachText;
+        // the locked line whole, with the time itself set bolder
+        var reachTimeText = destinationTime(row);
+        reach.appendChild(document.createTextNode(reachText.slice(0, reachText.length - reachTimeText.length)));
+        var reachBold = document.createElement("b");
+        reachBold.className = "alt-row__reach-time";
+        reachBold.textContent = reachTimeText;
+        reach.appendChild(reachBold);
         timing.appendChild(reach);
       }
       body.appendChild(timing);
@@ -8907,29 +9011,23 @@
         ? AT_YOUR_STOP_TEXT
         : fillText(WALK_TO_TEXT, { stop: displayStopName(row.stop_name), distance: typeof row.distance_m === "number" ? formatDistance(row.distance_m) : "" });
       body.appendChild(walk);
-      [[row.unlikely, PACE_TEXT.unlikely.title], [row.after_target, AFTER_TARGET_TEXT]].forEach(function (pair) {
-        if (!pair[0]) {
-          return;
-        }
-        var warn = document.createElement("p");
-        warn.className = "alt-row__warn";
-        warn.insertAdjacentHTML("beforeend", WARN_SVG_SMALL);
-        var warnText = document.createElement("span");
-        warnText.textContent = pair[1];
-        warn.appendChild(warnText);
-        body.appendChild(warn);
-      });
       var chevron = document.createElement("span");
       chevron.className = "alt-row__chevron";
       chevron.setAttribute("aria-hidden", "true");
       chevron.innerHTML = CHEVRON_SVG_SMALL;
-      hit.appendChild(icon);
+      hit.appendChild(buildProbRing(row));
       hit.appendChild(body);
       hit.appendChild(chevron);
       hit.addEventListener("click", function () {
         openNewJourney(row);
       });
       item.appendChild(hit);
+      // The two warnings are alerts, the full width of the row under the button.
+      [[row.unlikely, PACE_TEXT.unlikely.title], [row.after_target, AFTER_TARGET_TEXT]].forEach(function (pair) {
+        if (pair[0]) {
+          item.appendChild(buildAlert("warning", pair[1], { className: "alt-row__alert" }));
+        }
+      });
       return item;
     }
 
@@ -8939,8 +9037,6 @@
     var pageCSerial = 0;
     var lastPageCRefreshAt = 0;
     var entryPending = false;
-    var UNLIKELY_BANNER_TITLE = "You're unlikely to catch the Bus {service} arriving in {minutes}";
-    var SEE_OTHER_BUSES_TEXT = "See other buses";
     var OTHER_BUSES_HEADING = "Other buses at your stop";
     var ALTERNATIVES_HEADING = "Alternative options";
     var UPDATED_TEXT = "Updated {time}";
@@ -9146,7 +9242,7 @@
       pageCSerial += 1;
       pageC = { entry: entry, loading: true, options: null, failed: false, missedEpoch: missedEpoch === undefined ? null : missedEpoch, fetchedAt: Date.now() };
       rerouteProposal = null;
-      document.getElementById("page-c-none").textContent = "";
+      setAlertText(document.getElementById("page-c-none"), "");
       renderPageC();
       syncPageCClasses();
       syncAlertSlot();
@@ -9238,8 +9334,7 @@
       var emptyMiss = noOptionsState() === "missed";
       var noticeText = emptyMiss ? NO_OTHER_OPTIONS : rerouteNotice;
       var showNotice = !!pageC && pageC.entry === "missed" && !!noticeText;
-      notice.textContent = showNotice ? noticeText : "";
-      notice.hidden = !showNotice;
+      setAlertText(notice, showNotice ? noticeText : "");
       var rideCard = document.getElementById("pc-ride-apps");
       var rideLine = document.getElementById("pc-ride-apps-distance");
       var rideText = emptyMiss ? rideDistanceText() : "";
@@ -9259,7 +9354,7 @@
         list.hidden = true;
         more.hidden = true;
         head.hidden = !pageC || (loading && !options);
-        none.textContent = pageC && pageC.failed ? OPTIONS_FAILED_TEXT : "";
+        setAlertText(none, pageC && pageC.failed ? OPTIONS_FAILED_TEXT : "");
         heading.textContent = ALTERNATIVES_HEADING;
         syncPageCWarning();
         syncPageCRefresh();
@@ -9284,7 +9379,7 @@
       more.hidden = rows.length <= OPTIONS_VISIBLE;
       more.textContent = more.getAttribute("aria-expanded") === "true" ? "Show fewer" : "Show more";
       // The unlikely entry never shows the none sentence: its banner changes instead (syncPageCWarning).
-      none.textContent = "";
+      setAlertText(none, "");
       syncPageCWarning();
       syncPageCRefresh();
       updatePageCUpdated();
@@ -9328,12 +9423,11 @@
       return found ? "" : (pageC.entry === "missed" ? "missed" : "unlikely");
     }
 
-    // The unlikely entry's banner: "Catching this bus is unlikely." once the search found nothing, else with
-    // "Here are your other options." (also while loading or after a failure).
+    // The unlikely entry's banner: "Catching this bus is unlikely." (the same words as Page A's compact banner).
     function syncPageCWarning() {
       var text = document.getElementById("pc-warn-text");
       if (text) {
-        text.textContent = noOptionsState() === "unlikely" ? CURRENT_WARNING_NONE_TEXT : CURRENT_WARNING_TEXT;
+        text.textContent = CURRENT_WARNING_TEXT;
       }
     }
 
@@ -9345,34 +9439,12 @@
       }
       var show = !entryPending && !pageC && !missedMode && !displayFrozen && isUnlikely(hero) && !!selectedService && !isTrain();
       if (show) {
-        document.getElementById("unlikely-banner-title").textContent = fillText(UNLIKELY_BANNER_TITLE, {
-          service: selectedService,
-          minutes: hero.arrival_time ? arrivalMinutes(hero.arrival_time) : ""
-        });
-        document.getElementById("unlikely-banner-line").textContent = probabilityText(hero.probability);
+        document.getElementById("unlikely-banner-title").textContent = CURRENT_WARNING_TEXT;
       }
       if (banner.hidden === show) {
         banner.hidden = !show;
         syncAlertSlot();
       }
-    }
-
-    function openPageCFromBanner() {
-      if (entryPending || missedMode) {
-        return;
-      }
-      var wasPageB = screenStack[screenStack.length - 1] === "arrivals";
-      openPageC("unlikely");
-      if (wasPageB) {
-        try {
-          history.back();
-        } catch (error) {
-          screenStack.pop();
-          applyScreen(screenStack[screenStack.length - 1] || "live");
-          syncBackRow();
-        }
-      }
-      window.scrollTo(0, 0);
     }
 
     function clearRerouteProposal() {
@@ -9450,9 +9522,10 @@
     var NEW_JOURNEY_REASON = "Switching because your current bus is unlikely to be caught.";
     var BUS_LEFT_NOTICE = "Bus {service} has left. Here are your other options.";
     var NO_OTHER_OPTIONS = "No other buses or routes are available right now.";
-    // MIRROR: copy.js rerouteProposal.currentWarning and currentWarningNone
-    var CURRENT_WARNING_TEXT = "Catching this bus is unlikely. Here are your other options.";
-    var CURRENT_WARNING_NONE_TEXT = "Catching this bus is unlikely.";
+    // MIRROR: copy.js rerouteProposal.currentWarning
+    var CURRENT_WARNING_TEXT = "Catching this bus is unlikely.";
+    var SEE_ARRIVALS_TEXT = "See arrival times";  // MIRROR: copy.js catchPrompt.seeArrivals (Page W's button)
+    var SEE_BUS_ARRIVALS_TEXT = "See bus arrival times";  // MIRROR: copy.js catchPrompt, the bus button key (Page A and Page C)
     var BUS_ALREADY_LEFT = "That bus has already left. Choose another option.";
     var OPTIONS_CACHE_MAX_AGE_MS = 20000;
 
@@ -9537,8 +9610,7 @@
       leaveNewJourneyScreen();
       if (pageC) {
         var notice = document.getElementById("reroute-notice");
-        notice.textContent = rerouteNotice;
-        notice.hidden = false;
+        setAlertText(notice, rerouteNotice);
       }
     }
 
@@ -9626,7 +9698,7 @@
 
     // Page B shows the "Did you catch the bus?" bar while polling runs and the tracked bus has a known arrival time
     // (live, or the last known time while stale or unavailable). No-service, or unavailable with no time, hides it.
-    // Page A shows "See bus arrival times" while polling runs. Both hide once tracking has stopped.
+    // Page A shows "See arrival times" while polling runs. Both hide once tracking has stopped.
     function syncCatchBar() {
       // set from the tracked first leg on every sync, not only when its kind flips, so no path can leave the other kind
       document.getElementById("catch-bar-title").textContent = isTrain() ? TRAIN_PAGE.question : CATCH_QUESTION_BUS;
@@ -9637,6 +9709,10 @@
       var showArrivals = running && (document.body.classList.contains("is-page-a") || document.body.classList.contains("is-page-w"));
       question.hidden = !showQuestion;
       arrivals.hidden = !showArrivals;
+      // The two bottom buttons: Page A's bus first leg has both; a train has only "See train times"; Page W's button says "See arrival times"
+      var onWalk = document.body.classList.contains("is-page-w");
+      document.querySelector("#see-arrivals span").textContent = isTrain() ? TRAIN_PAGE.seeTimes : (onWalk ? SEE_ARRIVALS_TEXT : SEE_BUS_ARRIVALS_TEXT);
+      document.getElementById("other-bus-actions").hidden = isTrain() || !document.body.classList.contains("is-page-a");
       document.body.classList.toggle("has-catch-bar", showQuestion || showArrivals);
     }
 
@@ -9675,7 +9751,6 @@
     var paceEstimator = window.WalkSpeed && window.WalkSpeed.createEstimator
       ? window.WalkSpeed.createEstimator({
         onFix: onEstimatorFix,
-        onStatus: renderMotionNote,
         debugContext: function () {
           return { demo: demoModeOn(), serverAge: debugServerAge(), phoneAge: debugPhoneAge() };
         }
@@ -9688,50 +9763,6 @@
     var serverWalkSpeed = 1.25;
     var serverWalkSource = "default";
     var WALK_SOURCES = ["gps", "cadence", "remembered", "default"];
-    var PACE_LINES = {
-      gps: "Walking pace: {kmh} km/h · from GPS",
-      cadence: "Walking pace: {kmh} km/h · from your steps",
-      remembered: "Walking pace: {kmh} km/h · your usual pace",
-      "default": "Walking pace: {kmh} km/h · normal pace"
-    };
-    var MOTION_PRIVACY_TEXT = "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before.";
-    var MOTION_OFF_TEXT = "Motion sensor is off, so your steps are not used.";
-
-    // The pace line comes from the latest poll's walk_speed_used and walk_speed_source (the server's values), never from
-    // the estimator's own number. 1.25 m/s shows as 4.5 km/h. Page A's card has no caption above it.
-    function catchWalkPace() {
-      var used = lastSuccess && typeof lastSuccess.walk_speed_used === "number" && isFinite(lastSuccess.walk_speed_used)
-        ? lastSuccess.walk_speed_used : null;
-      var source = lastSuccess && WALK_SOURCES.indexOf(lastSuccess.walk_speed_source) !== -1 ? lastSuccess.walk_speed_source : "default";
-      if (used === null || (lastSuccess && WALK_SOURCES.indexOf(lastSuccess.walk_speed_source) === -1)) {
-        used = 1.25;
-        source = "default";
-      }
-      return { line: PACE_LINES[source].replace("{kmh}", (used * 3.6).toFixed(1)) };
-    }
-
-    // Above "Start journey": the privacy line, or the sensor-off line when there is no motion sensor or it was denied.
-    function motionUnavailable() {
-      if (!paceEstimator || !paceEstimator.motionSupported()) {
-        return true;
-      }
-      var status = paceEstimator.status();
-      return status.motion === "off" || status.permission === "denied" || status.permission === "unavailable";
-    }
-
-    function renderMotionNote() {
-      if (!paceEstimator) {
-        return;
-      }
-      var text = demoModeOn() ? "" : motionUnavailable() ? MOTION_OFF_TEXT : MOTION_PRIVACY_TEXT;
-      ["overview-motion-note", "new-journey-motion-note"].forEach(function (id) {
-        var note = document.getElementById(id);
-        if (note) {
-          note.textContent = text;
-        }
-      });
-    }
-
     function walkSpeedQuery() {
       return paceEstimator && !demoModeOn() ? paceEstimator.queryString() : "";
     }
@@ -10387,7 +10418,13 @@
       pushScreen("arrivals");
       window.scrollTo(0, 0);
     });
-    document.getElementById("unlikely-see").addEventListener("click", openPageCFromBanner);
+    // "Other bus options" does what "No, I missed it" does: the same function, so the same Page C ("missed" entry), the same data
+    document.getElementById("other-bus-options").addEventListener("click", function () {
+      if (isTrain() || entryPending || missedMode) {
+        return;
+      }
+      answerMissed();
+    });
     document.getElementById("reroute-refresh").addEventListener("click", refreshPageC);
     document.getElementById("pc-see-arrivals").addEventListener("click", function () {
       pushScreen("arrivals");

@@ -10,15 +10,9 @@ COPY = STATIC / "copy.js"
 CSS = STATIC / "components.css"
 
 STALE_HEADING = "LTA data is stale"
-STALE_BODY = (
-    "Due to stale data, we cannot give a catch probability or recommend leaving now. "
-    "Please wait for live data or try again later."
-)
-UNAVAILABLE = "No live arrival data available. No previous successful update."
-LOCATION_BODY = (
-    "Your GPS accuracy is {accuracy}. We'll show a wider range for the catch "
-    'probability and won\'t suggest "leave now" from this fix.'
-)
+STALE_BODY = "Stale data: no catch chance or leave advice until live data returns."
+UNAVAILABLE = "No live arrival data. No earlier update."
+LOCATION_BODY = "GPS accuracy is {accuracy}. The range is wider and we won't suggest leaving now."
 
 
 def _page() -> str:
@@ -39,10 +33,10 @@ def _slot() -> str:
 def test_leave_now_banner_mirrors_the_notification_card():
     html = _page()
     banner = _between(html, 'id="leave-now-banner"', "</section>")
-    for needle in ("bus-tile--small", "Beat the Bus and MRT", "now", 'id="leave-now-title"', 'id="leave-now-body"',
+    for needle in ("alert__icon", "Just-In-Time", "now", 'id="leave-now-title"', 'id="leave-now-body"',
                    'id="leave-now-details"', "View details", 'id="leave-now-dismiss"', "Dismiss"):
         assert needle in banner, needle
-    assert banner.index("leave-now-banner__head") < banner.index('id="leave-now-title"') < banner.index('id="leave-now-body"')
+    assert banner.index("alert__meta") < banner.index('id="leave-now-title"') < banner.index('id="leave-now-body"')
     assert banner.index('id="leave-now-details"') < banner.index('id="leave-now-dismiss"')
     assert 'class="primary"' in banner and 'class="secondary"' in banner
     tag = html.split('id="leave-now-banner"', 1)[1].split(">", 1)[0]
@@ -147,7 +141,7 @@ def test_stale_layout_hides_the_live_cards_and_shows_the_status_card():
         assert target in block
     assert "#live-tracking" not in block
     status = _between(html, 'id="stale-status"', "</section>")
-    for needle in ("bus-tile--hero", 'id="stale-bus-title"', "pill pill--schedule", 'id="stale-arriving"', "info-box", STALE_BODY):
+    for needle in ("bus-tile--hero", 'id="stale-bus-title"', "pill pill--schedule", 'id="stale-arriving"', "alert alert--info", STALE_BODY):
         assert needle in status, needle
     assert "%" not in status
     sync = _between(html, "function syncQuality()", "function activePlannedLeg")
@@ -173,7 +167,7 @@ def test_stale_counter_and_announcement():
     html = _page()
     banner = _between(html, 'id="quality-banner"', 'id="stale-status"')
     assert '<time id="quality-banner-time"' in banner
-    assert 'id="quality-banner-updated" class="alert-row__meta" aria-live="off"' in banner
+    assert 'id="quality-banner-updated" class="alert__meta" aria-live="off"' in banner
     assert "role=" not in html.split('id="quality-banner"', 1)[1].split(">", 1)[0]
     assert 'id="quality-announce" class="visually-hidden" aria-live="polite"' in html
     sync = _between(html, "function syncQuality()", "function activePlannedLeg")
@@ -205,7 +199,7 @@ def test_location_card_stacks_with_stale_and_uses_the_formatter():
     assert 'LOCATION_BODY.replace("{accuracy}", metres)' in sync
     assert 'LOCATION_AGE_BODY.replace("{seconds}", chance.location_age_s)' in sync
     card = html.split('id="location-card"', 1)[1].split(">", 1)[0]
-    assert "card--caution" in card
+    assert "alert--warning" in card
     rule = _between(html, "function locationCardApplies()", "function syncQuality")
     assert 'chance.data_quality === "location uncertain"' in rule
     assert 'chance.location_reason === "accuracy" || chance.location_reason === "age"' in rule  # neither: no card
@@ -216,10 +210,10 @@ def test_quality_strings_are_approved_and_match_copy():
     html = _page()
     copy = COPY.read_text(encoding="utf-8")
     for text in (STALE_HEADING, STALE_BODY, "Last update: {time}", "Arriving in {minutes} min (estimated)", UNAVAILABLE,
-                 "Location uncertain", "Your GPS accuracy is {accuracy}."):
+                 "Location uncertain", "GPS accuracy is {accuracy}."):
         assert text in html, text
         assert text in copy, text
-    assert LOCATION_BODY.replace('"', '\\"') in copy
+    assert LOCATION_BODY in copy
     tail = copy.split("quality: {", 1)[1]
     tail = tail.replace("/* proposed, needs approval */\n      ageBody", "ageBody")  # the age reason is the one new proposed string
     assert "proposed" not in tail.lower()

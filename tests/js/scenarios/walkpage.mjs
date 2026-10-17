@@ -31,8 +31,9 @@ export default async function (h) {
   await poll(h);
   const stopLat = h.config.lat, stopLon = h.config.lon;
   const north = h.config.userNorth;
-  out.pageA = await h.eval(`({ row: document.getElementById("walk-open").textContent, sub: document.getElementById("catch-pace-line").textContent,
-    hasCaption: !!document.getElementById("catch-caption"), top: screenStack[screenStack.length - 1], cardLines: document.getElementById("arrival-card").querySelectorAll("p#catch-pace-line").length })`);
+  out.pageA = await h.eval(`({ row: document.getElementById("walk-open").textContent.trim().replace(/\s+/g, " "),
+    hasPaceLine: !!document.getElementById("catch-pace-line"),
+    hasCaption: !!document.getElementById("catch-caption"), top: screenStack[screenStack.length - 1] })`);
   out.requestsBefore = await h.eval("__requests.length");
 
   // A to W
@@ -182,6 +183,6 @@ export default async function (h) {
   out.afterEnd = await h.eval("({ own: walkWatchId !== null, timer: walkRescoreTimer !== null, watching: __geo.watching() })");
 
   out.requestsAll = await h.eval("__requests.slice()");
-  out.storageKeys = await h.eval("Object.keys(localStorage).filter(function (k) { return k !== 'bus-catch-first-run-v1'; })");
+  out.storageKeys = await h.eval("Object.keys(localStorage).filter(function (k) { return k !== 'bus-catch-first-run-v2'; })");
   return out;
 }

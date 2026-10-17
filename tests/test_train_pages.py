@@ -184,13 +184,13 @@ def test_page_a_for_a_train(missed_light):
     a = missed_light["pageA"]
     assert a["isTrain"] is True and a["service"] == "NS" and a["top"] == "live"
     assert a["title"] == "Chance to catch the North-South Line train"
-    assert a["pill"] == "schedule only" and a["notLive"] is False and a["hasSub"] is False and a["hasCaption"] is False
+    assert a["pill"] == "schedule only" and a["notLive"] is False and a["hasSub"] is True and a["hasCaption"] is False
     assert a["hero"]["monitored"] is False and a["hero"]["quality"] == "schedule" and a["hero"]["atStop"] is False
     assert a["hero"]["point"] <= 60 and a["hero"]["high"] <= 60  # the schedule cap
     assert a["ring"] == f"{a['hero']['point']}%"
-    # top down: the line badge and name, the direction (loop lines only), "To {terminus}" (platform when known), the
-    # clock time, the pill. No "Scheduled · In n min".
-    assert a["line"] == "NS North-South Line" and a["direction"] is None
+    # Layout B, top down: the line badge, "To {terminus}", the muted line (the line's name, the loop direction on a loop
+    # line, the platform when known), the clock time, the pill. No "Scheduled · In n min".
+    assert a["line"] == "NS" and a["direction"] is None and a["sub"].startswith("North-South Line")
     assert a["to"].startswith("To Marina South Pier"), a["to"]
     assert a["when"] is None and "Scheduled \u00b7" not in a["cardText"] and "Arriving in" not in a["cardText"]
     assert "journey-step--rail-ns" in a["legClass"] and a["nodeRing"] != "none"
@@ -203,6 +203,7 @@ def test_page_a_for_a_train(missed_light):
     assert abs(geo["tile"]["w"] - geo["tiles"]["w"]) < 1.5  # Leave by is the full width
     assert a["hasLabel"] is False and re.fullmatch(r"\d{1,2}:\d{2}" + NB + "[AP]M( [(]tomorrow[)])?", a["arrives"])
     assert a["bar"] == "See train times" and a["catchBar"] is False
+    assert a["otherShown"] is False  # a train has only See train times: no Other bus options
     assert a["missRow"] is False and a["aiBadge"] is False and a["tileNote"] is False
     assert "The North-South Line train is scheduled in " in a["ai"] and "Live train times are not available." in a["ai"]
     assert "Leave by" in a["ai"] and "catch the train departing at" in a["ai"] and "bus" not in a["ai"].lower()
@@ -220,7 +221,7 @@ def test_page_w_for_a_train_and_arrived_reads_station(missed_light):
     assert w["distance"].endswith(NB + "m to the station") and w["heading"] == "Chance to catch the North-South Line train"
     assert w["arrives"].startswith("Train departs") and w["barText"] == "See train times"
     assert w["marker"] and w["marker"]["label"].startswith("Bishan MRT Station") and "NS17" in w["marker"]["label"]
-    assert w["state"] != "Arrived at the stop"
+    assert w["state"] != "Arrived"
     assert arrived["state"] == "Arrived at the station"
 
 
@@ -304,8 +305,8 @@ def test_a_bus_first_journey_keeps_every_bus_word_and_request(bus_first):
     assert a["pill"] in ("live", "schedule only") and a["notLive"] is False and a["hasLabel"] is False
     assert a["line"].startswith("18 ") or a["line"].startswith("Bus 18") or "18" in a["line"]
     assert a["tileDepartsLabel"] is None and a["tileLeaveLabel"] == "Leave by"
-    assert a["bar"] == "See bus arrival times"
-    assert w["title"] == "Walk to your stop" and w["distance"].endswith(NB + "m to the stop")
+    assert a["bar"] == "See bus arrival times" and a["otherShown"] is True
+    assert w["title"] == "Walk to your stop" and w["distance"].endswith(NB + "m to go")
     assert "Bus 18" in b["title"] and "line-badge--bus" in b["badge"]["cls"] and b["label"] in (None, "Next 3 buses")
     assert b["question"] == "Did you catch the bus?" and b["to"].startswith("To ")
     assert b["cells"]["live"] is None and b["then"] is None
@@ -318,14 +319,14 @@ def test_a_bus_first_journey_keeps_every_bus_word_and_request(bus_first):
 def test_a_loop_line_shows_the_direction_row_and_a_straight_line_shows_none(missed_light):
     heads = missed_light["headings"]
     clockwise = heads["clockwise"]
-    assert clockwise["line"] == "CC Circle Line" and clockwise["direction"] == "Clockwise"
-    assert clockwise["to"] == "To HarbourFront Platform A" and clockwise["platform"] == "Platform A"
+    assert clockwise["line"] == "CC" and clockwise["sub"] == "Circle Line · Clockwise · Platform A"
+    assert clockwise["to"] == "To HarbourFront"
     assert re.fullmatch(r"\d{1,2}:\d{2} [AP]M( [(]tomorrow[)])?", clockwise["arrives"]), clockwise  # the clock time
     assert clockwise["pill"] == "schedule only" and clockwise["load"] is None  # a train has no crowding label
     anti = heads["anticlockwise"]
-    assert anti["direction"] == "Anticlockwise" and anti["to"] == "To HarbourFront" and anti["platform"] is None
+    assert anti["sub"] == "Circle Line · Anticlockwise" and anti["to"] == "To HarbourFront"
     straight = heads["straight"]
-    assert straight["direction"] is None and straight["to"] == "To Jurong East Platform B"
+    assert straight["sub"] == "Circle Line · Platform B" and straight["to"] == "To Jurong East"
 
 
 def test_a_bus_shows_the_destination_stop_and_falls_back_to_the_terminus(bus_first):

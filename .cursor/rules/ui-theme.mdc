@@ -1,5 +1,5 @@
 ---
-description: UI theme and copy rules for Beat the Bus and MRT
+description: UI theme and copy rules for Just-In-Time
 alwaysApply: true
 ---
 
@@ -10,3 +10,4 @@ alwaysApply: true
 - User-facing strings come from `static/copy.js`. Copy them character for character from PROJECT_PLAN.md.
 - Reuse the components in `static/components.css` before adding a new component.
 - Never change guardrail copy without updating PROJECT_PLAN.md.
+- Every warning, error, info, success, neutral or simulated message is the one `.alert` component (`static/alert.js` draws its icon). Do not add another banner, notice or message class; compact label tags (pills, badges, tags) are not alerts.

@@ -242,5 +242,8 @@ def test_the_style_guide_shows_the_select_in_every_state():
 
 def test_the_select_css_uses_tokens_only_and_is_44_px():
     block = CSS.split(".priority-select {", 1)[1].split("}", 1)[0]
-    assert "min-height: var(--tap-min);" in block and "var(--color-line-strong)" in block
+    assert "min-height: var(--tap-min);" in block and "block-size: 3rem;" in block  # 48 px, fixed, so nothing shifts
+    assert "border: 2px solid var(--color-selected-outline);" in block and "appearance: none;" in block
+    assert "font-size: var(--type-body);" in block and "font-weight: 700;" in block and "font-family: inherit;" in block
+    assert "priority-select-wrap__chevron" in CSS and 'priority-select-wrap__chevron' in INDEX and "SG_CHEVRON_DOWN" in GUIDE
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(", CSS.split("The priority is a native select", 1)[1].split("/* Style guide: the route lines", 1)[0])

@@ -28,7 +28,7 @@ FASTEST_ROUTE = "Fastest Route"
 FEWEST_TRANSFERS = "Fewest Transfers"
 ALTERNATIVE_ROUTE = "Alternative Route"
 NO_FEASIBLE_ROUTE = "no_feasible_route"
-NO_FEASIBLE_MESSAGE = "No direct or 1-transfer bus connection available for this trip."
+NO_FEASIBLE_MESSAGE = "No direct or 1-transfer route for this trip."
 
 
 def reroute_enabled(route_type: str | None, leg_index: int | None, leg_kind: str | None = None) -> bool:

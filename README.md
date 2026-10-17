@@ -1,6 +1,6 @@
 # ai-transit-assistant
 
-Beat the Bus and MRT, a Singapore bus and MRT assistant for the AI Lodge Hackathon. The app is meant to help someone decide whether they can catch a bus and when to leave.
+Just-In-Time, a Singapore bus and MRT assistant for the AI Lodge Hackathon. The app is meant to help someone decide whether they can catch a bus and when to leave.
 
 This repository is being built one step at a time. The page asks for your location, shows nearby boarding stops, and can monitor live arrivals for one stop and one service. When your location is available, each bus card also shows a catch probability computed in Python. You can also search for a destination place, choose a destination bus stop, and see a journey form with ride time, an arrive-by check, and a leave-by clock. While that journey is open, the page can send a leave-now browser notification. An AI Explanation card states the numbers Python already computed.
 
@@ -41,7 +41,7 @@ With the virtual environment activated:
 uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser. You should see the Beat the Bus and MRT home page.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser. You should see the Just-In-Time home page.
 
 On startup the server looks for `cache/bus_stops.json`, `cache/bus_routes.json`, and `cache/bus_services.json`.
 
@@ -61,7 +61,7 @@ The map uses Leaflet and OpenStreetMap. Distances are straight-line, not a walki
 
 ## Multi-leg journey
 
-After a boarding stop is selected and a destination stop is confirmed, the page asks `/api/route-plan` for a bus route that starts at that boarding stop. The planner uses the cached stops, routes, and service frequencies. It does not call OneMap, OpenAI, or live arrivals. A direct route is one service from that stop to the confirmed destination stop. A one-transfer route changes to a second service at the same stop code. The chosen route is the lowest estimated journey time. A transfer adds a 10-minute ranking penalty and does not add a measured wait to leave-by or arrive-by. The catch chance, leave-by time, notification, and explanation describe only the leg in progress. The second bus stays a future leg, with no catch percentage, until you press `Start Next Leg`. That button is the only way the second leg becomes active. It clears the previous leg's reroute clock, pinned bus, notification memory, and explanation baseline, then the existing arrival poll scores the transfer stop and the second service. A one-transfer trip shows `Arrive-by check: N/A`. Automatic reroute stays off during that first leg and can run again on the second leg. If no direct or one-transfer connection exists, the page says: No direct or 1-transfer bus connection available for this trip. If a connection exists but its route distance cannot be timed, the page says: Route found, but travel time could not be estimated.
+After a boarding stop is selected and a destination stop is confirmed, the page asks `/api/route-plan` for a bus route that starts at that boarding stop. The planner uses the cached stops, routes, and service frequencies. It does not call OneMap, OpenAI, or live arrivals. A direct route is one service from that stop to the confirmed destination stop. A one-transfer route changes to a second service at the same stop code. The chosen route is the lowest estimated journey time. A transfer adds a 10-minute ranking penalty and does not add a measured wait to leave-by or arrive-by. The catch chance, leave-by time, notification, and explanation describe only the leg in progress. The second bus stays a future leg, with no catch percentage, until you press `Start Next Leg`. That button is the only way the second leg becomes active. It clears the previous leg's reroute clock, pinned bus, notification memory, and explanation baseline, then the existing arrival poll scores the transfer stop and the second service. A one-transfer trip shows `Arrive-by check: N/A`. Automatic reroute stays off during that first leg and can run again on the second leg. If no direct or one-transfer connection exists, the page says: No direct or 1-transfer route for this trip. If a connection exists but its route distance cannot be timed, the page says: Route found, but travel time could not be estimated.
 
 `/api/journey-plan` and `/api/route-plan` also take an optional `priority` (`fastest`, `fewest_transfers`, `least_walking`, `bus_only` or `mrt_only`). With it the planner (`pt_plan.py`) asks OneMap public transport routing for bus, MRT and LRT itineraries, checks every leg against its first and last service, and ranks the rest; the answer keeps every old field and adds `planner`, `priority`, `fallback_note`, `itinerary` and `itineraries`. Only a stop or station coordinate and the destination are sent to OneMap, never the user's position. If OneMap cannot be used the static planner above answers and `fallback_note` is true. The page always sends `priority`; without it the endpoints behave as before.
 

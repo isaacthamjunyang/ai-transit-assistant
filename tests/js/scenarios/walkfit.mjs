@@ -91,6 +91,8 @@ export default async function (h) {
   await h.eval("walkFitState = { done: false, distance: null }; renderWalkPage(); true");
 
   // a real drag (trusted pointer events) sets the flag, and later fixes do not refit
+  await h.eval("mapElement.scrollIntoView({ block: 'center' }); true");  // Page W's map sits under two cards now
+  await h.sleep(200);
   const rect = await h.eval("(function () { var r = mapElement.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()");
   const [cx, cy] = rect;
   await h.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: cx, y: cy });

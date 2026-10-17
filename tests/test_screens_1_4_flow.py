@@ -40,8 +40,8 @@ def test_incomplete_form_shows_messages_and_does_not_search():
     for text in ("Enter a destination to continue.", "Choose when you need to arrive, or select No target."):
         assert text in html
         assert text in COPY.read_text(encoding="utf-8")
-    assert '<p id="destination-required" class="field-help home-only" aria-live="polite">' in html
-    assert '<p id="arrive-required" class="field-help" aria-live="polite">' in html
+    assert '<div id="destination-required" class="alert alert--error home-only" aria-live="polite" hidden>' in html
+    assert '<div id="arrive-required" class="alert alert--error" aria-live="polite" hidden>' in html
     assert html.count('aria-live="polite"') >= 2
     assert '<span id="arrive-required-tag" class="required-tag">Required</span>' in html
 
@@ -53,7 +53,7 @@ def test_no_target_counts_but_an_untouched_field_or_past_custom_time_does_not():
     assert "arriveByPicked = true" in apply
     none = _between(html, 'getElementById("arrive-none").addEventListener("click"', "});")
     assert 'applyArriveValue("", "arrive-none")' in none
-    edit = _between(html, "function onArriveCustomEdit()", "arriveTimeInput.addEventListener")
+    edit = _between(html, "function onArriveCustomEdit(closeWhenValid)", "arriveTimeInput.addEventListener")
     assert edit.index("arriveCustomResult()") < edit.index("arriveByPicked = result.problem === null")  # a past time is not picked
     custom = _between(html, 'getElementById("arrive-custom").addEventListener("click"', "});")
     assert "onArriveCustomEdit()" in custom
@@ -61,7 +61,7 @@ def test_no_target_counts_but_an_untouched_field_or_past_custom_time_does_not():
 
 def test_header_button_resets_the_journey_and_keeps_the_fields():
     html = _page()
-    assert '<button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Beat the Bus and MRT, go to home"' in html
+    assert '<button type="button" class="app-header__brand app-header__home" id="home-button" aria-label="Just-In-Time, go to home"' in html
     exit_fn = _between(html, "function exitJourney(keepFields)", "function goHome()")
     assert "if (!keepFields) {\n        arriveByInput.value = \"\";" in exit_fn
     assert "if (!keepFields) {\n        destinationInput.value = \"\";" in exit_fn
@@ -92,8 +92,8 @@ def test_row_and_marker_taps_select_only_and_the_footer_opens_screen_four():
     assert "openDestinationConfirm" not in row and "openDestinationConfirm" not in marker
     assert "scrollIntoView" in marker
     footer = _between(html, 'class="dest-sheet__footer"', "</div>")
-    assert 'id="select-destination-stop" class="primary primary--icon" disabled' in footer
-    assert "Select destination stop" in footer
+    assert 'id="select-destination-stop" class="primary primary--icon pulse-button" disabled' in footer
+    assert "Select stop" in footer
     select = _between(html, "function selectDestinationStop(stop)", "function chooseDestinationStop")
     assert 'getElementById("select-destination-stop").disabled = false' in select
     clear = _between(html, "function clearDestinationStops()", "function clearDestinationSelection")
@@ -115,11 +115,11 @@ def test_arrive_by_display_strings():
     html = _page()
     copy = COPY.read_text(encoding="utf-8")
     labels = _between(html, "var ARRIVE_LABELS = {", "};")
-    for chip, text in (("arrive-none", "No target"), ("arrive-30", "In 30 min"), ("arrive-60", "In 1 hour"), ("arrive-custom", "Custom")):
+    for chip, text in (("arrive-none", "No target"), ("arrive-30", "In 30 min"), ("arrive-60", "In 1 hour"), ("arrive-90", "In 1 hr 30 min"), ("arrive-custom", "Custom")):
         assert '"%s": "%s"' % (chip, text) in labels
     summary = _between(html, "function syncArriveBySummary()", "function renderJourney")
+    assert 'var clock = formatArriveByClock(arriveByInput.value);' in summary and 'time.textContent = " · " + clock.replace(" (tomorrow)", " (Tomorrow)");' in summary
     assert 'display.textContent = arriveByChoice === "arrive-custom" ? ARRIVE_LABELS["arrive-custom"] : "Select time"' in summary
-    assert '" · " + formatArriveByClock(arriveByInput.value)' in summary
     assert 'arriveByChoice !== "arrive-none"' in summary
     assert "select-field__time" in summary
     assert 'displayTime: "{label} · {time}"' in copy

@@ -23,7 +23,7 @@ def report(tmp_path_factory):
 def test_60_m_away_is_the_normal_formula(report):
     far = report["far"]
     assert far["atStop"] is False and far["packAtStop"] is False
-    assert far["tile"] != "At the stop" and "You are at the stop" not in far["card"]
+    assert far["tile"] != "At the stop" and "You're here" not in far["card"]
 
 
 def test_at_the_stop_the_ring_the_tile_the_card_and_the_aria_say_so(report):
@@ -32,7 +32,7 @@ def test_at_the_stop_the_ring_the_tile_the_card_and_the_aria_say_so(report):
     assert "97" in view["ring"] and "about 97 percent" in view["aria"].replace(NB, " ")
     assert view["tile"] == "At the stop"
     assert view["detail"] == "" and view["detailHidden"] is True  # no subline under "At the stop"
-    assert view["card"] == f"You are at the stop. You have {view['e']} minutes to wait."
+    assert view["card"] == f"You're here. {view['e']} minutes to wait."
     assert view["cautionHidden"] is True  # the location-uncertain line cannot appear with a good fix
     assert view["chip"] == ""  # no pace chip (hidden inside 30 m)
     assert view["banner"] is True  # no Leave now banner
@@ -50,13 +50,13 @@ def test_the_pace_chip_is_hidden_inside_30_m_and_comes_back_after_each_way_out(r
 
 def test_a_poor_fix_does_not_use_the_rule(report):
     view = report["poorFix"]
-    assert view["atStop"] is False and view["tile"] != "At the stop" and "You are at the stop" not in view["card"]
+    assert view["atStop"] is False and view["tile"] != "At the stop" and "You're here" not in view["card"]
 
 
 def test_a_rescore_alone_brings_the_at_stop_text_back(report):
     view = report["rescored"]
     assert view["atStop"] is True and view["tile"] == "At the stop"
-    assert view["card"] == f"You are at the stop. You have {view['e']} minutes to wait."
+    assert view["card"] == f"You're here. {view['e']} minutes to wait."
     assert "97" in view["ring"]
 
 
@@ -67,9 +67,18 @@ def test_a_rescore_that_says_at_the_stop_hides_a_showing_leave_now_banner(report
 # ---- the strings are in copy.js and the page, character for character
 
 def test_the_at_stop_strings_are_in_the_page_and_in_copy_js():
-    for text in ("You are at the stop. You have {e} to wait.", "You are at the stop. The bus is arriving now.",
-                 "At the stop", "The bus is arriving now."):
+    for text in ("You're here. {e} to wait.", "You're here. The bus is arriving.",
+                 "You're here. The train is arriving.", "At the stop", "At the station",
+                 "The bus is arriving now"):
         assert text in INDEX and text in COPY, text
+    assert "You are at the stop" not in INDEX and "You are at the stop" not in COPY
+
+
+def test_a_train_at_the_station_says_train_and_station_never_bus_or_stop():
+    tile = INDEX.split("function leaveTileView", 1)[1].split("var mode = leaveMode", 1)[0]
+    assert "AT_STATION_TEXT" in tile and "train_line" in tile
+    sentence = INDEX.split("function explanationSentenceOne", 1)[1].split("explanationIsUnlikely(pack)", 1)[0]
+    assert "EXPL_AT_STOP_TRAIN_ARRIVING" in sentence and "EXPL_AT_STOP_ARRIVING" in sentence
     assert "The bus is {e}\\u00a0min away." not in INDEX and "The bus is {e}\\u00a0min away." not in COPY  # no subline
 
 

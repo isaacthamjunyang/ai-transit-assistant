@@ -1,7 +1,7 @@
 import { openHome } from "./common.mjs";
 
 // The destination stop page with bus stops and stations in one list. config: width, height, dark, shots (a folder),
-// click (a stop code to tap), confirm (true to press Select destination stop and then Confirm).
+// click (a stop code to tap), confirm (true to press Select stop and then Confirm).
 const READ = `(function () {
   function text(el) { return el ? el.textContent.replace(/[ \\t\\r\\n]+/g, " ").trim() : null; }
   function box(el) { var r = el.getBoundingClientRect(); return { w: r.width, h: r.height, x: r.x, y: r.y, right: r.right }; }

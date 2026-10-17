@@ -5,10 +5,10 @@ import { openHome, planOverview, tapStart } from "./common.mjs";
 const READ = (hostId) => `(function () {
   var host = document.getElementById(${JSON.stringify(hostId)});
   function text(el) { return el ? el.textContent.replace(/\\s+/g, " ").trim() : null; }
-  var boxes = host ? Array.prototype.map.call(host.querySelectorAll(".train-alert"), function (box) {
-    var t = box.querySelector(".train-alert__text");
-    var toggle = box.querySelector(".train-alert__toggle");
-    var icon = box.querySelector(".alert-row__icon svg");
+  var boxes = host ? Array.prototype.map.call(host.querySelectorAll(".alert--clamp"), function (box) {
+    var t = box.querySelector(".alert__text");
+    var toggle = box.querySelector(".alert__toggle");
+    var icon = box.querySelector(".alert__icon svg");
     var line = parseFloat(getComputedStyle(t).lineHeight);
     return { text: text(t), line: box.getAttribute("data-line"), status: box.getAttribute("data-status"),
       lines: Math.round(t.getBoundingClientRect().height / line), toggleShown: !!toggle && !toggle.hidden,
@@ -39,7 +39,7 @@ export default async function (h) {
   out.pageB = await h.eval(READ("live-train-alerts"));
   if (out.pageB.boxes.length && out.pageB.boxes[0].toggleShown) {
     // the expand control opens the whole text and closes it again; the state stays across the one-second redraw
-    await h.eval(`document.querySelector("#live-train-alerts .train-alert__toggle").click(); true`);
+    await h.eval(`document.querySelector("#live-train-alerts .alert__toggle").click(); true`);
     await h.sleep(1300);
     out.pageAExpanded = await h.eval(READ("live-train-alerts"));
   }

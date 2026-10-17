@@ -24,11 +24,11 @@ export default async function (h) {
     out.sensorSamples = Array.prototype.slice.call(document.querySelectorAll(".walk-sensors.is-open")).map(function (el) {
       var rows = {};
       Array.prototype.slice.call(el.querySelectorAll(".walk-sensors__list > div")).forEach(function (row) { rows[row.querySelector("dt").textContent] = row.querySelector("dd").textContent; });
-      var why = el.querySelector(".walk-sensors__why");
+      var why = el.querySelector(".walk-sensors__panel .alert");
       var panel = el.querySelector(".walk-sensors__panel");
       var page = el.closest(".walk-page-sample");
       var distance = page ? page.querySelector(".walk-status__distance") : null;
-      var state = page ? page.querySelector(".walk-status__state") : null;
+      var state = page ? page.querySelector(".walk-status .alert__text") : null;
       var progress = page ? page.querySelector(".walk-progress") : null;
       var chip = page ? page.querySelector(".sample-walk-map__chip") : null;
       return { rows: rows, why: why ? why.textContent : "", whyFirst: !!why && panel.firstElementChild === why, icon: !!why && !!why.querySelector("svg"),
@@ -36,7 +36,7 @@ export default async function (h) {
     });
     out.walkSamples = Array.prototype.slice.call(document.querySelectorAll(".walk-page-sample")).map(function (el) {
       var trend = el.querySelector(".walk-chance__trend");
-      return [el.querySelector(".walk-status__state").textContent, trend ? trend.textContent : ""];
+      return [el.querySelector(".walk-status .alert__text").textContent, trend ? trend.textContent : ""];
     });
     return out;
   })()`);

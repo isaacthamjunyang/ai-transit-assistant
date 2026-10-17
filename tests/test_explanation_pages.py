@@ -54,7 +54,7 @@ def test_the_variants_in_the_real_payloads_are_the_ones_expected(reports):
     assert " Leave by " in normal["text"] or " Leave now to reach your stop in " in normal["text"]
     assert normal["leave_now_threshold_s"] == 60 and normal["walk_speed_source"] == "default"
     assert reports["uncertain"]["pack"]["uncertain"] is True
-    assert "Your location is uncertain, so leave a little earlier than that to be safe." in reports["uncertain"]["pack"]["text"]         or "Your location is uncertain, so the walking time may be off." in reports["uncertain"]["pack"]["text"]
+    assert "Location uncertain: leave a little earlier to be safe." in reports["uncertain"]["pack"]["text"]         or "Location uncertain: the walk time may be off." in reports["uncertain"]["pack"]["text"]
     low = reports["low"]["pack"]
     assert "catching this bus is unlikely" in low["text"] and (low["band"] == "low" or low["action"] == "do_not_rely")
     fired = reports["reroute"]["pack"]
@@ -109,10 +109,10 @@ def test_the_leave_by_tile_and_the_card_in_every_state_in_the_real_page(tmp_path
     assert re.fullmatch(clock, by["tile"]) and by["tile"] == by["expectedClock"]
     assert re.fullmatch(r"\d+\u00a0min walk", by["detail"])
     _same_minutes(by["detail"], by["card"])
-    assert by["cautionHidden"] is True and " Leave by " in by["card"] and "Your location is uncertain" not in by["card"]
+    assert by["cautionHidden"] is True and " Leave by " in by["card"] and "Location uncertain" not in by["card"]
     assert by_unc["cautionHidden"] is False and by_unc["caution"] == "Location uncertain: leave a bit earlier to be safe."
     assert by_unc["card"].endswith(" Leave by " + by_unc["card"].split(" Leave by ", 1)[1])
-    assert by_unc["card"].endswith("Your location is uncertain, so leave a little earlier than that to be safe.")
+    assert by_unc["card"].endswith("Location uncertain: leave a little earlier to be safe.")
     assert now["tile"] == "Leave now" and re.fullmatch(r"\d+\u00a0min walk", now["detail"])
     _same_minutes(now["detail"], now["card"])
     assert now["cautionHidden"] is True and " Leave now to reach your stop in 4 minutes and catch the bus arriving at " in now["card"]
@@ -120,7 +120,7 @@ def test_the_leave_by_tile_and_the_card_in_every_state_in_the_real_page(tmp_path
     tail = now["card"].replace(chr(0xA0), " ")
     assert tail.endswith((" AM.", " PM.", " AM (tomorrow).", " PM (tomorrow)."))
     assert now_unc["cautionHidden"] is False and now_unc["tile"] == "Leave now"
-    assert now_unc["card"].endswith("Your location is uncertain, so the walking time may be off.")
+    assert now_unc["card"].endswith("Location uncertain: the walk time may be off.")
     assert "and walking at your usual speed of 4.0 km/h. Leave now" in states["nowRemembered"]["card"]
     assert "and walking at about 4.7 km/h. Leave now" in states["nowMeasured"]["card"]
     unlikely = states["unlikely"]["card"]

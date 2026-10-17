@@ -17,8 +17,10 @@ var copy = {
   },
   atStop: {
     tile: "At the stop",
-    card: "You are at the stop. You have {e} to wait.",
-    cardArriving: "You are at the stop. The bus is arriving now."
+    tileTrain: "At the station",
+    card: "You're here. {e} to wait.",
+    cardArriving: "You're here. The bus is arriving.",
+    cardArrivingTrain: "You're here. The train is arriving."
   },
   /* A train as the first leg (scheduled, not live). explTrain* are the whole of the AI card's first sentence; the leave
      sentence after it is the existing one. {line} is the line's name, {e} whole minutes. Mirrors explain.S_TRAIN*. */
@@ -57,27 +59,27 @@ var copy = {
     leaveBy: "Leave by {time} to reach your stop in {w} and catch the bus arriving at {arrival}.",
     leaveNow: "Leave now to reach your stop in {w} and catch the bus arriving at {arrival}.",
     leaveNowArriving: "Leave now to try to catch the bus arriving at {arrival}.",
-    uncertainBy: "Your location is uncertain, so leave a little earlier than that to be safe.",
-    uncertainNow: "Your location is uncertain, so the walking time may be off."
+    uncertainBy: "Location uncertain: leave a little earlier to be safe.",
+    uncertainNow: "Location uncertain: the walk time may be off."
   },
   walkPage: {
     /* proposed, needs approval: the button row on Page A and the page title */
-    openRow: "See current location and walking pace",
+    openRow: "Current location and walking pace",
     title: "Walk to your stop",
     /* proposed, needs approval: the status card; {n} and {distance} are filled by the page */
-    distance: "{distance} to the stop",
+    distance: "{distance} to go",
     minutes: "about {n}\u00a0min walk",
     onWay: "On your way",
     still: "Not moving",
     /* proposed, needs approval: the fourth and fifth state lines */
-    away: "Moving away from the stop",
+    away: "Moving away",
     checking: "Checking your movement…",
-    arrived: "Arrived at the stop",
+    arrived: "Arrived",
     waiting: "Waiting for your location…",
     recentre: "Recentre map",
     sensorDetails: "Sensor details",
     /* proposed, needs approval: the trend under the ring, from consecutive server values */
-    trendRisingCloser: "Rising as you get closer",
+    trendRisingCloser: "Rising as you near",
     trendRising: "Rising",
     trendFallingAway: "Falling as you move away",
     trendFalling: "Falling as time passes",
@@ -133,18 +135,19 @@ var copy = {
     noTarget: "No target",
     in30: "In 30 min",
     inHour: "In 1 hour",
+    in90: "In 1 hr 30 min",
     custom: "Custom",
     past: "That time has already passed today. Choose Tomorrow or a later time.",
     tooFar: "That time is more than 24 hours away. Choose an earlier time.",
-    timeLabel: "Time",
+    timeAria: "Arrive by time",
+    chooseTime: "Choose time",
     dayLabel: "Day",
     dayToday: "Today",
     dayTomorrow: "Tomorrow",
     tomorrow: "(tomorrow)",
     displayTime: "{label} · {time}"
   },
-  noRoute: "No direct or 1-transfer bus connection available for this trip.",
-  noDirectBus: "no direct bus from near you — a transfer may still work",
+  noRoute: "No direct or 1-transfer route for this trip.",
   demoBanner: "SIMULATED DEMO MODE",
   simulated: "[SIMULATED]",
   aiExplanationTitle: "AI Explanation",
@@ -186,17 +189,12 @@ var copy = {
     noHistoricalReliabilityYet: "no historical reliability yet"
   },
   home: {
-    heroLeave: "Know when to leave.",
-    heroCatch: "Catch your bus.",
-    heroSupport: "Get real-time bus information, catch probability and personalised leave-by time.",
     heading: "Where do you want to go?",
-    placeholder: "e.g. Marina Bay Sands, NUS, Orchard Road",
     /* proposed, needs approval: saved places on Home (up to {max}, named by the user, kept on this phone only; see
        static/saved-places.js). With nothing saved the row is "+" alone and the note and Edit toggle are hidden. */
     savedPlaces: {
-      note: "Saved on this phone only.",
-      add: "+",
-      addLabel: "Add a saved place",
+      add: "Add place",
+      addLabel: "Add place",
       count: "{n} of {max} saved",
       chipLabel: "{name}, saved place",
       chipLabelAddress: "{name}, saved place, {address}",
@@ -211,7 +209,6 @@ var copy = {
       searchLabel: "Search for the place",
       searchPlaceholder: "Search for a place",
       searchAction: "Search",
-      pickHint: "Pick a place from the results, then name it.",
       nameLabel: "Your name for this place",
       nameHint: "Up to {max} characters",
       save: "Save",
@@ -232,7 +229,7 @@ var copy = {
     arriveBy: "Arrive by",
     selectTime: "Select time",
     findRoute: "Find my route",
-    homeLabel: "Beat the Bus and MRT, go to home",
+    homeLabel: "Just-In-Time, go to home",
     required: "Required",
     requiredDestination: "Enter a destination to continue.",
     requiredArrive: "Choose when you need to arrive, or select No target.",
@@ -249,33 +246,33 @@ var copy = {
     leave: "Leave"
   },
   destinationStops: {
-    title: "Nearby destination MRT stations / bus stops",
+    title: "Nearby stops and stations",
     infoLabel: "About these stops",
-    info: "Bus stops and MRT or LRT stations within 600 m of your destination, nearest walk first. If no station is that close, the nearest one within 1.5 km is shown. The first one is chosen for you.",
+    info: "Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km. The first is pre-selected.",
     /* proposed, needs approval: the text on every row of the list, so the type is never told by colour alone */
     busStop: "Bus stop",
     mrtStation: "MRT station",
     lrtStation: "LRT station",
     bestOption: "Best option",
-    selectStop: "Select destination stop",
+    selectStop: "Select stop",
     range: "Range: {distance}",
     walk: "{minutes} min walk ({distance})",
     locate: "Centre map on your location",
-    none: "No destination stops were found within 600 m.",
-    unavailable: "Destination stops are unavailable.",
-    finding: "Finding destination stops…",
-    needLocation: "Location unavailable. Destination stops need your current location."
+    none: "No stops within 600 m.",
+    unavailable: "Stops unavailable.",
+    finding: "Finding stops…",
+    needLocation: "Location unavailable. We need it to find stops."
   },
   confirmDestination: {
     selectedDestination: "Selected destination",
-    destinationStop: "Destination bus stop",
+    destinationStop: "Destination stop",
     /* proposed, needs approval: the same card when the chosen destination is a station */
     destinationStation: "Destination station",
     editStation: "Edit destination station",
     edit: "Edit",
     editDestination: "Edit destination",
-    editStop: "Edit destination bus stop",
-    info: "We'll find the best route from here by bus and MRT and work out your leave-by time.",
+    editStop: "Edit destination stop",
+    info: "We'll find your best route and leave-by time.",
     action: "Confirm"
   },
   journeyOverview: {
@@ -298,19 +295,16 @@ var copy = {
     editDestination: "Edit destination",
     editArriveBy: "Edit arrive by time",
     startJourney: "Start journey",
-    /* approved: above Start journey. The server does receive the speed number. */
-    motionPrivacy: "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before.",
-    motionOff: "Motion sensor is off, so your steps are not used.",
     planning: "Planning your journey…",
-    needLocation: "Location unavailable. Destination stops need your current location.",
+    needLocation: "Location unavailable. We need it to find stops.",
     tryAgain: "Try again",
-    noRoute: "No direct or 1-transfer bus connection available for this trip.",
+    noRoute: "No direct or 1-transfer route for this trip.",
     /* the bus planner's sentence (the static fallback, and the destination stop list); the OneMap planner's are the
        noServiceAny, noBusClosed and noMrtClosed lines below */
-    noService: "No buses are running to this destination at this time.",
+    noService: "No service to this destination right now.",
     editDestinationAction: "Edit destination",
     editArriveByAction: "Edit arrive-by time",
-    unavailable: "Nearby stops are unavailable.",
+    unavailable: "Stops unavailable.",
     /* proposed: shown on the second bus of a transfer route; the headway line is omitted when it is not available */
     headway: "Schedule: about every {minutes} min.",
     /* proposed, needs approval (plan_edits_9 4.9): one row per leg. {n} {m} {k} {w} {t} are whole numbers. */
@@ -357,7 +351,7 @@ var copy = {
     noBusOnly: "No bus-only route found. Try another priority.",
     noMrtOnly: "No MRT or LRT route found. Try another priority.",
     /* proposed, needs approval: nothing runs (the OneMap planner), by priority */
-    noServiceAny: "No bus or MRT services are running to this destination at this time.",
+    noServiceAny: "No services to this destination right now.",
     noBusClosed: "Bus services have stopped for now. Try another priority.",
     noMrtClosed: "MRT and LRT services have stopped for now. Try another priority.",
     needsRouteService: "Needs the route service.",
@@ -373,7 +367,9 @@ var copy = {
   rideApps: {
     heading: "No transit right now. Open a ride app:",
     distance: "About {km} km in a straight line",
-    note: "These links open each app's own site. Your trip is not sent.",
+    /* the overview card; Page C keeps notePageC */
+    note: "Links open each app's site. Your trip isn't sent.",
+    notePageC: "These links open each app's own site. Your trip is not sent.",
     apps: [
       { name: "Grab", url: "https://www.grab.com/sg/download/" },
       { name: "Gojek", url: "https://gojek.com/sg/about" },
@@ -420,16 +416,19 @@ var copy = {
     PG: "Punggol LRT",
     SS: "Sentosa Express"
   },
-  /* proposed, needs approval: the first-run explainer (three steps over Home, reopened from the menu as "How it works").
+  /* proposed, needs approval: the first-run explainer (five steps over Home, reopened from the menu as "How it works").
      {n} and {total} are the step number and the number of steps. Mirrored in index.html (FIRST_RUN_*). */
+  /* The data attribution: always shown at the bottom of the menu panel, as small muted text. */
+  menuAttribution: "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0",
   firstRun: {
     title: "How it works",
     menu: "How it works",
-    attribution: "Contains information from LTA DataMall under the Singapore Open Data Licence v1.0",
     stepOf: "Step {n} of {total}",
     step1: "Pick where you're going.",
-    step2: "We show when to leave, and your chance of catching the bus or train.",
-    step3: "Walk, and we'll keep the chance updated.",
+    step2: "We show when to leave and your chance of catching it.",
+    step3: "Walk, and we keep the chance updated.",
+    step4: "Missed it? We find other options.",
+    step5: "Get alerts during your journey.",
     skip: "Skip",
     next: "Next",
     done: "Done"
@@ -460,13 +459,13 @@ var copy = {
     ringAt: " at {stop}",
     /* approved: muted label left of the bus arrival clock time, at the right of the ring */
     busArrives: "Bus arrives",
-    /* Page C's current-bus card keeps its one fixed caption; Page A's card has no caption */
-    caption: "if you leave now and walk at a normal pace",
-    /* approved: the muted line under the caption; {kmh} is the server's walk_speed_used x 3.6, one decimal */
-    walkPaceGps: "Walking pace: {kmh} km/h · from GPS",
-    walkPaceSteps: "Walking pace: {kmh} km/h · from your steps",
-    walkPaceUsual: "Walking pace: {kmh} km/h · your usual pace",
-    walkPaceNormal: "Walking pace: {kmh} km/h · normal pace",
+    /* Layout B: the route strip under the probability card (From, the walk, the vehicle's badge, Destination); routeWalk
+       stands in for "{n} min walk" when no walk minutes are shown, routeSeparator joins a train's sub line */
+    routeLabel: "Route",
+    routeFrom: "From",
+    routeDestination: "Destination",
+    routeWalk: "Walk",
+    routeSeparator: " · ",
     unavailable: "Unavailable",
     missed: "Missed",
     leaveBy: "Leave by",
@@ -502,11 +501,7 @@ var copy = {
     /* proposed, needs approval */
     otherBuses: "Other buses at your stop",
     /* proposed, needs approval */
-    seeOtherBuses: "See other buses",
-    /* proposed, needs approval */
-    currentWarning: "Catching this bus is unlikely. Here are your other options.",
-    /* proposed, needs approval: the same banner once the search completed and found no option */
-    currentWarningNone: "Catching this bus is unlikely.",
+    currentWarning: "Catching this bus is unlikely.",
     /* proposed, needs approval */
     updated: "Updated {time}",
     /* proposed, needs approval */
@@ -544,15 +539,18 @@ var copy = {
   liveTracking: {
     refresh: "Refresh live arrivals",
     nextBuses: "Next 3 buses",
-    arriving: "(Arriving)"
+    arriving: "Arriving"
   },
   /* proposed, needs approval: every string in catchPrompt */
   catchPrompt: {
-    seeArrivals: "See bus arrival times",
+    seeArrivals: "See arrival times",
+    /* Page C is bus-only and keeps its own wording */
+    seeBusArrivals: "See bus arrival times",
+    otherBusOptions: "Other bus options",
     question: "Did you catch the bus?",
     yes: "Yes, I caught it",
     no: "No, I missed it",
-    endUnanswered: "Tracking ended. Your bus's expected arrival time has passed.",
+    endUnanswered: "Tracking ended: arrival time has passed.",
     endMax: "Tracking stopped after 60 minutes.",
     planNew: "Plan a new journey",
     onWayTitle: "On your way",
@@ -584,7 +582,7 @@ var copy = {
     nearMe: "Near me"
   },
   leaveNowBanner: {
-    app: "Beat the Bus and MRT",
+    app: "Just-In-Time",
     now: "now",
     viewDetails: "View details",
     dismiss: "Dismiss"
@@ -594,15 +592,15 @@ var copy = {
       heading: "LTA data is stale",
       updated: "Last update: {time}",
       arriving: "Arriving in {minutes} min (estimated)",
-      body: "Due to stale data, we cannot give a catch probability or recommend leaving now. Please wait for live data or try again later."
+      body: "Stale data: no catch chance or leave advice until live data returns."
     },
-    unavailable: "No live arrival data available. No previous successful update.",
+    unavailable: "No live arrival data. No earlier update.",
     noService: "No buses currently in service at this stop.",
     uncertain: {
       heading: "Location uncertain",
       /* proposed, needs approval */
-      ageBody: "Your location hasn't updated for {seconds} s. We'll show a wider range for the catch probability and won't suggest \"leave now\" from this fix.",
-      body: "Your GPS accuracy is {accuracy}. We'll show a wider range for the catch probability and won't suggest \"leave now\" from this fix."
+      ageBody: "Location not updated for {seconds} s. The range is wider and we won't suggest leaving now.",
+      body: "GPS accuracy is {accuracy}. The range is wider and we won't suggest leaving now."
     }
   }
 };

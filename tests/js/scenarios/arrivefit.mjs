@@ -30,6 +30,8 @@ export default async function (h) {
     await h.send("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
     await h.sleep(250);
     await h.eval("arriveTimeInput.value = '23:59'; arriveTimeInput.dispatchEvent(new Event('input', { bubbles: true })); true");
+    // a valid time closes the panel (like a preset); open it again to measure the Custom control
+    await h.eval("if (document.getElementById('arrive-by-panel').hidden) { document.getElementById('arrive-by-field').click(); } true");
     out.widths[width] = await h.eval(MEASURE);
     if (h.config.shots) {
       await h.eval("document.getElementById('arrive-by-panel').scrollIntoView(); true");

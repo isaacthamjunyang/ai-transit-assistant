@@ -1,4 +1,4 @@
-"""Page W's "Arrived at the stop": the server's near_stop (the poll's own function and 30 m rule), asked by the rescore."""
+"""Page W's "Arrived": the server's near_stop (the poll's own function and 30 m rule), asked by the rescore."""
 
 import time
 from datetime import datetime, timedelta, timezone
@@ -86,23 +86,23 @@ def arrived(tmp_path_factory):
 def test_31_m_is_not_arrived_and_29_m_is_within_one_rescore_interval(arrived):
     limit = arrived["interval"] + 1500  # one 5 s rescore interval plus the request
     steps = arrived["steps"]
-    assert steps["at31"]["nearStop"] is False and arrived["at31After"]["state"] != "Arrived at the stop"
-    assert steps["to29"]["text"] == "Arrived at the stop" and steps["to29"]["ms"] is not None and steps["to29"]["ms"] <= limit, steps["to29"]
+    assert steps["at31"]["nearStop"] is False and arrived["at31After"]["state"] != "Arrived"
+    assert steps["to29"]["text"] == "Arrived" and steps["to29"]["ms"] is not None and steps["to29"]["ms"] <= limit, steps["to29"]
     assert steps["to29"]["nearStop"] is True
 
 
 def test_back_from_29_to_31_m_leaves_arrived(arrived):
     limit = arrived["interval"] + 1500
     step = arrived["steps"]["back31"]
-    assert step["ms"] is not None and step["ms"] <= limit and step["text"] != "Arrived at the stop", step
-    assert arrived["back31After"]["nearStop"] is False and arrived["back31After"]["state"] != "Arrived at the stop"
+    assert step["ms"] is not None and step["ms"] <= limit and step["text"] != "Arrived", step
+    assert arrived["back31After"]["nearStop"] is False and arrived["back31After"]["state"] != "Arrived"
 
 
 def test_12_m_shows_arrived_and_it_beats_the_movement_states(arrived):
-    assert arrived["steps"]["to12"]["text"] == "Arrived at the stop" and arrived["steps"]["to12"]["ms"] <= arrived["interval"] + 1500
-    assert arrived["priority"]["state"] == "Arrived at the stop"
+    assert arrived["steps"]["to12"]["text"] == "Arrived" and arrived["steps"]["to12"]["ms"] <= arrived["interval"] + 1500
+    assert arrived["priority"]["state"] == "Arrived"
     fresh = arrived["freshOpen"]
-    assert fresh["text"] == "Arrived at the stop" and fresh["span"] < 10000 and fresh["ms"] is not None  # not "Checking your movement…"
+    assert fresh["text"] == "Arrived" and fresh["span"] < 10000 and fresh["ms"] is not None  # not "Checking your movement…"
     assert fresh["ms"] <= 3000  # the rescore at opening already answered
 
 

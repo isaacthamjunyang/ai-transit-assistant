@@ -145,21 +145,14 @@ COPY = (ROOT / "static" / "copy.js").read_text(encoding="utf-8")
 GUIDE = (ROOT / "static" / "styleguide.html").read_text(encoding="utf-8")
 THEME = (ROOT / "static" / "theme.css").read_text(encoding="utf-8")
 
-NEW_STRINGS = [
-    "Walking pace: {kmh} km/h · from GPS",
-    "Walking pace: {kmh} km/h · from your steps",
-    "Walking pace: {kmh} km/h · your usual pace",
-    "Walking pace: {kmh} km/h · normal pace",
-    "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before.",
-    "Motion sensor is off, so your steps are not used.",
-]
+REMOVED_PRIVACY = "Motion data stays on your phone. Your location is only used to plan your trip."
 
 
-def test_the_new_strings_are_in_copy_js_and_in_the_page_character_for_character():
-    for text in NEW_STRINGS:
-        assert text in COPY, text
-        assert text in INDEX, text
-    assert "if you leave now and walk at a normal pace" in COPY and "if you leave now and walk at a normal pace" in INDEX
+def test_the_how_it_works_privacy_line_is_gone_from_every_file_and_the_other_new_strings_remain():
+    plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
+    for name, text in (("copy.js", COPY), ("index.html", INDEX), ("styleguide.html", GUIDE), ("plan", plan)):
+        assert REMOVED_PRIVACY not in text, name
+    assert "if you leave now and walk at a normal pace" not in COPY and "if you leave now and walk at a normal pace" not in INDEX  # the caption is gone
     # The three superseded wordings of the overview privacy line, built from pieces so that this file does not
     # itself contain them: the first wording, the second, and the one before the current text.
     lead = "Motion sensor data stays on your phone. "
@@ -174,22 +167,22 @@ def test_the_new_strings_are_in_copy_js_and_in_the_page_character_for_character(
         assert old not in everywhere, old
     for fragment in ("Your walking speed is used to improve the estimate", "Only your walking speed is sent to improve"):
         assert fragment not in everywhere, fragment
-    current = NEW_STRINGS[4]
-    assert current == "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before."
-    assert current in plan  # the plan quotes the current line
+    current = REMOVED_PRIVACY
+    assert current == "Motion data stays on your phone. Your location is only used to plan your trip."
+    assert current not in plan  # the card no longer carries it, so the plan does not quote it
 
 
-def test_the_pace_line_is_muted_silent_and_inside_the_probability_card():
-    card = _between(INDEX, 'id="arrival-card"', "</section>")
-    # the pace line moved out from under the caption: it is the muted, silent subtitle of the button row that opens Page W
-    assert '<span id="catch-pace-line" class="walk-open-row__sub" aria-live="off"></span>' in card
-    assert '<p id="catch-pace-line"' not in card
-    assert 'id="catch-caption"' not in card and card.index('id="walk-open"') < card.index('id="catch-pace-line"')
-    for note in ('id="overview-motion-note"', 'id="new-journey-motion-note"'):  # the overview lines: muted, silent
-        assert f'<p {note} class="note" aria-live="off"></p>' in INDEX
-    start = INDEX.index('<p id="overview-motion-note" class="note" aria-live="off"></p>')
-    assert INDEX.index('id="start-journey"') > start and INDEX.index('id="start-journey"') - start < 120
-    assert INDEX.index('id="new-journey-start"') > INDEX.index('id="new-journey-motion-note"')
+def test_the_row_that_opens_page_w_has_no_pace_subtitle():
+    # Layout B: one centred line, "Current location and walking pace"; the "Walking pace: {kmh} km/h" line is gone
+    assert 'id="catch-pace-line"' not in INDEX and "walk-open-row__sub" not in INDEX
+    assert "Walking pace: {kmh}" not in COPY + INDEX + GUIDE
+    for key in ("walkPaceGps", "walkPaceSteps", "walkPaceUsual", "walkPaceNormal"):
+        assert key not in COPY + INDEX + GUIDE, key
+    assert "walk-open-row__sub" not in THEME + (ROOT / "static" / "components.css").read_text(encoding="utf-8")
+    assert 'id="catch-caption"' not in INDEX
+    for note in ('id="overview-motion-note"', 'id="new-journey-motion-note"'):  # the overview notes are gone
+        assert note not in INDEX, note
+    assert "renderMotionNote" not in INDEX and "MOTION_PRIVACY_TEXT" not in INDEX
 
 
 def test_the_menu_has_appearance_and_how_it_works_and_no_pace_or_motion_row():
@@ -199,15 +192,11 @@ def test_the_menu_has_appearance_and_how_it_works_and_no_pace_or_motion_row():
     assert "motion" not in menu.lower()
 
 
-def test_the_style_guide_shows_every_caption_pace_line_note_and_the_readout_in_both_themes():
-    for key in ("walkPaceGps", "walkPaceSteps", "walkPaceUsual", "walkPaceNormal"):
-        assert f"lc.{key}" in GUIDE, key
-    for source in ("gps", "cadence", "remembered", "default"):
-        assert f'sgWalk("{source}"' in GUIDE, source
-    assert "jo.motionPrivacy" in GUIDE and "jo.motionOff" in GUIDE
+def test_the_style_guide_shows_the_one_line_row_the_notes_and_the_readout_in_both_themes():
+    assert "fr.privacy" not in GUIDE and "jo.motionPrivacy" not in GUIDE and "jo.motionOff" not in GUIDE
     assert 'class=\\"pace-debug pace-debug--sample' in GUIDE and "pace-debug__bar" in GUIDE and "Copy raw motion" in GUIDE
     assert 'id="catch-sample-light"' in GUIDE and 'id="catch-sample-dark"' in GUIDE  # catchSample() fills both
-    assert "function catchSample()" in GUIDE and "sgWalk(" in GUIDE.split("function catchSample()", 1)[1].split("function ", 1)[0]
+    assert "function catchSample()" in GUIDE and "sgWalkRow(" in GUIDE.split("function catchSample()", 1)[1].split("function ", 1)[0]
 
 
 def test_no_hex_rgb_hsl_or_inline_style_was_added_outside_the_theme():
@@ -274,3 +263,24 @@ def test_the_raw_capture_and_trace_are_never_stored_or_sent():
     for banned in ("localStorage", "fetch(", "sendBeacon", "XMLHttpRequest", "latitude", "longitude"):
         assert banned not in debug, banned
     assert not re.search(r"\.(lat|lon)", debug)  # no position in the trace or the raw capture
+
+
+def test_the_sensor_off_sentence_is_gone_everywhere():
+    sentence = "Motion sensor is off, so your steps are not used."
+    plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
+    for name, text in (("copy.js", COPY), ("index.html", INDEX), ("styleguide.html", GUIDE), ("plan", plan)):
+        assert sentence not in text and "motionOff" not in text and "MOTION_OFF_TEXT" not in text, name
+    tests = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "tests").glob("test_*.py") if p.name != "test_walk_speed_wiring.py")
+    assert sentence not in tests
+
+
+def test_the_old_overview_privacy_sentence_is_gone_and_the_how_it_works_line_replaces_it():
+    old = "Motion data stays on your phone. Only the walking speed worked out from it is sent. Your location is sent as before."
+    plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
+    for name, text in (("copy.js", COPY), ("index.html", INDEX), ("styleguide.html", GUIDE), ("plan", plan)):
+        assert old not in text and "motionPrivacy" not in text, name
+    tests = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "tests").glob("test_*.py") if p.name != "test_walk_speed_wiring.py")
+    assert old not in tests
+    card = INDEX.split('id="first-run"', 1)[1].split('id="catch-bar"', 1)[0]
+    assert "first-run-privacy" not in card and "first-run-attribution" not in card  # the card is bare
+    assert "motion data stays on the phone" in plan.lower()

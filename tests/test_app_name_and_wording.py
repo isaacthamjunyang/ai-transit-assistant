@@ -8,7 +8,7 @@ import journey
 import pt_plan
 
 ROOT = Path(__file__).resolve().parents[1]
-NAME = "Beat the Bus and MRT"
+NAME = "Just-In-Time"
 
 
 def _read(path: str) -> str:
@@ -21,12 +21,12 @@ NAMED_FILES = ("static/index.html", "static/copy.js", "static/styleguide.html", 
                ".cursorrules", ".cursor/rules/mockup-fidelity.mdc", ".cursor/rules/ui-theme.mdc")
 
 
-def test_the_app_is_named_beat_the_bus_and_mrt_in_the_page_title_header_and_home_link():
+def test_the_app_is_named_just_in_time_in_the_page_title_header_and_home_link():
     assert f"<title>{NAME}</title>" in INDEX
     assert f'<span class="app-header__title">{NAME}</span>' in INDEX
     assert f'aria-label="{NAME}, go to home"' in INDEX
     assert f'homeLabel: "{NAME}, go to home"' in COPY and f'app: "{NAME}"' in COPY  # the home link and the Leave now banner
-    assert f'<span class="leave-now-banner__app">{NAME}</span>' in INDEX
+    assert f"<span>{NAME}</span> &middot; <span>now</span>" in INDEX
     assert f'FastAPI(title="{NAME}"' in MAIN
     assert f'<h1 class="app-header__title">{NAME}</h1>' in GUIDE
     assert NAME in README and NAME in PLAN
@@ -45,13 +45,17 @@ def test_the_internal_keys_that_hold_users_saved_settings_keep_their_old_spellin
     assert "busCatch:" in INDEX  # the history state key, never shown
 
 
-def test_the_subtitle_is_gone_everywhere_and_the_home_tagline_is_unchanged():
+def test_the_subtitle_is_gone_everywhere_and_the_hero_carries_no_tagline():
     for path in NAMED_FILES:
         assert "AI-powered bus guidance" not in _read(path), path
     assert "app-header__subtitle" not in INDEX + GUIDE + _read("static/components.css")
     assert 'subtitle: "' not in COPY.split("home: {", 1)[1].split("},", 1)[0]
-    support = "Get real-time bus information, catch probability and personalised leave-by time."
-    assert support in INDEX and f'heroSupport: "{support}"' in COPY  # not asked to change
+    for line in ("Know when to leave.", "Catch your bus or train."):  # the hero illustration has no words on it
+        assert line not in INDEX + GUIDE + COPY, line
+    assert "heroLeave" not in INDEX + GUIDE + COPY and "heroCatch" not in INDEX + GUIDE + COPY
+    support = "Live arrivals, catch chance and a personal leave-by time."  # the grey line is removed everywhere
+    assert support not in INDEX + GUIDE + COPY and "heroSupport" not in INDEX + GUIDE + COPY
+    assert "hero-support" not in INDEX + GUIDE + _read("static/components.css")
 
 
 def test_the_best_available_line_is_gone_from_the_server_the_page_the_copy_and_the_guide():

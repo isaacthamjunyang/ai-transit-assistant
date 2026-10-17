@@ -404,7 +404,7 @@ def test_unusable_route_km_cannot_win_and_is_not_replaced_with_a_duration():
 def test_no_feasible_route_uses_the_locked_status_and_message():
     missing = _plan(_cache([_hop("1", ORIGIN, 1, 0), _hop("1", "OTHER", 2, 1)]))
     assert missing["route_status"] == "no_feasible_route"
-    assert missing["message"] == "No direct or 1-transfer bus connection available for this trip."
+    assert missing["message"] == "No direct or 1-transfer route for this trip."
     assert missing["route_type"] is None
     assert missing["legs"] == []
     assert missing["generalized_time_minutes"] is None
@@ -508,8 +508,8 @@ def test_page_keeps_the_active_leg_on_the_existing_poll_and_advances_only_on_the
     assert 'id="back-home"' in html
     assert 'aria-label="Back"' in html and ">Back</button>" not in html
     assert html.count("watchPosition(") == 1  # Page W's own fallback watch is the only one in the page script
-    assert html.count("Arrived at ") == 2  # the removed missed-stop string is gone; Page W's state line (stop; station for a train)
-    assert "No direct or 1-transfer bus connection available for this trip." in html
+    assert html.count("Arrived at ") == 1  # the removed missed-stop string is gone; Page W's state line (stop; station for a train)
+    assert "No direct or 1-transfer route for this trip." in html
     assert 'journeyComparison.textContent = "Arrive-by check: N/A"' not in html
     journey_request = html.split("function loadJourney()", 1)[1].split("fetch(url)", 1)[0]
     assert "&transfer=1" in journey_request

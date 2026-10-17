@@ -58,12 +58,12 @@ def _helpers():
 
 # ---- navigation
 
-def test_page_a_has_the_button_row_and_the_pace_line_is_its_subtitle(report):
+def test_page_a_has_the_one_line_button_row_with_no_pace_subtitle(report):
     page = report["pageA"]
-    assert "See current location and walking pace" in page["row"]
-    assert page["sub"] == "Walking pace: 4.5 km/h · normal pace"  # the same pace line as before, now the muted subtitle
+    assert page["row"] == "Current location and walking pace"
+    assert page["hasPaceLine"] is False  # Layout B: no "Walking pace: {kmh} km/h" subtitle
     assert page["hasCaption"] is False  # Page A's card has no caption under the ring
-    assert page["cardLines"] == 0 and page["top"] == "live"  # no pace line under the caption any more
+    assert page["top"] == "live"
 
 
 def test_a_to_w_to_b_and_back(report):
@@ -81,11 +81,11 @@ def test_a_to_w_to_b_and_back(report):
 def test_approaching_not_moving_moving_away_arrived_checking_and_waiting(report):
     assert report["approaching"] == ["Checking your movement…", "Checking your movement…", "On your way"]
     assert report["notMoving"] == ["Checking your movement…", "Checking your movement…", "Not moving"]
-    assert report["movingAway"] == ["Checking your movement…", "Moving away from the stop"]
-    assert report["arrived"]["state"] == "Arrived at the stop" and report["nearStopFlag"] is True  # the server's flag decides
+    assert report["movingAway"] == ["Checking your movement…", "Moving away"]
+    assert report["arrived"]["state"] == "Arrived" and report["nearStopFlag"] is True  # the server's flag decides
     assert report["arrived"]["progress"] == 100
     assert report["noFixText"] == "Waiting for your location…"
-    assert report["open"]["distance"] == "300" + NB + "m to the stop" and report["open"]["minutes"] == "about 4" + NB + "min walk"
+    assert report["open"]["distance"] == "300" + NB + "m to go" and report["open"]["minutes"] == "about 4" + NB + "min walk"
 
 
 @needs_node
@@ -241,7 +241,7 @@ def test_the_ring_is_the_servers_point_and_the_bus_arrival_time_replaces_the_ran
 
 
 TREND_BY_STATE = {  # (trend, state) -> the line
-    ("rising", "onway"): "Rising as you get closer", ("rising", "away"): "Rising", ("rising", "still"): "Rising",
+    ("rising", "onway"): "Rising as you near", ("rising", "away"): "Rising", ("rising", "still"): "Rising",
     ("falling", "onway"): "Falling as time passes", ("falling", "away"): "Falling as you move away",
     ("falling", "still"): "Falling as time passes",
 }
@@ -251,7 +251,7 @@ TREND_BY_STATE = {  # (trend, state) -> the line
 def test_the_trend_shows_only_after_a_change_of_2_points_or_more_and_follows_the_state(report, state):
     seq = report["trendSeq"][state]
     assert [row["ring"] for row in seq] == ["60%", "61%", "64%", "64%", "64%", "60%"]  # the ring follows each server value
-    assert [row["state"] for row in seq] == [{"onway": "On your way", "away": "Moving away from the stop", "still": "Not moving"}[state]] * 6
+    assert [row["state"] for row in seq] == [{"onway": "On your way", "away": "Moving away", "still": "Not moving"}[state]] * 6
     assert [row["hidden"] for row in seq] == [True, True, False, False, False, False]
     assert [row["trend"] for row in seq] == [
         "", "", TREND_BY_STATE[("rising", state)], TREND_BY_STATE[("rising", state)], "Steady", TREND_BY_STATE[("falling", state)]]
@@ -329,20 +329,20 @@ def test_stale_data_keeps_the_layout_with_an_unavailable_ring(report):
 
 def test_the_page_strings_are_in_copy_js():
     esc = chr(92) + "u00a0"
-    for text in ("See current location and walking pace", "Walk to your stop", "{distance} to the stop", "about {n}" + esc + "min walk",
-                 "On your way", "Not moving", "Arrived at the stop", "Waiting for your location…",
-                 "Recentre map", "Sensor details", "Moving away from the stop", "Checking your movement…", "Rising as you get closer", "Falling as you move away", "Steady",
+    for text in ("Current location and walking pace", "Walk to your stop", "{distance} to go", "about {n}" + esc + "min walk",
+                 "On your way", "Not moving", "Arrived", "Waiting for your location…",
+                 "Recentre map", "Sensor details", "Moving away", "Checking your movement…", "Rising as you near", "Falling as you move away", "Steady",
                  "from GPS", "from your steps", "your usual pace", "average pace", "Not walking yet", "No motion permission",
                  "Near the stop", "Walking pace", "GPS speed", "GPS accuracy", "Steps per minute", "Step length", "Learned samples"):
         assert f'"{text}"' in COPY, text
-    for text in ("Walk to your stop", "{distance} to the stop", "On your way", "Not moving", "Arrived at the stop",
-                 "Moving away from the stop", "Checking your movement…",
-                 "Waiting for your location…", "Rising as you get closer", "Falling as you move away", "Steady",
+    for text in ("Walk to your stop", "{distance} to go", "On your way", "Not moving", "Arrived",
+                 "Moving away", "Checking your movement…",
+                 "Waiting for your location…", "Rising as you near", "Falling as you move away", "Steady",
                  "Not walking yet", "No motion permission", "Near the stop", "from GPS", "from your steps", "your usual pace",
                  "average pace", "about {n}" + esc + "min walk"):
         assert f'"{text}"' in INDEX, text
     for label in ("Sensor details", "Walking pace", "GPS speed", "GPS accuracy", "Steps per minute", "Step length", "Learned samples",
-                  "Recentre map", "See current location and walking pace"):
+                  "Recentre map", "Current location and walking pace"):
         assert label in INDEX, label
 
 
@@ -398,7 +398,7 @@ def test_the_why_line_is_directly_under_the_title_in_body_text_with_an_icon_and_
         assert case["whyIsFirstInPanel"] is True and case["whyBeforeRows"] is True, case
         assert case["whyFont"] == case["bodyFont"] and case["whyFont"] > case["captionFont"], case  # body text, not caption size
         assert case["whyIcon"] is True and case["whySilent"] is True, case
-    assert 'id="walk-sensor-why" class="walk-sensors__why" hidden>' in INDEX and "aria-live" not in INDEX.split('id="walk-sensor-why"', 1)[1].split("</p>", 1)[0]
+    assert 'id="walk-sensor-why" class="alert alert--info" hidden>' in INDEX and "aria-live" not in INDEX.split('id="walk-sensor-why"', 1)[1].split("</div>", 1)[0]
 
 
 def test_with_no_learned_samples_the_step_length_is_the_starting_value(sensors):

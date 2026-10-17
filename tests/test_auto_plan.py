@@ -213,7 +213,7 @@ def test_edit_links_are_present_or_absent_as_specified():
     for label in ("Edit boarding stop", "Edit bus service", "Edit transfer stop"):
         assert label not in html
     assert 'label: "Edit destination stop", action: function () { backToScreen("stops"); }' in render
-    assert 'label: "Edit destination", action: function () { backToScreen("results"); }' in render
+    assert 'label: "Edit destination", action: editDestination }' in render
     assert 'id="overview-arrive-edit"' in html
 
 
@@ -237,4 +237,4 @@ def test_the_chosen_for_you_reason_line_is_gone():
     for name in ("reasonTargetMet", "reasonTargetMissed", "reasonNoTarget"):
         assert name not in copy
     assert 'id="overview-reason"' not in html and "PLAN_REASON_TEXT" not in html
-    assert "No direct or 1-transfer bus connection available for this trip." in _between(html, 'id="overview-no-route"', "</div>")
+    assert "No direct or 1-transfer route for this trip." in _between(html, 'id="overview-no-route"', "</div>")

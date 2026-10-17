@@ -24,7 +24,7 @@ from test_journey import PLACE, USER, _service, _stop
 
 ROOT = Path(__file__).resolve().parents[1]
 SGT = timezone(timedelta(hours=8))
-MESSAGE = "No buses are running to this destination at this time."
+MESSAGE = "No service to this destination right now."
 # 2026-10-07 is a Wednesday, 10-10 a Saturday, 10-11 a Sunday.
 WED, THU, SAT, SUN = date(2026, 10, 7), date(2026, 10, 8), date(2026, 10, 10), date(2026, 10, 11)
 

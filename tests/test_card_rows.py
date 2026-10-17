@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from explain import build_numbers, card_text
-from test_explanation_consistency import _case, _mirror_cases, needs_node
+from test_explanation_consistency import _case, _mirror_cases, _python_lead, needs_node
 
 SGT = timezone(timedelta(hours=8))
 NOON_ISH = datetime(2026, 10, 8, 15, 55, 0, tzinfo=SGT)  # 3:55 PM
@@ -49,11 +49,11 @@ ROWS = [
     ("9 by + uncertain", dict(e=14, w=5, leave_in=540, source="remembered", distance=203.0, unc=True),
      "The bus is 14 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
      "Leave by 4:04~PM to reach your stop in 5 minutes and catch the bus arriving at 4:09~PM. "
-     "Your location is uncertain, so leave a little earlier than that to be safe."),
+     "Location uncertain: leave a little earlier to be safe."),
     ("10 now + uncertain", dict(e=6, w=6, leave_in=30, source="remembered", distance=203.0, unc=True),
      "The bus is 6 minutes away, and you are 203~m from the stop and walking at your usual speed of 4.5~km/h. "
      "Leave now to reach your stop in 6 minutes and catch the bus arriving at 4:01~PM. "
-     "Your location is uncertain, so the walking time may be off."),
+     "Location uncertain: the walk time may be off."),
     ("11 unlikely", dict(e=14, leave_in=540, band="low", distance=203.0),
      "The bus is 14 minutes away, and you are 203~m from the stop, but catching this bus is unlikely."),
     ("12 unlikely, arriving now, 800 m", dict(e=0, leave_in=540, band="low", distance=800.0),
@@ -164,11 +164,11 @@ def test_the_leave_sentences_never_use_the_leave_to_arrival_gap():
 # ---- at the stop (tmp/plan_edits_8.md section 6): the whole card, nothing after it
 
 AT_STOP_ROWS = [
-    ("A1 e = 4", 4, "You are at the stop. You have 4 minutes to wait."),
-    ("A2 e = 2", 2, "You are at the stop. You have 2 minutes to wait."),
-    ("A3 e = 1", 1, "You are at the stop. You have 1 minute to wait."),
-    ("A4 arriving now", 0, "You are at the stop. The bus is arriving now."),
-    ("A5 e = 14", 14, "You are at the stop. You have 14 minutes to wait."),
+    ("A1 e = 4", 4, "You're here. 4 minutes to wait."),
+    ("A2 e = 2", 2, "You're here. 2 minutes to wait."),
+    ("A3 e = 1", 1, "You're here. 1 minute to wait."),
+    ("A4 arriving now", 0, "You're here. The bus is arriving."),
+    ("A5 e = 14", 14, "You're here. 14 minutes to wait."),
 ]
 
 
@@ -204,3 +204,26 @@ def test_at_the_stop_nothing_about_speed_distance_or_leaving_follows():
 def test_the_low_band_and_the_uncertain_flag_do_not_change_the_at_stop_card():
     plain = _python_text(_case(e=4, now=NOON_ISH, source="gps", distance=12.0, at_stop=True))
     assert _python_text(_case(e=4, now=NOON_ISH, source="gps", distance=12.0, at_stop=True, band="low", unc=True)) == plain
+
+
+TRAIN_AT_STATION_ROWS = [
+    (4, "You're here. 4 minutes to wait."),
+    (1, "You're here. 1 minute to wait."),
+    (0, "You're here. The train is arriving."),
+]
+
+
+def _train_at_station_cases():
+    return [_case(e=e, now=NOON_ISH, speed=1.25, source="gps", distance=12.0, leave_in=-100, at_stop=True,
+                  train="North-South Line") for e, _text in TRAIN_AT_STATION_ROWS]
+
+
+def test_python_tells_a_train_rider_at_the_station_the_train_is_arriving():
+    texts = [_python_lead(c) for c in _train_at_station_cases()]
+    assert texts == [row[1] for row in TRAIN_AT_STATION_ROWS]
+    assert not any("bus" in t.lower() or "stop" in t.lower() for t in texts)
+
+
+@needs_node
+def test_the_page_mirror_tells_a_train_rider_the_same():
+    assert _mirror_cases(_train_at_station_cases()) == [row[1] for row in TRAIN_AT_STATION_ROWS]

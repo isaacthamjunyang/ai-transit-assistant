@@ -11,7 +11,7 @@ const A = `(function () {
     top: screenStack[screenStack.length - 1], isTrain: isTrain(), service: selectedService,
     pill: text("catch-pill-text"), title: text("catch-title"), line: text("catch-line"), to: text("catch-to"), direction: shown("catch-direction") ? text("catch-direction") : null, when: null, legClass: document.getElementById("catch-leg").className,
     nodeRing: getComputedStyle(document.getElementById("catch-node")).boxShadow, ring: text("catch-ring-text"),
-    hasSub: !!document.getElementById("catch-sub"), hasCaption: !!document.getElementById("catch-caption"), pace: text("pace-slot"), paceHidden: document.getElementById("pace-slot").hidden,
+    hasSub: shown("catch-sub"), sub: shown("catch-sub") ? text("catch-sub") : null, hasCaption: !!document.getElementById("catch-caption"), pace: text("pace-slot"), paceHidden: document.getElementById("pace-slot").hidden,
     ringLabel: document.getElementById("catch-ring").getAttribute("aria-label"),
     cardText: document.getElementById("arrival-card").textContent.replace(/\\s+/g, " "),
     arrives: text("catch-arrives"), hasLabel: !!document.querySelector("#catch-arrives .catch-card__arrives-label"), notLive: !!document.getElementById("catch-not-live"),
@@ -25,7 +25,7 @@ const A = `(function () {
     tileDepartsLabel: text("tile-arrival-label"), tileDeparts: text("tile-arrival"), tileRange: shown("tile-arrival-range"),
     missRow: !!document.getElementById("if-you-miss"), aiBadge: !!document.getElementById("ai-badge"), tileNote: !!document.getElementById("tile-row"),
     ai: shown("ai-explanation") ? text("ai-explanation-text") : null,
-    bar: shown("see-arrivals-bar") ? text("see-arrivals-bar") : null, catchBar: shown("catch-bar"), barTitle: text("catch-bar-title"),
+    bar: shown("see-arrivals-bar") ? text("see-arrivals") : null, otherShown: shown("other-bus-actions"), catchBar: shown("catch-bar"), barTitle: text("catch-bar-title"),
     unlikelyBanner: shown("unlikely-banner"), catchWarning: shown("catch-warning"), pageC: document.body.classList.contains("is-page-c"),
     walkRow: text("walk-open"), scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth,
     hero: hero ? { monitored: hero.monitored, quality: hero.probability && hero.probability.data_quality, atStop: hero.probability && hero.probability.at_stop,
@@ -64,7 +64,7 @@ const W = `(function () {
     title: text("walk-title"), distance: text("walk-distance"), minutes: text("walk-minutes"), state: text("walk-state"),
     heading: text("walk-chance-title"), ring: text("walk-ring-text"), arrives: text("walk-arrives"),
     marker: stop ? { html: stop.innerHTML.indexOf("rect") !== -1, label: stop.textContent, hasTrain: stop.innerHTML.indexOf("M7 19") !== -1 || stop.innerHTML === "" ? true : stop.innerHTML.indexOf("<svg") !== -1 } : null,
-    bar: !document.getElementById("see-arrivals-bar").hidden, barText: text("see-arrivals-bar"),
+    bar: !document.getElementById("see-arrivals-bar").hidden, barText: text("see-arrivals"),
     scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth
   };
 })()`;
@@ -120,7 +120,7 @@ export default async function (h) {
   // Page A's heading column for other lines and for a bus whose destination stop is unknown (read, then restored)
   out.headings = await h.eval(`(function () {
     function text(id) { var el = document.getElementById(id); return el && !el.hidden ? el.textContent.replace(/\\s+/g, " ").trim() : null; }
-    function read() { return { line: text("catch-line"), direction: text("catch-direction"), to: text("catch-to"),
+    function read() { return { sub: text("catch-sub"), line: text("catch-line"), direction: text("catch-direction"), to: text("catch-to"),
       platform: (document.querySelector("#catch-to .catch-card__platform") || {}).textContent || null,
       arrives: text("catch-arrives"), pill: text("catch-pill-text"), load: text("catch-load") }; }
     var hero = featuredBus(lastSuccess.buses);

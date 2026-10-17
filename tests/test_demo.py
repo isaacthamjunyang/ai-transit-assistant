@@ -234,7 +234,7 @@ def test_browser_cannot_enable_demo_mode(monkeypatch):
 def test_demo_controls_exist_and_stay_hidden_until_the_server_enables_them():
     html = INDEX.read_text(encoding="utf-8")
     assert html.count("setInterval(") == 3
-    assert '<p id="demo-banner" class="demo-banner" hidden>SIMULATED DEMO MODE</p>' in html
+    assert '<div id="demo-banner" class="alert alert--simulated" hidden>' in html and "SIMULATED DEMO MODE</p></div>" in html
     assert '<details id="demo-controls" hidden>' in html
     assert "<summary>Demo Controls</summary>" in html
     assert 'id="demo-run">Run Scenario</button>' in html

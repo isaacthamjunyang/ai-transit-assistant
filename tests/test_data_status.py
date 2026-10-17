@@ -185,17 +185,30 @@ def test_the_menu_source_has_two_rows_and_no_data_lines():
     assert "loadMenuData" not in INDEX and 'fetch("/api/data-status")' not in INDEX
 
 
-def test_the_attribution_is_one_string_in_copy_the_explainer_the_guide_and_the_plan():
-    assert f'attribution: "{ATTRIBUTION}"' in COPY
-    block = INDEX.split('id="first-run"', 1)[1].split('id="catch-bar"', 1)[0]
-    assert ATTRIBUTION in block and block.rstrip().index("first-run-attribution") > block.index("first-run-next")
+def test_the_attribution_is_one_string_in_copy_the_menu_the_guide_and_the_plan():
+    assert f'menuAttribution: "{ATTRIBUTION}"' in COPY
     assert INDEX.count(ATTRIBUTION) == 1
-    assert "fr.attribution" in GUIDE and "first-run__attribution" in GUIDE
-    rule = CSS.split(".first-run__card .first-run__attribution {", 1)[1].split("}", 1)[0]
+    menu = INDEX.split('id="menu-sheet"', 1)[1].split("</header>", 1)[0]
+    assert f'id="menu-attribution" class="menu-sheet__attribution">{ATTRIBUTION}</p>' in menu
+    assert menu.rstrip().index("menu-attribution") > menu.index('id="how-it-works"')  # at the bottom of the panel
+    assert "menu-sheet__attribution" in GUIDE and 'data-copy="menuAttribution"' in GUIDE
+    rule = CSS.split(".menu-sheet__attribution {", 1)[1].split("}", 1)[0]
     assert "color: var(--color-muted)" in rule and "font-size: var(--type-caption)" in rule
     assert not re.search(r"#[0-9A-Fa-f]{3,8}\b|rgb\(|hsl\(|style=", rule)
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
     assert ATTRIBUTION in plan and "exactly two rows" in plan and "`GET /api/data-status` and the startup warnings stay" in plan
+    assert "at the bottom of the menu panel as small muted text" in plan
+
+
+def test_the_how_it_works_card_no_longer_carries_the_attribution_or_any_privacy_line():
+    card = INDEX.split('id="first-run"', 1)[1].split('id="catch-bar"', 1)[0]
+    for text in (ATTRIBUTION, "Motion data stays on your phone", "Saved places stay on this phone",
+                 "first-run-attribution", "first-run-privacy", "first-run-saved"):
+        assert text not in card, text
+    for text in ("Motion data stays on your phone", "Saved places stay on this phone"):
+        assert text not in COPY and text not in GUIDE, text
+    assert "attribution:" not in COPY.split("firstRun: {", 1)[1].split("},", 1)[0]
+    assert "first-run__attribution" not in CSS and "first-run__privacy" not in CSS and "first-run__attribution" not in GUIDE
 
 
 def _luminance(color):
@@ -242,10 +255,18 @@ def test_the_open_menu_has_exactly_two_rows_and_no_status_lines(menu):
     assert menu["calls"] == 0  # the page no longer asks for the status
 
 
-def test_the_attribution_is_the_last_muted_line_inside_the_how_it_works_card(menu):
+def test_the_attribution_is_the_last_muted_line_inside_the_open_menu(menu):
+    line = menu["attribution"]
+    assert line["text"] == ATTRIBUTION
+    assert line["isLast"] is True and line["visible"] is True and line["inside"] is True
+    assert line["belowRows"] is True
+    assert line["color"] != line["bodyColor"]  # muted, not the primary text colour
+    assert line["fontSize"] in ("12px", "0.75rem")  # small
+    assert line["scrollWidth"] <= line["innerWidth"]
+
+
+def test_the_how_it_works_card_holds_only_the_step_the_icon_the_line_and_the_buttons(menu):
     card = menu["card"]
-    assert card["text"] == ATTRIBUTION
-    assert card["isLast"] is True and card["visible"] is True and card["inside"] is True
-    assert card["belowActions"] is True
-    assert card["color"] != card["bodyColor"]  # muted, not the primary text colour
+    assert card["children"] == ["first-run-step", "first-run-icon", "first-run-text", "first-run__actions"]
+    assert ATTRIBUTION not in card["text"] and "Motion data" not in card["text"] and "Saved places" not in card["text"]
     assert card["scrollWidth"] <= card["innerWidth"]

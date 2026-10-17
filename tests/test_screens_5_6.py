@@ -36,7 +36,7 @@ def test_overview_order_and_edit_routes():
     assert 'return legItem(leg, position === 0 ? scheduledInLine(leg) : scheduleLine(leg), lineRow(leg), "");' in render
     assert "return legItem(leg, when, busRow(leg, live), whenClass);" in render
     assert 'label: "Edit destination stop", action: function () { backToScreen("stops"); }' in render
-    assert 'label: "Edit destination", action: function () { backToScreen("results"); }' in render
+    assert 'label: "Edit destination", action: editDestination }' in render
     assert "formatDistance(toBoard)" in main
     # Edit is the same as Back: it walks the history stack and adds no state of its own.
     back = _between(html, "function backToScreen(name)", "function closeStopsNote")
@@ -60,7 +60,7 @@ def test_transfer_variant_adds_a_transfer_stop_and_a_schedule_only_second_bus():
 def test_bottom_button_runs_the_existing_select_and_start_action():
     html = _page()
     markup = _between(html, 'id="journey-overview"', "</section>")
-    assert '<button type="button" id="start-journey" class="primary primary--icon" disabled>' in markup
+    assert '<button type="button" id="start-journey" class="primary primary--icon pulse-button" disabled>' in markup
     assert "<span>Start journey</span>" in markup
     assert "Select & Start Journey" not in html
     start = _between(html, 'getElementById("start-journey").addEventListener("click"', "});")
@@ -85,11 +85,11 @@ def test_tiles_are_display_only_capped_at_three_with_arriving_on_the_monitored_b
     assert "buses.slice(0, 3)" in tiles
     assert 'document.createElement("li")' in tiles
     assert "button" not in tiles and "addEventListener" not in tiles and "tabIndex" not in tiles
-    assert tiles.count('"(Arriving)"') == 1
+    assert tiles.count('textContent = "Arriving"') == 1 and "(Arriving)" not in tiles  # the Arriving chip: a tick and the word
     assert 'if (bus === hero) {\n          var arriving' in tiles
     assert 'id="next-buses" class="bus-tiles" role="list"' in html
     css = CSS.read_text(encoding="utf-8")
-    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
+    assert "grid-template-columns: minmax(0, 1fr)" in css and "repeat(3, minmax(0, 1fr))" not in css.split(".bus-tiles {", 1)[1].split("}", 1)[0]  # one row each
     assert ".bus-tile-card.is-selected {\n  box-shadow: 0 0 0 2px var(--color-selected-outline);" in css
 
 
@@ -143,7 +143,8 @@ def test_no_bus_tag_without_coordinates_and_no_invented_position():
 
 def test_live_page_order_puts_the_bus_card_last():
     html = _page()
-    order = ['id="alert-slot"', 'id="arrival-card"', 'id="pace-slot"', 'id="leave-tiles"',
+    # Layout B: the Leave by card first, the pace row, the probability card, the route strip, the Page W row, the AI card
+    order = ['id="alert-slot"', 'id="leave-tiles"', 'id="pace-slot"', 'id="arrival-card"', 'id="route-strip"', 'id="walk-open"',
              'id="ai-explanation"', 'id="live-tracking"', 'id="journey-panel"']
     positions = [html.index(marker) for marker in order]
     assert positions == sorted(positions)

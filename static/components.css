@@ -148,35 +148,58 @@ a {
   color: var(--color-link);
 }
 
+/* The header and the back row are rounded blocks on the card surface, like the bottom bar (--color-card, a 1 px line, the
+   card shadow), inset from the top and the sides by a small gap and separated from each other by the same gap. The
+   corners use --radius-card (the bottom bar itself is flush and has none). The top gap clears the safe area. */
 .app-header {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  width: min(440px, 100%);
-  margin: 0 auto;
-  padding: var(--space-3);
+  width: min(440px, calc(100% - 2 * var(--space-2)));
+  margin: max(var(--space-2), env(safe-area-inset-top)) auto var(--space-2);
+  padding: var(--space-2) var(--space-3);
   box-sizing: border-box;
   background: var(--color-card);
-  border-bottom: 1px solid var(--color-line);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
+/* The brand is the primary blue pill with white text and icon (the approved Home design), on every page. */
 .app-header__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
   min-width: 0;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  background: var(--color-primary);
+  border-radius: var(--radius-control);
+  color: var(--color-primary-ink);
 }
 
 .app-header__logo {
   display: grid;
   place-items: center;
-  width: var(--tap-min);
-  height: var(--tap-min);
-  border-radius: var(--radius-control);
-  background: var(--color-secondary);
-  color: var(--color-secondary-ink);
+  flex: 0 0 auto;
+  color: inherit;
+}
+
+.app-header__logo .icon {
+  width: 22px;
+  height: 22px;
+}
+
+/* The menu button is the warning fill (yellowish orange) with a black icon (--line-cc-ink, 11:1) and a 2 px outline in
+   the uncertain-text colour, which is 3:1 or more against the header in both themes. It stays 44 px. */
+.walk-page .icon-button,
+.back-bar .icon-button,
+.app-header .icon-button {
+  background: var(--fill-warning);
+  border: 2px solid var(--status-uncertain);
+  color: var(--line-cc-ink);
 }
 
 .field__hint,
@@ -192,19 +215,17 @@ a {
   font-size: var(--type-caption);
 }
 
+/* The back row is not sticky: it is the first thing in the page content, directly under the header block, and scrolls
+   away with the page (scrolling back up shows it again). Nothing is fixed or offset, so it covers no content. */
 .back-bar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  width: min(440px, 100%);
-  margin: 0 auto;
+  width: min(440px, calc(100% - 2 * var(--space-2)));
+  margin: 0 auto var(--space-2);
   padding: var(--space-1) var(--space-3);
-  padding-top: max(var(--space-1), env(safe-area-inset-top));
   box-sizing: border-box;
   background: var(--color-card);
-  border: 0;
-  box-shadow: none;
-  backdrop-filter: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .back-bar[hidden] {
@@ -214,8 +235,6 @@ a {
 .back-bar__button {
   display: grid;
   place-items: center;
-  min-width: var(--tap-min);
-  padding: 0;
 }
 
 .menu-sheet {
@@ -232,6 +251,15 @@ a {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+}
+
+/* The data attribution: small muted text at the bottom of the panel, always shown. */
+.menu-sheet__attribution {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+  line-height: 1.4;
 }
 
 .menu-sheet.is-preview {
@@ -292,14 +320,8 @@ a {
   box-shadow: var(--shadow-card);
 }
 
-.leave-dialog__actions {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.leave-dialog__actions .button {
-  flex: 1 1 0;
-}
+/* Stay and Leave are the add-place panel's Save (green outline and text) and Cancel (red): the dialog's actions carry
+   saved-panel__actions--form and its buttons .primary and .secondary, so they take that panel's rules unchanged. */
 
 .card,
 .list-item,
@@ -318,17 +340,6 @@ a {
 
 .card {
   padding: var(--space-3);
-}
-
-.card--info {
-  background: var(--color-secondary);
-  color: var(--color-secondary-ink);
-  border-color: transparent;
-}
-
-.card--info,
-.card--info p {
-  color: var(--color-secondary-ink);
 }
 
 .dest-stop-row.is-selected,
@@ -356,7 +367,8 @@ a {
 }
 
 .menu-radio.is-selected,
-.arrive-chip.is-selected {
+.arrive-chip.is-selected,
+.saved-chip__main.is-selected {
   box-shadow: 0 0 0 2px var(--color-selected-outline);
 }
 
@@ -364,29 +376,168 @@ a {
   box-shadow: 0 0 0 2px var(--color-selected-outline-success);
 }
 
-.card--caution,
-.banner--caution {
-  background: var(--tint-warning);
-  color: var(--status-uncertain);
-}
-
-.card--success {
-  background: var(--tint-success);
-  color: var(--status-live);
-}
-
-.card--unavailable,
-.banner--denied {
-  background: var(--tint-danger);
-  color: var(--status-unavailable);
-}
-
-.card--simulated,
-.banner--demo,
-.demo-banner,
 .simulated-badge {
   background: var(--tint-simulated);
   color: var(--status-simulated);
+}
+
+/* The one alert component. Every warning, error, info, success, neutral and simulated message in the app is this: a rounded
+   rectangle with a tint, a 1px border in the text colour, a left icon and bold text, full width of its container. The
+   severity sets two custom properties (a tint and an ink token), so each pair keeps 4.5:1 for the text and 3:1 for the
+   border in both themes. Compact label tags (the LIVE and Schedule only pills, the line and bus badges, the crowding
+   label, the recommendation tags) are not alerts and are not this component.
+   Markup: <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><div class="alert__body">
+   <p class="alert__text">...</p> [<p class="alert__meta">...</p>] [<div class="alert__actions">buttons</div>]</div></div>
+   (a text-only alert may put the .alert__text directly beside the icon). */
+.alert {
+  --alert-tint: var(--tint-warning);
+  --alert-ink: var(--status-uncertain);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-1));
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: calc(var(--space-2) + var(--space-1));
+  background: var(--alert-tint);
+  color: var(--alert-ink);
+  border: 1px solid var(--alert-ink);
+  border-radius: var(--radius-card);
+  font-size: var(--type-body);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.alert[hidden] {
+  display: none;
+}
+
+.alert--warning {
+  --alert-tint: var(--tint-warning);
+  --alert-ink: var(--status-uncertain);
+}
+
+.alert--error {
+  --alert-tint: var(--tint-danger);
+  --alert-ink: var(--status-unavailable);
+}
+
+.alert--info {
+  --alert-tint: var(--color-secondary);
+  --alert-ink: var(--color-secondary-ink);
+}
+
+.alert--success {
+  --alert-tint: var(--tint-success);
+  --alert-ink: var(--status-live);
+}
+
+.alert--neutral {
+  --alert-tint: var(--tint-neutral);
+  --alert-ink: var(--status-no-history);
+}
+
+.alert--simulated {
+  --alert-tint: var(--tint-simulated);
+  --alert-ink: var(--status-simulated);
+}
+
+.alert__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.625rem;
+  height: 1.625rem;
+  color: var(--alert-ink);
+}
+
+.alert__icon .icon {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
+.alert__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.alert p,
+.alert h3 {
+  margin: 0;
+}
+
+.alert__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.alert__meta {
+  font-size: var(--type-caption);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.alert__detail {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.alert__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.alert__actions .secondary,
+.alert__actions .primary {
+  width: 100%;
+  min-height: var(--tap-min);
+}
+
+/* An alert with buttons or several lines keeps its icon beside the first line. */
+.alert:has(.alert__actions),
+.alert:has(.alert__detail),
+.alert:has(.alert__meta) {
+  align-items: flex-start;
+}
+
+.alert:has(.alert__actions) > .alert__icon,
+.alert:has(.alert__detail) > .alert__icon,
+.alert:has(.alert__meta) > .alert__icon {
+  align-self: flex-start;
+}
+
+/* A train alert is cut at two lines with an expand control. */
+.alert--clamp .alert__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.alert--clamp.is-expanded .alert__text {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+
+.alert__toggle {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  color: inherit;
+  text-decoration: underline;
+}
+
+.alert__toggle[hidden] {
+  display: none;
 }
 
 .card h3,
@@ -394,14 +545,6 @@ a {
   margin-top: 0;
 }
 
-.banner,
-.demo-banner {
-  margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-card);
-}
-
-.demo-banner,
 .simulated-badge {
   border-radius: var(--radius-pill);
   font-weight: 700;
@@ -412,113 +555,6 @@ a {
   align-items: center;
   min-height: var(--tap-min);
   padding: 0 var(--space-3);
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--tap-min);
-  margin: 0;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-pill);
-  border: 1px solid transparent;
-  font-size: var(--type-caption);
-  font-weight: 700;
-}
-
-.badge__icon {
-  display: inline-flex;
-  color: currentColor;
-}
-
-.badge__dot {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: var(--radius-pill);
-  flex: 0 0 auto;
-}
-
-.badge__labels {
-  display: flex;
-  flex-direction: column;
-}
-
-.badge--live {
-  background: var(--tint-success);
-  color: var(--status-live);
-}
-
-.badge--live .badge__dot {
-  background: var(--fill-success);
-}
-
-.badge--schedule {
-  background: transparent;
-  color: var(--status-schedule);
-  border-color: var(--status-schedule);
-}
-
-.badge--schedule .badge__dot,
-.badge--no-history .badge__dot {
-  background: transparent;
-  box-shadow: inset 0 0 0 2px currentColor;
-}
-
-.badge--uncertain {
-  background: var(--tint-warning);
-  color: var(--status-uncertain);
-}
-
-.badge--uncertain .badge__dot {
-  background: var(--fill-warning);
-}
-
-.badge--stale,
-.badge--unavailable {
-  background: var(--tint-danger);
-}
-
-.badge--stale {
-  color: var(--status-stale);
-}
-
-.badge--unavailable {
-  color: var(--status-unavailable);
-}
-
-.badge--stale .badge__dot,
-.badge--unavailable .badge__dot {
-  background: var(--fill-danger);
-}
-
-.badge--no-history {
-  background: var(--tint-neutral);
-  color: var(--status-no-history);
-}
-
-.badge--simulated {
-  background: var(--tint-simulated);
-  color: var(--status-simulated);
-}
-
-.badge--simulated .badge__dot {
-  background: currentColor;
-}
-
-.badge--track {
-  background: var(--tint-success);
-  color: var(--status-live);
-}
-
-.badge--risk {
-  background: var(--tint-warning);
-  color: var(--status-uncertain);
-}
-
-.badge--na {
-  background: var(--tint-neutral);
-  color: var(--status-no-history);
 }
 
 .meter {
@@ -767,8 +803,8 @@ select,
   display: none;
 }
 
-.alert-slot__item.is-shown {
-  display: block;
+.alert.alert-slot__item.is-shown {
+  display: flex;
 }
 
 .empty {
@@ -915,21 +951,45 @@ select,
   box-shadow: var(--shadow-card);
 }
 
+/* Two rows that never wrap inside: In 30 min, In 1 hour, In 1 hr 30 min; then No target and Custom. The chips share a row and the
+   text stays on one line. The row is a size container, and the font and the side padding follow its width (6cqi less 1px, 2cqi), so on a
+   narrow phone the chips are a little smaller instead of wrapping; the height stays 44 px. On a wide row they reach 1 rem and 16 px. */
 .arrive-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-2);
+}
+
+.arrive-chips__row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.arrive-chips__row > .arrive-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-inline: clamp(4px, 2cqi, var(--space-3));
+  font-size: clamp(0.6875rem, calc(6cqi - 1px), 1rem);
+  white-space: nowrap;
+}
+
+@media (max-width: 340px) {
+  .arrive-panel {
+    padding: var(--space-2);
+  }
+
+  .arrive-chips__row {
+    gap: var(--space-1);
+  }
 }
 
 .arrive-custom {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.arrive-custom__label {
-  color: var(--color-muted);
-  font-size: var(--type-caption);
 }
 
 /* iOS Safari gives a time input its own intrinsic width and centres its value. Take both away so it fits the card:
@@ -944,6 +1004,55 @@ select,
   min-height: var(--tap-min);
   box-sizing: border-box;
   text-align: left;
+}
+
+/* The open Custom panel outlines the field as the selected Custom chip is: the selected outline token as a 2 px ring on the chip's
+   1 px line, with its pill radius (a shadow, so nothing moves). The right padding leaves room for the clock button. This rule
+   outranks the shared input[type="time"] rule. */
+.arrive-time-field .arrive-time {
+  padding-right: calc(var(--tap-min) + var(--space-2));
+  padding-left: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 0 2px var(--color-selected-outline);
+}
+
+/* The native clock icon is hidden (iPhone Safari does not draw it); .arrive-time-picker is the visible button. */
+.arrive-time::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.arrive-time-field {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* A real button, 44 px square, at the field's right: the link colour (blue in light, light blue in dark), at least 3:1 on the field. */
+.arrive-time-picker {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  padding: 0;
+  background: transparent;
+  color: var(--color-link);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.arrive-time-picker:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.arrive-time-picker .icon {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .arrive-time::-webkit-date-and-time-value {
@@ -970,12 +1079,16 @@ select,
   flex: 1 1 0;
 }
 
-/* The selected day has a thicker accent border (the 1 px border plus a 2 px ring, which takes no room) and bold text, so
-   it is not told by colour alone. The options share the row equally, so bold text cannot change their width. */
+/* The selected day has the same 2 px ring as a selected chip (one token, --color-selected-outline, set by the shared
+   .arrive-chip.is-selected rule) and bold text, so it is not told by colour alone. The options share the row equally, so
+   bold text cannot change their width. */
 .arrive-day__option.is-selected {
   font-weight: 700;
-  border-color: var(--color-selected-outline);
-  box-shadow: 0 0 0 2px var(--color-selected-outline);
+}
+
+/* The Custom problem message sits at least 12 px below the Today / Tomorrow buttons. */
+#arrive-by-error {
+  margin-top: var(--space-3);
 }
 
 .arrive-chip {
@@ -995,76 +1108,140 @@ select,
   margin: 0;
 }
 
-.planning-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.planning-banner p {
-  flex: 1 1 12rem;
-  margin: 0;
-}
-
-.field-error {
-  margin: var(--space-2) 0 0;
-  color: var(--status-unavailable);
-}
-
 #destination-heading {
-  font-size: var(--type-title);
-  font-weight: 700;
   line-height: 1.15;
 }
 
 .hero {
   position: relative;
-  height: calc(var(--space-5) * 5);
   margin: calc(var(--space-3) * -1) calc(var(--space-3) * -1) 0;
   overflow: hidden;
   border-radius: var(--radius-card) var(--radius-card) 0 0;
-  background: var(--illus-sky);
+  background: linear-gradient(180deg, var(--hero-sky-1) 0%, var(--hero-sky-2) 32%, var(--hero-sky-3) 58%,
+    var(--hero-sky-4) 82%, var(--hero-sky-5) 100%);
 }
 
+/* The illustration is decorative (aria-hidden, no controls). Its box keeps the viewBox's 3:1 shape at every width, so
+   nothing moves while it animates; the inline svg clips what drives past the edges. */
 .hero__art {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  overflow: hidden;
 }
 
-.hero__copy {
-  position: absolute;
-  top: var(--space-3);
-  left: var(--space-3);
-  right: 24%;
-  margin: 0;
-  color: var(--color-ink);
-  font-size: var(--type-title);
-  font-weight: 700;
-  line-height: 1.2;
+.hero-cloud__a { fill: var(--hero-cloud-1); opacity: 0.28; }
+.hero-cloud__b { fill: var(--hero-cloud-2); opacity: 0.4; }
+.hero-cloud__c { fill: var(--hero-cloud-3); opacity: 0.28; }
+
+.hero-wheel__spokes { fill: none; stroke: var(--hero-wheel); stroke-width: 0.35; opacity: 0.65; }
+.hero-wheel__rim { fill: none; stroke: var(--hero-wheel); stroke-width: 2.6; }
+.hero-wheel__pods { fill: none; stroke: var(--hero-pod); stroke-width: 3.4; stroke-dasharray: 3.4 5.1; }
+.hero-wheel__stand { fill: none; stroke: var(--hero-stand); stroke-width: 1.4; }
+.hero-wheel__base { fill: var(--hero-stand); }
+
+.hero-skyline { opacity: 0.92; }
+.hero-tower--blue { fill: var(--hero-tower-blue); }
+.hero-tower--teal { fill: var(--hero-tower-teal); }
+.hero-tower--navy { fill: var(--hero-tower-navy); }
+.hero-tower--slate { fill: var(--hero-tower-slate); }
+.hero-tower--pale { fill: var(--hero-tower-pale); }
+.hero-windows--blue { stroke: var(--hero-tower-blue-lit); }
+.hero-windows--teal { stroke: var(--hero-tower-teal-lit); }
+.hero-windows--navy { stroke: var(--hero-tower-navy-lit); }
+.hero-windows--slate { stroke: var(--hero-tower-slate-lit); }
+.hero-windows--pale { stroke: var(--hero-tower-pale-lit); }
+.hero-windows { fill: none; stroke-width: 2; stroke-dasharray: 2.4 3.2; }
+.hero-mast { fill: none; stroke: var(--illus-building-alt); stroke-width: 1; }
+
+.hero-mbs__tower { fill: var(--hero-mbs); }
+.hero-mbs__lit { fill: none; stroke: var(--hero-mbs-lit); stroke-width: 1.6; stroke-dasharray: 2 3.6; opacity: 0.85; }
+.hero-mbs__deck { fill: var(--hero-mbs-deck); }
+.hero-mbs__trim { fill: none; stroke: var(--hero-tower-pale-lit); stroke-width: 1; }
+.hero-mbs__base { fill: var(--hero-mbs-base); }
+
+.hero-rail { fill: var(--illus-building-alt); }
+.hero-rail__edge { fill: var(--color-ink); opacity: 0.5; }
+.hero-ground { fill: var(--illus-ground); }
+.hero-road { fill: none; stroke: var(--illus-building-alt); stroke-width: 2; stroke-dasharray: 10 8; }
+.hero-tree__trunk { fill: var(--color-ink); }
+.hero-tree__crown { fill: var(--illus-tree); }
+
+.hero-train__body { fill: var(--hero-train); stroke: var(--hero-train-edge); stroke-width: 1.5; }
+.hero-train__yellow { fill: var(--hero-train-yellow); }
+.hero-train__orange { fill: var(--hero-train-orange); }
+.hero-train__glass { fill: var(--hero-train-glass); }
+.hero-train__frame { fill: var(--hero-train-frame); }
+.hero-train__joint { fill: var(--hero-hub); }
+
+.hero-bus__body { fill: var(--hero-bus); }
+.hero-bus__roof { fill: var(--hero-bus-dark); }
+.hero-bus__glass { fill: var(--hero-bus-glass); }
+.hero-bus__mullion { fill: none; stroke: var(--hero-bus); stroke-width: 1.5; }
+.hero-bus__band { fill: var(--hero-bus-band); }
+.hero-bus__tag { fill: var(--line-cc); }
+.hero-bus__door { fill: var(--hero-bus-glass); stroke: var(--hero-bus-dark); stroke-width: 1; }
+.hero-bus__tyre { fill: var(--hero-tyre); }
+.hero-bus__hub { fill: var(--hero-hub); }
+
+/* Motion (decorative, slow, nothing flashes): the bus crosses in 14 s and the train in 20 s, each on a linear loop; the
+   tree sways 2 degrees either way every 3 s; the clouds drift 42 px over 18 s, back and forth. With reduced motion the
+   whole hero is a still frame with the bus and the train in view. */
+.hero-move {
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
-.hero__line {
-  display: block;
+.hero-move--bus {
+  animation-name: hero-drive-bus;
+  animation-duration: 14s;
 }
 
-.hero-support {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: var(--type-body);
-  line-height: 1.4;
-  text-align: center;
+.hero-move--train {
+  animation-name: hero-drive-train;
+  animation-duration: 20s;
+  animation-delay: -7s;
 }
 
-.illus-sky { fill: var(--illus-sky); }
-.illus-building { fill: var(--illus-building); }
-.illus-building-alt { fill: var(--illus-building-alt); }
-.illus-tree { fill: var(--illus-tree); }
-.illus-bus { fill: var(--illus-bus); }
-.illus-bus-window { fill: var(--illus-bus-window); }
-.illus-ground { fill: var(--illus-ground); }
-.illus-ink { fill: var(--color-ink); }
+.hero-tree {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: hero-sway 3s ease-in-out infinite alternate;
+}
+
+.hero-cloud {
+  animation: hero-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes hero-drive-bus {
+  from { transform: translateX(-110px); }
+  to { transform: translateX(380px); }
+}
+
+@keyframes hero-drive-train {
+  from { transform: translateX(-240px); }
+  to { transform: translateX(380px); }
+}
+
+@keyframes hero-sway {
+  from { transform: rotate(-2deg); }
+  to { transform: rotate(2deg); }
+}
+
+@keyframes hero-drift {
+  from { transform: translateX(-12px); }
+  to { transform: translateX(30px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-move,
+  .hero-tree,
+  .hero-cloud {
+    animation: none;
+    transform: none;
+  }
+}
 
 .search-row {
   display: flex;
@@ -1077,11 +1254,83 @@ select,
   min-width: 0;
 }
 
+.search-row .field__shell,
+.saved-panel__search .field__shell {
+  min-height: 56px;
+  padding: 0 var(--space-3);
+  border: 2px solid var(--color-link);
+}
+
+.search-row .field__shell {
+  color: var(--color-link);
+}
+
+.search-row .field__shell #destination,
+.saved-panel__search .field__control {
+  align-self: stretch;  /* the whole 56 px box is the text field's tap area */
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.search-row .field__shell #destination::placeholder,
+.saved-panel__search .field__control::placeholder {
+  color: var(--color-muted);
+  opacity: 1;
+}
+
+/* The Home heading: the approved gradient, every stop 4.5:1 or more on the card (theme.css). It shifts gently, and is
+   a still gradient with reduced motion. Without background-clip support, or in forced colours, it is plain text. */
+.card .home-heading {
+  text-align: center;
+  white-space: nowrap;
+  padding-bottom: 2px;
+  background: linear-gradient(90deg, var(--heading-g1), var(--heading-g2), var(--heading-g3), var(--heading-g4),
+    var(--heading-g1));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: var(--color-ink);
+  -webkit-text-fill-color: transparent;
+  font-size: 1.375rem;
+  /* One line, always: the size follows the form's width (the text spans about 80% of it, at 360 px and at every other
+     width), never more than 1.5rem, so a larger text size or a narrow phone only shrinks the line, never wraps it. */
+  font-size: min(1.5rem, 6.2cqw);
+  font-weight: 800;
+  animation: home-shine 8s linear infinite;
+}
+
+@keyframes home-shine {
+  from { background-position: 0 0; }
+  to { background-position: 200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card .home-heading {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .card .home-heading {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .card .home-heading {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
 .quick-picks {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 10px 10px 0 0;  /* room for the delete badge on the top and right chips: nothing moves in edit mode */
+  gap: 14px;
+  /* The gap under the search bar is the shared Home block gap (--space-6): the form's 24 px plus this margin. The delete
+     badge (12 px above its chip) sits inside that gap, so nothing moves in edit mode. */
+  margin-top: calc(var(--space-6) - var(--space-4));
 }
 
 .quick-pick {
@@ -1097,13 +1346,30 @@ select,
 
 /* Saved places on Home: a row of chips (the user's own names), "+" and "Custom", one muted line, and one inline panel.
    Every control is at least 44 px; a long name ends in an ellipsis and keeps its full aria-label. */
-/* "+" : a dashed green outline and green text (the success outline and text tokens), so it differs from the solid green
-   saved chips. Both tokens are text-safe on the chip background in light and dark (4.5:1 and 3:1 or more). */
-.quick-pick--add {
-  min-width: var(--tap-min);
-  border: 1px dashed var(--color-selected-outline-success);
-  color: var(--status-live);
+/* Every chip in the row has a 2 px outline, so Saved, Edit and Done all keep one size and nothing moves. */
+.quick-picks .quick-pick {
+  padding: 0 18px;
+  border-width: 2px;
+  font-size: 1rem;
   font-weight: 700;
+}
+
+/* "+ Add place": a dashed green outline and green text (the success outline and text tokens), so it differs from the
+   solid grey saved chips. Both tokens are text-safe on the chip background in light and dark (4.5:1 and 3:1 or more). */
+.quick-picks .quick-pick--add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: var(--tap-min);
+  padding: 0 16px;
+  border-style: dashed;
+  border-color: var(--color-selected-outline-success);
+  color: var(--status-live);
+}
+
+.quick-pick--add .icon {
+  width: 18px;
+  height: 18px;
 }
 
 .saved-chip {
@@ -1113,15 +1379,21 @@ select,
   min-width: 0;
 }
 
-/* Saved places have a green outline (the success outline token, 3:1 or more on the card in both themes) on the normal
-   chip background, with the name in the normal text colour. */
+/* A saved place is an Arrive by chip: the same 1 px light outline (--color-line), card fill, pill radius and text colour when
+   unselected, and the shared selected look (the 2 px --color-selected-outline ring, set with .arrive-chip.is-selected above)
+   when it matches the current search or destination. The side padding is 1 px wider than the rest of the row's so the chip
+   keeps the width it had with a 2 px border; the ring is a shadow, so selecting changes no size. */
 .saved-chip__main {
   display: inline-flex;
   align-items: center;
   max-width: 10rem;
   min-width: 0;
-  border-color: var(--color-selected-outline-success);
   color: var(--color-ink);
+}
+
+.quick-picks .saved-chip__main {
+  padding: 0 19px;
+  border-width: 1px;
 }
 
 .saved-chip__name {
@@ -1132,17 +1404,12 @@ select,
   white-space: nowrap;
 }
 
-/* Selected keeps the 2 px selected outline, as an outer ring with a gap so it reads apart from the green outline. */
-.saved-chip__main.is-selected {
-  box-shadow: 0 0 0 2px var(--color-card), 0 0 0 4px var(--color-selected-outline);
-}
-
-/* The delete badge (edit mode): a 20 px mark centred on the chip's upper right corner inside a 44 px hit area that
-   reaches 10 px beyond the chip, less than the row gap, so it never covers a neighbouring chip. */
+/* The delete badge (edit mode): a 24 px mark centred on the chip's upper right corner inside a 44 px hit area that
+   reaches 12 px beyond the chip, less than the row gap, so it never covers a neighbouring chip. */
 .saved-chip__badge {
   position: absolute;
-  top: -10px;
-  right: -10px;
+  top: -12px;
+  right: -12px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
@@ -1160,8 +1427,8 @@ select,
 .saved-chip__badge-mark {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: var(--color-ink);
   border-radius: var(--radius-pill);
   font-size: 0.875rem;
@@ -1170,16 +1437,17 @@ select,
 }
 
 /* Edit: a red outline and red text (the danger text token, 4.5:1 or more on the chip in both themes). While editing
-   it reads "Done" and goes back to the neutral chip style. Size and label are unchanged. */
-.saved-edit-toggle {
-  min-width: 4.5rem;
+   it reads "Done" with the blue selected outline, a tinted fill and a soft halo. Size is unchanged. */
+.quick-picks .saved-edit-toggle {
+  min-width: 5.25rem;  /* "Done" is wider than "Edit": one width for both, so the chip never changes size */
   border-color: var(--status-stale);
   color: var(--status-stale);
-  font-weight: 600;
 }
 
-.saved-edit-toggle[aria-pressed="true"] {
-  border-color: var(--color-line);
+.quick-picks .saved-edit-toggle[aria-pressed="true"] {
+  background: var(--color-secondary);
+  border-color: var(--color-selected-outline);
+  box-shadow: 0 0 0 3px var(--color-secondary);
   color: var(--color-ink);
 }
 
@@ -1196,20 +1464,20 @@ select,
   line-height: 1.4;
 }
 
-.saved-places__note--warn {
-  color: var(--status-uncertain);
-}
-
-/* The privacy note is concealed, not removed, while nothing is saved and the add panel is closed, so the space stays. */
-.saved-places__note.is-concealed {
-  visibility: hidden;
+/* The search status line is a live region: while it is empty it takes no room and adds no gap. */
+.saved-panel__status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 
 .saved-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  gap: 1.125rem;
+  padding: 1.125rem;
   background: var(--color-card);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -1223,8 +1491,8 @@ select,
 .saved-panel__title {
   margin: 0;
   color: var(--color-ink);
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.1875rem;
+  font-weight: 800;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -1240,8 +1508,37 @@ select,
 .saved-panel__search {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-2);
+  align-items: center;
+  gap: 10px;
+}
+
+/* Search is the blue action; Save is the green outline and Cancel the red outline, as on the chips. */
+.saved-panel__search .secondary {
+  min-height: 48px;
+  padding: 0 18px;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-ink);
+  font-weight: 700;
+}
+
+.saved-panel__actions--form .primary,
+.saved-panel__actions--form .secondary,
+.saved-panel__actions--delete .primary,
+.saved-panel__actions--delete .secondary {
+  min-height: 48px;
+  background: transparent;
+  border: 2px solid var(--color-selected-outline-success);
+  color: var(--status-live);
+  font-weight: 700;
+}
+
+/* Cancel in the add and rename panels, and Delete in the delete question, are the red outline; Save in those panels,
+   and Cancel in the delete question (the default focus), are the green one. One format for all four. */
+.saved-panel__actions--form .secondary,
+.saved-panel__actions--delete .primary {
+  border-color: var(--status-stale);
+  color: var(--status-stale);
 }
 
 .saved-panel__search .field {
@@ -1272,13 +1569,6 @@ select,
   font-size: 0.875rem;
   font-weight: 600;
   overflow-wrap: anywhere;
-}
-
-.saved-panel__error {
-  margin: 0;
-  color: var(--status-stale);
-  font-size: 0.875rem;
-  font-weight: 600;
 }
 
 .saved-panel__actions {
@@ -1535,7 +1825,7 @@ select,
   height: calc(var(--tap-min) + var(--space-4));
   border-radius: var(--radius-card);
   background: var(--color-secondary);
-  color: var(--color-secondary-ink);
+  color: var(--marker-end);  /* the destination's green flag, the map's icon: 3:1 or more on the tile */
 }
 
 .place-tile .icon {
@@ -1690,10 +1980,6 @@ select,
   font-weight: 700;
 }
 
-.error {
-  color: var(--status-unavailable);
-}
-
 #demo-controls {
   display: flex;
   flex-direction: column;
@@ -1843,12 +2129,6 @@ select,
   align-items: flex-start;
   gap: var(--space-3);
   flex-wrap: wrap;
-}
-
-.pace-chip {
-  display: grid;
-  gap: var(--space-2);
-  max-width: 16rem;
 }
 
 .leaflet-popup.map-popup .leaflet-popup-content-wrapper {
@@ -2400,10 +2680,6 @@ body.is-screen-stops main.wrap {
   margin-top: 0.1rem;
 }
 
-.dest-stop-row__note {
-  font-size: var(--type-caption);
-}
-
 .dest-stop-row__chevron {
   flex: 0 0 auto;
   color: var(--color-muted);
@@ -2697,27 +2973,6 @@ body.is-screen-stops main.wrap {
   font-size: 0.875rem;
 }
 
-.info-box {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  background: var(--color-secondary);
-  color: var(--color-secondary-ink);
-  border-radius: var(--radius-card);
-}
-
-.info-box .icon {
-  flex: 0 0 auto;
-  margin-top: 0.1rem;
-}
-
-.info-box p {
-  margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
 /* Style guide frames for the screen 3 samples. */
 
 .dest-map.sample-map {
@@ -2824,10 +3079,10 @@ body.is-screen-home .hero {
 
 .app-header__home {
   min-height: var(--tap-min);
-  margin: 0 calc(var(--space-1) * -1);
-  padding: 0 var(--space-1);
-  background: transparent;
-  color: var(--color-ink);
+  margin: 0;
+  padding: 0 var(--space-3);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
   border: 0;
   border-radius: var(--radius-control);
   font: inherit;
@@ -2836,7 +3091,7 @@ body.is-screen-home .hero {
 }
 
 .app-header__home:hover {
-  background: var(--tint-neutral);
+  opacity: 0.92;
 }
 
 .app-header__home:focus-visible {
@@ -2852,7 +3107,8 @@ body.is-screen-home .hero {
 
 .app-header__text .app-header__title {
   display: block;
-  font-weight: 700;
+  font-size: var(--type-title);
+  font-weight: 800;
 }
 
 /* Screen 1: required arrive-by and the find-route gate. */
@@ -2875,32 +3131,6 @@ body.is-screen-home .hero {
   background: var(--color-secondary);
   color: var(--color-secondary-ink);
   cursor: not-allowed;
-}
-
-.field-help {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-1);
-  margin: 0;
-  color: var(--status-unavailable);
-  font-size: 0.875rem;
-  line-height: 1.35;
-}
-
-.field-help__icon {
-  flex: 0 0 auto;
-  width: 1rem;
-  height: 1rem;
-  margin-top: 0.05rem;
-}
-
-.field-help:not(.is-shown) {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
 }
 
 .select-field__time {
@@ -2947,12 +3177,21 @@ body.is-screen-home .hero {
   padding-bottom: var(--space-2);
 }
 
+/* Approved overview design: no outer card. The title, the select, the summary and the rows sit on the page; each
+   transit leg is its own bordered group. The On your way and new-journey screens share it. */
+.card.overview-card {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
 .overview-card .overview-title {
   margin: 0 0 var(--space-2);
   color: var(--color-ink);
-  font-size: 1.375rem;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: 1.625rem;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .journey-steps {
@@ -2978,16 +3217,6 @@ body.is-screen-home .hero {
   width: 2px;
   height: 100%;
   background: var(--color-primary);
-}
-
-.journey-step + .journey-step::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: calc(var(--step-node) + var(--space-2) + var(--space-1));
-  height: 1px;
-  background: var(--color-line);
 }
 
 .step-node {
@@ -3085,9 +3314,12 @@ body.is-screen-home .hero {
   flex: 0 0 auto;
   width: var(--tap-min);
   height: var(--tap-min);
-  border-radius: var(--radius-pill);
-  background: var(--color-card);
-  color: var(--color-primary);
+  color: var(--color-secondary-ink);
+}
+
+.arrive-box__icon .icon {
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .arrive-box__copy {
@@ -3107,6 +3339,27 @@ body.is-screen-home .hero {
   font-weight: 700;
 }
 
+/* Approved design: the label is small above, the time is the large one and never wraps. */
+.arrive-box__lead {
+  display: block;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.arrive-box__time {
+  display: block;
+  font-size: clamp(1.875rem, 11vw, 3rem);
+  font-weight: 800;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.arrive-box__next {
+  display: block;
+  font-size: var(--type-body);
+  font-weight: 600;
+}
+
 .arrive-box__value .select-field__time {
   color: inherit;
 }
@@ -3114,18 +3367,6 @@ body.is-screen-home .hero {
 .arrive-box__meta {
   font-size: var(--type-caption);
   line-height: 1.35;
-}
-
-.badge.arrive-box__status {
-  align-self: flex-start;
-  min-height: 0;
-  margin-top: var(--space-1);
-  padding: 2px var(--space-2);
-}
-
-.banner--info {
-  background: var(--color-secondary);
-  color: var(--color-secondary-ink);
 }
 
 /* Screen 6: live bus tracking. */
@@ -3275,8 +3516,8 @@ body:not(.is-screen-live) #arrival-card {
 
 .bus-tiles {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -3284,31 +3525,58 @@ body:not(.is-screen-live) #arrival-card {
 
 .bus-tile-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
+  justify-content: space-between;
+  gap: var(--space-3);
+  box-sizing: border-box;
   min-height: var(--tap-min);
-  padding: calc(var(--space-2) + var(--space-1)) var(--space-1);
+  padding: calc(var(--space-2) + var(--space-1)) var(--space-3);
   background: var(--color-card);
   color: var(--color-ink);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  text-align: center;
+  text-align: left;
 }
 
+/* Approved Page B design: the selected row takes the secondary surface and the selected outline (the 1px border plus the 2px
+   outline read as the design's 3px, and the row keeps its size). */
 .bus-tile-card.is-selected {
   box-shadow: 0 0 0 2px var(--color-selected-outline);
+  background: var(--color-secondary);
+}
+
+.bus-tile-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bus-tile-card__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+  text-align: right;
 }
 
 .bus-tile-card__minutes {
-  font-size: 1.125rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 1.875rem;
+  font-weight: 800;
+  line-height: 1.05;
 }
 
 .bus-tile-card__service {
-  font-size: 0.875rem;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.bus-tile-card.is-selected .bus-tile-card__service {
+  color: var(--color-ink);
 }
 
 /* Bus crowding (LTA Load): an icon of its own shape, a colour token and a word, never colour alone. Display only. The
@@ -3321,8 +3589,8 @@ body:not(.is-screen-live) #arrival-card {
   max-width: 100%;
   margin: 0;
   color: var(--color-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -3358,13 +3626,28 @@ body:not(.is-screen-live) #arrival-card {
 }
 
 .crowd-chip__icon .icon {
-  width: 1rem;
-  height: 1rem;
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
+/* The Arriving state: a green pill with a tick and the word. */
 .bus-tile-card__arriving {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px calc(var(--space-2) + 2px);
+  background: var(--tint-success);
+  border-radius: var(--radius-pill);
   color: var(--status-live);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.bus-tile-card__arriving .icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
 }
 
 .live-map {
@@ -3499,23 +3782,6 @@ body:not(.is-screen-live) #arrival-card {
 
 body.is-screen-journey main.wrap {
   padding-top: var(--space-2);
-}
-
-.overview-reason {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-1);
-  margin: calc(var(--space-1) * -1) 0 var(--space-2);
-  color: var(--color-muted);
-  font-size: var(--type-caption);
-  line-height: 1.4;
-}
-
-.overview-reason .icon {
-  flex: 0 0 auto;
-  width: 0.875rem;
-  height: 0.875rem;
-  margin-top: 0.05rem;
 }
 
 .overview-state {
@@ -3674,11 +3940,27 @@ body.is-screen-journey main.wrap {
   --leg-bar: var(--line-ss);
 }
 
+/* The group box around a transit leg: a 2px border in the leg's ring colour (grey for a bus, the line's colour for a
+   train) on the card surface. The inset keeps the markers in line with the other rows, so the bar and the plain
+   connector move right by the padding. */
+.journey-step--leg {
+  --leg-inset: var(--space-2);
+  margin-inline: calc(var(--leg-inset) * -1 - 2px);
+  padding-inline: var(--leg-inset);
+  background: var(--color-card);
+  border: 2px solid var(--leg-ring);
+  border-radius: var(--radius-card);
+}
+
+.journey-step--leg:not(:last-child)::before {
+  left: calc(var(--step-node) / 2 - 1px + var(--leg-inset));
+}
+
 .journey-step__bar {
   position: absolute;
   top: calc(var(--step-pad) + var(--step-node) / 2);
   bottom: calc(var(--step-pad) + var(--step-node) / 2);
-  left: calc(var(--step-node) / 2 - 2px);
+  left: calc(var(--step-node) / 2 - 2px + var(--leg-inset));
   width: 4px;
   border-radius: var(--radius-pill);
   background: var(--leg-bar);
@@ -3721,16 +4003,46 @@ body.is-screen-journey main.wrap {
   margin: 0 0 var(--space-2);
 }
 
+/* The select is prominent: the row titles' type (body size, bold, the page font), a 2px outline in the selected-outline
+   token (4.7:1 light, 8:1 dark on the card), 48 px high with a fixed border so nothing shifts, and a drawn chevron. */
+.priority-select-wrap {
+  position: relative;
+  display: block;
+}
+
+.priority-select-wrap__chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  color: var(--color-selected-outline);
+  pointer-events: none;
+}
+
+.priority-select-wrap__chevron .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .priority-select {
   box-sizing: border-box;
   width: 100%;
   min-height: var(--tap-min);
-  padding: 0 var(--space-3);
+  block-size: 3rem;
+  padding: 0 calc(var(--space-3) + 2rem) 0 var(--space-3);
   background: var(--color-card);
   color: var(--color-ink);
-  border: 1px solid var(--color-line-strong);
+  border: 2px solid var(--color-selected-outline);
   border-radius: var(--radius-control);
-  font: inherit;
+  font-family: inherit;
+  font-size: var(--type-body);
+  font-weight: 700;
+  line-height: 1.3;
+  appearance: none;
+  -webkit-appearance: none;
+  text-overflow: ellipsis;
 }
 
 .priority-select:focus-visible {
@@ -3755,13 +4067,14 @@ body.is-screen-journey main.wrap {
 .overview-summary {
   --summary-accent: var(--status-live);
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1fr);
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
   box-sizing: border-box;
   margin: 0 0 var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  background: color-mix(in srgb, var(--summary-accent) 9%, var(--color-card));
-  border: 1px solid var(--color-line);
+  padding: var(--space-3);
+  background: var(--color-secondary);
+  border: 0;
   border-left: 6px solid var(--summary-accent);
   border-radius: var(--radius-card);
   color: var(--color-ink);
@@ -3790,10 +4103,26 @@ body.is-screen-journey main.wrap {
 }
 
 .overview-summary__value {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.1;
   white-space: nowrap;
+}
+
+/* Approved design: the total time is the hero at the left; transfers and walking stack at the right. */
+.overview-summary__cell:first-child {
+  grid-row: 1 / span 2;
+}
+
+.overview-summary__cell:first-child .overview-summary__value {
+  font-size: clamp(2rem, 10vw, 3rem);
+  line-height: 1.05;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.overview-summary__cell:not(:first-child) {
+  grid-column: 2;
 }
 
 .summary-item .dest-tile {
@@ -3993,14 +4322,16 @@ body.is-screen-journey main.wrap {
   height: 1.2em;
 }
 
+/* Approved design: the empty-answer banner has a 1px outline in its own text colour and bold text. */
 .overview-state__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
 .overview-state__actions .secondary {
-  flex: 1 1 10rem;
+  width: 100%;
+  min-height: 3rem;
 }
 
 /* The ride-app card under an empty plan answer: a heading, an optional distance line, one text link per
@@ -4032,8 +4363,8 @@ body.is-screen-journey main.wrap {
 }
 
 .ride-apps__list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -4041,8 +4372,30 @@ body.is-screen-journey main.wrap {
 }
 
 .ride-apps__list li {
-  flex: 1 1 8rem;
   display: flex;
+}
+
+/* The last link takes the full row when the count is odd (Ryde, the fifth). */
+.ride-apps__list li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* Approved overview design: the ride-app card is a tinted block (the Page C copy keeps its own look). */
+.overview-card .ride-apps {
+  padding: var(--space-3);
+  background: var(--color-secondary);
+  border-radius: var(--radius-card);
+}
+
+.overview-card .ride-apps__heading {
+  font-size: 1.125rem;
+}
+
+.overview-card .ride-apps__link {
+  min-height: 3rem;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
 }
 
 .ride-apps__link {
@@ -4121,54 +4474,12 @@ body:not(.is-screen-live) .live-only {
   display: none;
 }
 
-.banner--success {
-  background: var(--tint-success);
-  color: var(--status-live);
-}
-
-.banner--quiet {
-  background: var(--tint-neutral);
-  color: var(--color-ink);
-}
-
-.reroute-none:empty {
-  display: none;
-}
-
 .reroute-block,
 .reroute-proposal,
 .reroute-details {
   display: flex;
   flex-direction: column;
   gap: calc(var(--space-2) + var(--space-1));
-}
-
-.reroute-warning {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--space-2) + var(--space-1));
-}
-
-.reroute-warning p,
-.reroute-confirm p,
-.reroute-confirm h3 {
-  margin: 0;
-}
-
-.reroute-warning .icon {
-  flex: 0 0 auto;
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.reroute-warning__title {
-  font-weight: 700;
-}
-
-.reroute-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
 }
 
 .better-card {
@@ -4350,10 +4661,6 @@ body:not(.is-screen-live) .live-only {
   white-space: pre;
 }
 
-.catch-warning {
-  cursor: pointer;
-}
-
 /* Probability ring (presentation only: the engine supplies point and range). */
 
 .prob-ring {
@@ -4374,6 +4681,12 @@ body:not(.is-screen-live) .live-only {
 .prob-ring--large {
   width: clamp(6rem, 30vw, 7.5rem);
   height: clamp(6rem, 30vw, 7.5rem);
+}
+
+/* Modest colour: the ring sits on a secondary-tint disc. The arc keeps its probability colour. */
+.prob-ring--large {
+  border-radius: 50%;
+  background: var(--color-secondary);
 }
 
 .prob-ring--large .prob-ring__text {
@@ -4470,13 +4783,31 @@ body:not(.is-screen-live) .live-only {
    journey-step--rail-{code} class that only sets --leg-ring), the row and the time line. */
 .catch-card__leg {
   --step-node: 2.5rem;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+/* Layout B: the marker and the badge share the top row; "To {place}", the muted line, the time, the pill and the
+   crowding label stack below at the full width of the column. */
+.catch-card__leg .catch-card__heading {
+  display: contents;
+}
+
+.catch-card__leg .catch-card__heading > :not(.catch-card__line, .visually-hidden) {
+  grid-column: 1 / -1;
 }
 
 .catch-card__leg p {
   margin: 0;
+}
+
+/* Modest colour: the heading block is a secondary-tint band. */
+.catch-card__leg {
+  padding: var(--space-2);
+  background: var(--color-secondary);
+  border-radius: var(--radius-control);
 }
 
 .catch-card__leg .step-node {
@@ -4499,38 +4830,27 @@ body:not(.is-screen-live) .live-only {
    text; the pill, the platform and the crowding label are smaller. */
 .catch-card__line .line-badge {
   min-height: 1.75rem;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
 }
 
-.catch-card__line-name {
-  color: var(--color-ink);
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.catch-card__direction {
+.catch-card__sub-line {
+  margin: 0;
   color: var(--color-muted);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
-.catch-card__direction[hidden],
+.catch-card__sub-line[hidden],
 .catch-card__to[hidden] {
   display: none;
 }
 
 .catch-card__to {
+  overflow-wrap: anywhere;
   color: var(--color-ink);
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.catch-card__platform {
-  color: var(--color-muted);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 1.3125rem;
+  font-weight: 800;
+  line-height: 1.15;
 }
 
 .catch-card__status {
@@ -4567,7 +4887,7 @@ body:not(.is-screen-live) .live-only {
 
 /* Page A: the heading (marker, row, time line) sits at the right of the ring, the clock time below it. */
 .catch-card__copy .catch-card__arrives-time {
-  font-size: 1.25rem;
+  font-size: 1.625rem;
 }
 
 .catch-card__title {
@@ -4617,64 +4937,33 @@ body:not(.is-screen-live) .live-only {
 
 .catch-card__arrives-time {
   color: var(--color-ink);
-  font-size: 1.0625rem;
-  font-weight: 700;
+  font-size: 1.625rem;
+  font-weight: 800;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
-.catch-card__caption {
-  color: var(--color-muted);
-  font-size: var(--type-caption);
-}
-
-.catch-card .note:empty,
-.catch-card .arrival-warning:empty {
+.catch-card .note:empty {
   display: none;
 }
 
-.pace-slot .pace-chip {
-  max-width: none;
-  padding: var(--space-3);
-  background: var(--color-card);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-}
-
-.pace-slot .pace-chip .badge {
-  min-height: 0;
-  padding: var(--space-1) var(--space-3);
-}
-
-.pace-slot .pace-chip p {
-  margin: 0;
-}
-
-/* The walk line inside the pace card: the chip's own font, the primary text colour. */
-.pace-walk {
-  margin: 0;
-  color: var(--color-ink);
-  font-size: var(--type-caption);
-  font-weight: 700;
-}
-
-.pace-walk[hidden] {
-  display: none;
-}
-
+/* Layout B: the pace chip and the walk line are one plain row (no card) under the Leave by card. */
+/* The walk line beside the chip: bold, the primary text colour. */
 .leave-tiles {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 
+/* Layout B: the most prominent card after the ring. A filled card in the primary token with the primary-ink text
+   (4.69:1 light, 4.78:1 dark), the label above a large time. "Leave now" and "At the stop" use the same fill. */
 .leave-tile {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--color-card);
-  color: var(--color-ink);
-  border: 1px solid var(--color-line);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
   border-radius: var(--radius-card);
 }
 
@@ -4684,24 +4973,20 @@ body:not(.is-screen-live) .live-only {
 
 .leave-tile__icon {
   flex: 0 0 auto;
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 .leave-tile__icon .icon {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
-/* "Leave by: {time}" on one line; "Leave now" and "At the stop" stand alone (the label is hidden). */
 .leave-tile__line {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  white-space: nowrap;
-}
-
-.leave-tile__line .leave-tile__label {
-  font-size: clamp(0.9rem, 4.4vw, 1.375rem);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
 }
 
 .leave-tile__label[hidden] {
@@ -4709,20 +4994,17 @@ body:not(.is-screen-live) .live-only {
 }
 
 .leave-tile__label {
-  font-size: 0.875rem;
+  color: var(--color-primary-ink);
+  font-size: 1rem;
   font-weight: 500;
+  line-height: 1.1;
 }
 
 .leave-tile__value {
-  font-size: clamp(0.9rem, 4.4vw, 1.375rem);
-  font-weight: 700;
+  font-size: clamp(1.75rem, 9.5vw, 3rem);
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  line-height: 1.25;
-}
-
-.leave-tile__meta {
-  color: var(--color-muted);
-  font-size: var(--type-caption);
+  line-height: 1.05;
 }
 
 /* The clock time and "Leave now" stay on one line in the full-width tile at every phone width. */
@@ -4732,23 +5014,6 @@ body:not(.is-screen-live) .live-only {
 
 .leave-tile > div {
   min-width: 0;
-}
-
-.leave-tile__warn {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-1);
-  color: var(--status-uncertain);
-}
-
-.leave-tile__warn[hidden] {
-  display: none;
-}
-
-.leave-tile__warn .icon {
-  flex: 0 0 auto;
-  width: 1rem;
-  height: 1rem;
 }
 
 #ai-explanation.is-enabled:not(.has-content) {
@@ -4803,51 +5068,6 @@ body:not(.is-screen-live) .live-only {
 
 /* Screens 9 and 10: Leave now banner and data-quality alert components. */
 
-.alert-row {
-  display: flex;
-  align-items: flex-start;
-  gap: calc(var(--space-2) + var(--space-1));
-}
-
-.alert-row__icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
-
-.alert-row__icon .icon {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.alert-row__copy {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  gap: 2px;
-  min-width: 0;
-}
-
-.alert-row__copy > * {
-  margin: 0;
-}
-
-.alert-row__title {
-  font-size: var(--type-body);
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.alert-row__meta {
-  font-size: var(--type-caption);
-  line-height: 1.4;
-}
-
-.alert-row__body {
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
 .stale-status {
   display: flex;
   flex-direction: column;
@@ -4870,64 +5090,11 @@ body:not(.is-screen-live) .live-only {
   height: 1rem;
 }
 
-.leave-now-banner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  box-shadow: var(--shadow-card);
-}
-
-.leave-now-banner__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.leave-now-banner__app {
-  color: var(--color-ink);
-  font-size: var(--type-caption);
-  font-weight: 700;
-}
-
-.leave-now-banner__time {
-  margin-left: auto;
-  color: var(--color-muted);
-  font-size: var(--type-caption);
-}
-
-.leave-now-banner__title,
-.leave-now-banner__body {
-  margin: 0;
-}
-
-.leave-now-banner__title {
-  color: var(--color-ink);
-  font-size: var(--type-body);
-  font-weight: 700;
-}
-
-.leave-now-banner__body {
-  color: var(--color-ink);
-  font-size: 0.9375rem;
-  line-height: 1.45;
-}
-
-.leave-now-banner__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
-}
-
-.leave-now-banner .secondary {
-  background: var(--tint-neutral);
-  border-color: transparent;
-  color: var(--color-ink);
-}
-
 body.is-data-blocked #arrival-card,
 body.is-data-blocked #pace-slot,
 body.is-data-blocked #leave-tiles,
+body.is-data-blocked #route-strip,
+body.is-data-blocked #walk-open,
 body.is-data-blocked #ai-explanation.ai-card.is-enabled.has-content,
 body.is-data-blocked #ai-explanation,
 body.is-data-blocked #reroute-block {
@@ -4997,20 +5164,6 @@ body.is-data-blocked #reroute-block {
   color: var(--color-muted);
 }
 
-.notification-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.notification-card p {
-  margin: 0;
-}
-
-.notification-card__title {
-  font-weight: 700;
-}
-
 /* Screen 8: option cards, the full options list and the new-journey overview. */
 
 body.is-screen-newjourney main.wrap {
@@ -5022,10 +5175,6 @@ body.is-screen-newjourney main.wrap {
   display: flex;
   flex-direction: column;
   gap: calc(var(--space-2) + var(--space-1));
-}
-
-.reroute-notice {
-  margin: 0;
 }
 
 .alt-row {
@@ -5068,20 +5217,6 @@ body.is-screen-newjourney main.wrap {
 .alt-row--unlikely .alt-row__icon {
   background: var(--tint-warning);
   color: var(--status-uncertain);
-}
-
-.alt-row__warn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--status-uncertain);
-  font-size: var(--type-caption);
-  font-weight: 700;
-}
-
-.alt-row__warn .icon {
-  width: 1rem;
-  height: 1rem;
 }
 
 .reroute-more {
@@ -5189,6 +5324,7 @@ body:not(.is-screen-live) #ai-explanation.ai-card.is-enabled.has-content {
   justify-content: center;
   gap: var(--space-2);
   min-height: var(--tap-min);
+  padding-inline: var(--space-2);
 }
 
 .catch-bar__actions .action-yes,
@@ -5248,18 +5384,18 @@ body.has-catch-bar {
   overflow-wrap: anywhere;
 }
 
-.on-way-alert .secondary {
-  align-self: flex-start;
-}
-
 body.is-bus-missed #arrival-card,
 body.is-bus-missed #pace-slot,
 body.is-bus-missed #leave-tiles,
+body.is-bus-missed #route-strip,
+body.is-bus-missed #walk-open,
 body.is-bus-missed #ai-explanation.ai-card.is-enabled.has-content,
 body.is-bus-missed #ai-explanation,
 body.is-tracking-ended #arrival-card,
 body.is-tracking-ended #pace-slot,
 body.is-tracking-ended #leave-tiles,
+body.is-tracking-ended #route-strip,
+body.is-tracking-ended #walk-open,
 body.is-tracking-ended #ai-explanation.ai-card.is-enabled.has-content,
 body.is-tracking-ended #ai-explanation,
 body.is-tracking-ended #reroute-block {
@@ -5293,6 +5429,8 @@ body.is-screen-onway main.wrap {
 body.is-page-b #arrival-card,
 body.is-page-b #pace-slot,
 body.is-page-b #leave-tiles,
+body.is-page-b #route-strip,
+body.is-page-b #walk-open,
 body.is-page-b #stale-status,
 body.is-page-b #ai-explanation.ai-card.is-enabled.has-content,
 body.is-page-b #ai-explanation {
@@ -5360,53 +5498,27 @@ body.is-page-b #ai-explanation {
   gap: calc(var(--space-2) + var(--space-1));
 }
 
-.page-c-current .page-c-warn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) calc(var(--space-2) + var(--space-1));
-  background: var(--tint-warning);
-  color: var(--status-uncertain);
-  border-radius: var(--radius-control);
-  font-weight: 600;
-}
-
-.page-c-current .page-c-warn p {
-  margin: 0;
-}
-
-.page-c-current .page-c-warn .icon {
-  flex: 0 0 auto;
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
 .reroute-alternatives__head {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-2);
 }
 
 .reroute-alternatives__head .reroute-alternatives__heading {
   flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
+}
+
+.reroute-alternatives__head .reroute-updated {
+  flex: 0 0 auto;
 }
 
 .reroute-updated {
   margin: 0;
   color: var(--color-muted);
   font-size: var(--type-caption);
-}
-
-.unlikely-banner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.unlikely-banner p {
-  margin: 0;
 }
 
 .entry-skeleton,
@@ -5417,6 +5529,8 @@ body.is-page-b #ai-explanation {
 body.is-page-c #arrival-card,
 body.is-page-c #pace-slot,
 body.is-page-c #leave-tiles,
+body.is-page-c #route-strip,
+body.is-page-c #walk-open,
 body.is-page-c #ai-explanation.ai-card.is-enabled.has-content,
 body.is-page-c #ai-explanation,
 body.is-page-c #see-arrivals-bar,
@@ -5425,6 +5539,8 @@ body.is-page-c #catch-warning,
 body.is-entry-loading #arrival-card,
 body.is-entry-loading #pace-slot,
 body.is-entry-loading #leave-tiles,
+body.is-entry-loading #route-strip,
+body.is-entry-loading #walk-open,
 body.is-entry-loading #ai-explanation.ai-card.is-enabled.has-content,
 body.is-entry-loading #ai-explanation,
 body.is-entry-loading #see-arrivals-bar,
@@ -5529,21 +5645,24 @@ body.is-entry-loading #alert-slot {
   gap: var(--space-3);
   width: 100%;
   min-height: var(--tap-min);
-  margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: var(--color-card);
   color: var(--color-ink);
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-card);
   font: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
+}
+
+.walk-open-row[hidden] {
+  display: none;
 }
 
 .walk-open-row__icon,
 .walk-open-row__chevron {
   flex: 0 0 auto;
-  color: var(--color-primary);
+  color: var(--color-link);
 }
 
 .walk-open-row__icon .icon,
@@ -5552,24 +5671,82 @@ body.is-entry-loading #alert-slot {
   height: 1.5rem;
 }
 
-.walk-open-row__copy {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-width: 0;
-}
-
 .walk-open-row__title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-weight: 600;
+  line-height: 1.25;
 }
 
-.walk-open-row__sub {
-  color: var(--color-muted);
-  font-size: var(--type-caption);
+/* Layout B: the route strip under the probability card (From, the walk, the vehicle, Destination). */
+.route-strip {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--space-3);
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
 }
 
-.walk-open-row__sub:empty {
+.route-strip[hidden] {
   display: none;
+}
+
+.route-strip__node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  text-align: center;
+}
+
+.route-strip__label {
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.route-strip__dot,
+.route-strip__vehicle {
+  --step-node: 2.25rem;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--step-node);
+  height: var(--step-node);
+  border-radius: var(--radius-pill);
+  background: var(--color-secondary);
+  color: var(--color-secondary-ink);
+}
+
+.route-strip__dot .icon,
+.route-strip__vehicle .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.route-strip__dot--from {
+  color: var(--marker-start);
+}
+
+.route-strip__dot--to {
+  color: var(--marker-end);
+}
+
+.route-strip__vehicle {
+  box-shadow: 0 0 0 3px var(--leg-ring, var(--ring-neutral));
+  color: var(--color-ink);
+}
+
+.route-strip__line {
+  flex: 1 1 auto;
+  min-width: 0.5rem;
+  height: 3px;
+  margin-top: 1rem;
+  background: var(--color-link);
+  border-radius: 2px;
 }
 
 /* Page W: the map, the status card, the probability card and the sensor details. */
@@ -5577,7 +5754,7 @@ body.is-entry-loading #alert-slot {
 .walk-page {
   display: none;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: calc(var(--space-3) + var(--space-1));
 }
 
 body.is-page-w .walk-page {
@@ -5587,27 +5764,51 @@ body.is-page-w .walk-page {
 body.is-page-w #arrival-card,
 body.is-page-w #pace-slot,
 body.is-page-w #leave-tiles,
+body.is-page-w #route-strip,
+body.is-page-w #walk-open,
 body.is-page-w #stale-status,
 body.is-page-w #ai-explanation.ai-card.is-enabled.has-content,
 body.is-page-w #ai-explanation {
   display: none;
 }
 
+/* The approved Page W design (tmp/design/pagew-v2.html) supersedes the mockup for Page W. Top down: the back button beside
+   the title, the chance card (a large ring, the vehicle marker and badge, the time), the distance card (a big number,
+   the walk time, the progress bar, the state as the shared alert), the 300 px map, Sensor details. Page W has its own
+   back button, so the page's back row is not shown here. */
+body.is-page-w .back-bar {
+  display: none;
+}
+
+.walk-top {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-1));
+}
+
 .walk-title {
   margin: 0;
-  font-size: var(--type-title);
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.walk-page > .card:not(.walk-sensors) {
+  padding: 1.125rem;
+  gap: var(--space-3);
 }
 
 .live-map.walk-map {
-  height: 50vh;
-  min-height: 240px;
-  max-height: 560px;
+  height: 300px;
+  min-height: 0;
+  max-height: none;
+  border-radius: var(--radius-card);
 }
 
 .walk-map .map-recentre {
   position: absolute;
-  right: var(--space-3);
-  bottom: calc(var(--space-3) + var(--space-5));
+  right: calc(var(--space-2) + var(--space-1));
+  bottom: calc(var(--space-4) + var(--space-1));
   z-index: 500;
   display: flex;
   align-items: center;
@@ -5686,27 +5887,81 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
 .walk-status {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
 
 .walk-status p {
   margin: 0;
 }
 
+/* The state line is a shared alert that always has room for two lines (the longest words wrap on a narrow phone or with a larger
+   text size), so a state change never moves what is below it. */
+.walk-status .alert {
+  min-height: calc(2 * 1.3em + 2 * (var(--space-2) + var(--space-1)) + 2px);
+}
+
+/* The distance is the big number on a secondary band with the walking figure; its label sits under it. */
+.walk-band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--color-secondary);
+  border-radius: var(--radius-card);
+  color: var(--color-secondary-ink);
+}
+
+.walk-band__icon {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
 .walk-status__distance {
-  font-size: var(--type-distance);
-  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--color-ink);
   font-variant-numeric: tabular-nums;
 }
 
+.walk-status__value {
+  font-size: clamp(2rem, 12.5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+.walk-status__label {
+  min-height: 1.2em;  /* an empty label (no fix yet) keeps its line */
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .walk-status__minutes {
-  font-size: var(--type-body);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: calc(1.0625rem * 1.45);  /* the text's own line, so an empty row is as tall */
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.walk-status__minutes.is-empty {
+  visibility: hidden;  /* the row keeps its height while there is no fix, so nothing below it moves */
+}
+
+.walk-status__minutes .icon {
+  flex: 0 0 auto;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .walk-progress {
   width: 100%;
-  height: 0.5rem;
-  margin-top: var(--space-2);
+  height: 0.75rem;
   appearance: none;
   border: 0;
   border-radius: var(--radius-pill);
@@ -5720,21 +5975,74 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
 
 .walk-progress::-webkit-progress-value {
   background: var(--prob-ring-ok);
+  border-radius: var(--radius-pill);
 }
 
 .walk-progress::-moz-progress-bar {
   background: var(--prob-ring-ok);
+  border-radius: var(--radius-pill);
 }
 
-.walk-status__state {
-  margin-top: var(--space-1);
+/* The chance card on Page W: a large ring, the vehicle marker and badge without a band, the time stacked under its label. */
+.walk-chance .prob-ring--large {
+  width: 7.5rem;
+  height: 7.5rem;
+}
+
+.walk-chance .catch-card__leg {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.walk-chance .catch-card__arrives {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.walk-chance .catch-card__arrives-label {
+  font-size: 0.9375rem;
   font-weight: 600;
 }
 
+.walk-chance .catch-card__copy .catch-card__arrives-time {
+  font-size: 2.125rem;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+/* The trend has an icon and words (Rising / Falling / Steady): rising in the live colour, falling in the warning text colour. */
 .walk-chance__trend {
-  margin: var(--space-1) 0 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
   color: var(--color-muted);
-  font-size: var(--type-caption);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.walk-chance__trend[hidden] {
+  display: none;
+}
+
+.walk-chance__trend .icon {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.walk-chance__trend.is-rising {
+  color: var(--status-live);
+}
+
+.walk-chance__trend.is-falling {
+  color: var(--status-uncertain);
+}
+
+.walk-chance__trend.is-falling .icon {
+  transform: scaleY(-1);
 }
 
 .walk-sensors {
@@ -5746,13 +6054,14 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: var(--tap-min);
-  padding: var(--space-2) var(--space-3);
+  min-height: 3.5rem;
+  padding: var(--space-2) 1.125rem;
   background: transparent;
   color: var(--color-ink);
   border: 0;
   font: inherit;
-  font-weight: 600;
+  font-size: 1.0625rem;
+  font-weight: 800;
   text-align: left;
   cursor: pointer;
 }
@@ -5768,7 +6077,10 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
 }
 
 .walk-sensors__panel {
-  padding: 0 var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-3) - var(--space-1) / 2);
+  padding: 0 1.125rem 1.125rem;
 }
 
 .walk-sensors__panel[hidden] {
@@ -5799,26 +6111,6 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
   text-align: right;
 }
 
-.walk-sensors__why {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-3);
-  color: var(--color-ink);
-  font-size: var(--type-body);
-}
-
-.walk-sensors__why[hidden] {
-  display: none;
-}
-
-.walk-sensors__why .icon {
-  flex: 0 0 auto;
-  width: 1.25rem;
-  height: 1.25rem;
-  margin-top: 0.1rem;
-  color: var(--color-primary);
-}
 
 /* Style guide frames for the Page W samples (the real page draws the map with Leaflet). */
 
@@ -5953,41 +6245,13 @@ body.is-page-w .leaflet-marker-icon.user-marker:not(.walk-you) {
 /* Train service alerts: a warning banner (icon and text) under the journey summary and on the live pages. The text is
    cut at two lines with an expand control that shows only when it is cut. */
 
-.train-alerts {
+.alert-stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.train-alerts[hidden] {
-  display: none;
-}
-
-.train-alert__text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  font-weight: 600;
-}
-
-.train-alert.is-expanded .train-alert__text {
-  display: block;
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  overflow: visible;
-}
-
-.train-alert__toggle {
-  align-self: flex-start;
-  min-height: var(--tap-min);
-  color: inherit;
-  text-decoration: underline;
-}
-
-.train-alert__toggle[hidden] {
+.alert-stack[hidden] {
   display: none;
 }
 
@@ -6059,11 +6323,6 @@ body.is-entry-loading #live-train-alerts {
   line-height: 1.35;
 }
 
-.first-run__card .first-run__attribution {
-  color: var(--color-muted);
-  font-size: var(--type-caption);
-}
-
 .first-run__actions {
   display: flex;
   gap: var(--space-2);
@@ -6076,4 +6335,515 @@ body.is-entry-loading #live-train-alerts {
 
 .first-run__actions button[hidden] {
   display: none;
+}
+
+/* Approved Page C design (tmp/design/pagec-v2.html), which supersedes the mockup for Page C. The current-bus card, two
+   recommended cards that each hold their own Switch button, the alternative rows with a ring, and the empty answer. */
+.page-c-current .catch-card__arrives {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  white-space: normal;
+}
+
+.page-c-current .catch-card__arrives-label {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.page-c-current .catch-card__arrives-time {
+  font-size: 1.875rem;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.page-c-current .secondary {
+  width: 100%;
+  min-height: 3rem;
+}
+
+.option-merged {
+  gap: calc(var(--space-2) + var(--space-1));
+}
+
+.option-merged .option-card {
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.option-merged .option-card__aside {
+  align-items: center;
+}
+
+.option-merged .option-card__copy {
+  gap: 6px;
+}
+
+.option-merged .catch-card__leg {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.option-merged .catch-card__to-place,
+.option-merged .catch-card__line span:not(.line-badge) {
+  font-size: 1.1875rem;
+  font-weight: 800;
+}
+
+.option-merged .catch-card__when {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Leave by and Reach destination by: Page A's Leave by tile. Leave by is the strong fill; Reach destination by is the
+   secondary tint with the flag. The time is the large figure. */
+.leave-tile--option .leave-tile__value {
+  font-size: clamp(1.75rem, 9vw, 2.5rem);
+}
+
+.leave-tile--reach {
+  background: var(--color-secondary);
+  color: var(--color-ink);
+}
+
+.leave-tile--reach .leave-tile__icon {
+  color: var(--color-secondary-ink);
+}
+
+.leave-tile--reach .leave-tile__icon .icon {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+.leave-tile--reach .leave-tile__label {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.leave-tile--reach .leave-tile__value {
+  font-size: clamp(1.5rem, 7vw, 1.625rem);
+}
+
+.option-merged > .primary {
+  width: 100%;
+  min-height: 3rem;
+}
+
+.reroute-alternatives__head .reroute-alternatives__heading {
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.reroute-updated {
+  font-size: 0.875rem;
+}
+
+/* An alternative row: the ring at the left, the vehicle row, then the lines; a warning is an alert under the row. */
+.alt-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.alt-row__top {
+  flex-wrap: nowrap;
+}
+
+.alt-row__top .alt-row__icon {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.alt-row__service {
+  font-size: 1.0625rem;
+}
+
+.alt-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.alt-row__chance {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.alt-row__arrives {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.alt-row__reach-time {
+  font-size: 1.0625rem;
+  font-weight: 800;
+}
+
+.alt-row__alert {
+  width: auto;
+  margin: 0 var(--space-3) var(--space-3);
+}
+
+.page-c .ride-apps {
+  padding: var(--space-3);
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.page-c .ride-apps__link {
+  min-height: 3rem;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+}
+
+/* The pace alert on Page A sits in the old pace row's place, full width. */
+.pace-slot .alert {
+  width: 100%;
+}
+
+.pace-slot .alert__meta {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.arrive-box {
+  flex-wrap: wrap;
+}
+
+.arrive-box > .alert {
+  flex: 1 1 100%;
+  width: auto;
+}
+
+/* ---- Home (approved design tmp/design/home-v2.html supersedes the mockup for Home) ------------------------------- */
+
+/* The hairlines between the rows are gone: the location row and the Arrive by band are their own surfaces. */
+#destination-form > .hairline {
+  display: none;
+}
+
+#destination-form {
+  gap: var(--space-4);
+  container-type: inline-size;
+}
+
+/* The gap from the saved places (the chips, or the add panel when it is open) to Your location is the shared Home block
+   gap (--space-6), the same as under the search bar, in every state. The empty wrapper takes no flex slot (it used to add
+   a second 24 px gap in every state but the panel one); the card adds what the form's 24 px lacks. */
+.saved-places:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+/* Your location: the same card as Arrive by (--color-secondary fill, --space-3 padding, --radius-card, no border), the
+   start pin on the round tile, the status dot in front of its words. */
+.info-row--location {
+  margin-top: calc(var(--space-6) - var(--space-4));
+  gap: calc(var(--space-3) + var(--space-1));
+  padding: var(--space-3);
+  background: var(--color-secondary);
+  border-radius: var(--radius-card);
+}
+
+.info-row--location .info-row__copy {
+  gap: var(--space-2);
+}
+
+.info-row--location .info-row__title {
+  font-size: 1.0625rem;
+}
+
+.icon-tile--start {
+  color: var(--marker-start);
+}
+
+.info-row__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.info-row__status .location-indicator {
+  width: auto;
+  height: auto;
+}
+
+.info-row__status .status-dot {
+  width: 10px;
+  height: 10px;
+}
+
+.info-row__status .info-row__meta {
+  color: var(--color-ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/* Arrive by: a tinted band with a large clock, the label, the Required pill and a 56 px selector. */
+.arrive-band {
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-secondary);
+  border-radius: var(--radius-card);
+}
+
+.arrive-band .info-row__head {
+  gap: 12px;
+  color: var(--color-secondary-ink);
+}
+
+.arrive-band .icon-tile--bare {
+  width: auto;
+  height: auto;
+  background: transparent;
+}
+
+.arrive-band .icon-tile--bare .icon {
+  width: 44px;
+  height: 44px;
+}
+
+.arrive-band .info-row__title {
+  color: var(--color-ink);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.arrive-band .required-tag {
+  color: var(--color-ink);
+  border-color: var(--color-line-strong);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.arrive-band .select-field {
+  min-height: 56px;
+  border: 2px solid var(--color-link);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.arrive-band .select-field .icon {
+  color: var(--color-link);
+}
+
+.arrive-band .select-field__time {
+  color: inherit;
+}
+
+/* Find my route: its own bar at the bottom, full width, pulsing every 2 s (the shared .pulse-button) while enabled. */
+.home-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 0 calc(var(--space-3) * -1) calc(var(--space-3) * -1);
+  padding: var(--space-3);
+  background: var(--color-card);
+  border-top: 1px solid var(--color-line);
+}
+
+.find-route {
+  min-height: 52px;
+  border-radius: var(--radius-card);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.find-route[aria-disabled="true"] {
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  opacity: 0.45;
+}
+
+/* An empty results list takes no room and adds no gap. */
+.saved-panel__results:empty {
+  display: none;
+}
+
+/* Pulse every 2 seconds: Find my route, Select stop, Confirm, Start journey and See arrival times (one shared class,
+   .pulse-button) grow about 4% and return over 400 ms (the first 20% of a 2 s cycle), then rest for the other 1.6 s, for
+   as long as the button is visible and enabled. It is a CSS animation alone (no timer, no script, no class from the
+   page). It does not run while the button is disabled, hidden (a hidden element has no animation), pressed or focused
+   from the keyboard, nor under reduced motion; a browser also pauses it in a hidden tab. A transform takes no layout
+   room, the growth (a few pixels) stays inside the 16 px page gutter at 320 px, and the focus ring is never drawn on a
+   growing button. */
+.pulse-button:not(:disabled):not([aria-disabled="true"]):not(:active):not(:focus-visible) {
+  animation: button-pulse 2s ease-in-out infinite;
+}
+
+@keyframes button-pulse {
+  0% { transform: scale(1); }
+  10% { transform: scale(1.04); }
+  20% { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-button:not(:disabled):not([aria-disabled="true"]):not(:active):not(:focus-visible) {
+    animation: none;
+  }
+}
+
+/* Page W's bottom button: the approved design's 52 px full-width button (Page A keeps its own). */
+body.is-page-w #see-arrivals {
+  min-height: 52px;
+  border-radius: var(--radius-card);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+/* Page A's bottom bar has two stacked buttons: "See bus arrival times" (the primary blue, with the shared pulse) and, for a bus,
+   "Other bus options" in the add-place panel's Save style (green outline and text, 48 px, the control radius). Page W's bar keeps
+   its one button, and the bar is taller on Page A, so the page leaves more room under it. */
+.other-bus-actions {
+  width: 100%;
+}
+
+.other-bus-actions[hidden],
+body.is-page-w .other-bus-actions {
+  display: none;
+}
+
+body.is-page-a.has-catch-bar {
+  padding-bottom: calc(11.5rem + env(safe-area-inset-bottom));
+}
+
+/* The probability ring is about 40% of the card (the tinted card at its right takes the rest). */
+#catch-ring.prob-ring--large {
+  width: min(7.5rem, 40%);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/* The approved Page B design (tmp/design/pageb-v2.html) supersedes the mockup for Page B, for a bus and a train alike. Top down:
+   the back button beside "To {destination}", the vehicle card (a ringed marker, the number or line badge, the pill and the
+   refresh button), "Next 3 buses" / "Next trains" with one row each (the selected row on the secondary surface), the map
+   and the sticky question bar. Page B has its own back button, so the page's back row is not shown here. */
+body.is-page-b .back-bar {
+  display: none;
+}
+
+.live-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.live-top {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-1));
+}
+
+.live-title {
+  min-width: 0;
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.live-vehicle {
+  --step-node: 3rem;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.live-vehicle .live-node {
+  flex: none;
+  margin: 3px;
+  background: var(--leg-tint, var(--ring-neutral-tint));
+  color: var(--color-ink);
+  box-shadow: 0 0 0 3px var(--leg-ring, var(--ring-neutral));
+}
+
+.live-vehicle .live-node .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.live-vehicle .bus-card__line {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.live-vehicle .refresh-button {
+  align-self: center;
+  color: var(--color-link);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+}
+
+.live-vehicle .refresh-button[aria-disabled="true"] {
+  color: var(--color-muted);
+}
+
+.live-page .live-label {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.live-page .bus-tile-card {
+  min-height: 4.75rem;
+}
+
+.live-page .live-map {
+  height: 260px;
+}
+
+.live-vehicle.journey-step--rail-ns {
+  --leg-tint: var(--ring-ns-tint);
+}
+
+.live-vehicle.journey-step--rail-ew {
+  --leg-tint: var(--ring-ew-tint);
+}
+
+.live-vehicle.journey-step--rail-cg {
+  --leg-tint: var(--ring-cg-tint);
+}
+
+.live-vehicle.journey-step--rail-ne {
+  --leg-tint: var(--ring-ne-tint);
+}
+
+.live-vehicle.journey-step--rail-cc {
+  --leg-tint: var(--ring-cc-tint);
+}
+
+.live-vehicle.journey-step--rail-dt {
+  --leg-tint: var(--ring-dt-tint);
+}
+
+.live-vehicle.journey-step--rail-te {
+  --leg-tint: var(--ring-te-tint);
+}
+
+.live-vehicle.journey-step--rail-bp {
+  --leg-tint: var(--ring-bp-tint);
+}
+
+.live-vehicle.journey-step--rail-sk {
+  --leg-tint: var(--ring-sk-tint);
+}
+
+.live-vehicle.journey-step--rail-pg {
+  --leg-tint: var(--ring-pg-tint);
+}
+
+.live-vehicle.journey-step--rail-ss {
+  --leg-tint: var(--ring-ss-tint);
 }

@@ -88,7 +88,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Beat the Bus and MRT", lifespan=lifespan)
+app = FastAPI(title="Just-In-Time", lifespan=lifespan)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 INDEX_PATH = STATIC_DIR / "index.html"
@@ -147,6 +147,11 @@ def format_distance_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "format-distance.js", media_type="text/javascript")
 
 
+@app.get("/alert.js")
+def alert_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "alert.js", media_type="text/javascript")
+
+
 @app.get("/sw.js")
 def service_worker_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "sw.js", media_type="text/javascript")
@@ -155,11 +160,6 @@ def service_worker_js() -> FileResponse:
 @app.get("/walk-speed.js")
 def walk_speed_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "walk-speed.js", media_type="text/javascript")
-
-
-@app.get("/place-icons.js")
-def place_icons_js() -> FileResponse:
-    return FileResponse(STATIC_DIR / "place-icons.js", media_type="text/javascript")
 
 
 @app.get("/first-run.js")

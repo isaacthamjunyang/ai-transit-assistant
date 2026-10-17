@@ -27,7 +27,9 @@ const READ = `(function () {
       tags: Array.prototype.map.call(card.querySelectorAll(".option-chip"), text),
       sentences: card.querySelectorAll(".option-reason").length,
       order: Array.prototype.filter.call(card.querySelectorAll(".option-heading .catch-card__when, .option-card__destination, .option-card__leave"),
-        function (el) { return !el.hidden && el.textContent.trim() !== ""; }).map(function (el) { return el.className.split(" ")[0]; }),
+        function (el) { return !el.hidden && el.textContent.trim() !== ""; }).map(function (el) {
+          return el.classList.contains("option-card__destination") ? "option-card__destination" : el.classList.contains("option-card__leave") ? "option-card__leave" : el.className.split(" ")[0];
+        }),
       when: raw(when), destination: destination && !destination.hidden ? raw(destination) : null,
       leave: text(card.querySelector(".option-card__leave")),
       ring: !!card.querySelector(".prob-ring"),

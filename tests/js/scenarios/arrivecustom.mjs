@@ -37,6 +37,8 @@ export default async function (h) {
     await h.eval("if (document.getElementById('arrive-by-panel').hidden) { document.getElementById('arrive-by-field').click(); } document.getElementById('arrive-custom').click(); true");
   };
   const reset = () => h.eval("applyArriveValue('', 'arrive-none'); arriveByPicked = false; true");
+  // a valid Custom time closes the panel, like a preset; the dropdown reopens it
+  const reopen = () => h.eval("if (document.getElementById('arrive-by-panel').hidden) { document.getElementById('arrive-by-field').click(); } true");
 
   // the controls
   await custom();
@@ -86,7 +88,7 @@ export default async function (h) {
   // Today with a time that has passed: the message, no silent switch, Confirm and Find route disabled
   await h.eval(CLOCK("2026-10-08T18:00:00+08:00"));
   await reset(); await custom();
-  await setTime("17:00");
+  await setTime("17:00"); await clickDay("today");
   out.cases.pastToday = await h.eval(READ);
   await clickDay("tomorrow");
   out.cases.pastThenTomorrow = await h.eval(READ);        // Tomorrow 5:00 PM is 23 h ahead
@@ -108,10 +110,12 @@ export default async function (h) {
   const styleOf = (id) => h.eval("(function () { var b = document.getElementById('" + id + "'); var cs = getComputedStyle(b); return { checked: b.getAttribute('aria-checked'), weight: cs.fontWeight, ring: cs.boxShadow !== 'none' && cs.boxShadow.indexOf('0px 0px 0px 2px') !== -1, content: getComputedStyle(b, '::before').content }; })()");
   const panelWidth = () => h.eval("document.getElementById('arrive-by-panel').getBoundingClientRect().width");
   await h.eval(CLOCK("2026-10-08T12:00:00+08:00"));
-  await reset(); await custom(); await clickDay("today");
-  out.toggle = { today: await styleOf("arrive-day-today"), tomorrow: await styleOf("arrive-day-tomorrow"),
-    boxesToday: await boxes(), panelWidthToday: await panelWidth() };
-  await clickDay("tomorrow");
+  await reset(); await custom();
+  out.toggle = { fresh: { today: await styleOf("arrive-day-today"), tomorrow: await styleOf("arrive-day-tomorrow") } };
+  await clickDay("today"); await reopen();
+  out.toggle.today = await styleOf("arrive-day-today"); out.toggle.tomorrow = await styleOf("arrive-day-tomorrow");
+  out.toggle.boxesToday = await boxes(); out.toggle.panelWidthToday = await panelWidth();
+  await clickDay("tomorrow"); await reopen();
   out.toggle.afterTomorrow = { today: await styleOf("arrive-day-today"), tomorrow: await styleOf("arrive-day-tomorrow") };
   out.toggle.boxesTomorrow = await boxes();
   out.toggle.panelWidthTomorrow = await panelWidth();
@@ -133,7 +137,7 @@ export default async function (h) {
 
   await h.eval(CLOCK("2026-10-08T18:00:10+08:00"));
   await reset(); await custom();
-  await setTime("18:05");
+  await setTime("18:05"); await clickDay("today"); await reopen();
   out.nothingUnder = await h.eval(READ);
   // it follows the time and the toggle
   await setTime("17:30");                                       // Today 5:30 PM has passed: message, caption hidden
@@ -141,6 +145,7 @@ export default async function (h) {
   await clickDay("tomorrow");                                   // Tomorrow 5:30 PM is 23 h 30 min away
   out.whenTomorrow = await h.eval(READ);
   await clickDay("today"); await setTime("18:30");
+  await reopen();
   out.whenBefore = await h.eval(READ);
   await h.eval(CLOCK("2026-10-08T18:10:10+08:00"));
   await h.eval("arriveRecheckTick(); true");                     // the minute tick
@@ -156,7 +161,7 @@ export default async function (h) {
   const preset = await h.eval(READ);
   await custom();
   const presetKept = await h.eval(READ);
-  await setTime("16:45");
+  await setTime("16:45"); await clickDay("today"); await reopen();
   await h.eval("document.getElementById('arrive-custom').click(); true");
   const userKept = await h.eval(READ);
   await h.eval("document.getElementById('arrive-none').click(); document.getElementById('arrive-by-field').click(); true");
@@ -172,11 +177,100 @@ export default async function (h) {
   // the clock passes the chosen time while the page sits open
   await h.eval(CLOCK("2026-10-08T15:00:00+08:00"));
   await reset(); await custom();
-  await setTime("15:05");
+  await setTime("15:05"); await clickDay("today");
+  await reopen();
   await h.eval(CLOCK("2026-10-08T15:07:00+08:00"));
   await h.eval("document.getElementById('confirm-destination-stop').disabled = false; true");
   await h.eval("onArriveCustomEdit(); true");
   out.prefill.clockPassed = await h.eval(READ);
+
+  // the panel: Custom opens it; a valid Today or Tomorrow closes it and the dropdown names the choice; a problem keeps it
+  // open with its message at least 12 px under the day buttons
+  const PANEL = `(function () {
+    var panel = document.getElementById('arrive-by-panel');
+    var box = function (id) { var r = document.getElementById(id).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height, width: r.width }; };
+    var ring = function (id) { return getComputedStyle(document.getElementById(id)).boxShadow; };
+    var errorEl = document.getElementById('arrive-by-error');
+    return { hidden: panel.hidden, expanded: document.getElementById('arrive-by-field').getAttribute('aria-expanded'),
+      timeBox: box('arrive-by-time'), todayBox: box('arrive-day-today'), tomorrowBox: box('arrive-day-tomorrow'),
+      errorBox: errorEl.hidden ? null : box('arrive-by-error'), errorShown: !errorEl.hidden,
+      errorClass: errorEl.className, errorText: errorEl.textContent.trim(),
+      customRing: ring('arrive-custom'), todayRing: ring('arrive-day-today'), tomorrowRing: ring('arrive-day-tomorrow'),
+      customSelected: document.getElementById('arrive-custom').classList.contains('is-selected'),
+      todayChecked: document.getElementById('arrive-day-today').getAttribute('aria-checked'),
+      tomorrowChecked: document.getElementById('arrive-day-tomorrow').getAttribute('aria-checked'),
+      findRoute: document.getElementById('find-route').getAttribute('aria-disabled'), time: arriveTimeInput.value,
+      token: getComputedStyle(document.documentElement).getPropertyValue('--color-selected-outline').trim(),
+      display: document.getElementById('arrive-by-display').textContent.replace(/\\s+/g, ' ').trim(),
+      confirmDisabled: document.getElementById('confirm-destination-stop').disabled,
+      todayWeight: getComputedStyle(document.getElementById('arrive-day-today')).fontWeight };
+  })()`;
+  out.panel = {};
+  await h.eval(CLOCK("2026-10-08T18:00:10+08:00"));
+  await reset();
+  await h.eval("document.getElementById('arrive-by-field').click(); document.getElementById('arrive-custom').click(); true");
+  out.panel.customOpened = await h.eval(PANEL);                 // Custom opens the panel: time field, both days, none chosen
+  await setTime("19:00");
+  out.panel.timeTyped = await h.eval(PANEL);                    // typing a time with no day: still open, still disabled
+  await clickDay("today");
+  out.panel.todayValid = await h.eval(PANEL);                   // a tap on Today: valid, the panel closes, "Custom · 7:00 PM"
+  await reopen();
+  out.panel.reopened = await h.eval(PANEL);                     // reopened: Today is still outlined
+  await setTime("17:00");
+  out.panel.todayPast = await h.eval(PANEL);                    // retyped into the past: the message, the panel stays open
+  await setTime("19:30");
+  out.panel.retyped = await h.eval(PANEL);                      // a valid retype re-validates but does not close
+  await setTime("17:30"); await clickDay("tomorrow");
+  out.panel.tomorrowValid = await h.eval(PANEL);                // 23 h 30 min ahead: closes, "(Tomorrow)"
+  await reopen();
+  await setTime("19:00");
+  out.panel.tomorrowFar = await h.eval(PANEL);                  // 25 h ahead: its own message, the panel stays open
+  await clickDay("tomorrow");
+  out.panel.tomorrowFarTap = await h.eval(PANEL);               // tapping Tomorrow again changes nothing
+  await clickDay("today");
+  out.panel.backToToday = await h.eval(PANEL);
+
+  // presets and No target clear the chosen day: the next Custom starts unselected again
+  await reopen();
+  await h.eval("document.getElementById('arrive-30').click(); true");
+  await reopen();
+  await h.eval("document.getElementById('arrive-custom').click(); true");
+  out.panel.afterPreset = await h.eval(PANEL);
+  await clickDay("today");
+  await reopen();
+  await h.eval("document.getElementById('arrive-none').click(); true");
+  await reopen();
+  await h.eval("document.getElementById('arrive-custom').click(); true");
+  out.panel.afterNone = await h.eval(PANEL);
+
+  // the keyboard: no option is checked at first; the arrow keys only move the focus; Enter selects and closes
+  const press = async (key, code, vk, text) => {
+    await h.send("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: vk, text });
+    await h.send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: vk });
+  };
+  await h.eval(CLOCK("2026-10-08T18:00:10+08:00"));
+  await reset(); await custom();
+  await h.eval("document.getElementById('arrive-day-today').focus(); true");
+  await press("ArrowRight", "ArrowRight", 39);
+  out.panel.keyArrow = { focus: await h.eval("document.activeElement.id"), state: await h.eval(PANEL),
+    checked: await h.eval("Array.prototype.map.call(document.querySelectorAll('#arrive-day [role=radio]'), function (b) { return b.getAttribute('aria-checked'); })") };
+  await h.eval("document.getElementById('arrive-day-today').focus(); true");
+  await press("Enter", "Enter", 13, "\r");
+  out.panel.keyEnter = await h.eval(PANEL);
+  await reset(); await custom();
+  await setTime("12:00");
+  await h.eval("document.getElementById('arrive-day-tomorrow').focus(); true");
+  await press(" ", "Space", 32, " ");
+  out.panel.keySpace = await h.eval(PANEL);
+
+  // midnight: the suggested time is 12:04 AM; Today has passed, Tomorrow works
+  await h.eval(CLOCK("2026-10-08T23:58:10+08:00"));
+  await reset(); await custom();
+  out.panel.midnightOpen = await h.eval(PANEL);
+  await clickDay("today");
+  out.panel.midnightToday = await h.eval(PANEL);
+  await clickDay("tomorrow");
+  out.panel.midnightTomorrow = await h.eval(PANEL);
 
   // the same element on the Confirm page
   out.confirm = await h.eval(`(function () {

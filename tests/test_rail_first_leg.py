@@ -332,14 +332,14 @@ def test_the_train_card_with_leave_now_and_with_an_uncertain_location():
     now_text = explain.card_text(numbers(e=4, leave_in=30, action="leave_now"), band="ok", uncertain=True)
     assert now_text == (f"The {LINE} train is scheduled in 4{NB}min. Live train times are not available. "
                         f"Leave now to reach your station in 3 minutes and catch the train departing at 8:24{NB}AM. "
-                        "Your location is uncertain, so the walking time may be off.")
+                        "Location uncertain: the walk time may be off.")
     by_text = explain.card_text(numbers(e=4, leave_in=120), band="ok", uncertain=True)
-    assert by_text.endswith("Your location is uncertain, so leave a little earlier than that to be safe.")
+    assert by_text.endswith("Location uncertain: leave a little earlier to be safe.")
     arriving = explain.card_text(numbers(e=0, leave_in=0, action="leave_now"), band="mid", uncertain=False)
     assert arriving == (f"The {LINE} train is scheduled to leave now. Live train times are not available. "
                         f"Leave now to try to catch the train departing at 8:20{NB}AM.")
     arriving_uncertain = explain.card_text(numbers(e=0, leave_in=0, action="leave_now"), band="mid", uncertain=True)
-    assert arriving_uncertain.endswith(f"departing at 8:20{NB}AM. Your location is uncertain, so the walking time may be off.")
+    assert arriving_uncertain.endswith(f"departing at 8:20{NB}AM. Location uncertain: the walk time may be off.")
 
 
 def test_an_unlikely_train_names_the_distance_to_the_station_and_is_one_sentence():

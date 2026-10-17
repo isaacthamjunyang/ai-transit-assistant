@@ -1,6 +1,6 @@
 import { poll, toLive } from "./common.mjs";
 
-// "Arrived at the stop" on Page W: decided by the server's near_stop (the 30 m rule, the poll's own function), asked
+// "Arrived" on Page W: decided by the server's near_stop (the 30 m rule, the poll's own function), asked
 // by the rescore and used together with the poll's. How long after the fix does the state line change?
 export default async function (h) {
   const out = { steps: {} };
@@ -28,7 +28,7 @@ export default async function (h) {
     }
     return { ms: null, text: await stateNow() };
   };
-  const ARRIVED = "Arrived at the stop";
+  const ARRIVED = "Arrived";
   const record = async (name, metres, predicate) => {
     await moveTo(metres);
     const found = await waitFor(predicate, 8000);

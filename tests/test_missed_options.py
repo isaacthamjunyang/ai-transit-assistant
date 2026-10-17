@@ -347,15 +347,15 @@ def test_page_c_shows_no_bus_stop_code(report):
 # ---- the none sentence has one gate (noOptionsState) ------------------------------------------------------------
 
 SHORT = "Catching this bus is unlikely."
-LONG = "Catching this bus is unlikely. Here are your other options."
+LONG = "Catching this bus is unlikely."  # one sentence now
 
 
 def test_the_none_sentence_is_decided_in_one_function_and_the_strings_are_mirrored():
     gate = _function("noOptionsState")
     assert "pageC.loading || pageC.failed || !pageC.options" in gate and '"missed"' in gate
-    assert f'currentWarning: "{LONG}"' in COPY and f'currentWarningNone: "{SHORT}"' in COPY
-    assert f'var CURRENT_WARNING_TEXT = "{LONG}";' in INDEX and f'var CURRENT_WARNING_NONE_TEXT = "{SHORT}";' in INDEX
-    assert "currentWarningNone" in GUIDE and "unlikely entry" in PLAN and SHORT in PLAN
+    assert f'currentWarning: "{SHORT}"' in COPY and "currentWarningNone" not in COPY and "Here are your other options" not in COPY.split("busLeftNotice", 1)[0]
+    assert f'var CURRENT_WARNING_TEXT = "{SHORT}";' in INDEX and "CURRENT_WARNING_NONE_TEXT" not in INDEX
+    assert "currentWarningNone" not in GUIDE and "unlikely entry" in PLAN and SHORT in PLAN
 
 
 @pytest.fixture(scope="module", params=[("n360", 360, 800, False), ("n1280", 1280, 900, True)],

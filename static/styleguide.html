@@ -25,7 +25,7 @@
         </svg>
       </span>
       <div>
-        <h1 class="app-header__title">Beat the Bus and MRT</h1>
+        <h1 class="app-header__title">Just-In-Time</h1>
       </div>
     </div>
     <button type="button" class="icon-button" id="menu-open" aria-expanded="false" aria-controls="menu-sheet">
@@ -76,6 +76,7 @@
       <div class="menu-sheet is-preview">
         <button type="button" class="menu-row" aria-expanded="false"><span data-copy="home.appearance">Appearance</span></button>
         <button type="button" class="menu-row"><span data-copy="firstRun.menu">How it works</span></button>
+        <p class="menu-sheet__attribution" data-copy="menuAttribution">Contains information from LTA DataMall under the Singapore Open Data Licence v1.0</p>
       </div>
       <div class="back-bar">
         <button type="button" class="icon-button back-bar__button" aria-label="Back">
@@ -97,6 +98,21 @@
       <h2 id="buttons-heading">Buttons</h2>
       <button type="button" class="button button--primary">Primary</button>
       <button type="button" class="button button--secondary">Secondary</button>
+      <h3>Action buttons pulse every 2 s (grow about 4% over 400 ms, then rest) while visible and enabled; none when disabled, pressed, keyboard-focused or with reduced motion</h3>
+      <button type="button" class="primary primary--icon pulse-button"><span>Find my route</span></button>
+      <button type="button" class="primary primary--icon pulse-button"><span>Select stop</span></button>
+      <button type="button" class="primary primary--icon pulse-button"><span>Confirm</span></button>
+      <button type="button" class="primary primary--icon pulse-button"><span>Start journey</span></button>
+      <button type="button" class="primary primary--icon pulse-button"><span>See arrival times</span></button>
+      <button type="button" class="primary primary--icon pulse-button" disabled><span>Select stop (disabled: no pulse)</span></button>
+      <h3>Leave this journey? Stay is the Save look (green), Leave the Cancel look (red); Stay has the focus</h3>
+      <div class="leave-dialog" role="group" aria-label="Leave this journey?">
+        <p>Leave this journey? Live tracking will stop.</p>
+        <div class="leave-dialog__actions saved-panel__actions saved-panel__actions--form">
+          <button type="button" class="primary">Stay</button>
+          <button type="button" class="secondary">Leave</button>
+        </div>
+      </div>
     </section>
 
     <section class="stack" aria-labelledby="field-heading">
@@ -120,43 +136,13 @@
     </section>
 
     <section class="stack" aria-labelledby="status-heading">
-      <h2 id="status-heading">Status badges</h2>
-      <p class="badge badge--live">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.2 17 19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
-        <span data-copy="status.live"></span>
-      </p>
-      <p class="badge badge--schedule">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <span data-copy="status.scheduleOnly"></span>
-      </p>
-      <p class="badge badge--uncertain">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="2"></path><circle cx="12" cy="11" r="2" fill="currentColor"></circle></svg></span>
-        <span data-copy="status.locationUncertain"></span>
-      </p>
-      <p class="badge badge--stale">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 8v5M5 5l14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <span data-copy="status.stale"></span>
-      </p>
-      <p class="badge badge--unavailable">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <span data-copy="status.unavailable"></span>
-      </p>
-      <p class="badge badge--no-history">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"></circle></svg></span>
-        <span data-copy="status.noHistoryYet"></span>
-      </p>
-      <p class="field__hint" data-copy="status.noHistoricalReliabilityYet"></p>
-      <p class="badge badge--simulated">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <span data-copy="simulated"></span>
-      </p>
+      <h2 id="status-heading">Alerts: one component, six severities</h2>
+      <p class="field__hint">Every warning, error, info, success, neutral and simulated message is this one alert: a rounded rectangle with a tint, a 1px border, a left icon and bold text, full width of its container. The icon is drawn by alert.js from the severity.</p>
+      <div class="place-row-samples theme-sample-light" id="alert-samples-light"></div>
+      <div class="place-row-samples theme-sample-dark" id="alert-samples-dark"></div>
+      <h3>Compact label tags (not alerts)</h3>
+      <p class="field__hint">A tag labels a thing: the LIVE and Schedule only pills, the line and bus badges, the crowding label, the recommendation tags and [SIMULATED]. A tag never carries a message.</p>
+      <div class="row" id="label-tags"></div>
     </section>
 
     <section class="stack" aria-labelledby="meter-heading">
@@ -175,33 +161,17 @@
     <section class="stack" aria-labelledby="pace-heading">
       <h2 id="pace-heading">Pace guidance</h2>
       <p class="field__hint">When pace guidance has no category, this chip is not shown.</p>
-      <div class="pace-chip">
-        <p class="badge badge--live"><span data-copy="pace.slower.title"></span></p>
-      </div>
-      <div class="pace-chip">
-        <p class="badge badge--live"><span data-copy="pace.slightly_slower.title"></span></p>
-      </div>
-      <div class="pace-chip">
-        <p class="badge badge--no-history"><span data-copy="pace.steady.title"></span></p>
-      </div>
-      <div class="pace-chip">
-        <p class="badge badge--uncertain"><span data-copy="pace.slightly_faster.title"></span></p>
-      </div>
-      <div class="pace-chip">
-        <p class="badge badge--uncertain"><span data-copy="pace.faster.title"></span></p>
-      </div>
-      <div class="pace-chip">
-        <p class="badge badge--unavailable"><span data-copy="pace.unlikely.title"></span></p>
-      </div>
+      <div class="alert alert--success"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="pace.slower.title"></p></div>
+      <div class="alert alert--success"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="pace.slightly_slower.title"></p></div>
+      <div class="alert alert--neutral"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="pace.steady.title"></p></div>
+      <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="pace.slightly_faster.title"></p></div>
+      <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="pace.faster.title"></p></div>
+      <div class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="pace.unlikely.title"></p></div>
     </section>
 
     <section class="stack" aria-labelledby="live-heading">
       <h2 id="live-heading">Live journey sample</h2>
-      <p class="badge badge--live">
-        <span class="badge__dot" aria-hidden="true"></span>
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.2 17 19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
-        <span data-copy="status.live"></span>
-      </p>
+      <p><span class="pill pill--live"><span class="pill__dot" aria-hidden="true"></span><span data-copy="status.live"></span></span></p>
       <ul class="tabs" aria-label="next 3 buses">
         <li><span class="tabs__tab tabs__tab--current">158</span></li>
         <li><span class="tabs__tab">158A</span></li>
@@ -230,41 +200,24 @@
         <button type="button" class="button button--secondary" id="show-caution" aria-pressed="false">Caution banner</button>
       </div>
       <div class="alert-slot" id="alert-slot">
-        <article class="card card--info alert-slot__item is-shown" id="slot-optional">
-          <h3 data-copy="notificationCard.title"></h3>
-          <p data-copy="notificationCard.description"></p>
-          <button type="button" class="button button--primary" data-copy="notificationCard.action"></button>
-        </article>
-        <p class="banner banner--denied alert-slot__item" id="slot-denied" data-copy="deniedBanner"></p>
-        <p class="banner alert-slot__item" id="slot-active" data-copy="notificationCard.granted"></p>
-        <p class="banner banner--caution alert-slot__item" id="slot-caution"></p>
+        <div class="alert alert--info alert-slot__item is-shown" id="slot-optional"><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><h3 class="alert__text" data-copy="notificationCard.title"></h3><p class="alert__detail" data-copy="notificationCard.description"></p><div class="alert__actions"><button type="button" class="primary" data-copy="notificationCard.action"></button></div></div></div>
+        <div class="alert alert--warning alert-slot__item" id="slot-denied"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="deniedBanner"></p></div>
+        <div class="alert alert--success alert-slot__item" id="slot-active"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="notificationCard.granted"></p></div>
+        <div class="alert alert--warning alert-slot__item" id="slot-caution"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" id="slot-caution-text"></p></div>
       </div>
     </section>
 
     <section class="stack" aria-labelledby="reroute-heading">
       <h2 id="reroute-heading">Route updated</h2>
-      <article class="card card--success">
-        <h3 data-copy="rerouteCard.title"></h3>
-        <p id="reroute-message"></p>
-        <p id="reroute-probability"></p>
-      </article>
+      <div class="alert alert--success"><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><h3 class="alert__text" data-copy="rerouteCard.title"></h3><p class="alert__detail" id="reroute-message"></p><p class="alert__detail" id="reroute-probability"></p></div></div>
     </section>
 
     <section class="stack" aria-labelledby="arrive-heading">
-      <h2 id="arrive-heading">Arrive-by badges</h2>
-      <p class="badge badge--track">
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.2 17 19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
-        <span data-copy="arriveBy.onTrack"></span>
-      </p>
+      <h2 id="arrive-heading">Arrive-by check alerts</h2>
+      <div class="alert alert--success"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="arriveBy.onTrack"></p></div>
       <p data-copy="arriveBy.onTrackMessage"></p>
-      <p class="badge badge--risk">
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <span data-copy="arriveBy.risk"></span>
-      </p>
-      <p class="badge badge--na">
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <span data-copy="arriveBy.na"></span>
-      </p>
+      <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="arriveBy.risk"></p></div>
+      <div class="alert alert--neutral"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="arriveBy.na"></p></div>
       <p data-copy="arriveBy.naMessage"></p>
       <p class="field__hint">The second bus schedule line sits here.</p>
     </section>
@@ -274,52 +227,67 @@
       <div class="place-row-samples theme-sample-light">
         <p>Arrive about 6:24 PM</p>
         <p>Estimated destination arrival about 6:24 PM</p>
-        <div class="banner banner--caution planning-banner">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-          <p>Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p>
-          <button type="button" class="secondary" data-copy="arriveBy.changeTime"></button>
-        </div>
+        <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p class="alert__text">Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p><div class="alert__actions"><button type="button" class="secondary">Change time</button></div></div></div>
         <div class="arrive-chips" role="radiogroup" aria-label="Arrive by">
-          <button type="button" class="arrive-chip is-selected" role="radio" aria-checked="true" data-copy="arriveBy.noTarget"></button>
-          <button type="button" class="arrive-chip is-hover" role="radio" aria-checked="false" data-copy="arriveBy.in30"></button>
-          <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false" data-copy="arriveBy.inHour"></button>
-          <button type="button" class="arrive-chip" role="radio" aria-checked="false" data-copy="arriveBy.custom"></button>
+          <div class="arrive-chips__row">
+            <button type="button" class="arrive-chip is-hover" role="radio" aria-checked="false" data-copy="arriveBy.in30"></button>
+            <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false" data-copy="arriveBy.inHour"></button>
+            <button type="button" class="arrive-chip" role="radio" aria-checked="false" data-copy="arriveBy.in90"></button>
+          </div>
+          <div class="arrive-chips__row">
+            <button type="button" class="arrive-chip is-selected" role="radio" aria-checked="true" data-copy="arriveBy.noTarget"></button>
+            <button type="button" class="arrive-chip" role="radio" aria-checked="false" data-copy="arriveBy.custom"></button>
+          </div>
         </div>
-        <p class="field-error" data-copy="arriveBy.past"></p>
+        <div class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="arriveBy.past"></p></div>
+        <h4>Custom arrive-by, just opened: the suggested time, neither Today nor Tomorrow selected</h4>
+        <div class="arrive-custom">
+          <div class="arrive-time-field">
+            <input class="arrive-time" type="time" value="18:06" aria-label="Arrive by time">
+            <button type="button" class="arrive-time-picker" aria-label="Choose time"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+          </div>
+          <div class="arrive-day" role="radiogroup" aria-label="Arrive by day">
+            <button type="button" class="arrive-chip arrive-day__option" role="radio" aria-checked="false" aria-label="Arrive today" data-copy="arriveBy.dayToday"></button>
+            <button type="button" class="arrive-chip arrive-day__option" role="radio" aria-checked="false" aria-label="Arrive tomorrow" data-copy="arriveBy.dayTomorrow"></button>
+          </div>
+        </div>
         <h4>Custom arrive-by: a time and Today / Tomorrow (Tomorrow selected), then the two messages</h4>
         <div class="arrive-custom">
-          <label class="arrive-custom__label" data-copy="arriveBy.timeLabel"></label>
-          <input class="arrive-time" type="time" value="00:10" aria-label="Arrive by time">
+          <div class="arrive-time-field">
+            <input class="arrive-time" type="time" value="00:10" aria-label="Arrive by time">
+            <button type="button" class="arrive-time-picker" aria-label="Choose time"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+          </div>
           <div class="arrive-day" role="radiogroup" aria-label="Arrive by day">
             <button type="button" class="arrive-chip arrive-day__option" role="radio" aria-checked="false" aria-label="Arrive today" data-copy="arriveBy.dayToday"></button>
             <button type="button" class="arrive-chip arrive-day__option is-selected" role="radio" aria-checked="true" aria-label="Arrive tomorrow" data-copy="arriveBy.dayTomorrow"></button>
           </div>
         </div>
-        <p class="field-error" data-copy="arriveBy.tooFar"></p>
+        <div class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="arriveBy.tooFar"></p></div>
       </div>
       <div class="place-row-samples theme-sample-dark">
         <p>Arrive about 6:24 PM</p>
         <p>Estimated destination arrival about 6:24 PM</p>
-        <div class="banner banner--caution planning-banner">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 3 20h18L12 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-          <p>Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p>
-          <button type="button" class="secondary">Change time</button>
-        </div>
+        <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p class="alert__text">Earliest arrival is about 6:41 PM, after your 6:30 PM target.</p><div class="alert__actions"><button type="button" class="secondary">Change time</button></div></div></div>
         <div class="arrive-chips" role="radiogroup" aria-label="Arrive by">
-          <button type="button" class="arrive-chip is-selected" role="radio" aria-checked="true">No target</button>
-          <button type="button" class="arrive-chip is-hover" role="radio" aria-checked="false">In 30 min</button>
-          <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false">In 1 hour</button>
-          <button type="button" class="arrive-chip" role="radio" aria-checked="false">Custom</button>
+          <div class="arrive-chips__row">
+            <button type="button" class="arrive-chip is-hover" role="radio" aria-checked="false">In 30 min</button>
+            <button type="button" class="arrive-chip is-focus" role="radio" aria-checked="false">In 1 hour</button>
+            <button type="button" class="arrive-chip" role="radio" aria-checked="false">In 1 hr 30 min</button>
+          </div>
+          <div class="arrive-chips__row">
+            <button type="button" class="arrive-chip is-selected" role="radio" aria-checked="true">No target</button>
+            <button type="button" class="arrive-chip" role="radio" aria-checked="false">Custom</button>
+          </div>
         </div>
-        <p class="field-error" data-copy="arriveBy.past"></p>
+        <div class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="arriveBy.past"></p></div>
       </div>
     </section>
 
     <section class="stack" aria-labelledby="search-states-heading">
       <h2 id="search-states-heading">Search and stop states</h2>
       <p class="empty">No matches found. Try a building, road, or postal code.</p>
-      <p class="banner banner--denied">Destination search unavailable.</p>
-      <p class="empty">No destination stops were found within 600 m.</p>
+      <div class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Destination search unavailable.</p></div>
+      <p class="empty">No stops within 600 m.</p>
     </section>
 
     <section class="stack" aria-labelledby="quality-heading">
@@ -362,8 +330,8 @@
       <h2 id="home-heading">Home and search</h2>
       <div id="screen-sample-light" class="place-row-samples theme-sample-light"></div>
       <div id="screen-sample-dark" class="place-row-samples theme-sample-dark"></div>
-      <p class="banner banner--caution">No matches found. Try a building, road, or postal code.</p>
-      <p class="banner banner--denied">Destination search unavailable.</p>
+      <div class="alert alert--warning"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">No matches found. Try a building, road, or postal code.</p></div>
+      <div class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Destination search unavailable.</p></div>
     </section>
 
     <section class="stack" aria-labelledby="place-row-heading">
@@ -508,11 +476,8 @@
 
     <section class="stack" aria-labelledby="demo-heading">
       <h2 id="demo-heading">Demo, loading, and empty</h2>
-      <p class="banner banner--demo" data-copy="demoBanner"></p>
-      <p class="badge badge--simulated">
-        <span class="badge__icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" focusable="false"><path d="M12 3v4M12 17v4M3 12h4M17 12h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span>
-        <span data-copy="simulated"></span>
-      </p>
+      <div class="alert alert--simulated"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="demoBanner"></p></div>
+      <p class="simulated-badge">[SIMULATED]</p>
     </section>
 
     <section class="stack" aria-labelledby="dest-screens-heading">
@@ -573,14 +538,22 @@
     </section>
   </main>
   <script src="copy.js"></script>
-  <script src="place-icons.js"></script>
-  <script
+  <script src="alert.js"></script>
+    <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
   <script>
     var cp = copy.catchPrompt;
+    // The shared alert: the icon span is filled by alert.js (paintAlerts) once the page is built.
+    var SG_ICON = '<span class="alert__icon" aria-hidden="true"></span>';
+    function sgAlert(kind, text) {
+      return '<div class="alert alert--' + kind + '">' + SG_ICON + '<p class="alert__text">' + text + '</p></div>';
+    }
+    function sgAlertRich(kind, body) {
+      return '<div class="alert alert--' + kind + '">' + SG_ICON + '<div class="alert__body">' + body + '</div></div>';
+    }
     var CHEVRON_SM = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     document.querySelectorAll("[data-copy]").forEach(function (el) {
       var value = copy;
@@ -599,7 +572,7 @@
       scenarioList.appendChild(option);
     });
 
-    document.getElementById("slot-caution").textContent = copy.cautionBanner.replace("{point}", "48");
+    document.getElementById("slot-caution-text").textContent = copy.cautionBanner.replace("{point}", "48");
     document.getElementById("reroute-message").textContent = copy.rerouteCard.message
       .replace("{new_service}", "18")
       .replace("{new_stop_name}", "Opp Pebble Bay")
@@ -675,29 +648,31 @@
     chooseGuideTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
     var chevronSvg = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M9 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
     var downSvg = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 9l6 6 6-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
-    var heroArt = "<svg class=\"hero__art\" viewBox=\"0 0 440 160\" preserveAspectRatio=\"xMidYMid slice\" aria-hidden=\"true\" focusable=\"false\"><rect class=\"illus-sky\" x=\"0\" y=\"0\" width=\"440\" height=\"160\"></rect><rect class=\"illus-ground\" x=\"0\" y=\"124\" width=\"440\" height=\"36\"></rect><rect class=\"illus-building-alt\" x=\"292\" y=\"78\" width=\"36\" height=\"58\" rx=\"2\"></rect><rect class=\"illus-building\" x=\"338\" y=\"52\" width=\"24\" height=\"84\"></rect><rect class=\"illus-building\" x=\"368\" y=\"52\" width=\"24\" height=\"84\"></rect><rect class=\"illus-building\" x=\"398\" y=\"52\" width=\"24\" height=\"84\"></rect><rect class=\"illus-building\" x=\"332\" y=\"40\" width=\"96\" height=\"16\" rx=\"8\"></rect><rect class=\"illus-ink\" x=\"248\" y=\"108\" width=\"6\" height=\"20\"></rect><circle class=\"illus-tree\" cx=\"251\" cy=\"98\" r=\"16\"></circle><rect class=\"illus-bus\" x=\"168\" y=\"108\" width=\"78\" height=\"26\" rx=\"6\"></rect><rect class=\"illus-bus-window\" x=\"176\" y=\"114\" width=\"14\" height=\"8\" rx=\"2\"></rect><rect class=\"illus-bus-window\" x=\"194\" y=\"114\" width=\"14\" height=\"8\" rx=\"2\"></rect><circle class=\"illus-ink\" cx=\"186\" cy=\"134\" r=\"6\"></circle><circle class=\"illus-ink\" cx=\"228\" cy=\"134\" r=\"6\"></circle></svg>";
+    var DEST_FLAG_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 21V4M6 4h11l-2 4 2 4H6\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";  // the destination's green flag (--marker-end), the map's icon
+    var arrowSvg = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 12h14M13 6l6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var heroArt = "<svg class=\"hero__art\" viewBox=\"0 30 360 120\" preserveAspectRatio=\"xMidYMax meet\" aria-hidden=\"true\" focusable=\"false\"><g class=\"hero-cloud\"><ellipse class=\"hero-cloud__a\" cx=\"70\" cy=\"46\" rx=\"46\" ry=\"5\"/><ellipse class=\"hero-cloud__b\" cx=\"250\" cy=\"56\" rx=\"60\" ry=\"6\"/><ellipse class=\"hero-cloud__c\" cx=\"170\" cy=\"40\" rx=\"40\" ry=\"4\"/></g><g class=\"hero-wheel\"><path class=\"hero-wheel__spokes\" d=\"M66 80L66.0 47.0M66 80L78.6 49.5M66 80L89.3 56.7M66 80L96.5 67.4M66 80L99.0 80.0M66 80L96.5 92.6M66 80L89.3 103.3M66 80L78.6 110.5M66 80L66.0 113.0M66 80L53.4 110.5M66 80L42.7 103.3M66 80L35.5 92.6M66 80L33.0 80.0M66 80L35.5 67.4M66 80L42.7 56.7M66 80L53.4 49.5\"/><circle class=\"hero-wheel__rim\" cx=\"66\" cy=\"80\" r=\"33\"/><circle class=\"hero-wheel__pods\" cx=\"66\" cy=\"80\" r=\"35.5\"/><path class=\"hero-wheel__stand\" d=\"M64 80L53 124M68 80L81 124M57 104H75M59 96H73\"/><rect class=\"hero-wheel__base\" x=\"44\" y=\"117\" width=\"44\" height=\"7\" rx=\"1.5\"/></g><g class=\"hero-skyline\"><rect class=\"hero-tower hero-tower--blue\" x=\"104\" y=\"84\" width=\"14\" height=\"42\"/><path class=\"hero-windows hero-windows--blue\" d=\"M106.5 87V124M110.5 87V124M114.5 87V124\"/><rect class=\"hero-tower hero-tower--blue\" x=\"120\" y=\"62\" width=\"16\" height=\"64\"/><path class=\"hero-windows hero-windows--blue\" d=\"M122.5 65V124M126.5 65V124M130.5 65V124M134.5 65V124\"/><rect class=\"hero-tower hero-tower--teal\" x=\"138\" y=\"52\" width=\"14\" height=\"74\"/><path class=\"hero-windows hero-windows--teal\" d=\"M140.5 55V124M144.5 55V124M148.5 55V124\"/><rect class=\"hero-tower hero-tower--navy\" x=\"154\" y=\"72\" width=\"12\" height=\"54\"/><path class=\"hero-windows hero-windows--navy\" d=\"M156.5 75V124M160.5 75V124M164.5 75V124\"/><rect class=\"hero-tower hero-tower--pale\" x=\"168\" y=\"44\" width=\"12\" height=\"82\"/><path class=\"hero-windows hero-windows--pale\" d=\"M170.5 47V124M174.5 47V124M178.5 47V124\"/><rect class=\"hero-tower hero-tower--pale\" x=\"182\" y=\"60\" width=\"14\" height=\"66\"/><path class=\"hero-windows hero-windows--pale\" d=\"M184.5 63V124M188.5 63V124M192.5 63V124\"/><rect class=\"hero-tower hero-tower--slate\" x=\"198\" y=\"68\" width=\"14\" height=\"58\"/><path class=\"hero-windows hero-windows--slate\" d=\"M200.5 71V124M204.5 71V124M208.5 71V124\"/><rect class=\"hero-tower hero-tower--blue\" x=\"214\" y=\"76\" width=\"14\" height=\"50\"/><path class=\"hero-windows hero-windows--blue\" d=\"M216.5 79V124M220.5 79V124M224.5 79V124\"/><rect class=\"hero-tower hero-tower--navy\" x=\"230\" y=\"86\" width=\"12\" height=\"40\"/><path class=\"hero-windows hero-windows--navy\" d=\"M232.5 89V124M236.5 89V124M240.5 89V124\"/><rect class=\"hero-tower hero-tower--blue\" x=\"244\" y=\"92\" width=\"14\" height=\"34\"/><path class=\"hero-windows hero-windows--blue\" d=\"M246.5 95V124M250.5 95V124M254.5 95V124\"/><rect class=\"hero-tower hero-tower--slate\" x=\"260\" y=\"98\" width=\"12\" height=\"28\"/><path class=\"hero-windows hero-windows--slate\" d=\"M262.5 101V124M266.5 101V124M270.5 101V124\"/><rect class=\"hero-tower hero-tower--teal\" x=\"141\" y=\"48\" width=\"8\" height=\"5\"/><path class=\"hero-mast\" d=\"M145 38V48\"/><path class=\"hero-tower hero-tower--navy\" d=\"M154 72L166 66V72Z\"/><path class=\"hero-tower hero-tower--pale\" d=\"M182 60L189 54L196 60Z\"/></g><g class=\"hero-mbs\"><path class=\"hero-mbs__tower\" d=\"M301 55H316L318 124H299Z\"/><path class=\"hero-mbs__lit\" d=\"M303.5 60V124M308 60V124M312.5 60V124\"/><path class=\"hero-mbs__tower\" d=\"M320 57H335L337 124H318Z\"/><path class=\"hero-mbs__lit\" d=\"M322.5 62V124M327 62V124M331.5 62V124\"/><path class=\"hero-mbs__tower\" d=\"M339 59H354L356 124H337Z\"/><path class=\"hero-mbs__lit\" d=\"M341.5 64V124M346 64V124M350.5 64V124\"/><path class=\"hero-mbs__deck\" d=\"M289 50Q295 45 320 46L364 44V53Q338 57 314 55Q296 55 289 50Z\"/><path class=\"hero-mbs__trim\" d=\"M295 52Q320 55 362 50\"/><path class=\"hero-mbs__base\" d=\"M286 124Q310 109 364 113V124Z\"/></g><g class=\"hero-rail\"><rect x=\"0\" y=\"87\" width=\"360\" height=\"3\"/><rect x=\"60\" y=\"90\" width=\"3\" height=\"36\"/><rect x=\"170\" y=\"90\" width=\"3\" height=\"36\"/><rect x=\"270\" y=\"90\" width=\"3\" height=\"36\"/></g><rect class=\"hero-rail__edge\" x=\"0\" y=\"86\" width=\"360\" height=\"1.2\"/><rect class=\"hero-ground\" x=\"0\" y=\"124\" width=\"360\" height=\"26\"/><path class=\"hero-road\" d=\"M0 140H360\"/><g class=\"hero-tree\"><rect class=\"hero-tree__trunk\" x=\"279\" y=\"108\" width=\"3\" height=\"18\"/><circle class=\"hero-tree__crown\" cx=\"280.5\" cy=\"102\" r=\"10\"/></g><g class=\"hero-move hero-move--train\"><g transform=\"translate(0 54)\"><rect class=\"hero-train__body\" x=\"1\" y=\"1\" width=\"60\" height=\"30\" rx=\"6\"/><rect class=\"hero-train__yellow\" x=\"2\" y=\"19\" width=\"58\" height=\"2\"/><rect class=\"hero-train__orange\" x=\"2\" y=\"21\" width=\"58\" height=\"6\"/><rect class=\"hero-train__glass\" x=\"6\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"13\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"46\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"53\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"22\" y=\"7\" width=\"10\" height=\"8\" rx=\"1.5\"/><rect class=\"hero-train__glass\" x=\"34\" y=\"7\" width=\"10\" height=\"8\" rx=\"1.5\"/><rect class=\"hero-train__frame\" x=\"1\" y=\"28\" width=\"60\" height=\"3\"/><rect class=\"hero-train__body\" x=\"67\" y=\"1\" width=\"60\" height=\"30\" rx=\"6\"/><rect class=\"hero-train__yellow\" x=\"68\" y=\"19\" width=\"58\" height=\"2\"/><rect class=\"hero-train__orange\" x=\"68\" y=\"21\" width=\"58\" height=\"6\"/><rect class=\"hero-train__glass\" x=\"72\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"79\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"112\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"119\" y=\"6\" width=\"5\" height=\"16\" rx=\"1\"/><rect class=\"hero-train__glass\" x=\"88\" y=\"7\" width=\"10\" height=\"8\" rx=\"1.5\"/><rect class=\"hero-train__glass\" x=\"100\" y=\"7\" width=\"10\" height=\"8\" rx=\"1.5\"/><rect class=\"hero-train__frame\" x=\"67\" y=\"28\" width=\"60\" height=\"3\"/><rect class=\"hero-train__joint\" x=\"62\" y=\"8\" width=\"5\" height=\"18\"/></g></g><g class=\"hero-move hero-move--bus\"><g transform=\"translate(12 90)\"><rect class=\"hero-bus__roof\" x=\"30\" y=\"-3\" width=\"30\" height=\"4\" rx=\"1.5\"/><rect class=\"hero-bus__body\" x=\"0\" y=\"0\" width=\"94\" height=\"34\" rx=\"6\"/><rect class=\"hero-bus__glass\" x=\"3\" y=\"3\" width=\"88\" height=\"11\" rx=\"2\"/><path class=\"hero-bus__mullion\" d=\"M14.7 3V14M26.7 3V14M38.7 3V14M50.7 3V14M62.7 3V14M74.7 3V14\"/><rect class=\"hero-bus__band\" x=\"0\" y=\"15\" width=\"94\" height=\"7\"/><rect class=\"hero-bus__tag\" x=\"76\" y=\"16.5\" width=\"12\" height=\"4\" rx=\"1\"/><rect class=\"hero-bus__glass\" x=\"4\" y=\"24\" width=\"20\" height=\"7\" rx=\"1.5\"/><rect class=\"hero-bus__glass\" x=\"27\" y=\"24\" width=\"20\" height=\"7\" rx=\"1.5\"/><rect class=\"hero-bus__door\" x=\"52\" y=\"23\" width=\"12\" height=\"11\" rx=\"1.5\"/><rect class=\"hero-bus__door\" x=\"74\" y=\"23\" width=\"12\" height=\"11\" rx=\"1.5\"/><circle class=\"hero-bus__tyre\" cx=\"20\" cy=\"34\" r=\"7\"/><circle class=\"hero-bus__tyre\" cx=\"72\" cy=\"34\" r=\"7\"/><circle class=\"hero-bus__hub\" cx=\"20\" cy=\"34\" r=\"2.8\"/><circle class=\"hero-bus__hub\" cx=\"72\" cy=\"34\" r=\"2.8\"/></g></g></svg>";
 
     function guideLocation(mode, text, extra) {
-      return "<section class=\"info-row" + (extra ? " " + extra : "") + "\"><span class=\"icon-tile\" aria-hidden=\"true\"><svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></span><span class=\"info-row__copy\"><span class=\"info-row__title\">" + copy.home.locationTitle + "</span><span class=\"info-row__meta\">" + text + "</span></span><span class=\"location-indicator is-" + mode + "\" aria-hidden=\"true\"><span class=\"spinner\"><span class=\"spinner__dot\"></span><span class=\"spinner__dot\"></span><span class=\"spinner__dot\"></span></span><span class=\"status-dot status-dot--ok\"></span><span class=\"status-dot status-dot--warn\"></span></span></section>";
+      return "<section class=\"info-row info-row--location" + (extra ? " " + extra : "") + "\"><span class=\"icon-tile icon-tile--start\" aria-hidden=\"true\"><svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\"><path d=\"M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><circle cx=\"12\" cy=\"10\" r=\"2.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle></svg></span><span class=\"info-row__copy\"><span class=\"info-row__title\">" + copy.home.locationTitle + "</span><span class=\"info-row__status\"><span class=\"location-indicator is-" + mode + "\" aria-hidden=\"true\"><span class=\"spinner\"><span class=\"spinner__dot\"></span><span class=\"spinner__dot\"></span><span class=\"spinner__dot\"></span></span><span class=\"status-dot status-dot--ok\"></span><span class=\"status-dot status-dot--warn\"></span></span><span class=\"info-row__meta\">" + text + "</span></span></span></section>";
     }
 
     function guideResult(title, address, distance, extraClass, focusClass) {
       var distanceHtml = distance ? "<span class=\"place-row__distance\">" + distance + "</span>" : "";
-      return "<li class=\"place-row" + (extraClass ? " " + extraClass : "") + "\"" + (extraClass === "is-selected" ? " aria-selected=\"true\"" : "") + "><button type=\"button\" class=\"place-row__hit" + (focusClass ? " " + focusClass : "") + "\"><span class=\"place-tile\" aria-hidden=\"true\">" + placeIconSvg(placeIconId(title)) + "</span><span class=\"place-row__body\"><span class=\"place-row__topline\"><span class=\"place-row__title\">" + title + "</span>" + distanceHtml + "</span><span class=\"place-row__address\" title=\"" + address + "\">" + address + "</span></span><span class=\"place-row__chevron\" aria-hidden=\"true\">" + chevronSvg + "</span></button></li>";
+      return "<li class=\"place-row" + (extraClass ? " " + extraClass : "") + "\"" + (extraClass === "is-selected" ? " aria-selected=\"true\"" : "") + "><button type=\"button\" class=\"place-row__hit" + (focusClass ? " " + focusClass : "") + "\"><span class=\"place-tile\" aria-hidden=\"true\">" + DEST_FLAG_ICON + "</span><span class=\"place-row__body\"><span class=\"place-row__topline\"><span class=\"place-row__title\">" + title + "</span>" + distanceHtml + "</span><span class=\"place-row__address\" title=\"" + address + "\">" + address + "</span></span><span class=\"place-row__chevron\" aria-hidden=\"true\">" + chevronSvg + "</span></button></li>";
     }
 
     function guideArrive(label, open) {
       var panel = open
-        ? "<div class=\"arrive-panel\"><div class=\"arrive-chips\"><button type=\"button\" class=\"arrive-chip is-selected\" aria-checked=\"true\">" + copy.arriveBy.noTarget + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.in30 + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.inHour + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.custom + "</button></div></div>"
+        ? "<div class=\"arrive-panel\"><div class=\"arrive-chips\"><div class=\"arrive-chips__row\"><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.in30 + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.inHour + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.in90 + "</button></div><div class=\"arrive-chips__row\"><button type=\"button\" class=\"arrive-chip is-selected\" aria-checked=\"true\">" + copy.arriveBy.noTarget + "</button><button type=\"button\" class=\"arrive-chip\">" + copy.arriveBy.custom + "</button></div></div></div>"
         : "";
-      return "<div class=\"arrive-block\"><div class=\"info-row__head\"><span class=\"icon-tile\" aria-hidden=\"true\"><svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 8v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></span><span class=\"info-row__title\">" + copy.home.arriveBy + "</span></div><button type=\"button\" class=\"select-field\" aria-expanded=\"" + (open ? "true" : "false") + "\"><span>" + label + "</span>" + downSvg + "</button>" + panel + "</div>";
+      return "<div class=\"arrive-block arrive-band\"><div class=\"info-row__head\"><span class=\"icon-tile icon-tile--bare\" aria-hidden=\"true\"><svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 7v5l3 2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg></span><span class=\"info-row__title\">" + copy.home.arriveBy + "</span><span class=\"required-tag\">" + copy.home.required + "</span></div><button type=\"button\" class=\"select-field\" aria-expanded=\"" + (open ? "true" : "false") + "\"><span>" + label + "</span>" + downSvg + "</button>" + panel + "</div>";
     }
 
-    // Saved places on Home: the saved chips side by side with a green outline (the name only), "+" (not at five) and, when
+    // Saved places on Home: the saved chips side by side, styled as the Arrive by chips (the name only), "+" (not at five) and, when
     // something is saved, the Edit / Done toggle. "+" has a dashed green outline and green text, Edit a red outline and
-    // red text, and Done the neutral chip style. In edit mode a small "x" badge sits on each chip's upper right corner and
+    // red text, and Done the blue selected outline with a tinted fill. In edit mode a small "x" badge sits on each chip's upper right corner and
     // the chip itself renames. With nothing saved the row is "+" alone and the privacy note is concealed (its space
-    // stays). selected: the index of the chip with the selected outer ring.
+    // stays). selected: the index of the chip with the selected outline.
 
     function sgSavedRow(names, editing, selected) {
       var sp = copy.home.savedPlaces;
@@ -709,18 +684,17 @@
           + "</span>";
       });
       if (names.length < 5) {
-        chips.push("<button type=\"button\" class=\"quick-pick quick-pick--add\" aria-label=\"" + sp.addLabel + "\">" + sp.add + "</button>");
+        chips.push("<button type=\"button\" class=\"quick-pick quick-pick--add\" aria-label=\"" + sp.addLabel + "\"><svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 5v14M5 12h14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\"></path></svg><span>" + sp.add + "</span></button>");
       }
       if (names.length) {
         chips.push("<button type=\"button\" class=\"quick-pick saved-edit-toggle\" aria-pressed=\"" + (editing ? "true" : "false") + "\" aria-label=\"" + (editing ? sp.doneToggleLabel : sp.editToggleLabel) + "\">" + (editing ? sp.doneToggle : sp.editToggle) + "</button>");
       }
       var count = names.length >= 5 ? "<p class=\"saved-places__note\">" + sp.count.replace("{n}", "5").replace("{max}", "5") + "</p>" : "";
-      return "<div class=\"quick-picks\">" + chips.join("") + "</div><div class=\"saved-places\">" + count
-        + "<p class=\"saved-places__note" + (names.length ? "" : " is-concealed") + "\">" + sp.note + "</p></div>";
+      return "<div class=\"quick-picks\">" + chips.join("") + "</div><div class=\"saved-places\">" + count + "</div>";
     }
 
-    function sgSavedField(label, value, hint) {
-      return "<div class=\"field saved-panel__field\"><label class=\"saved-panel__label\">" + label + "</label><div class=\"field__shell\">"
+    function sgSavedField(label, value, hint, hideLabel) {
+      return "<div class=\"field saved-panel__field\"><label class=\"saved-panel__label" + (hideLabel ? " visually-hidden" : "") + "\">" + label + "</label><div class=\"field__shell\">"
         + "<input class=\"field__control\" type=\"text\" value=\"" + value + "\" aria-label=\"" + label + "\"></div>"
         + (hint ? "<p class=\"saved-places__note\">" + hint + "</p>" : "") + "</div>";
     }
@@ -730,42 +704,31 @@
       if (kind === "delete") {
         var question = sp.deleteConfirm.replace("{name}", "Home");
         return "<div class=\"saved-panel\" role=\"group\" aria-label=\"" + question + "\"><h3 class=\"saved-panel__title\">" + question + "</h3>"
-          + "<div class=\"saved-panel__actions\"><button type=\"button\" class=\"primary\">" + sp.deleteYes + "</button><button type=\"button\" class=\"secondary\">" + sp.cancel + "</button></div></div>";
+          + "<div class=\"saved-panel__actions saved-panel__actions--delete\"><button type=\"button\" class=\"primary\">" + sp.deleteYes + "</button><button type=\"button\" class=\"secondary\">" + sp.cancel + "</button></div></div>";
       }
       return "<div class=\"saved-panel\" role=\"group\" aria-label=\"" + sp.addTitle + "\"><h3 class=\"saved-panel__title\">" + sp.addTitle + "</h3>"
-        + "<div class=\"saved-panel__search\">" + sgSavedField(sp.searchLabel, "NUS", "") + "<button type=\"button\" class=\"secondary\">" + sp.searchAction + "</button></div>"
+        + "<div class=\"saved-panel__search\">" + sgSavedField(sp.searchLabel, "NUS", "", true) + "<button type=\"button\" class=\"secondary\">" + sp.searchAction + "</button></div>"
         + "<ul class=\"saved-panel__results\"><li><button type=\"button\" class=\"quick-pick saved-panel__choose\">National University of Singapore · 21 Lower Kent Ridge Road</button></li></ul>"
         + "<p class=\"saved-panel__picked\">National University of Singapore · 21 Lower Kent Ridge Road</p>"
         + sgSavedField(sp.nameLabel, "School", sp.nameHint.replace("{max}", "24"))
-        + "<p class=\"saved-panel__error\">" + sp.errorDuplicate + "</p>"
-        + "<div class=\"saved-panel__actions\"><button type=\"button\" class=\"primary\">" + sp.save + "</button><button type=\"button\" class=\"secondary\">" + sp.cancel + "</button></div></div>";
+        + sgAlert("error", sp.errorDuplicate)
+        + "<div class=\"saved-panel__actions saved-panel__actions--form\"><button type=\"button\" class=\"primary\">" + sp.save + "</button><button type=\"button\" class=\"secondary\">" + sp.cancel + "</button></div></div>";
     }
 
     function screenSample() {
       var longAddress = "25 Lower Kent Ridge Road, Singapore 119081. This longer address continues past the second line so the ellipsis can be checked.";
-      var tiles = [
-        ["Bayfront MRT Station", "Train"],
-        ["Orchard Mall", "Shopping"],
-        ["ArtScience Museum", "Museum"],
-        ["Changi Airport", "Plane"],
-        ["Marina Bay Sands", "Building"],
-        ["NUS", "Campus"],
-        ["General Hospital", "Hospital"],
-        ["Botanic Garden", "Park"],
-        ["HarbourFront", "Pin"]
-      ].map(function (item) {
-        return "<span class=\"icon-sample\"><span class=\"place-tile\" aria-hidden=\"true\">" + placeIconSvg(placeIconId(item[0])) + "</span><span class=\"note\">" + item[1] + "</span></span>";
-      }).join("");
+      var tiles = "<span class=\"icon-sample\"><span class=\"place-tile\" aria-hidden=\"true\">" + DEST_FLAG_ICON + "</span><span class=\"note\">Destination (green flag)</span></span>";
       return "<div class=\"card screen-sample\">" +
-        "<div class=\"hero\">" + heroArt + "<p class=\"hero__copy\"><span class=\"hero__line\">" + copy.home.heroLeave + "</span><span class=\"hero__line\">" + copy.home.heroCatch + "</span></p></div>" +
-        "<p class=\"hero-support\">" + copy.home.heroSupport + "</p>" +
+        "<p class=\"note\">Hero: animated (the bus crosses in 14 s, the train in 20 s, the tree sways every 3 s, the clouds drift over 18 s); still with reduced motion</p>" +
+        "<div class=\"hero\">" + heroArt + "</div>" +
+        "<h2 class=\"home-heading\">" + copy.home.heading + "</h2>" +
         "<p class=\"note\">Saved places: nothing saved (\"+\" alone; no Edit; the note is concealed)</p>" + sgSavedRow([]) +
         "<p class=\"note\">Saved places: one saved (\"+\" dashed green, Edit red)</p>" + sgSavedRow(["Home"]) +
-        "<p class=\"note\">Saved places: one selected (a blue outer ring with a gap, apart from the green outline)</p>" +
+        "<p class=\"note\">Saved places: one selected (the same blue selected outline as a selected Arrive by chip; an unselected one has the Arrive by chip's light outline)</p>" +
         sgSavedRow(["Home", "School"], false, 0) +
         "<p class=\"note\">Saved places: five saved (a long name ends in an ellipsis; no + and a count)</p>" +
         sgSavedRow(["Home", "School", "Gym", "Mum’s flat in Bedok North", "Office"]) +
-        "<p class=\"note\">Saved places: edit mode (a \u00d7 badge on each chip's upper right corner; the chip itself renames; Done is neutral and leaves)</p>" +
+        "<p class=\"note\">Saved places: edit mode (a \u00d7 badge on each chip's upper right corner; the chip itself renames; Done has the blue outline and a tinted fill and leaves)</p>" +
         sgSavedRow(["Home", "School", "Gym", "Mum\u2019s flat in Bedok North", "Office"], true) +
         "<p class=\"note\">Saved places: add panel (picked place, your own name, duplicate message)</p>" + sgSavedPanel("add") +
         "<p class=\"note\">Saved places: delete confirmation</p>" + sgSavedPanel("delete") +
@@ -779,6 +742,10 @@
         guideArrive(copy.home.selectTime, false) +
         guideArrive("6:30\u00a0PM", false) +
         guideArrive("6:30\u00a0PM", true) +
+        guideArrive("Custom \u00b7 6:30\u00a0PM", false) +
+        guideArrive("Custom \u00b7 6:30\u00a0PM (Tomorrow)", false) +
+        "<div class=\"home-footer\"><button type=\"button\" class=\"primary primary--icon find-route pulse-button\" aria-disabled=\"true\"><span>" + copy.home.findRoute + "</span>" + arrowSvg + "</button></div>" +
+        "<div class=\"home-footer\"><button type=\"button\" class=\"primary primary--icon find-route pulse-button\" aria-disabled=\"false\"><span>" + copy.home.findRoute + "</span>" + arrowSvg + "</button></div>" +
         "<div class=\"search-row\"><div class=\"field\"><div class=\"field__shell\"><svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"11\" cy=\"11\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M16 16l4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg><input class=\"field__control\" type=\"text\" value=\"Marina Bay Sands\" aria-label=\"Where do you want to go?\"><button type=\"button\" class=\"field__clear\" aria-label=\"Clear\"><svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 7l10 10M17 7L7 17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button></div></div></div>" +
         "<h2 class=\"results-heading\"><span class=\"results-heading__title\">" + copy.home.resultsHeading + "</span><span class=\"results-heading__hint\">" + copy.home.resultsHint + "</span></h2>" +
         "<ul class=\"destination-results\">" +
@@ -802,7 +769,7 @@
         var tile = document.createElement("span");
         tile.className = "place-tile";
         tile.setAttribute("aria-hidden", "true");
-        tile.innerHTML = placeIconSvg(placeIconId(title.textContent));
+        tile.innerHTML = DEST_FLAG_ICON;
         pin.replaceWith(tile);
       }
       var hit = row.querySelector(".place-row__hit");
@@ -847,7 +814,6 @@
           return "<span class=\"dest-stop-row__line\"><span class=\"line-badge line-badge--" + code.toLowerCase() + "\">" + code + "</span> <span>" + copy.lineNames[code] + "</span></span>";
         }).join("") + "</span>" : "")
         + "<span class=\"dest-stop-row__meta\">" + WALK_ICON + walkLine(minutes, metres) + "</span>"
-        + (options.unreachable ? "<span class=\"dest-stop-row__meta dest-stop-row__note\">" + INFO_ICON + copy.noDirectBus + "</span>" : "")
         + "</span>"
         + (options.best ? "<span class=\"pill pill--best\">" + stopsCopy.bestOption + "</span>" : "<span class=\"dest-stop-row__chevron\" aria-hidden=\"true\">" + CHEVRON_ICON + "</span>")
         + "</button></li>";
@@ -908,18 +874,18 @@
         + destRow("Bayfront MRT (hover)", 6, 450, { state: "is-hover" })
         + destRow("The Float @ Marina Bay (focus)", 8, 600, { state: "is-focus" })
         + destRow("Marina Bay Sands (selected)", 3, 250, { state: "is-selected", best: true })
-        + destRow("Marina Bay Sands Theatre", 4, 300, { unreachable: true })
         + destRow("Opp The Promontory @ Marina Bay Waterfront Promenade Ctr", 7, 520, {})
+        + destRow("Marina Bay Sands Theatre (no direct bus: listed like any other, no note)", 4, 300, { unreachable: true })
         + "</ul>"
-        + "<p class=\"banner banner--caution\">" + stopsCopy.none + "</p>"
-        + "<p class=\"banner banner--denied\">" + stopsCopy.unavailable + "</p>"
+        + "" + sgAlert("warning", stopsCopy.none) + ""
+        + "" + sgAlert("error", stopsCopy.unavailable) + ""
         + "</div>"
         + "<h4>Confirm card, Edit links and info box</h4>"
         + "<div class=\"confirm-screen\">"
         + "<div class=\"card summary-card\">"
         + "<div class=\"summary-section\"><div class=\"summary-head\"><h5 class=\"summary-head__title\">" + confirmCopy.selectedDestination + "</h5>"
         + "<button type=\"button\" class=\"link-button\" aria-label=\"" + confirmCopy.editDestination + "\">" + confirmCopy.edit + "</button></div>"
-        + "<div class=\"summary-item\"><span class=\"place-tile place-tile--large\" aria-hidden=\"true\">" + placeIconSvg(placeIconId("Marina Bay Sands")) + "</span>"
+        + "<div class=\"summary-item\"><span class=\"place-tile place-tile--large\" aria-hidden=\"true\">" + DEST_FLAG_ICON + "</span>"
         + "<span class=\"summary-item__copy\"><span class=\"summary-item__title\">Marina Bay Sands</span><span class=\"summary-item__address\">10 Bayfront Ave, Singapore 018956</span></span></div></div>"
         + "<hr class=\"hairline\">"
         + "<div class=\"summary-section\"><div class=\"summary-head\"><h5 class=\"summary-head__title\">" + confirmCopy.destinationStop + "</h5>"
@@ -931,7 +897,7 @@
         + "<span class=\"info-row__title\">" + copy.home.arriveBy + "</span></div>"
         + arriveField(copy.arriveBy.custom, "6:30\u00a0PM") + "</div></div>"
         + "</div>"
-        + "<div class=\"info-box\">" + INFO_ICON + "<p>" + confirmCopy.info + "</p></div>"
+        + "" + sgAlert("info", confirmCopy.info) + ""
         + "<button type=\"button\" class=\"primary primary--icon\"><span>" + confirmCopy.action + "</span>" + ARROW_ICON + "</button>"
         + "</div>"
         + "<h4>Confirm card for a station: the train icon in its first line's ring, every line's badge, and the station text in the info box</h4>"
@@ -944,10 +910,8 @@
           return "<span class=\"dest-stop-row__line\"><span class=\"line-badge line-badge--" + code.toLowerCase() + "\">" + code + "</span> <span>" + copy.lineNames[code] + "</span></span>";
         }).join("") + "</span>"
         + "<span class=\"summary-item__meta\">" + walkLine(2, 120) + "</span></span></div></div></div>"
-        + "<div class=\"info-box\">" + INFO_ICON + "<p>" + confirmCopy.info + "</p></div></div>";
+        + "" + sgAlert("info", confirmCopy.info) + "</div>";
     }
-
-    var ALERT_ICON = "<svg class=\"icon field-help__icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 7.5v5.5M12 16.5h.01\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
 
     function arriveField(label, time) {
       return "<button type=\"button\" class=\"select-field\"><span>" + label
@@ -955,19 +919,22 @@
         + "</span>" + DOWN_ICON + "</button>";
     }
 
-    // The first-run explainer: step n of 3, one line and a simple icon; Skip and Next, Done on the last. A fixed overlay in
+    var REFRESH_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var BELL_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"></path><path d=\"M10 20.5a2 2 0 0 0 4 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
+
+    // The first-run explainer: step n of 5, one line and a simple icon; Skip and Next, Done on the last. A fixed overlay in
     // the app; here the card is shown in place.
     function sgFirstRun(step) {
       var fr = copy.firstRun;
-      var icons = [PIN_FILL_ICON, CLOCK_ICON, WALK_ICON];
-      var last = step === 3;
+      var icons = [PIN_FILL_ICON, CLOCK_ICON, WALK_ICON, REFRESH_ICON, BELL_ICON];
+      var last = step === 5;
       return "<div class=\"first-run__card\" role=\"group\" aria-label=\"" + fr.title + "\">"
-        + "<p class=\"first-run__step\">" + sgFill(fr.stepOf, { n: step, total: 3 }) + "</p>"
+        + "<p class=\"first-run__step\">" + sgFill(fr.stepOf, { n: step, total: 5 }) + "</p>"
         + "<span class=\"first-run__icon\" aria-hidden=\"true\">" + icons[step - 1] + "</span>"
         + "<p class=\"first-run__text\">" + fr["step" + step] + "</p>"
         + "<div class=\"first-run__actions\">" + (last ? "" : "<button type=\"button\" class=\"secondary\">" + fr.skip + "</button>")
         + "<button type=\"button\" class=\"primary\">" + (last ? fr.done : fr.next) + "</button></div>"
-        + "<p class=\"first-run__attribution\">" + fr.attribution + "</p></div>";
+        + "</div>";
     }
 
     function firstRunSample() {
@@ -975,27 +942,30 @@
         + "<button type=\"button\" class=\"menu-row\"><span>" + copy.firstRun.menu + "</span></button></div>"
         + "<h4>First-run explainer: step 1</h4><div class=\"stack\">" + sgFirstRun(1) + "</div>"
         + "<h4>First-run explainer: step 2</h4><div class=\"stack\">" + sgFirstRun(2) + "</div>"
-        + "<h4>First-run explainer: step 3 (Done, no Skip)</h4><div class=\"stack\">" + sgFirstRun(3) + "</div>";
+        + "<h4>First-run explainer: step 3</h4><div class=\"stack\">" + sgFirstRun(3) + "</div>"
+        + "<h4>First-run explainer: step 4</h4><div class=\"stack\">" + sgFirstRun(4) + "</div>"
+        + "<h4>First-run explainer: step 5 (Done, no Skip)</h4><div class=\"stack\">" + sgFirstRun(5) + "</div>";
     }
 
     function homeGateSample() {
       return ""
         + "<h4>Find my route, incomplete, with both messages and the Required tag</h4>"
         + "<div class=\"card stack\">"
-        + "<div class=\"field\"><div class=\"field__shell\"><input class=\"field__control\" type=\"text\" aria-label=\"" + copy.home.heading + "\" placeholder=\"" + copy.home.placeholder + "\"></div></div>"
-        + "<p class=\"field-help is-shown\">" + ALERT_ICON + "<span class=\"field-help__text\">" + copy.home.requiredDestination + "</span></p>"
+        + "<div class=\"field\"><div class=\"field__shell\"><input class=\"field__control\" type=\"text\" aria-label=\"" + copy.home.heading + "\"></div></div>"
+        + "" + sgAlert("error", copy.home.requiredDestination) + ""
         + "<div class=\"arrive-block\"><div class=\"info-row__head\"><span class=\"icon-tile\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
         + "<span class=\"info-row__title\">" + copy.home.arriveBy + "</span><span class=\"required-tag\">" + copy.home.required + "</span></div>"
         + arriveField(copy.home.selectTime, "")
-        + "<p class=\"field-help is-shown\">" + ALERT_ICON + "<span class=\"field-help__text\">" + copy.home.requiredArrive + "</span></p></div>"
+        + "" + sgAlert("error", copy.home.requiredArrive) + "</div>"
         + "<button type=\"button\" class=\"primary primary--icon\" aria-disabled=\"true\"><span>" + copy.home.findRoute + "</span>" + ARROW_ICON + "</button>"
         + "</div>"
-        + "<h4>Arrive-by field: the five states</h4>"
+        + "<h4>Arrive-by field: the six states</h4>"
         + "<div class=\"stack\">"
         + arriveField(copy.home.selectTime, "")
         + arriveField(copy.arriveBy.noTarget, "")
         + arriveField(copy.arriveBy.in30, "6:45\u00a0PM")
         + arriveField(copy.arriveBy.inHour, "7:15\u00a0PM")
+        + arriveField(copy.arriveBy.in90, "7:45\u00a0PM")
         + arriveField(copy.arriveBy.custom, "6:30\u00a0PM")
         + "</div>"
         + firstRunSample();
@@ -1066,7 +1036,7 @@
     }
 
     function sgReason(text) {
-      return "<p class=\"overview-reason\">" + INFO_ICON + "<span>" + text + "</span></p>";
+      return sgAlert("info", text);
     }
 
     function sgOverviewState(kind) {
@@ -1075,22 +1045,22 @@
         var line = "<li class=\"journey-step\"><span class=\"step-node step-node--skeleton\"></span><span class=\"skeleton-lines\"><span class=\"skeleton-line\"></span><span class=\"skeleton-line skeleton-line--short\"></span></span></li>";
         body = "<ol class=\"journey-steps journey-steps--skeleton\" aria-hidden=\"true\">" + line + line + line + "</ol>";
       } else if (kind === "no-location") {
-        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + jo.needLocation + "</p><button type=\"button\" class=\"secondary\">" + jo.tryAgain + "</button></div>";
+        body = "<div class=\"overview-state\">" + sgAlert("warning", jo.needLocation) + "<button type=\"button\" class=\"secondary\">" + jo.tryAgain + "</button></div>";
       } else {
-        body = "<div class=\"overview-state\"><p class=\"banner banner--caution\">" + (kind === "no-service" ? jo.noServiceAny : kind === "no-bus-closed" ? jo.noBusClosed : kind === "no-mrt-closed" ? jo.noMrtClosed : kind === "no-service-static" ? jo.noService : jo.noRoute) + "</p><div class=\"overview-state__actions\"><button type=\"button\" class=\"secondary\">" + jo.editDestinationAction + "</button><button type=\"button\" class=\"secondary\">" + jo.editArriveByAction + "</button></div></div>";
+        body = "<div class=\"overview-state\">" + sgAlert("warning", (kind === "no-service" ? jo.noServiceAny : kind === "no-bus-closed" ? jo.noBusClosed : kind === "no-mrt-closed" ? jo.noMrtClosed : kind === "no-service-static" ? jo.noService : jo.noRoute)) + "<div class=\"overview-state__actions\"><button type=\"button\" class=\"secondary\">" + jo.editDestinationAction + "</button><button type=\"button\" class=\"secondary\">" + jo.editArriveByAction + "</button></div></div>";
       }
       return "<div class=\"card overview-card\" aria-busy=\"" + (kind === "loading" ? "true" : "false") + "\"><h4 class=\"overview-title\">" + jo.title + "</h4>" + body + "</div>";
     }
 
     // The ride-app card under an empty answer: plain operator links, a straight-line figure when the phone has both points.
-    function sgRideApps(withDistance) {
+    function sgRideApps(withDistance, pageC) {
       var ra = copy.rideApps;
       var links = ra.apps.map(function (app) {
         return "<li><a class=\"secondary ride-apps__link\" href=\"" + app.url + "\" target=\"_blank\" rel=\"noopener noreferrer\">" + app.name + "</a></li>";
       }).join("");
       return "<div class=\"ride-apps\"><h3 class=\"ride-apps__heading\">" + ra.heading + "</h3>"
         + (withDistance ? "<p class=\"ride-apps__distance\">" + ra.distance.replace("{km}", "4.2") + "</p>" : "")
-        + "<ul class=\"ride-apps__list\">" + links + "</ul><p class=\"overview-note ride-apps__note\">" + ra.note + "</p></div>";
+        + "<ul class=\"ride-apps__list\">" + links + "</ul><p class=\"overview-note ride-apps__note\">" + (pageC ? ra.notePageC : ra.note) + "</p></div>";
     }
 
     // The Arrive by card: the main line is the app's estimate ("Arrive by: {time}", heading size); under it, muted, the
@@ -1103,30 +1073,56 @@
     // No visible label: the card is a group named "Arrive by". The gap is a pill, the same component as the check pill, in
     // the same state (track, risk or N/A), and always says before or after target in words.
     function sgArriveBox(time, gap, pill) {
-      var tone = pill && pill[0] === "badge--track" ? "track" : pill && pill[0] === "badge--risk" ? "risk" : "na";
+      var tone = pill && pill[0] === "badge--track" ? "success" : pill && pill[0] === "badge--risk" ? "warning" : "neutral";
       return "<div class=\"arrive-box\" role=\"group\" aria-label=\"" + copy.home.arriveBy + "\"><span class=\"arrive-box__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span>"
         + "<div class=\"arrive-box__copy\">"
-        + "<p class=\"arrive-box__value\">" + copy.arriveBy.arriveLine.replace("{time}", time) + "</p>"
-        + (gap ? "<p class=\"badge badge--" + tone + " arrive-box__status\">" + gap + "</p>" : "")
-        + (pill ? "<p class=\"badge " + pill[0] + " arrive-box__status\">" + pill[1] + "</p>" : "") + "</div>"
-        + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button></div>";
+        + "<p class=\"arrive-box__value\"><span class=\"arrive-box__lead\">" + copy.arriveBy.arriveLine.split("{time}")[0].trim()
+        + "</span> <span class=\"arrive-box__time\">" + time + "</span></p>"
+        + "</div>"
+        + "<button type=\"button\" class=\"link-button\" aria-label=\"" + jo.editArriveBy + "\">" + jo.edit + "</button>"
+        + (gap ? sgAlert("neutral", gap) : "")
+        + (pill ? sgAlert(pill[0] === "badge--track" ? "success" : pill[0] === "badge--risk" ? "warning" : "neutral", pill[1]) : "") + "</div>";
     }
 
     function sgArriveBoxNoTarget() {
       return sgArriveBox("6:24\u00a0PM", "", null);
     }
 
-    function sgBusCard(state, refreshClass, refreshDisabled) {
-      return "<div class=\"bus-card\"><span class=\"bus-tile bus-tile--hero\" aria-hidden=\"true\">" + BUS_SVG + "</span>"
-        + "<div class=\"bus-card__copy\"><p class=\"journey-step__line bus-card__line\"><span class=\"bus-card__badge\"><span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>36</span></span>"
-        + "<span class=\"bus-card__to\">" + jo.to.replace("{destination}", "Marina Bay Sands") + "</span>" + sgPill(state) + "</p></div>"
-        + "<button type=\"button\" class=\"refresh-button" + (refreshClass ? " " + refreshClass : "") + "\" aria-label=\"" + lt.refresh + "\" aria-disabled=\"" + (refreshDisabled ? "true" : "false") + "\">" + REFRESH_ICON + "</button></div>";
+    // Approved Page B design (tmp/design/pageb-v2.html): the title row, the vehicle card and one row per arrival.
+    var SG_B_BACK = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M15 6l-6 6 6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var SG_B_ARRIVING = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\"></circle><path d=\"M8 12l3 3 5-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    function sgLiveTop(title) {
+      return "<div class=\"live-top\"><button type=\"button\" class=\"icon-button live-back\" aria-label=\"Back\">" + SG_B_BACK + "</button><h2 class=\"live-title\">" + title + "</h2></div>";
     }
 
-    function sgTiles(minutes) {
+    // o.train: the train icon and (o.ring) the line's ring and tint; o.badge: the badge markup (a bus number by default).
+    function sgBusCard(state, refreshClass, refreshDisabled, o) {
+      o = o || {};
+      return "<section class=\"card bus-card live-vehicle" + (o.ring ? " journey-step--rail-" + o.ring : "") + "\"><span class=\"step-node live-node\" aria-hidden=\"true\">" + (o.train ? SG_TRAIN_ICON : BUS_SVG) + "</span>"
+        + "<div class=\"bus-card__copy\"><p class=\"journey-step__line bus-card__line\"><span class=\"bus-card__badge\">" + (o.badge || "<span class=\"line-badge line-badge--bus\"><span class=\"visually-hidden\">Bus </span>36</span>") + "</span>"
+        + sgPill(state) + "</p></div>"
+        + "<button type=\"button\" class=\"refresh-button" + (refreshClass ? " " + refreshClass : "") + "\" aria-label=\"" + lt.refresh + "\" aria-disabled=\"" + (refreshDisabled ? "true" : "false") + "\">" + REFRESH_ICON + "</button></section>";
+    }
+
+    // One row per arrival: the time and the service at the left; the crowding label and the Arriving chip at the right. o.train: the
+    // time alone, with an aria-label naming the line.
+    function sgCrowdChip(code) {
+      return "<span class=\"crowd-chip\" data-load=\"" + code + "\"><span class=\"crowd-chip__icon\" aria-hidden=\"true\">" + SG_CROWD_ICONS[code] + "</span><span class=\"crowd-chip__text\">"
+        + copy.crowding[code === "UNKNOWN" ? "unknown" : code] + "</span></span>";
+    }
+
+    function sgTiles(minutes, loads, o) {
+      o = o || {};
       return "<ul class=\"bus-tiles\" role=\"list\">" + minutes.map(function (m, i) {
-        return "<li class=\"bus-tile-card" + (i === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + m + "</span><span class=\"bus-tile-card__service\">" + jo.bus.replace("{service}", "36") + "</span>"
-          + (i === 0 ? "<span class=\"bus-tile-card__arriving\">" + lt.arriving + "</span>" : "") + "</li>";
+        var selected = i === 0 ? " is-selected" : "";
+        if (o.train) {
+          return "<li class=\"bus-tile-card bus-tile-card--time-only" + selected + "\" aria-label=\"" + sgFill(copy.trainPage.tileLabel, { line: o.line, time: m }) + "\"><span class=\"bus-tile-card__minutes\">" + m + "</span></li>";
+        }
+        var side = (loads && loads[i] ? sgCrowdChip(loads[i]) : "")
+          + (i === 0 ? "<span class=\"bus-tile-card__arriving\">" + SG_B_ARRIVING + "<span>" + lt.arriving + "</span></span>" : "");
+        return "<li class=\"bus-tile-card" + selected + "\"><span class=\"bus-tile-card__main\"><span class=\"bus-tile-card__minutes\">" + m + "</span><span class=\"bus-tile-card__service\">" + jo.bus.replace("{service}", "36") + "</span></span>"
+          + (side ? "<span class=\"bus-tile-card__side\">" + side + "</span>" : "") + "</li>";
       }).join("") + "</ul>";
     }
 
@@ -1151,12 +1147,12 @@
         + "<h4>Screen 5: the bus planner (static fallback) keeps its bus-only sentence</h4>" + sgOverviewState("no-service-static")
         + "<h4>Screen 5: ride-app card under an empty answer, with the distance line</h4><div class=\"card overview-card\">" + sgRideApps(true) + "</div>"
         + "<h4>Screen 5: ride-app card, no distance (a point is missing)</h4><div class=\"card overview-card\">" + sgRideApps(false) + "</div>"
-        + "<h4>Start journey, with the motion privacy line above it</h4><p class=\"note\" aria-live=\"off\">" + jo.motionPrivacy + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
-        + "<h4>Start journey, motion sensor off or denied</h4><p class=\"note\" aria-live=\"off\">" + jo.motionOff + "</p><button type=\"button\" class=\"primary primary--icon\"><span>" + jo.startJourney + "</span>" + ARROW_ICON + "</button>"
-        + "<h4>Bus card: LIVE, refresh idle</h4><div class=\"card live-card\">" + sgBusCard("live", "", false) + "</div>"
-        + "<h4>Bus card: SCHEDULE ONLY, refresh spinning</h4><div class=\"card live-card\">" + sgBusCard("schedule", "is-spinning", false) + "</div>"
-        + "<h4>Bus card: stale, refresh disabled (cooldown or demo)</h4><div class=\"card live-card\">" + sgBusCard("stale", "", true) + "</div>"
-        + "<h4>Next buses: three, two and one</h4><p class=\"live-label\">" + lt.nextBuses + "</p>" + sgTiles(["4 min", "12 min", "24 min"]) + sgTiles(["Due", "15 min"]) + sgTiles(["<1 min"])
+        + "<h4>Page B title row: the back button beside To {destination}</h4><div class=\"live-page\">" + sgLiveTop(jo.to.replace("{destination}", "Marina Bay Sands")) + "</div>"
+        + "<h4>Bus card: LIVE, refresh idle</h4><div class=\"live-page\">" + sgBusCard("live", "", false) + "</div>"
+        + "<h4>Bus card: SCHEDULE ONLY, refresh spinning</h4><div class=\"live-page\">" + sgBusCard("schedule", "is-spinning", false) + "</div>"
+        + "<h4>Bus card: stale, refresh disabled (cooldown or demo)</h4><div class=\"live-page\">" + sgBusCard("stale", "", true) + "</div>"
+        + "<h4>Next buses: three rows (the selected one on the secondary surface with the Arriving chip), two and one</h4><div class=\"live-page\"><p class=\"live-label\">" + lt.nextBuses + "</p>"
+        + sgTiles(["4 min", "12 min", "24 min"], ["SEA", "SDA", "LSD"]) + sgTiles(["Due", "15 min"], ["UNKNOWN", "SEA"]) + sgTiles(["<1 min"], ["LSD"]) + "</div>"
         + "<h4>Live bus tag and boarding-stop label chip</h4>"
         + "<div class=\"live-map sample-live\"><span class=\"live-bus-tag\"><span class=\"live-bus-tag__icon\">" + BUS_SVG + "</span><span class=\"live-bus-tag__text\"><span class=\"live-bus-tag__service\">" + jo.bus.replace("{service}", "36") + "</span><span class=\"live-bus-tag__eta\">4 min</span></span></span>"
         + "<span class=\"map-stop map-stop--live\"><span class=\"map-stop__dot\">" + BUS_SVG + "</span><span class=\"map-stop__label map-stop-label map-stop__label--two-line is-right\">Opp Stamford Pr Sch</span></span>"
@@ -1218,14 +1214,16 @@
         whenText ? sgDetail(whenText, whenClass) : "", noteText, rideText, endName);
     }
 
+    var SG_CHEVRON_DOWN = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+
     // The priority select under its label, with the options the bus planner fallback cannot do disabled.
     function sgSelect(selected, disabled) {
       var labels = [["fastest", jo.priorityFastest], ["fewest_transfers", jo.priorityFewest], ["least_walking", jo.priorityLeastWalk],
         ["bus_only", jo.priorityBus], ["mrt_only", jo.priorityMrt]];
-      return "<select class=\"priority-select\" aria-label=\"" + jo.priorityLabel + "\">"
+      return "<div class=\"priority-select-wrap\"><select class=\"priority-select\" aria-label=\"" + jo.priorityLabel + "\">"
         + labels.map(function (pair) {
           return "<option value=\"" + pair[0] + "\"" + (pair[0] === selected ? " selected" : "") + (disabled.indexOf(pair[0]) !== -1 ? " disabled" : "") + ">" + pair[1] + "</option>";
-        }).join("") + "</select>";
+        }).join("") + "</select><span class=\"priority-select-wrap__chevron\" aria-hidden=\"true\">" + SG_CHEVRON_DOWN + "</span></div>";
     }
 
     // The route lines of the map (plan 4.3): walk dashed, bus solid, train solid, LRT dotted, a casing only where the colour
@@ -1254,9 +1252,9 @@
     function crowdingSample() {
       var words = copy.crowding;
       function tile(code, index) {
-        return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__minutes\">" + (index + 2) + " min</span>"
-          + "<span class=\"bus-tile-card__service\">Bus 174</span><span class=\"crowd-chip\" data-load=\"" + code + "\"><span class=\"crowd-chip__icon\" aria-hidden=\"true\">"
-          + SG_CROWD_ICONS[code] + "</span><span class=\"crowd-chip__text\">" + words[code === "UNKNOWN" ? "unknown" : code] + "</span></span></li>";
+        return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\"><span class=\"bus-tile-card__main\"><span class=\"bus-tile-card__minutes\">" + (index + 2) + " min</span>"
+          + "<span class=\"bus-tile-card__service\">Bus 174</span></span><span class=\"bus-tile-card__side\"><span class=\"crowd-chip\" data-load=\"" + code + "\"><span class=\"crowd-chip__icon\" aria-hidden=\"true\">"
+          + SG_CROWD_ICONS[code] + "</span><span class=\"crowd-chip__text\">" + words[code === "UNKNOWN" ? "unknown" : code] + "</span></span></span></li>";
       }
       function lists() {
         return "<ul class=\"bus-tiles bus-tiles--3\">" + ["SEA", "SDA", "LSD"].map(tile).join("") + "</ul>"
@@ -1268,10 +1266,9 @@
 
     function sgTrainAlert(lineName, message, expanded, cut) {
       var ta = copy.trainAlert;
-      return "<div class=\"banner banner--caution alert-row train-alert" + (expanded ? " is-expanded" : "") + "\" role=\"status\">"
-        + "<span class=\"alert-row__icon\" aria-hidden=\"true\">" + WARN_ICON + "</span><div class=\"alert-row__copy\">"
-        + "<p class=\"alert-row__title train-alert__text\">" + sgFill(ta.text, { line: lineName, message: message }) + "</p>"
-        + (cut ? "<button type=\"button\" class=\"link-button train-alert__toggle\">" + (expanded ? ta.less : ta.more) + "</button>" : "")
+      return "<div class=\"alert alert--warning alert--clamp" + (expanded ? " is-expanded" : "") + "\" role=\"status\">" + SG_ICON
+        + "<div class=\"alert__body\"><p class=\"alert__text\">" + sgFill(ta.text, { line: lineName, message: message }) + "</p>"
+        + (cut ? "<button type=\"button\" class=\"link-button alert__toggle\">" + (expanded ? ta.less : ta.more) + "</button>" : "")
         + "</div></div>";
     }
 
@@ -1282,13 +1279,13 @@
         + "designated bus stops. Free MRT shuttle services are also available along the affected stretch.";
       var cleaned = "5:00\u00a0PM: No train service between Bishan and Woodlands. Free bus rides are available.";
       var bare = "Additional travelling time of 10 minutes between Punggol and HarbourFront.";
-      return "<h4>Train alert: cleaned message (code dropped, 12-hour time kept)</h4><div class=\"train-alerts\">" + sgTrainAlert("North-South Line", cleaned, false, false) + "</div>"
-        + "<h4>Train alert: code dropped, no time stamp</h4><div class=\"train-alerts\">" + sgTrainAlert("North-East Line", bare, false, false) + "</div>"
-        + "<h4>Train alert: no message, Status 1 (minor delay)</h4><div class=\"train-alerts\">" + sgTrainAlert("Circle Line", copy.trainAlert.noMessageMinor, false, false) + "</div>"
-        + "<h4>Train alert: no message, Status 2 (disrupted)</h4><div class=\"train-alerts\">" + sgTrainAlert("Circle Line", copy.trainAlert.noMessageDisrupted, false, false) + "</div>"
-        + "<h4>Train alert: a short message (no expand control)</h4><div class=\"train-alerts\">" + sgTrainAlert("North-South Line", short, false, false) + "</div>"
-        + "<h4>Train alert: a long message cut at two lines, with Show more</h4><div class=\"train-alerts\">" + sgTrainAlert("North-East Line", long, false, true) + "</div>"
-        + "<h4>Train alert: expanded, with Show less</h4><div class=\"train-alerts\">" + sgTrainAlert("North-East Line", long, true, true) + "</div>";
+      return "<h4>Train alert: cleaned message (code dropped, 12-hour time kept)</h4><div class=\"alert-stack\">" + sgTrainAlert("North-South Line", cleaned, false, false) + "</div>"
+        + "<h4>Train alert: code dropped, no time stamp</h4><div class=\"alert-stack\">" + sgTrainAlert("North-East Line", bare, false, false) + "</div>"
+        + "<h4>Train alert: no message, Status 1 (minor delay)</h4><div class=\"alert-stack\">" + sgTrainAlert("Circle Line", copy.trainAlert.noMessageMinor, false, false) + "</div>"
+        + "<h4>Train alert: no message, Status 2 (disrupted)</h4><div class=\"alert-stack\">" + sgTrainAlert("Circle Line", copy.trainAlert.noMessageDisrupted, false, false) + "</div>"
+        + "<h4>Train alert: a short message (no expand control)</h4><div class=\"alert-stack\">" + sgTrainAlert("North-South Line", short, false, false) + "</div>"
+        + "<h4>Train alert: a long message cut at two lines, with Show more</h4><div class=\"alert-stack\">" + sgTrainAlert("North-East Line", long, false, true) + "</div>"
+        + "<h4>Train alert: expanded, with Show less</h4><div class=\"alert-stack\">" + sgTrainAlert("North-East Line", long, true, true) + "</div>";
     }
 
     function trainPagesSample() {
@@ -1296,26 +1293,20 @@
       var line = "North-South Line";
       var tiles = "<div class=\"leave-tiles\"><div class=\"leave-tile\" role=\"group\" aria-label=\"Leave by\"><div><p class=\"leave-tile__line\"><span class=\"leave-tile__label\">Leave by:</span>"
         + "<span class=\"leave-tile__value\">8:44" + " AM</span></p></div></div></div>";
-      var pageA = sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgPaceChip("steady") + tiles
+      var pageA = tiles + sgPaceChip("steady") + sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgRouteStrip("train", 3) + sgWalkRow()
         + "<div class=\"catch-bar catch-bar--single\"><button type=\"button\" class=\"primary\"><span>" + tp.seeTimes + "</span></button></div>";
       // Page B card header: the tile, then the badge and the name on one row (a wrapped name stays under the name), the pill and
       // the direction under it, the refresh button top right. Tiles show the time only; the aria-label names the line and time.
-      var refresh = "<button type=\"button\" class=\"refresh-button\" aria-label=\"Refresh live arrivals\">" + REFRESH_ICON + "</button>";
       var pageBCard = function (code, name, terminus, wide) {
-        return "<div class=\"card live-card\"><div class=\"bus-card\"><span class=\"bus-tile bus-tile--hero\" aria-hidden=\"true\">" + SG_TRAIN_ICON + "</span>"
-          + "<div class=\"bus-card__copy\"><p class=\"journey-step__line bus-card__line\"><span class=\"bus-card__badge\">"
-          + sgBadge(code) + "</span><span class=\"bus-card__to\">" + jo.trainToward.replace("{terminus}", terminus) + "</span>"
-          + sgPill("schedule") + "</p></div>" + refresh + "</div>"
-          + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"bus-tiles bus-tiles--3\">"
-          + ["8:50", "8:54", "8:58"].map(function (time, index) {
-            return "<li class=\"bus-tile-card" + (index === 0 ? " is-selected" : "") + "\" aria-label=\"" + sgFill(tp.tileLabel, { line: name, time: time + " AM" })
-              + "\"><span class=\"bus-tile-card__minutes\">" + time + "\u00a0AM</span></li>";
-          }).join("") + "</ul>"
-          + (wide ? "<div class=\"catch-bar\"><p class=\"catch-bar__title\">" + tp.question + "</p></div>" : "") + "</div>";
+        return "<div class=\"live-page\">" + sgLiveTop(jo.trainToward.replace("{terminus}", terminus))
+          + sgBusCard("schedule", "", false, { train: true, ring: code.toLowerCase(), badge: sgBadge(code) })
+          + "<p class=\"live-label\">" + tp.nextTrains + "</p>"
+          + sgTiles(["8:50\u00a0AM", "8:54\u00a0AM", "8:58\u00a0AM"], null, { train: true, line: name })
+          + (wide ? "<div class=\"catch-bar catch-bar--sample\"><p class=\"catch-bar__title\">" + tp.question + "</p></div>" : "") + "</div>";
       };
       var pageB = pageBCard("NS", line, "Marina South Pier", true)
-        + "<h4>Page B header: a long terminus wraps inside its own text</h4>" + pageBCard("TE", "Thomson-East Coast Line", "Woodlands North", false)
-        + "<h4>Page B header: a short terminus stays on the badge row</h4>" + pageBCard("CC", "Circle Line", "HarbourFront", false);
+        + "<h4>Page B title: a long terminus wraps inside its own text</h4>" + pageBCard("TE", "Thomson-East Coast Line", "Woodlands North", false)
+        + "<h4>Page B title: a short terminus</h4>" + pageBCard("CC", "Circle Line", "HarbourFront", false);
       var missed = "<div class=\"card train-missed\"><p class=\"train-missed__left\">" + sgFill(tp.left, { line: line, time: "8:54 AM" }) + "</p>"
         + "<p class=\"live-label\">" + tp.nextTrains + "</p><ul class=\"train-rows\">"
         + ["8:54", "8:58", "9:02"].map(function (time) { return "<li class=\"train-rows__item\">" + sgFill(tp.about, { time: time + " AM" }) + "</li>"; }).join("")
@@ -1398,9 +1389,9 @@
         }).join("") + "</div>"
         + "<h4>Priority select: Least walking selected</h4><div class=\"overview-priority\">" + sgSelect("least_walking", []) + "</div>"
         + "<h4>Priority select: the bus planner is the fallback (two options disabled, both notes)</h4><div class=\"overview-priority\">"
-        + sgSelect("fastest", ["least_walking", "mrt_only"]) + "<p class=\"overview-note\">" + jo.fallbackNote + "</p><p class=\"overview-note\">" + jo.needsRouteService + "</p></div>"
+        + sgSelect("fastest", ["least_walking", "mrt_only"]) + sgAlert("info", jo.fallbackNote) + sgAlert("info", jo.needsRouteService) + "</div>"
         + "<h4>Priority select: nothing for MRT only (the banner below says so)</h4><div class=\"overview-priority\">" + sgSelect("mrt_only", []) + "</div>"
-        + "<div class=\"card overview-card\"><p class=\"banner banner--caution\">" + jo.noMrtOnly + "</p></div>"
+        + "<div class=\"card overview-card\">" + sgAlert("warning", jo.noMrtOnly) + "</div>"
         + "<h4>Train leg row: a first leg says \"Scheduled \u00b7 In N min\"; Start journey is on</h4>"
         + "<div class=\"card overview-card\"><ol class=\"journey-steps\">" + firstTrain.join("") + "</ol></div>"
         + "<h4>A change is a plain neutral walk row; a different line switches the colour, the same line keeps it</h4>"
@@ -1444,8 +1435,8 @@
         sgLegRow("destination", jo.destination, [sgDetail("Marina Bay Sands")], "")
       ];
       var banner = function (text) {
-        return "<div class=\"banner banner--info alert-row on-way-alert\" role=\"status\"><span class=\"alert-row__icon\" aria-hidden=\"true\">" + bell + "</span>"
-          + "<div class=\"alert-row__copy\"><p class=\"alert-row__title\">" + text + "</p><button type=\"button\" class=\"secondary\">" + ow.dismiss + "</button></div></div>";
+        return "<div class=\"alert alert--info\" role=\"status\">" + SG_ICON
+          + "<div class=\"alert__body\"><p class=\"alert__text\">" + text + "</p><div class=\"alert__actions\"><button type=\"button\" class=\"secondary\">" + ow.dismiss + "</button></div></div></div>";
       };
       var nextLine = function (text) {
         return "<p class=\"on-way-next\">" + text + "</p>";
@@ -1533,7 +1524,8 @@
     // Page A's heading, from the overview's row components: a marker (ring grey for a bus, the line's colour for a train),
     // the row with the state pill, then the time line. kind: "bus" (default) or "train".
     // Page A's heading column, top down (bus: number badge, "To {destination stop}", clock time, pill, crowding; train: line
-    // badge and name, loop direction, "To {terminus}" with the platform, clock time, pill). usable false: no clock time.
+    // badge; "To {terminus}" and a muted line with the line's name, the loop direction and the platform; clock time, pill).
+    // usable false: no clock time.
     function sgCrowdChip(code) {
       return '<p class="crowd-chip" data-load="' + code + '"><span class="crowd-chip__icon" aria-hidden="true">' + SG_CROWD_ICONS[code]
         + '</span><span class="crowd-chip__text">' + copy.crowding[code === "UNKNOWN" ? "unknown" : code] + '</span></p>';
@@ -1542,10 +1534,9 @@
     function sgCatchHead(state, kind, eta, usable, load) {
       var train = kind === "train";
       var rows = train
-        ? '<p class="journey-step__line catch-card__line">' + sgBadge("CC") + ' <span class="catch-card__line-name">' + copy.lineNames.CC + '</span></p>'
-          + '<p class="catch-card__direction">' + jo.clockwise + '</p>'
-          + '<p class="catch-card__to"><span class="catch-card__to-place">' + jo.trainToward.replace("{terminus}", "HarbourFront")
-          + '</span> <span class="catch-card__platform">' + jo.platformOnly.replace("{x}", "A") + '</span></p>'
+        ? '<p class="journey-step__line catch-card__line">' + sgBadge("CC") + '</p>'
+          + '<p class="catch-card__to"><span class="catch-card__to-place">' + jo.trainToward.replace("{terminus}", "HarbourFront") + '</span></p>'
+          + '<p class="catch-card__sub-line">' + [copy.lineNames.CC, jo.clockwise, jo.platformOnly.replace("{x}", "A")].join(lc.routeSeparator) + '</p>'
         : '<p class="journey-step__line catch-card__line"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>11</span></p>'
           + '<p class="catch-card__to"><span class="catch-card__to-place">' + jo.busToward.replace("{terminus}", "Pasir Ris Int") + '</span></p>';
       var minutes = train ? 6 : (sgEtaMinutes(eta) === null ? 15 : sgEtaMinutes(eta));
@@ -1560,20 +1551,39 @@
       return '<section class="card catch-card" aria-live="polite">'
         + '<div class="catch-card__row">' + sgRing(point, low, high, false, lc.unavailable).replace('class="prob-ring', 'class="prob-ring prob-ring--large')
         + '<div class="catch-card__copy">' + sgCatchHead(state, kind, eta, usable, load) + '</div></div>'
-        + sgWalkRow(walk && walk.line ? walk.line : lc.walkPaceNormal.replace("{kmh}", "4.5")) + '</section>';
+        + '</section>';
     }
 
-    // The four walking-speed sources: the muted pace line (1.25 m/s is 4.5 km/h).
-    function sgWalk(source, kmh) {
-      var map = { gps: lc.walkPaceGps, cadence: lc.walkPaceSteps, remembered: lc.walkPaceUsual, "default": lc.walkPaceNormal };
-      return { line: map[source].replace("{kmh}", kmh) };
+    // Layout B, Page A top to bottom: the Leave by card, the pace row (chip and walk line), the probability card (ring and
+    // heading), the route strip and the card that opens Page W.
+    function sgLayoutB(kind, point, low, high, eta, chip, tile, load, state) {
+      return sgLeaveTiles(false, tile) + sgPaceChip(chip, 3)
+        + sgCatchCard(state || "live", point, low, high, undefined, eta, undefined, kind, load)
+        + sgRouteStrip(kind, 3) + sgWalkRow();
+    }
+
+    // Layout B: the route strip (From, the walk, the vehicle's badge, Destination) and the card that opens Page W.
+    function sgRouteStrip(kind, walkMinutes) {
+      var train = kind === "train";
+      return '<section class="route-strip" aria-label="' + lc.routeLabel + '">'
+        + '<div class="route-strip__node"><span class="route-strip__dot route-strip__dot--from" aria-hidden="true">' + SG_PIN_ICON + '</span><span class="route-strip__label">' + lc.routeFrom + '</span></div>'
+        + '<span class="route-strip__line" aria-hidden="true"></span>'
+        + '<div class="route-strip__node"><span class="route-strip__dot" aria-hidden="true">' + SG_WALK_ICON + '</span><span class="route-strip__label">'
+        + (walkMinutes === null ? lc.routeWalk : lc.paceWalk.replace("{n}", String(walkMinutes))) + '</span></div>'
+        + '<span class="route-strip__line" aria-hidden="true"></span>'
+        + '<div class="route-strip__node"><span class="step-node route-strip__vehicle' + (train ? ' journey-step--rail-cc' : '') + '" aria-hidden="true">' + (train ? SG_TRAIN_ICON : BUS_SVG)
+        + '</span><span class="route-strip__label">' + (train ? "CC" : "158") + '</span></div>'
+        + '<span class="route-strip__line" aria-hidden="true"></span>'
+        + '<div class="route-strip__node"><span class="route-strip__dot route-strip__dot--to" aria-hidden="true">' + SG_FLAG_ICON + '</span><span class="route-strip__label">' + lc.routeDestination + '</span></div>'
+        + '</section>';
     }
 
     // The walk line sits under the chip: the chip's font, the primary text colour, the AI sentence's walk minutes.
     function sgPaceChip(key, walkMinutes) {
-      return "<div class=\"pace-slot\"><div class=\"pace-chip\"><p class=\"badge badge--live\"><span>" + copy.pace[key].title + "</span></p>"
-        + (walkMinutes === null ? "" : "<p class=\"pace-walk\">" + lc.paceWalk.replace("{n}", String(walkMinutes === undefined ? 3 : walkMinutes)) + "</p>")
-        + "</div></div>";
+      var kind = { slower: "success", slightly_slower: "success", steady: "neutral", slightly_faster: "warning", faster: "warning", unlikely: "error", neutral: "neutral" }[key] || "neutral";
+      return "<div class=\"pace-slot\"><div class=\"alert alert--" + kind + "\">" + SG_ICON + "<div class=\"alert__body\"><p class=\"alert__text\">" + copy.pace[key].title + "</p>"
+        + (walkMinutes === null ? "" : "<p class=\"alert__meta\">" + lc.paceWalk.replace("{n}", String(walkMinutes === undefined ? 3 : walkMinutes)) + "</p>")
+        + "</div></div></div>";
     }
 
     // ---- consistent sample values: "now" is 9:55:00\u00a0PM and every leave-by value is computed with the app's rule
@@ -1613,9 +1623,9 @@
     }
 
     // At the stop (the probability carries at_stop): the tile and the whole card, from the same strings as the page.
-    function sgAtStopTile(e) {
+    function sgAtStopTile(e, train) {
       return {
-        e: e, warn: false, value: copy.atStop.tile, meta: ""
+        e: e, warn: false, value: train ? copy.atStop.tileTrain : copy.atStop.tile, meta: ""
       };
     }
 
@@ -1634,11 +1644,11 @@
       var high = sgClockParts((e + 22) * 60);
       var range = low.suffix === high.suffix ? low.hm + "–" + high.hm + SG_NB + low.suffix : low.hm + SG_NB + low.suffix + "–" + high.hm + SG_NB + high.suffix;
       // One line: "Leave by: {time}". "Leave now" and "At the stop" stand alone, with no label.
-      var stands = state.value === lc.leaveNow || state.value === copy.atStop.tile;
+      var stands = state.value === lc.leaveNow || state.value === copy.atStop.tile || state.value === copy.atStop.tileTrain;
       return "<section class=\"leave-tiles\"><div class=\"leave-tile\" role=\"group\" aria-label=\"" + lc.leaveBy + "\"><span class=\"leave-tile__icon\" aria-hidden=\"true\">" + CLOCK_ICON + "</span><div>"
         + "<p class=\"leave-tile__line\">" + (stands ? "" : "<span class=\"leave-tile__label\">" + lc.leaveByLabel + "</span>") + "<span class=\"leave-tile__value\"><span class=\"leave-tile__nowrap\">" + state.value + "</span></span></p>"
-        + (state.warn ? "<p class=\"leave-tile__meta leave-tile__warn\">" + SG_WARN_ICON + "<span>" + lc.leaveUncertain + "</span></p>" : "")
         + "</div></div>"
+        + (state.warn ? sgAlert("warning", lc.leaveUncertain) : "")
         + "</section>";
     }
 
@@ -1651,7 +1661,10 @@
       var x = copy.explanation;
       var e = opts.e;
       if (opts.atStop) {
-        return e < 1 ? copy.atStop.cardArriving : copy.atStop.card.replace("{e}", sgMinutes(e));
+        if (e < 1) {
+          return opts.train ? copy.atStop.cardArrivingTrain : copy.atStop.cardArriving;
+        }
+        return copy.atStop.card.replace("{e}", sgMinutes(e));
       }
       var metres = opts.distance === undefined ? 300 : opts.distance;
       var speed = opts.speed === undefined ? 1.25 : opts.speed;
@@ -1697,27 +1710,34 @@
     var SG_TAG_TEXT = { fastest: rp.tagFastest, highest_chance: rp.tagHighest, next_best: rp.tagNextBest };
 
     // tags: the keys on the card; opts.destination: the clock text of "Reach destination by: {time}" ("" for no estimate).
+    function sgTimeTile(icon, template, time, extra) {
+      var nextAt = time.indexOf(" (");
+      var clock = nextAt === -1 ? time : time.slice(0, nextAt);
+      return '<div class="leave-tile leave-tile--option' + extra + '"><span class="leave-tile__icon" aria-hidden="true">' + icon + '</span><div>'
+        + '<p class="leave-tile__line"><span class="leave-tile__label">' + template.split("{time}")[0].trim() + '</span> <span class="leave-tile__value"><span class="leave-tile__nowrap">' + clock + '</span>'
+        + (nextAt === -1 ? '' : time.slice(nextAt)) + '</span></p></div></div>';
+    }
+
     function sgMergedCard(tags, service, opts) {
       opts = opts || {};
-      var destination = opts.destination === undefined ? "6:36\u00a0PM" : opts.destination;
+      var destination = opts.destination === undefined ? "6:36 PM" : opts.destination;
       return '<div class="reroute-option"><div class="card option-merged"><div class="option-tags">'
         + tags.map(function (tag) {
           return '<p class="option-chip" data-tag="' + tag + '"><span class="option-chip__icon" aria-hidden="true">' + SHIELD_ICON + '</span><span>' + SG_TAG_TEXT[tag] + '</span></p>';
         }).join("") + '</div>'
-        + '<div class="option-card">'
+        + '<div class="option-card"><div class="option-card__aside">' + sgRing(63, 55, 70, false, "—").replace("prob-ring ", "prob-ring prob-ring--large ") + '</div>'
         + '<div class="option-card__copy"><div class="catch-card__leg option-heading"><span class="step-node" aria-hidden="true">' + BUS_SVG + '</span>'
         + '<div class="catch-card__heading"><p class="journey-step__line catch-card__line"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>' + service + '</span> <span>' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</span></p>'
-        + '<p class="catch-card__when journey-step__arriving">' + rp.arrivesIn.replace("{minutes}", "6 min") + '</p></div></div>'
-        + (destination ? '<p class="option-card__destination">' + rp.destination.replace("{time}", destination) + '</p>' : '')
-        + '<p class="option-card__leave">' + rp.leaveBy.replace("{time}", "6:15\u00a0PM") + '</p></div>'
-        + '<div class="option-card__aside">' + sgRing(63, 55, 70, true, "—") + '</div></div>'
-        + (opts.after ? '<p class="alt-row__warn">' + WARN_ICON + '<span>' + rp.afterTarget + '</span></p>' : '')
-        + '</div>'
-        + '<button type="button" class="primary primary--icon"><span>' + rp.switchTo.replace("{service}", service).replace("{minutes}", "6 min") + '</span>' + ARROW_ICON + '</button></div>';
+        + '<p class="catch-card__when journey-step__arriving">' + rp.arrivesIn.replace("{minutes}", "6 min") + '</p></div></div></div></div>'
+        + sgTimeTile(CLOCK_ICON, rp.leaveBy, "6:15 PM", "")
+        + (destination ? sgTimeTile(SG_FLAG_ICON, rp.destination, destination, " leave-tile--reach") : '')
+        + (opts.after ? sgAlert("warning", rp.afterTarget) : '')
+        + '<button type="button" class="primary primary--icon"><span>' + rp.switchTo.replace("{service}", service).replace("{minutes}", "6 min") + '</span>' + ARROW_ICON + '</button>'
+        + '</div></div>';
     }
 
     function sgAutoBanner() {
-      return '<div class="banner banner--caution reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "36").replace("{minutes}", "3 min") + '</p><p>' + sgProbLine(28) + '</p></div></div>';
+      return sgAlertRich("warning", '<p class="alert__text">' + rp.warningTimedTitle.replace("{service}", "36").replace("{minutes}", "3 min") + '</p><p class="alert__meta">' + sgProbLine(28) + '</p>');
     }
 
     function sgReroute() {
@@ -1736,9 +1756,8 @@
       return '<section class="card catch-card page-c-current" aria-live="polite">'
         + sgCardHead(lc.chanceToCatchPageC.replace("{service}", "11"), sgSub(lc.arrivingIn.replace("{n}", "2"), stop || "Tanjong Rhu Stn Exit 2"), "live")
         + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy">' + sgBusArrives(2) + '</div></div>'
-        + '<p class="catch-card__caption">' + lc.caption + '</p>'
-        + '<div class="page-c-warn">' + WARN_ICON + '<p>' + (none ? rp.currentWarningNone : rp.currentWarning) + '</p></div>'
-        + '<button type="button" class="secondary">' + cp.seeArrivals + '</button></section>';
+        + sgAlert("warning", rp.currentWarning)
+        + '<button type="button" class="secondary">' + cp.seeBusArrivals + '</button></section>';
     }
 
     function sgRefreshHeader(heading) {
@@ -1756,12 +1775,12 @@
 
     // After a miss with nothing found: the plain text on the notice line and the ride-app card, no list.
     function sgPageCMissedNone() {
-      return '<div class="page-c"><div class="reroute-proposal"><p class="banner banner--info reroute-notice">' + rp.noOtherOptions + '</p>'
-        + sgRideApps(true) + '</div></div>';
+      return '<div class="page-c"><div class="reroute-proposal">' + sgAlert("info", rp.noOtherOptions) + ''
+        + sgRideApps(true, true) + '</div></div>';
     }
 
     function sgPageCMissed() {
-      return '<div class="page-c"><div class="reroute-proposal"><p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "11") + '</p>'
+      return '<div class="page-c"><div class="reroute-proposal">' + sgAlert("info", rp.busLeftNotice.replace("{service}", "11")) + ''
         + sgMergedCard(["fastest", "highest_chance"], "7") + sgMergedCard(["next_best"], "16", { destination: "6:48\u00a0PM" })
         + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
         + sgOptionRow("16", 60, 50, 70, "20 min", "6:54\u00a0PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183\u00a0m"), {})
@@ -1773,8 +1792,7 @@
     }
 
     function sgUnlikelyBanner() {
-      return '<div class="banner banner--caution unlikely-banner"><div class="reroute-warning">' + WARN_ICON + '<div><p class="reroute-warning__title">' + rp.warningTimedTitle.replace("{service}", "11").replace("{minutes}", "4 min") + '</p><p>' + sgProbLine(12) + '</p></div></div>'
-        + '<button type="button" class="secondary">' + rp.seeOtherBuses + '</button></div>';
+      return sgAlert("warning", rp.currentWarning);
     }
 
     // ---- Page A button row and Page W samples (the real page draws the map with Leaflet; here it is static markup)
@@ -1783,9 +1801,12 @@
     var SG_RECENTRE_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"></circle><circle cx=\"12\" cy=\"12\" r=\"7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg>";
     var SG_CHEVRON_DOWN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 9l6 6 6-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
 
-    function sgWalkRow(sub) {
+    var SG_PIN_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><circle cx=\"12\" cy=\"10\" r=\"2.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></circle></svg>";
+    var SG_FLAG_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 21V4M5 4h12l-2.5 4L17 12H5\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    function sgWalkRow() {
       return "<button type=\"button\" class=\"walk-open-row\"><span class=\"walk-open-row__icon\" aria-hidden=\"true\">" + SG_WALK_ICON + "</span>"
-        + "<span class=\"walk-open-row__copy\"><span class=\"walk-open-row__title\">" + copy.walkPage.openRow + "</span><span class=\"walk-open-row__sub\">" + sub + "</span></span>"
+        + "<span class=\"walk-open-row__title\">" + copy.walkPage.openRow + "</span>"
         + "<span class=\"walk-open-row__chevron\" aria-hidden=\"true\">" + SG_CHEVRON_ICON + "</span></button>";
     }
 
@@ -1825,55 +1846,69 @@
       };
       var rows = rowsByKind[kind || "notWalking"];
       return "<section class=\"card walk-sensors is-open\"><button type=\"button\" class=\"walk-sensors__toggle\" aria-expanded=\"true\"><span>" + w.sensorDetails + "</span>" + SG_CHEVRON_DOWN_ICON + "</button>"
-        + "<div class=\"walk-sensors__panel\"><p class=\"walk-sensors__why\">" + SG_INFO_ICON + "<span>" + why + "</span></p><dl class=\"walk-sensors__list\">" + rows.map(function (r) { return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>"; }).join("") + "</dl></div></section>";
+        + "<div class=\"walk-sensors__panel\"><div class=\"alert alert--info\"><span class=\"alert__icon\" aria-hidden=\"true\"></span><p class=\"alert__text\">" + why + "</p></div><dl class=\"walk-sensors__list\">" + rows.map(function (r) { return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>"; }).join("") + "</dl></div></section>";
     }
 
-    // o: { state: waiting | onway | still | arrived, distance, minutes, trend, ring: [point, low, high, band], accuracy, alerts, sensors }
+    var SG_BACK_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M15 6l-6 6 6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+    var SG_TREND_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M3 17l6-6 4 4 8-8M15 7h6v6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
+
+    // The approved Page W (tmp/design/pagew-v2.html): the back button beside the title, the chance card (large ring, the vehicle
+    // marker and badge, the time), the distance card (a big number on a band, the walk time, the progress bar, the state as the
+    // shared alert), the 300 px map and the sensor details.
+    // o: { state: waiting | checking | onway | away | still | arrived, distance, minutes, trend, ring: [point, low, high, band], accuracy,
+    //      alerts, sensors, train }
     function sgWalkPage(o) {
       var w = copy.walkPage;
       var stateText = { waiting: w.waiting, checking: w.checking, onway: w.onWay, away: w.away, still: w.still, arrived: w.arrived }[o.state];
+      var kind = { waiting: "neutral", checking: "info", onway: "success", away: "error", still: "warning", arrived: "success" }[o.state];
       var hasFix = o.state !== "waiting";
+      var trendKey = o.trend === "steady" || !o.trend ? "" : o.trend;
       var trendText = o.trend ? { rising: o.state === "onway" ? w.trendRisingCloser : w.trendRising, falling: o.state === "away" ? w.trendFallingAway : w.trendFalling, steady: w.trendSteady }[o.trend] : "";
       var ring = o.ring;
       var progress = { waiting: 0, checking: 0, onway: 10, away: 0, still: 27, arrived: 100 }[o.state];
+      var label = o.train ? copy.trainPage.walkDistance : w.distance;
+      label = label.replace("{distance}", "");
+      var vehicle = o.train
+        ? "<div class=\"catch-card__leg journey-step--rail-ns\"><span class=\"step-node\" aria-hidden=\"true\">" + DEST_TRAIN_ICON + "</span><p class=\"journey-step__line catch-card__line\"><span class=\"line-badge line-badge--ns\">NS</span></p></div>"
+        : "<div class=\"catch-card__leg\"><span class=\"step-node\" aria-hidden=\"true\">" + BUS_SVG + "</span><p class=\"journey-step__line catch-card__line\"><span class=\"line-badge line-badge--bus\">11</span></p></div>";
       return "<div class=\"walk-page-sample\">" + (o.alerts || "")
-        + "<h2 class=\"walk-title\">" + w.title + "</h2>"
-        + sgWalkMap(o.accuracy || "small", o.state === "arrived")
-        + "<section class=\"card walk-status\"><p class=\"walk-status__distance\">" + (hasFix ? w.distance.replace("{distance}", o.distance) : "—") + "</p>"
-        + (hasFix ? "<p class=\"walk-status__minutes\">" + w.minutes.replace("{n}", o.minutes) + "</p>" : "")
+        + "<div class=\"walk-top\"><button type=\"button\" class=\"icon-button walk-back\" aria-label=\"Back\">" + SG_BACK_ICON + "</button><h2 class=\"walk-title\">" + (o.train ? copy.trainPage.walkTitle : w.title) + "</h2></div>"
+        + "<section class=\"card catch-card walk-chance\" aria-live=\"polite\">" + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), "", o.train ? "schedule" : "live")
+        + "<div class=\"catch-card__row\">" + sgRing(ring[0], ring[1], ring[2], false, "", ring[3]).replace("class=\"prob-ring", "class=\"prob-ring prob-ring--large")
+        + "<div class=\"catch-card__copy\">" + vehicle + sgBusArrives(o.busMinutes === undefined ? 6 : o.busMinutes)
+        + (trendText ? "<p class=\"walk-chance__trend" + (trendKey ? " is-" + trendKey : "") + "\">" + SG_TREND_ICON + "<span>" + trendText + "</span></p>" : "") + "</div></div></section>"
+        + "<section class=\"card walk-status\"><div class=\"walk-band\">" + WALK_ICON.replace("class=\"icon\"", "class=\"icon walk-band__icon\"")
+        + "<p class=\"walk-status__distance\"><span class=\"walk-status__value\">" + (hasFix ? o.distance : "—") + "</span><span class=\"walk-status__label\">" + (hasFix ? label : "") + "</span></p></div>"
+        + "<p class=\"walk-status__minutes" + (hasFix ? "" : " is-empty") + "\">" + CLOCK_ICON + "<span>" + (hasFix ? w.minutes.replace("{n}", o.minutes) : "") + "</span></p>"
         + "<progress class=\"walk-progress\" max=\"100\" value=\"" + progress + "\" aria-hidden=\"true\"></progress>"
-        + "<p class=\"walk-status__state\">" + stateText + "</p></section>"
-        + "<section class=\"card catch-card walk-chance\" aria-live=\"polite\">" + sgCardHead(lc.chanceToCatch.replace("{service}", "11"), "", "live")
-        + "<div class=\"catch-card__row\">" + sgRing(ring[0], ring[1], ring[2], false, "", ring[3])
-        + "<div class=\"catch-card__copy\">" + sgBusArrives(o.busMinutes === undefined ? 6 : o.busMinutes)
-        + (trendText ? "<p class=\"walk-chance__trend\">" + trendText + "</p>" : "") + "</div></div></section>"
+        + "<div class=\"alert alert--" + kind + "\"><span class=\"alert__icon\" aria-hidden=\"true\"></span><p class=\"alert__text\">" + stateText + "</p></div></section>"
+        + sgWalkMap(o.accuracy || "small", o.state === "arrived")
         + (o.sensors || sgSensors(false)) + "</div>"
-        + sgSeeArrivalsBar();
+        + sgSeeArrivalsBar("walk");
     }
 
     function catchSample() {
       return ""
-        + "<h4>Probability card: bus, live, crowding label, with the pace chip and its walk line</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, undefined, undefined, "SEA") + sgPaceChip("steady")
-        + "<h4>Probability card: bus, schedule only, low band, with the pace chip</h4>" + sgCatchCard("schedule", 41, 30, 52) + sgPaceChip("unlikely")
-        + "<h4>Probability card: MRT, schedule only (line badge and name, direction, To terminus and Platform, clock time, pill)</h4>" + sgCatchCard("schedule", 64, 51, 78, undefined, undefined, undefined, "train") + sgPaceChip("steady")
-        + "<h4>Pace chip before a speed is measured</h4>" + sgPaceChip("neutral")
-        + "<h4>Walking pace: from GPS</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("gps", "4.7"))
-        + "<h4>Walking pace: from your steps</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("cadence", "4.3"))
-        + "<h4>Walking pace: your usual pace</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("remembered", "3.9"))
-        + "<h4>Walking pace: normal pace (1.25 m/s)</h4>" + sgCatchCard("live", 64, 51, 78, undefined, undefined, sgWalk("default", "4.5"))
+        + "<h4>Page A, Layout B: bus, live, crowding label (Leave by card, pace row, probability card, route strip, Page W card)</h4>" + sgLayoutB("bus", 64, 51, 78, undefined, "steady", sgTileState(15, 300, 1.25), "SEA")
+        + "<h4>Page A, Layout B: bus, schedule only, low band, Leave now</h4>" + sgLayoutB("bus", 41, 30, 52, undefined, "unlikely", sgTileState(6, 250, 1.3), "SDA", "schedule")
+        + "<h4>Page A, Layout B: MRT, schedule only (badge; To terminus; Circle Line, Clockwise and Platform on a muted line)</h4>" + sgLayoutB("train", 64, 51, 78, undefined, "steady", sgTileState(15, 300, 1.25), undefined, "schedule")
+        + "<h4>Pace chip before a speed is measured (one plain row with the walk line)</h4>" + sgPaceChip("neutral")
+        + "<h4>The card that opens Page W: one centred line, no subtitle</h4>" + sgWalkRow()
+        + "<h4>Route strip: bus, then train, with no walk minutes</h4>" + sgRouteStrip("bus", 3) + sgRouteStrip("train", null)
         + "<h4>Developer readout (only with ?pace=debug; delete before submission)</h4>"
         + "<div class=\"pace-debug pace-debug--sample is-open\"><button type=\"button\" class=\"pace-debug__bar\">mode gps &middot; used 1.30 m/s &middot; ok &middot; srv age 3 s</button>"
         + "<div class=\"pace-debug__panel\"><pre class=\"pace-debug__text\">mode gps (walking by gps)\ncadence 1.82 score 0.91 rms 1.20 null 0 cv 0.04\ngps 1.30 m/s reported acc 8 m age 0.4 s\nfix age 0.4 s, stale ignored 0\nlocation age: server 3 s, phone 2 s\ngps-only n 9 in 8 out 0 outliers 1 cv 0.05 ok\npick stride_doubled in 0.00/0.00 all 1.01/0.82 low 1.01/0.82\nstep 0.72 m n=4 learn: ok\nused 1.30 m/s gps smooth 1.29 sent 1.28\nmotion on events 1420\ntrace: trace ready: 90 rows, raw 2250 values</pre>"
         + "<div class=\"pace-debug__actions\"><button type=\"button\" class=\"pace-debug__button\">Record trace</button><button type=\"button\" class=\"pace-debug__button\">Copy trace</button><button type=\"button\" class=\"pace-debug__button\">Copy raw motion</button></div></div></div>"
         + "<h4>Page A heading with no ETA (no clock time)</h4>" + sgCatchCard("schedule", 41, 30, 52, undefined, "")
         + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
-        + "<h4>Page A, action wait: Leave by tile reads one line, Leave by: {time}; the walk line sits under the pace chip</h4>" + sgCatchCard("live", 92, 92, 92, undefined, sgArriving(15)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(15, 300, 1.25))
-        + "<h4>Page A, action leave_now: Leave by tile reads Leave now alone; the walk line sits under the pace chip</h4>" + sgCatchCard("live", 70, 44, 76, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.3))
+        + "<h4>Page A, action wait: the Leave by card (primary fill, primary-ink text) shows Leave by: and the large time</h4>" + sgLayoutB("bus", 92, 92, 92, sgArriving(15), "steady", sgTileState(15, 300, 1.25))
+        + "<h4>Page A, action leave_now: the Leave by card reads Leave now alone, in the same large size</h4>" + sgLayoutB("bus", 70, 44, 76, sgArriving(6), "steady", sgTileState(6, 250, 1.3))
         + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, sgTileState(15, 300, 1.25, true))
         + "<h4>Leave by tile, location uncertain, Leave now (warning line)</h4>" + sgLeaveTiles(false, sgTileState(6, 250, 1.3, true))
         + "<h4>Leave by tile, no walk minutes (no explanation pack): the time alone</h4>" + sgLeaveTiles(false, { value: sgLeave(15, 300, 1.25).time, e: 15 })
         + "<h4>Leave by tile, at the stop: the bus is 4 minutes away</h4>" + sgLeaveTiles(false, sgAtStopTile(4))
         + "<h4>Leave by tile, at the stop: the bus is arriving now</h4>" + sgLeaveTiles(false, sgAtStopTile(0))
+        + "<h4>Leave by tile, at the station: the train is arriving</h4>" + sgLeaveTiles(false, sgAtStopTile(0, true))
         + "<h4>Leave by and Estimated destination arrival tiles</h4>" + sgLeaveTiles(true)
         + "<h4>AI Explanation: loading</h4>" + sgAiCard("loading")
         + "<h4>AI Explanation (no check pill above it)</h4>" + sgAiCard("normal", { e: 10, band: "ok", action: "wait" })
@@ -1891,9 +1926,10 @@
         + "<h4>At the stop: the bus is 4 minutes away</h4>" + sgAiCard("normal", { e: 4, band: "ok", action: "wait", atStop: true })
         + "<h4>At the stop: the bus is 1 minute away, and arriving now</h4>" + sgAiCard("normal", { e: 1, band: "ok", action: "wait", atStop: true })
         + sgAiCard("normal", { e: 0, band: "ok", action: "wait", atStop: true })
+        + "<h4>At the station: the train is arriving</h4>" + sgAiCard("normal", { e: 0, band: "ok", action: "wait", atStop: true, train: true })
         + "<h4>Reroute block (automatic entry, pending proposal)</h4>" + sgReroute()
-        + "<h4>After the switch</h4><div class=\"banner banner--success reroute-confirm\"><h3>" + copy.rerouteCard.title + "</h3><p>" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p>" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p></div>"
-        + "<h4>Options asked for after a miss, none found</h4><p class=\"banner banner--info reroute-notice\">" + rp.noOtherOptions + "</p>";
+        + "<h4>After the switch</h4>" + sgAlertRich("success", "<h3 class=\"alert__text\">" + copy.rerouteCard.title + "</h3><p class=\"alert__detail\">" + copy.rerouteCard.message.replace("{new_service}", "7").replace("{new_stop_name}", "Opp Stamford Pr Sch").replace("{new_stop_code}", "04119") + "</p><p class=\"alert__detail\">" + copy.rerouteCard.probability.replace("{new_point}", "63").replace("{new_low}", "55").replace("{new_high}", "70").replace("{old_point}", "28") + "</p>")
+        + "<h4>Options asked for after a miss, none found</h4>" + sgAlert("info", rp.noOtherOptions);
     }
 
     document.getElementById("catch-sample-light").innerHTML = catchSample();
@@ -1911,37 +1947,32 @@
     }
 
     function sgLeaveNow(title, body, simulated) {
-      return '<section class="card leave-now-banner" aria-label="' + title + '">'
-        + '<div class="leave-now-banner__head"><span class="bus-tile bus-tile--small" aria-hidden="true">' + BUS_SVG + '</span>'
-        + '<span class="leave-now-banner__app">' + lb.app + '</span><span class="leave-now-banner__time">' + lb.now + '</span></div>'
-        + '<h3 class="leave-now-banner__title">' + title + '</h3><p class="leave-now-banner__body">' + body + '</p>'
+      return '<section class="alert alert--info" aria-label="' + title + '">' + SG_ICON + '<div class="alert__body">'
+        + '<p class="alert__meta"><span>' + lb.app + '</span> &middot; <span>' + lb.now + '</span></p>'
+        + '<h3 class="alert__text">' + title + '</h3><p class="alert__detail">' + body + '</p>'
         + (simulated ? '<p class="simulated-badge">' + copy.simulated + '</p>' : '')
-        + '<div class="leave-now-banner__actions"><button type="button" class="primary">' + lb.viewDetails + '</button>'
-        + '<button type="button" class="secondary">' + lb.dismiss + '</button></div></section>';
+        + '<div class="alert__actions"><button type="button" class="primary">' + lb.viewDetails + '</button>'
+        + '<button type="button" class="secondary">' + lb.dismiss + '</button></div></div></section>';
     }
 
     function sgStaleBanner() {
-      return '<div class="banner banner--denied alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
-        + '<div class="alert-row__copy"><p class="alert-row__title">' + qc.stale.heading + '</p>'
-        + '<p class="alert-row__meta" aria-live="off">' + qc.stale.updated.split("{time}")[0] + '<time class="sg-stale-time" datetime="2026-10-01T18:04:10+08:00">' + sgAge() + '</time></p></div></div>';
+      return sgAlertRich("error", '<p class="alert__text">' + qc.stale.heading + '</p>'
+        + '<p class="alert__meta" aria-live="off">' + qc.stale.updated.split("{time}")[0] + '<time class="sg-stale-time" datetime="2026-10-01T18:04:10+08:00">' + sgAge() + '</time></p>');
     }
 
     function sgUnavailableBanner() {
-      return '<div class="banner banner--denied alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
-        + '<div class="alert-row__copy"><p class="alert-row__title">' + qc.unavailable + '</p></div></div>';
+      return sgAlert("error", qc.unavailable);
     }
 
     function sgStaleStatus() {
       return '<section class="card stale-status"><div class="bus-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
         + '<div class="bus-card__copy"><p class="bus-card__title"><span>' + jo.bus.replace("{service}", "36") + '</span><span class="pill pill--schedule"><span>' + copy.status.scheduleOnly + '</span></span></p>'
         + '<p class="bus-card__to">' + qc.stale.arriving.replace("{minutes}", "6") + '</p></div></div>'
-        + '<div class="info-box">' + INFO_ICON + '<p>' + qc.stale.body + '</p></div></section>';
+        + sgAlert("info", qc.stale.body) + '</section>';
     }
 
     function sgLocationCard() {
-      return '<section class="card card--caution alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
-        + '<div class="alert-row__copy"><h3 class="alert-row__title">' + qc.uncertain.heading + '</h3>'
-        + '<p class="alert-row__body">' + qc.uncertain.body.replace("{accuracy}", "120\u00a0m") + '</p></div></section>';
+      return sgAlertRich("warning", '<h3 class="alert__text">' + qc.uncertain.heading + '</h3><p class="alert__detail">' + qc.uncertain.body.replace("{accuracy}", "120\u00a0m") + '</p>');
     }
 
     function qualitySample() {
@@ -1955,7 +1986,7 @@
         + "<h4>Location uncertain card</h4>" + sgLocationCard()
         + "<h4>Stale and location uncertain, stacked</h4>" + sgStaleBanner() + sgStaleStatus() + sgLocationCard()
         + "<h4>Complete stale page layout</h4>" + sgStaleBanner() + sgStaleStatus() + sgLocationCard()
-        + '<div class="card live-card">' + sgBusCard("stale", "", false) + '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["6 min", "14 min", "25 min"]) + '</div>';
+        + '<div class="live-page">' + sgBusCard("stale", "", false) + '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["6 min", "14 min", "25 min"], ["SEA", "SDA", "LSD"]) + '</div>';
     }
 
     document.getElementById("quality-sample-light").innerHTML = qualitySample();
@@ -1970,7 +2001,7 @@
       return '<section class="card stale-status"><div class="bus-card"><span class="bus-tile bus-tile--hero" aria-hidden="true">' + BUS_SVG + '</span>'
         + '<div class="bus-card__copy"><p class="bus-card__title"><span>' + jo.bus.replace("{service}", "36") + '</span><span class="pill pill--schedule"><span>' + pill + '</span></span></p>'
         + (arriving ? '<p class="bus-card__to">' + arriving + '</p>' : '') + '</div></div>'
-        + '<div class="info-box">' + INFO_ICON + '<p>' + info + '</p></div></section>';
+        + sgAlert("info", info) + '</section>';
     }
 
     function sgMap(full) {
@@ -2008,14 +2039,15 @@
 
     function sgOptionRow(service, point, low, high, minutes, reach, walk, opts) {
       opts = opts || {};
-      var warn = function (text) { return '<p class="alt-row__warn">' + WARN_ICON + '<span>' + text + '</span></p>'; };
-      return '<li class="alt-row' + (opts.unlikely ? " alt-row--unlikely" : "") + '"><button type="button" class="alt-row__hit"><span class="alt-row__icon" aria-hidden="true">' + BUS_SVG + '</span>'
-        + '<div class="alt-row__body"><p class="alt-row__top journey-step__line"><span class="alt-row__service"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>' + service + '</span> <span class="alt-row__to">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</span></span>'
-        + '<span class="alt-row__chance">' + rp.alternativeChance.replace("{point}", point) + '</span></p>'
-        + '<p class="alt-row__bottom"><span class="alt-row__arrives catch-card__when journey-step__arriving">' + rp.arrivesIn.replace("{minutes}", minutes) + '</span><span class="alt-row__reach">' + (reach ? rp.destination.replace("{time}", reach) : "") + '</span></p>'
-        + '<p class="alt-row__bottom">' + walk + '</p>'
-        + (opts.unlikely ? warn(copy.pace.unlikely.title) : '') + (opts.after ? warn(rp.afterTarget) : '') + '</div>'
-        + '<span class="alt-row__chevron" aria-hidden="true">' + CHEVRON_SM + '</span></button></li>';
+      var reachHtml = reach ? rp.destination.replace("{time}", "\u0001").split("\u0001") : null;
+      return '<li class="alt-row' + (opts.unlikely ? " alt-row--unlikely" : "") + '"><button type="button" class="alt-row__hit">' + sgRing(point, low, high, true, "—")
+        + '<div class="alt-row__body"><p class="alt-row__top journey-step__line"><span class="alt-row__icon" aria-hidden="true">' + BUS_SVG + '</span><span class="alt-row__service"><span class="line-badge line-badge--bus"><span class="visually-hidden">Bus </span>' + service + '</span> <span class="alt-row__to">' + rp.toDestination.replace("{destination}", "Marina Bay Sands") + '</span></span></p>'
+        + '<span class="alt-row__chance">' + rp.alternativeChance.replace("{point}", point) + '</span>'
+        + '<p class="alt-row__bottom"><span class="alt-row__arrives catch-card__when journey-step__arriving">' + rp.arrivesIn.replace("{minutes}", minutes) + '</span><span class="alt-row__reach">' + (reachHtml ? reachHtml[0] + '<b class="alt-row__reach-time">' + reach + '</b>' + reachHtml[1] : "") + '</span></p>'
+        + '<p class="alt-row__bottom">' + walk + '</p></div>'
+        + '<span class="alt-row__chevron" aria-hidden="true">' + CHEVRON_SM + '</span></button>'
+        + (opts.unlikely ? sgAlert("warning", copy.pace.unlikely.title).replace('class="alert ', 'class="alert alt-row__alert ') : '')
+        + (opts.after ? sgAlert("warning", rp.afterTarget).replace('class="alert ', 'class="alert alt-row__alert ') : '') + '</li>';
     }
 
     function sgOptionList(heading, rows, more) {
@@ -2043,14 +2075,14 @@
         sgOptionRow("21", 28, 20, 36, "25 min", "", rp.atYourStop, { unlikely: true })
       ];
       return ""
-        + "<h4>No buses in service (no-service layout)</h4>" + sgStatusCard(copy.status.unavailable, copy.quality.noService) + '<div class="card live-card">' + sgBusCard("unavailable", "", false) + '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>' + '</div>'
+        + "<h4>No buses in service (no-service layout)</h4>" + sgStatusCard(copy.status.unavailable, copy.quality.noService) + '<div class="live-page">' + sgBusCard("unavailable", "", false) + '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>' + '</div>'
         + "<h4>Live map: local view with the destination pin</h4>" + sgMap(false)
         + "<h4>Live map: Full route pressed</h4>" + sgMap(true)
         + "<h4>Question bar</h4>" + sgQuestionBar()
         + "<h4>On your way: direct route</h4>" + sgOnWay(false)
         + "<h4>On your way: transfer route</h4>" + sgOnWay(true)
-        + "<h4>End card</h4>" + '<div class="banner banner--info alert-row end-card"><span class="alert-row__icon" aria-hidden="true">' + INFO_ICON + '</span><div class="alert-row__copy"><p class="alert-row__title">' + cp.endUnanswered + '</p><button type="button" class="primary">' + cp.planNew + '</button></div></div>'
-        + '<div class="banner banner--info alert-row end-card"><span class="alert-row__icon" aria-hidden="true">' + INFO_ICON + '</span><div class="alert-row__copy"><p class="alert-row__title">' + cp.endMax + '</p><button type="button" class="primary">' + cp.planNew + '</button></div></div>'
+        + "<h4>End card</h4>" + sgAlertRich("info", '<p class="alert__text">' + cp.endUnanswered + '</p><div class="alert__actions"><button type="button" class="primary">' + cp.planNew + '</button></div>')
+        + sgAlertRich("info", '<p class="alert__text">' + cp.endMax + '</p><div class="alert__actions"><button type="button" class="primary">' + cp.planNew + '</button></div>')
         + "<h4>Page C, unlikely entry (current-bus card, recommended card, refresh header, alternatives)</h4>" + sgPageCUnlikely()
         + "<h4>Page C, missed entry (banner first, no current-bus card)</h4>" + sgPageCMissed()
         + "<h4>Page C, missed entry, nothing found (plain text and the ride-app card)</h4>" + sgPageCMissedNone()
@@ -2058,7 +2090,7 @@
         + "<h4>Compact warning banner on Pages A and B</h4>" + sgUnlikelyBanner()
         + "<h4>Page C current-bus card on its own</h4>" + sgCurrentBusCard()
         + "<h4>Question bar: Yes green, No red</h4>" + sgQuestionBar()
-        + "<h4>Entry banners: automatic entry and the No entry</h4>" + sgAutoBanner() + '<p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "36") + '</p>'
+        + "<h4>Entry banners: automatic entry and the No entry</h4>" + sgAutoBanner() + sgAlert("info", rp.busLeftNotice.replace("{service}", "36")) + ''
         + "<h4>Recommended cards: two cards, Fastest to destination and Highest catch probability</h4>"
         + sgMergedCard(["fastest"], "16", { destination: "6:30\u00a0PM" }) + sgMergedCard(["highest_chance"], "7")
         + "<h4>Recommended card: one option wins both tags (the second card is Next best)</h4>"
@@ -2070,7 +2102,7 @@
         + "<h4>Recommended card: after your target</h4>" + sgMergedCard(["fastest"], "16", { after: true })
         + "<h4>Rows: same stop, different stop, low chance, after your target</h4>" + sgOptionList(rp.alternatives, rows, true)
         + "<h4>Rows with no recommended card</h4>" + sgOptionList(rp.otherBuses, rows.slice(2), false)
-        + "<h4>Reroute notices</h4>" + '<p class="banner banner--info reroute-notice">' + rp.busLeftNotice.replace("{service}", "36") + '</p>' + '<p class="banner banner--info reroute-notice">' + rp.alreadyLeft + '</p>'
+        + "<h4>Reroute notices</h4>" + sgAlert("info", rp.busLeftNotice.replace("{service}", "36")) + '' + sgAlert("info", rp.alreadyLeft) + ''
         + "<h4>New-journey overview</h4>" + sgNewJourney();
     }
 
@@ -2090,18 +2122,20 @@
     }
 
     function sgLocationAgeCard() {
-      return '<section class="card card--caution alert-row"><span class="alert-row__icon" aria-hidden="true">' + TRI_FILL_ICON + '</span>'
-        + '<div class="alert-row__copy"><h3 class="alert-row__title">' + qc.uncertain.heading + '</h3>'
-        + '<p class="alert-row__body">' + qc.uncertain.ageBody.replace("{seconds}", "74") + '</p></div></section>';
+      return sgAlertRich("warning", '<h3 class="alert__text">' + qc.uncertain.heading + '</h3><p class="alert__detail">' + qc.uncertain.ageBody.replace("{seconds}", "74") + '</p>');
     }
 
-    function sgSeeArrivalsBar() {
-      return '<div class="catch-bar catch-bar--single catch-bar--sample"><button type="button" class="primary primary--icon"><span>' + cp.seeArrivals + '</span>' + ARROW_ICON + '</button></div>';
+    // mode: "bus" (Page A: both buttons), "train" (Page A: only See train times) or "walk" (Page W: See arrival times)
+    function sgSeeArrivalsBar(mode) {
+      var text = mode === "walk" ? cp.seeArrivals : mode === "train" ? copy.trainPage.seeTimes : cp.seeBusArrivals;
+      return '<div class="catch-bar catch-bar--single catch-bar--sample"><button type="button" class="primary primary--icon pulse-button"><span>' + text + '</span>' + ARROW_ICON + '</button>'
+        + (mode === "walk" || mode === "train" ? "" : '<div class="other-bus-actions saved-panel__actions saved-panel__actions--form"><button type="button" class="primary"><span>' + cp.otherBusOptions + '</span></button></div>')
+        + '</div>';
     }
 
     function sgPageA(kind) {
       var cards = kind === "live"
-        ? sgCatchCard("live", 65, 48, 78, undefined, sgArriving(6)) + sgPaceChip("steady") + sgLeaveTiles(true, sgTileState(6, 250, 1.25))
+        ? sgLayoutB("bus", 65, 48, 78, sgArriving(6), "steady", sgTileState(6, 250, 1.25))
           + sgAiCard("normal", { e: 6, action: "leaveNow", band: "ok", distance: 250, speed: 1.25, source: "default" })
         : "";
       return sgPageAlerts(kind === "live" ? "" : kind) + cards + sgSeeArrivalsBar();
@@ -2110,10 +2144,10 @@
     function sgPageB(kind) {
       var tiles = kind === "no-service"
         ? '<p class="live-label next-buses-empty">' + copy.quality.noService + '</p>'
-        : '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["4 min", "12 min", "24 min"]);
+        : '<p class="live-label">' + lt.nextBuses + '</p>' + sgTiles(["4 min", "12 min", "24 min"], ["SEA", "SDA", "LSD"]);
       var pill = kind === "no-service" ? "unavailable" : "live";
       return sgPageAlerts(kind === "uncertain" || kind === "stale" ? "" : "")
-        + '<div class="card live-card">' + sgBusCard(pill, "", false) + '' + tiles + sgMap(false) + '</div>'
+        + '<div class="live-page">' + sgLiveTop(jo.to.replace("{destination}", "Marina Bay Sands")) + sgBusCard(pill, "", false) + tiles + sgMap(false) + '</div>'
         + (kind === "no-service" ? "" : sgQuestionBar());
     }
 
@@ -2132,7 +2166,6 @@
         + "<h4>Page A: location uncertain, accuracy reason and age reason</h4>" + sgPageA("uncertain")
         + "<h4>Page B, Bus arrival, with its sticky question bar</h4>" + sgPageB("live")
         + "<h4>Page B: no-service line in place of the next buses (no question bar)</h4>" + sgPageB("no-service")
-        + "<h4>Page A: the button row that opens Page W (the pace line is its muted subtitle)</h4>" + sgCatchCard("live", 70, 44, 76, undefined, sgArriving(6), sgWalk("gps", "4.7"))
         + "<h4>Page W, waiting for your location (no fix)</h4>" + sgWalkPage({ state: "waiting", ring: [92, 92, 92, "ok"], accuracy: "" })
         + "<h4>Page W, on your way (the distance is falling), trend rising</h4>" + sgWalkPage({ state: "onway", distance: "270\u00a0m", minutes: 4, trend: "rising", ring: [70, 44, 76, "ok"] })
         + "<h4>Page W, not moving, trend steady</h4>" + sgWalkPage({ state: "still", distance: "219\u00a0m", minutes: 3, trend: "steady", ring: [70, 44, 76, "ok"] })
@@ -2143,10 +2176,12 @@
         + "<h4>Page W, arrived at the stop (within 30 m)</h4>" + sgWalkPage({ state: "arrived", distance: "12\u00a0m", minutes: 1, trend: "steady", ring: [65, 48, 78, "ok"] })
         + "<h4>Page W, poor accuracy: a large accuracy circle and the existing uncertain-location card</h4>" + sgWalkPage({ state: "still", distance: "330\u00a0m", minutes: 5, ring: [41, 28, 52, "mid"], accuracy: "large", alerts: sgLocationCard() })
         + "<h4>Page W, no location: the waiting state with the existing banner</h4>" + sgWalkPage({ state: "waiting", ring: [92, 92, 92, "ok"], accuracy: "", alerts: sgLocationCard() })
+        + "<h4>Page W, a train: the line badge and ring, the station wording, schedule only</h4>" + sgWalkPage({ state: "onway", distance: "291\u00a0m", minutes: 4, ring: [60, 48, 72, "ok"], train: true })
+        + "<h4>Page W, moving away: the state is an error alert; not moving is a warning; checking is info</h4>" + sgWalkPage({ state: "still", distance: "291\u00a0m", minutes: 4, ring: [60, 48, 72, "ok"] })
         + "<h4>Page W, Sensor details open (measured speed from GPS and steps)</h4>" + sgSensors(true)
         + "<h4>Page W, Sensor details closed</h4>" + sgSensors(false)
         + "<h4>Page W, Sensor details open with a why line (no measured speed)</h4>" + sgSensorsWhy(copy.walkPage.whyNotWalking, "notWalking") + sgSensorsWhy(copy.walkPage.whyNoPermission, "noPermission")
-        + "<h4>Page W, Near the stop: 12 m, Arrived at the stop, full progress bar, map at zoom 19, the measured pace frozen</h4>" + sgWalkPage({ state: "arrived", distance: "12 m", minutes: 1, trend: "steady", ring: [65, 48, 78, "ok"], sensors: sgSensorsWhy(copy.walkPage.whyNearStop, "nearStop") });
+        + "<h4>Page W, Near the stop: 12 m, Arrived, full progress bar, map at zoom 19, the measured pace frozen</h4>" + sgWalkPage({ state: "arrived", distance: "12 m", minutes: 1, trend: "steady", ring: [65, 48, 78, "ok"], sensors: sgSensorsWhy(copy.walkPage.whyNearStop, "nearStop") });
     }
 
     document.getElementById("pages-sample-light").innerHTML = pagesSample();
@@ -2217,6 +2252,22 @@
       // drawn last: the train Page A sample uses the Page A card helpers defined further down
     document.getElementById("legs-sample-light").innerHTML = legsSample();
     document.getElementById("legs-sample-dark").innerHTML = legsSample();
+    function alertSamples() {
+      return sgAlert("warning", "Warning: " + rp.currentWarning) + sgAlert("error", "Error: " + qc.unavailable) + sgAlert("info", "Info: " + jo.fallbackNote)
+        + sgAlert("success", "Success: " + copy.notificationCard.granted) + sgAlert("neutral", "Neutral: " + copy.arriveBy.na)
+        + sgAlert("simulated", "Simulated: " + copy.demoBanner)
+        + sgAlertRich("warning", '<p class="alert__text">' + rp.warningTimedTitle.replace("{service}", "11").replace("{minutes}", "4 min") + '</p><p class="alert__meta">' + sgProbLine(12) + '</p><div class="alert__actions"><button type="button" class="secondary">' + rp.seeOtherBuses + '</button></div>');
+    }
+
+    document.getElementById("alert-samples-light").innerHTML = "<h3>Light</h3>" + alertSamples();
+    document.getElementById("alert-samples-dark").innerHTML = "<h3>Dark</h3>" + alertSamples();
+    document.getElementById("label-tags").innerHTML = '<span class="pill pill--live"><span class="pill__dot" aria-hidden="true"></span><span>' + copy.status.live + '</span></span>'
+      + '<span class="pill pill--schedule"><span>' + copy.status.scheduleOnly + '</span></span>'
+      + '<span class="line-badge line-badge--bus">158</span><span class="line-badge line-badge--cc">CC</span>'
+      + '<p class="option-chip" data-tag="fastest"><span class="option-chip__icon" aria-hidden="true">' + SHIELD_ICON + '</span><span>' + rp.tagFastest + '</span></p>'
+      + '<span class="simulated-badge">' + copy.simulated + '</span>';
+    // the alert icons are drawn from the severity classes, once every sample is in the page
+    paintAlerts(document);
   </script>
 </body>
 </html>

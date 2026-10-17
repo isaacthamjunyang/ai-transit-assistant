@@ -354,7 +354,7 @@ def test_the_page_mirrors_the_copy_and_shows_the_three_lines_in_order():
     assert "destinationText(row)" in row and "optionWhenText(row)" in row
     card = INDEX.split("function buildOptionCard(row)", 1)[1].split("function buildOptionRow(row)", 1)[0]
     assert "destinationText(row)" in card and "buildSwitchButton(row)" in card and "row.reasons" not in card
-    text = INDEX.split("function destinationText(row)", 1)[1].split("}\n", 1)[0]
+    text = INDEX.split("function destinationTime(row)", 1)[1].split("}\n", 1)[0]
     assert "row.destination_arrival" in text and 'return ""' in text  # no estimate: no destination line
 
 
@@ -387,7 +387,8 @@ def test_two_cards_each_with_its_tag_three_lines_in_order_and_switch_button(page
         assert re.fullmatch(r"Arrives in (\d+ min|under 1 min)", card["when"])
         assert re.fullmatch(r"Reach destination by: \d{1,2}:\d{2} [AP]M( \(tomorrow\))?", card["destination"])
         assert re.fullmatch(r"Leave by: \d{1,2}:\d{2}\s[AP]M( \(tomorrow\))?", card["leave"])
-        assert card["order"] == ["catch-card__when", "option-card__destination", "option-card__leave"]
+        # approved Page C design: Leave by first (the one to act on), then Reach destination by
+        assert card["order"] == ["catch-card__when", "option-card__leave", "option-card__destination"]
         assert card["sentences"] == 0
         assert card["button"].startswith("Switch to Bus ") and card["ring"] is True
         assert card["right"] <= page["two"]["innerWidth"]

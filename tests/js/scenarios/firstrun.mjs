@@ -10,7 +10,7 @@ const READ = `(function () {
     return { id: b.id, hidden: b.hidden, text: b.textContent.trim(), h: b.hidden ? 0 : b.getBoundingClientRect().height, w: b.hidden ? 0 : b.getBoundingClientRect().width };
   });
   var flag = null;
-  try { flag = window.localStorage.getItem("bus-catch-first-run-v1"); } catch (e) { flag = "blocked"; }
+  try { flag = window.localStorage.getItem("bus-catch-first-run-v2"); } catch (e) { flag = "blocked"; }
   var header = document.querySelector("header");
   var main = document.querySelector("main");
   return {
@@ -50,6 +50,10 @@ export default async function (h) {
   await h.eval("document.getElementById('first-run-next').click(); true");
   out.step3 = await h.eval(READ);
   await h.eval("document.getElementById('first-run-next').click(); true");
+  out.step4 = await h.eval(READ);
+  await h.eval("document.getElementById('first-run-next').click(); true");
+  out.step5 = await h.eval(READ);
+  await h.eval("document.getElementById('first-run-next').click(); true");
   await h.sleep(150);
   out.afterDone = await h.eval(READ);
   if (!blocked) {
@@ -77,7 +81,7 @@ export default async function (h) {
     await h.eval("firstRunDecided = false; decideFirstRun(true); true");
     out.demo = await h.eval(READ);
     // a fresh phone: remove the flag and reload; the card is back, and Skip on the first step sets the flag
-    await h.eval("window.localStorage.removeItem('bus-catch-first-run-v1'); location.reload(); true");
+    await h.eval("window.localStorage.removeItem('bus-catch-first-run-v2'); location.reload(); true");
     await h.until("(function () { var b = document.getElementById('first-run'); return !!b && !b.hidden; })()", 10000, "the card after a reset");
     out.fresh = await h.eval(READ);
     await h.eval("document.getElementById('first-run-skip').click(); true");

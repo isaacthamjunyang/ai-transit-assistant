@@ -76,7 +76,8 @@ def test_a_live_bus_kilometres_away_does_not_pull_page_w_out_to_the_whole_island
 def test_the_zoom_never_goes_below_15_under_300_m_and_fitbounds_serves_the_far_cases(fit):
     for metres in ("20", "59", "300"):
         assert fit["distances"][metres]["zoom"] >= 15
-    assert fit["distances"]["1200"]["zoom"] == 15 and fit["distances"]["5000"]["zoom"] <= 14
+    # the approved Page W map is 300 px tall, so 1.2 km is fitted at zoom 14 or 15 (15 in the old, taller map)
+    assert fit["distances"]["1200"]["zoom"] in (14, 15) and fit["distances"]["5000"]["zoom"] <= 14
     assert "map.fitBounds(bounds" in INDEX and "WALK_FIT_MAX_ZOOM = 18" in INDEX and "WALK_FIT_NEAR_MIN_ZOOM = 15" in INDEX
 
 

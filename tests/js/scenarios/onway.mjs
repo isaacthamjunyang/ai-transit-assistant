@@ -310,7 +310,7 @@ export default async function (h) {
     out.colors = await h.eval(`(function () {
       var box = document.getElementById("on-way-alert");
       var s = getComputedStyle(box);
-      var icon = box.querySelector(".alert-row__icon svg");
+      var icon = box.querySelector(".alert__icon svg");
       return { bg: s.backgroundColor, color: s.color, hasIcon: !!icon, iconW: icon ? icon.getBoundingClientRect().width : 0,
         text: box.querySelector("#on-way-alert-text").textContent.length > 0, bodyBg: getComputedStyle(document.body).backgroundColor };
     })()`);

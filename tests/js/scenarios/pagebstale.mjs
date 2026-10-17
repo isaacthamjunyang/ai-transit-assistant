@@ -7,13 +7,14 @@ const READ = `(function () {
   function text(el) { return el ? el.textContent.replace(/\\s+/g, " ").trim() : null; }
   function box(el) { if (!el) { return null; } var r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }
   var badge = document.querySelector("#live-bus-title .line-badge");
-  var tile = document.querySelector("#live-tracking .bus-tile--hero");
+  var tile = document.getElementById("live-node");
   return {
     top: screenStack[screenStack.length - 1], pageB: document.body.classList.contains("is-page-b"),
     badgeText: badge ? text(badge) : null, badgeBus: !!(badge && badge.classList.contains("line-badge--bus")),
     to: text(document.getElementById("live-bus-to")), pill: text(document.getElementById("live-bus-pill-text")),
     tile: box(tile), badge: box(badge), toBox: box(document.getElementById("live-bus-to")), pillBox: box(document.getElementById("live-bus-pill")),
-    header: text(document.querySelector("#live-tracking .bus-card")),
+    header: text(document.getElementById("live-vehicle")), vehicleBox: box(document.getElementById("live-vehicle")),
+    backBox: box(document.getElementById("live-back")), backBar: getComputedStyle(document.getElementById("back-bar")).display,
     nextTiles: document.querySelectorAll("#next-buses > li").length, map: shown("live-map-slot"),
     refresh: shown("live-refresh"), refreshDisabled: document.getElementById("live-refresh").getAttribute("aria-disabled"),
     greyRows: !!(document.getElementById("live-then") || document.getElementById("live-status") || document.querySelector("#live-tracking .status-cell")),

@@ -16,16 +16,19 @@ def test_the_back_arrow_sits_under_the_header_and_the_menu_has_no_back_row():
     assert INDEX.count('id="back-home"') == 1
 
 
-def test_the_back_bar_is_hidden_on_home_sticky_and_a_44_px_target():
+def test_the_back_bar_is_hidden_on_home_not_sticky_and_a_44_px_target():
     assert 'bar.hidden = screenStack[screenStack.length - 1] === "home"' in INDEX
     block = CSS.split(".back-bar {", 1)[1].split("}", 1)[0]
-    assert "position: sticky" in block and "safe-area-inset-top" in block
+    for forbidden in ("position:", "sticky", "fixed", "top:", "z-index", "safe-area-inset-top"):
+        assert forbidden not in block, forbidden  # it sits in the page flow and scrolls away with the page
     assert "background: var(--color-card)" in block and "var(--color-bg)" not in block
-    assert "border: 0" in block and "box-shadow: none" in block
-    assert "backdrop-filter: none" in block
+    # a rounded block like the header: the card surface, a 1 px line, the card shadow and the card radius
+    assert "border: 1px solid var(--color-line)" in block and "box-shadow: var(--shadow-card)" in block
+    assert "border-radius: var(--radius-card)" in block and "backdrop-filter" not in block
     button = CSS.split(".back-bar__button {", 1)[1].split("}", 1)[0]
-    assert "var(--tap-min)" in button
-    assert "background" not in button and "border" not in button  # the hamburger look
+    assert "background" not in button and "border" not in button  # the look comes from the menu button's shared rule
+    base = CSS.split(".button,\n.field__control,", 1)[1].split("}", 1)[0]
+    assert ".icon-button" in base and "min-height: var(--tap-min)" in base  # 44 px, as the menu button
     assert "hover" not in button and ".back-bar__button:hover" not in CSS
 
 

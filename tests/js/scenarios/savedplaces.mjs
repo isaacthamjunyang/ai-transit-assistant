@@ -56,7 +56,7 @@ const HELPERS = `
 `;
 
 async function addPlace(h, query, index, name) {
-  await h.eval(`__spButton("#quick-picks", "+").click(); true`);
+  await h.eval(`__spButton("#quick-picks", "Add place").click(); true`);
   await h.eval(`__spType("saved-search", ${JSON.stringify(query)});
     document.querySelector("#saved-panel form").requestSubmit(); true`);
   await h.until(`document.querySelectorAll("#saved-panel .saved-panel__choose").length > ${index}`, 5000, "the add results");
@@ -71,18 +71,16 @@ const SNAP = `(function () {
   return {
     row: __spRow(),
     count: __spShown(document.getElementById("saved-places-count")) ? __spText(document.getElementById("saved-places-count")) : null,
-    note: __spText(document.getElementById("saved-places-note")),
-    noteShown: getComputedStyle(document.getElementById("saved-places-note")).visibility !== "hidden",
     toggle: __spText(document.querySelector('#quick-picks [data-saved-action="toggle-edit"]')),
     layout: (function () {
       var rect = function (el) { var r = el.getBoundingClientRect(); return { top: r.top, height: r.height }; };
       var hair = document.querySelector("#saved-places + hr");
-      return { row: rect(document.getElementById("quick-picks")), note: rect(document.getElementById("saved-places-note")),
+      return { row: rect(document.getElementById("quick-picks")),
                places: rect(document.getElementById("saved-places")), below: hair ? rect(hair) : null };
     })(),
     storage: __spShown(document.getElementById("saved-places-storage")) ? __spText(document.getElementById("saved-places-storage")) : null,
     panel: __spShown(panel) ? __spText(panel) : null,
-    error: __spShown(panel.querySelector(".saved-panel__error")) ? __spText(panel.querySelector(".saved-panel__error")) : null,
+    error: __spShown(panel.querySelector(".alert--error")) ? __spText(panel.querySelector(".alert--error")) : null,
     stored: localStorageSafe(),
     scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth
   };
@@ -117,7 +115,7 @@ export default async function (h) {
   out.steps.empty = await h.eval(SNAP);
 
   // add: the name is typed by the user, trimmed and capped at 24, and the picked place shows under the field
-  await h.eval(`__spButton("#quick-picks", "+").click(); true`);
+  await h.eval(`__spButton("#quick-picks", "Add place").click(); true`);
   out.steps.addOpen = await h.eval(SNAP);
   await h.eval(`__spType("saved-search", "NUS"); document.querySelector("#saved-panel form").requestSubmit(); true`);
   await h.until(`document.querySelectorAll("#saved-panel .saved-panel__choose").length > 0`, 5000, "the add results");
@@ -133,7 +131,7 @@ export default async function (h) {
   out.steps.afterFirst = await h.eval(SNAP);
 
   // the same place again is refused with a short message
-  await h.eval(`__spButton("#quick-picks", "+").click();
+  await h.eval(`__spButton("#quick-picks", "Add place").click();
     __spType("saved-search", "NUS"); document.querySelector("#saved-panel form").requestSubmit(); true`);
   await h.until(`document.querySelectorAll("#saved-panel .saved-panel__choose").length > 0`, 5000, "the add results");
   await h.eval(`document.querySelectorAll("#saved-panel .saved-panel__choose")[0].click();
@@ -333,7 +331,7 @@ export default async function (h) {
   await h.eval(`__spButton("#quick-picks", "Uni").click(); true`);
   out.steps.tapNoArrive = await h.eval(`({ screen: screenStack[screenStack.length - 1], value: destinationInput.value,
     prompt: __spText(document.getElementById("arrive-required")),
-    prompted: document.getElementById("arrive-required").classList.contains("is-shown"),
+    prompted: !document.getElementById("arrive-required").hidden,
     selected: selectedDestination ? selectedDestination.label_display : null })`);
   await h.eval(`document.getElementById("arrive-none").click(); true`);
   await h.until("arriveByPicked === true", 5000, "an arrive-by choice");
@@ -351,7 +349,7 @@ export default async function (h) {
   out.steps.typedBefore = await h.eval(`({ saved: savedSelection ? savedSelection.name : null })`);
   await h.eval(`__spType("destination", "Marina"); true`);
   out.steps.typedAfter = await h.eval(`({ saved: savedSelection, value: destinationInput.value })`);
-  // nothing saved: "+" alone, no Edit toggle, no badges, the note concealed; then one saved place and back to none
+  // nothing saved: "+" alone, no Edit toggle, no badges; then one saved place and back to none
   await h.eval(`resetScreens(); localStorage.removeItem("bus-catch-saved-places-v1"); renderSavedPlaces(); true`);
   out.steps.none = await h.eval(`(function () { var s = ${SNAP}; s.edit = ${EDIT_READ}; return s; })()`);
   await h.eval(`localStorage.setItem("bus-catch-saved-places-v1", JSON.stringify({ v: 1, places: [
@@ -363,7 +361,7 @@ export default async function (h) {
   await h.eval(`document.querySelector("#quick-picks .saved-chip__badge").click();
     __spButton("#saved-panel", "Delete").click(); true`);
   out.steps.lastDeleted = await h.eval(`(function () { var s = ${SNAP}; s.edit = ${EDIT_READ}; return s; })()`);
-  await h.eval(`__spButton("#quick-picks", "+").click(); true`);
+  await h.eval(`__spButton("#quick-picks", "Add place").click(); true`);
   out.steps.noneAddOpen = await h.eval(SNAP);
   await h.eval(`__spButton("#saved-panel", "Cancel").click(); true`);
   out.steps.noneAfterCancel = await h.eval(SNAP);

@@ -22,7 +22,6 @@ PLAN = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
 CSS = (ROOT / "static" / "components.css").read_text(encoding="utf-8")
 SCRIPT = (ROOT / "static" / "saved-places.js").read_text(encoding="utf-8")
 KEY = "bus-catch-saved-places-v1"
-NOTE = "Saved on this phone only."
 STORAGE_LINE = "Can't save on this device."
 COORDINATES = ["1.29667", "103.77639", "1.30421", "103.83197", "1.35711", "103.98905", "1.28349", "103.86026",
                "1.31386", "103.81589"]
@@ -94,7 +93,7 @@ def _ui() -> str:
 
 
 def test_only_the_estimator_the_theme_and_saved_places_use_storage():
-    for name in ("index.html", "copy.js", "format-distance.js", "place-icons.js", "sw.js"):
+    for name in ("index.html", "copy.js", "format-distance.js", "sw.js"):
         assert "localStorage" not in (ROOT / "static" / name).read_text(encoding="utf-8"), name
     assert "localStorage" in SCRIPT and "sessionStorage" not in INDEX and "indexedDB" not in INDEX
     assert 'src="saved-places.js"' in INDEX
@@ -103,7 +102,7 @@ def test_only_the_estimator_the_theme_and_saved_places_use_storage():
 
 def test_copy_js_and_the_page_carry_the_same_words():
     block = COPY.split("savedPlaces: {", 1)[1].split("\n    },", 1)[0]
-    for key, value in (("note", NOTE), ("addLabel", "Add a saved place"), ("editToggle", "Edit"),
+    for key, value in (("addLabel", "Add place"), ("add", "Add place"), ("editToggle", "Edit"),
                        ("doneToggle", "Done"), ("menuLabel", "Rename {name}"), ("deleteMarkLabel", "Delete {name}"),
                        ("count", "{n} of {max} saved"), ("save", "Save"), ("cancel", "Cancel"),
                        ("deleteConfirm", "Delete {name}?"), ("deleteYes", "Delete"),
@@ -111,17 +110,17 @@ def test_copy_js_and_the_page_carry_the_same_words():
                        ("errorFull", "You can save up to {max} places."), ("storageUnavailable", STORAGE_LINE)):
         assert f'{key}: "{value}"' in block, key
         assert f'"{value}"' in INDEX or f">{value}<" in INDEX, value
-    assert NOTE in INDEX and STORAGE_LINE in INDEX
+    assert STORAGE_LINE in INDEX
 
 
 def test_the_row_markup_is_the_plus_chip_alone_and_no_starters_exist_anywhere():
     row = INDEX.split('id="quick-picks"', 1)[1].split("</div>", 1)[0]
-    texts = re.findall(r">([^<]+)</button>", row)
-    assert texts == ["+"]
+    texts = re.findall(r"<span>([^<]+)</span></button>", row)
+    assert texts == ["Add place"]  # the plus mark and the words "Add place"
     for text in (INDEX, COPY, GUIDE):
         assert "QUICK_PICKS" not in text and "quickPicks" not in text and "starters" not in text.lower()
     para = PLAN.split("**Saved places (Home).**", 1)[1].split("\n", 1)[0]
-    assert "starter" not in para.lower() and "With nothing saved the row is the `+` chip alone." in para
+    assert "starter" not in para.lower() and "With nothing saved the row is the `Add place` chip alone." in para
     assert INDEX.count('class="quick-pick"') == 0  # no plain suggestion chip in the markup
 
 
@@ -160,7 +159,7 @@ def test_css_44px_ellipsis_tokens_and_no_inline_styles():
 
 def test_the_style_guide_shows_empty_one_selected_five_edit_mode_add_and_delete():
     assert "copy.home.quickPicks" not in GUIDE and "starters" not in GUIDE.lower()
-    assert "is-concealed" in GUIDE.split("function sgSavedRow(", 1)[1].split("function sgSavedField", 1)[0]
+    assert "is-concealed" not in GUIDE.split("function sgSavedRow(", 1)[1].split("function sgSavedField", 1)[0]
     for needle in ("sgSavedRow([])", 'sgSavedRow(["Home"])', "sgSavedRow([\"Home\", \"School\"", ", true)",
                    'sgSavedRow(["Home", "School"], false, 0)', 'sgSavedPanel("add")', 'sgSavedPanel("delete")',
                    "storageUnavailable", "copy.home.savedPlaces", "sp.deleteMarkLabel", "sp.editToggle",
@@ -181,14 +180,15 @@ def test_there_is_no_ellipsis_menu_circle_anywhere():
     assert "There is no `" + chr(0x2026) + "` button in the normal row" in para
 
 
-def test_the_chips_have_a_green_outline_only_and_the_selected_ring_is_apart_from_it():
+def test_the_chips_are_arrive_by_chips_with_no_green_outline_and_the_shared_selected_ring():
     block = CSS.split(".saved-chip__main {", 1)[1].split(".saved-chip__name {", 1)[0]
-    assert "border-color: var(--color-selected-outline-success);" in block
+    assert "border-color" not in block and "success" not in block  # no green outline: the chip's own light outline
     assert "color: var(--color-ink);" in block
     assert "background" not in block  # no tint: the normal chip background
     assert "--tint-success" not in CSS.split("/* Saved places on Home", 1)[1].split(".hairline {", 1)[0]
-    selected = CSS.split(".saved-chip__main.is-selected {", 1)[1].split("}", 1)[0]
-    assert "0 0 0 2px var(--color-card)" in selected and "0 0 0 4px var(--color-selected-outline)" in selected
+    assert "0 0 0 2px var(--color-card), 0 0 0 4px" not in CSS  # no gap ring
+    shared = CSS.split(".menu-radio.is-selected,\n.arrive-chip.is-selected,\n.saved-chip__main.is-selected {", 1)[1].split("}", 1)[0]
+    assert "box-shadow: 0 0 0 2px var(--color-selected-outline);" in shared  # the Arrive by chip's selected look
     theme = (ROOT / "static" / "theme.css").read_text(encoding="utf-8")
     for token in ("--color-selected-outline-success", "--color-selected-outline", "--color-ink"):
         assert token in theme
@@ -205,14 +205,14 @@ def test_there_is_no_tick_icon_anywhere():
     assert "tick" not in PLAN.split("**Saved places (Home).**", 1)[1].split("\n", 1)[0].lower()
 
 
-def test_the_delete_badge_is_20px_with_a_44px_hit_area_inside_the_row_gap_and_a_focus_ring():
+def test_the_delete_badge_is_24px_with_a_44px_hit_area_inside_the_row_gap_and_a_focus_ring():
     badge = CSS.split(".saved-chip__badge {", 1)[1].split("}", 1)[0]
-    assert "position: absolute;" in badge and "top: -10px;" in badge and "right: -10px;" in badge
+    assert "position: absolute;" in badge and "top: -12px;" in badge and "right: -12px;" in badge
     assert "width: var(--tap-min);" in badge and "height: var(--tap-min);" in badge
     mark = CSS.split(".saved-chip__badge-mark {", 1)[1].split("}", 1)[0]
-    assert "width: 20px;" in mark and "height: 20px;" in mark
+    assert "width: 24px;" in mark and "height: 24px;" in mark
     row = CSS.split(".quick-picks {", 1)[1].split("}", 1)[0]
-    assert "gap: 12px;" in row  # more than the 10 px the hit area reaches beyond a chip
+    assert "gap: 14px;" in row  # more than the 12 px the hit area reaches beyond a chip
     focus = CSS.split(".saved-chip__badge:focus-visible .saved-chip__badge-mark {", 1)[1].split("}", 1)[0]
     assert "outline: 2px solid var(--color-focus);" in focus
     ui = _ui()
@@ -235,7 +235,7 @@ def test_there_is_no_custom_chip_anywhere():
 
 def test_the_plan_says_saved_places_stay_on_the_phone():
     para = PLAN.split("**Saved places (Home).**", 1)[1].split("\n", 1)[0]
-    for text in ("Saved places stay on the phone", "localStorage", "never the coordinates", NOTE, STORAGE_LINE, "`Edit`",
+    for text in ("Saved places stay on the phone", "localStorage", "never the coordinates", STORAGE_LINE, "`Edit`",
                  "`Done`", "`Delete {name}?`", "Escape", "five", "Demo Mode is unchanged"):
         assert text in para, text
     assert b"\r\n" in (ROOT / "PROJECT_PLAN.md").read_bytes()  # the line endings are kept
@@ -266,40 +266,40 @@ def _names(snap):
     return [item["text"] for item in snap["row"]]
 
 
-def test_with_nothing_saved_the_row_is_plus_alone_with_no_edit_and_no_note(flow):
+def test_with_nothing_saved_the_row_is_plus_alone_with_no_edit(flow):
     empty = flow["steps"]["empty"]
-    assert _names(empty) == ["+"]
+    assert _names(empty) == ["Add place"]
     assert [item["saved"] for item in empty["row"]] == [False]
-    assert empty["toggle"] is None and empty["noteShown"] is False
+    assert empty["toggle"] is None
     assert empty["count"] is None and empty["storage"] is None and empty["stored"] is None
     none = flow["steps"]["none"]
-    assert _names(none) == ["+"] and none["toggle"] is None and none["noteShown"] is False
+    assert _names(none) == ["Add place"] and none["toggle"] is None
     assert none["edit"]["toggle"] is None and none["edit"]["badgeCount"] == 0 and none["edit"]["badges"] == []
 
 
-def test_edit_appears_after_the_first_save_and_the_note_comes_with_it(flow):
+def test_edit_appears_after_the_first_save(flow):
     steps = flow["steps"]
     after = steps["afterFirst"]
-    assert _names(after) == ["Uni", "+", "Edit"] and after["toggle"] == "Edit"
-    assert after["noteShown"] is True and after["note"] == NOTE
-    assert steps["solo"]["toggle"] == "Edit" and steps["solo"]["noteShown"] is True
+    assert _names(after) == ["Uni", "Add place", "Edit"] and after["toggle"] == "Edit"
+    assert steps["solo"]["toggle"] == "Edit"
 
 
 def test_edit_disappears_and_edit_mode_ends_after_the_last_delete(flow):
     steps = flow["steps"]
     assert steps["soloEdit"]["toggle"] == "Done" and steps["soloEdit"]["edit"]["badgeCount"] == 1
     last = steps["lastDeleted"]
-    assert _names(last) == ["+"] and last["toggle"] is None and last["noteShown"] is False
+    assert _names(last) == ["Add place"] and last["toggle"] is None
     assert last["edit"]["badgeCount"] == 0 and last["edit"]["toggle"] is None
     assert last["panel"] is None and last["stored"] is not None and json.loads(last["stored"])["places"] == []
 
 
-def test_the_note_shows_while_the_add_panel_is_open_and_hides_again_when_it_closes(flow):
+def test_the_add_panel_opens_and_closes_with_no_muted_note_anywhere(flow):
     steps = flow["steps"]
-    assert steps["noneAddOpen"]["noteShown"] is True and steps["noneAddOpen"]["panel"] is not None
-    assert steps["noneAfterCancel"]["noteShown"] is False and steps["noneAfterCancel"]["toggle"] is None
-    # the first save from the add panel in the main flow also shows the note and Edit
-    assert steps["addOpen"]["noteShown"] is True and steps["addOpen"]["toggle"] is None
+    assert steps["noneAddOpen"]["panel"] is not None and "Pick a place from the results, then" not in steps["noneAddOpen"]["panel"]
+    assert steps["noneAfterCancel"]["panel"] is None and steps["noneAfterCancel"]["toggle"] is None
+    assert steps["addOpen"]["toggle"] is None
+    for step in (steps["none"], steps["solo"], steps["five"]):
+        assert "Saved on this phone only." not in json.dumps(step)
 
 
 def test_the_empty_and_saved_states_have_the_same_layout_so_nothing_shifts(flow):
@@ -307,8 +307,6 @@ def test_the_empty_and_saved_states_have_the_same_layout_so_nothing_shifts(flow)
     for other in (solo, closed):
         assert other["layout"]["row"]["top"] == none["layout"]["row"]["top"]
         assert other["layout"]["row"]["height"] == none["layout"]["row"]["height"]
-        assert other["layout"]["note"]["top"] == none["layout"]["note"]["top"]
-        assert other["layout"]["note"]["height"] == none["layout"]["note"]["height"] > 0
         assert other["layout"]["below"]["top"] == none["layout"]["below"]["top"]
 
 
@@ -338,11 +336,10 @@ def test_a_duplicate_is_refused_with_a_short_message(flow):
 
 def test_the_limit_of_five_hides_plus_and_shows_the_count_in_the_order_added(flow):
     four, five = flow["steps"]["four"], flow["steps"]["five"]
-    assert _names(four) == ["Uni", "Shops", "Grandmother's flat Bedok", "Work", "+", "Edit"]
+    assert _names(four) == ["Uni", "Shops", "Grandmother's flat Bedok", "Work", "Add place", "Edit"]
     assert _names(five) == ["Uni", "Shops", "Grandmother's flat Bedok", "Work", "Park", "Edit"]
     assert five["count"] == "5 of 5 saved" and four["count"] is None
     assert len(json.loads(five["stored"])["places"]) == 5
-    assert five["note"] == NOTE
 
 
 def test_layout_44px_ellipsis_and_nothing_scrolls_sideways(flow):
@@ -376,15 +373,14 @@ def _contrast(foreground, background):
     return (high + 0.05) / (low + 0.05)
 
 
-def test_saved_chips_have_a_green_outline_no_tint_and_no_icon(flow):
+def test_saved_chips_have_the_arrive_by_outline_no_tint_and_no_icon(flow):
     look, tokens = flow["steps"]["look"], flow["steps"]["tokens"]
     assert look["icons"] == 0 and look["tickNodes"] == 0 and look["name"] == "Uni"
     assert look["borderWidth"] == "1px"
-    assert _rgb(look["border"]) == _rgb(tokens["outlineSuccess"])  # the success outline token
+    assert _rgb(look["border"]) == _rgb(tokens["line"]) and _rgb(look["border"]) != _rgb(tokens["outlineSuccess"])  # not green
     assert _rgb(look["background"]) == _rgb(tokens["card"])  # the normal chip background: no tint
     assert _rgb(look["background"]) != _rgb(tokens["tint"])
     assert _rgb(look["color"]) == _rgb(tokens["ink"]) and _rgb(look["nameColor"]) == _rgb(tokens["ink"])
-    assert _contrast(look["border"], tokens["card"]) >= 3.0  # the outline against the card, in this theme
     assert _contrast(look["nameColor"], look["background"]) >= 4.5
 
 
@@ -393,15 +389,14 @@ def test_the_plus_chip_has_the_normal_chip_background(flow):
     assert _rgb(look["addBackground"]) == _rgb(look["background"])
 
 
-def test_the_selected_chip_has_a_blue_outer_ring_with_a_gap_apart_from_the_green_outline(flow):
+def test_the_selected_chip_has_the_arrive_by_blue_selected_outline(flow):
     selected, unselected, tokens = flow["steps"]["selected"], flow["steps"]["unselected"], flow["steps"]["tokens"]
     assert "is-selected" in selected["cls"] and selected["pressed"] == "true"
     assert selected["others"] == 1
     shadow = selected["shadow"].replace(" ", "")
     blue, card = _rgb(tokens["outlineSelected"]), _rgb(tokens["card"])
-    assert f"rgb({blue[0]},{blue[1]},{blue[2]})0px0px0px4px" in shadow  # the 2 px selected ring, outside a 2 px gap
-    assert f"rgb({card[0]},{card[1]},{card[2]})0px0px0px2px" in shadow  # the gap
-    assert _rgb(selected["border"]) == _rgb(tokens["outlineSuccess"])  # the green outline is still there
+    assert shadow == f"rgb({blue[0]},{blue[1]},{blue[2]})0px0px0px2px"  # the 2 px selected outline, as a selected Arrive by chip
+    assert _rgb(selected["border"]) == _rgb(tokens["line"])  # no green outline
     assert _contrast(tokens["outlineSelected"], tokens["card"]) >= 3.0
     assert "is-selected" not in unselected["cls"] and unselected["pressed"] == "false"
     assert unselected["width"] == selected["width"]  # selecting does not change the chip's size
@@ -424,7 +419,7 @@ def test_edit_mode_puts_a_small_delete_badge_on_each_chips_upper_right_corner(fl
         assert badge["text"] == "\u00d7" and badge["label"].startswith("Delete ")
         assert badge["tag"] == "BUTTON" and badge["tabindex"] >= 0
         assert badge["hitWidth"] >= 44 and badge["hitHeight"] >= 44  # the invisible hit area
-        assert badge["markWidth"] == 20 and badge["markHeight"] == 20  # the visible badge
+        assert badge["markWidth"] == 24 and badge["markHeight"] == 24  # the visible badge
         assert abs(badge["dx"]) <= 1.5 and abs(badge["dy"]) <= 1.5  # centred on the chip's upper right corner
         assert badge["overlapsNeighbour"] is False  # never over another chip's tap area
         assert badge["overlapsOwnChip"] is True
@@ -462,7 +457,7 @@ def test_delete_asks_first_cancel_keeps_it_and_delete_removes_it_with_no_request
     assert "Mall" not in saved and len(saved) == 4
     assert [place["name"] for place in json.loads(deleted["stored"])["places"]] == saved  # storage and row agree
     assert deleted["edit"]["toggle"] == "Edit" and deleted["edit"]["badgeCount"] == 0  # edit mode ended
-    assert "+" in _names(deleted) and deleted["count"] is None  # room again: "+" is back
+    assert "Add place" in _names(deleted) and deleted["count"] is None  # room again: "+" is back
     assert steps["sentAfterDelete"] == []  # no network request of any kind
 
 
@@ -481,8 +476,8 @@ def test_malformed_storage_is_dropped_and_garbage_gives_the_plus_chip_alone(flow
     steps = flow["steps"]
     saved = [item["text"] for item in steps["malformed"]["row"] if item["saved"]]
     assert saved == ["Good", "Two", "Three", "Four", "Five"]
-    assert [item["text"] for item in steps["garbage"]["row"]] == ["+"]
-    assert steps["garbage"]["toggle"] is None and steps["garbage"]["noteShown"] is False
+    assert [item["text"] for item in steps["garbage"]["row"]] == ["Add place"]
+    assert steps["garbage"]["toggle"] is None
 
 
 def test_a_tap_goes_to_the_stops_step_like_a_search_result_with_the_stored_point(flow):
@@ -543,13 +538,14 @@ def test_private_mode_works_for_the_session_and_says_so_once(private_mode):
 
 
 def test_css_gives_plus_a_dashed_green_outline_and_edit_a_red_one_from_existing_tokens():
-    add = CSS.split(".quick-pick--add {", 1)[1].split("}", 1)[0]
-    assert "border: 1px dashed var(--color-selected-outline-success);" in add
+    add = CSS.split(".quick-picks .quick-pick--add {", 1)[1].split("}", 1)[0]
+    assert "border-style: dashed;" in add and "border-color: var(--color-selected-outline-success);" in add
     assert "color: var(--status-live);" in add
-    toggle = CSS.split(".saved-edit-toggle {", 1)[1].split("}", 1)[0]
+    toggle = CSS.split(".quick-picks .saved-edit-toggle {", 1)[1].split("}", 1)[0]
     assert "border-color: var(--status-stale);" in toggle and "color: var(--status-stale);" in toggle
-    done = CSS.split('.saved-edit-toggle[aria-pressed="true"] {', 1)[1].split("}", 1)[0]
-    assert "border-color: var(--color-line);" in done and "color: var(--color-ink);" in done
+    done = CSS.split('.quick-picks .saved-edit-toggle[aria-pressed="true"] {', 1)[1].split("}", 1)[0]
+    assert "border-color: var(--color-selected-outline);" in done and "color: var(--color-ink);" in done
+    assert "background: var(--color-secondary);" in done
     theme = (ROOT / "static" / "theme.css").read_text(encoding="utf-8")
     for token in ("--status-stale", "--status-live", "--color-selected-outline-success", "--color-line"):
         assert token in theme
@@ -559,15 +555,15 @@ def test_css_gives_plus_a_dashed_green_outline_and_edit_a_red_one_from_existing_
 
 def test_the_plan_and_the_style_guide_describe_the_plus_and_edit_colours():
     para = PLAN.split("**Saved places (Home).**", 1)[1].split("\n", 1)[0]
-    for text in ("dashed green outline", "red outline and red text", "neutral chip style as `Done`", "4.5:1", "3:1"):
+    for text in ("dashed green outline", "red outline and red text", "blue selected outline", "4.5:1", "3:1"):
         assert text in para, text
-    assert "dashed green" in GUIDE and "Edit red" in GUIDE and "Done is neutral" in GUIDE
+    assert "dashed green" in GUIDE and "Edit red" in GUIDE and "Done has the blue outline" in GUIDE
 
 
 def test_plus_is_a_dashed_green_chip_with_green_text_and_keeps_its_label(flow):
     steps, tokens = flow["steps"], flow["steps"]["tokens"]
     add, saved = steps["controlsNormal"]["add"], steps["controlsNormal"]["saved"]
-    assert add["text"] == "+" and add["label"] == "Add a saved place" and add["visible"] is True
+    assert add["text"] == "Add place" and add["label"] == "Add place" and add["visible"] is True
     assert add["borderStyle"] == "dashed" and saved["borderStyle"] == "solid"  # differs from the saved chips
     assert _rgb(add["borderColor"]) == _rgb(tokens["outlineSuccess"])
     assert _rgb(add["color"]) == _rgb(tokens["live"])
@@ -584,7 +580,7 @@ def test_edit_is_a_red_chip_that_reads_done_and_goes_neutral_while_editing(flow)
     assert _contrast(normal["color"], normal["background"]) >= 4.5
     assert _contrast(normal["borderColor"], normal["background"]) >= 3.0
     assert editing["text"] == "Done" and editing["pressed"] == "true" and editing["visible"] is True
-    assert _rgb(editing["borderColor"]) == _rgb(tokens["line"]) and _rgb(editing["color"]) == _rgb(tokens["ink"])
+    assert _rgb(editing["borderColor"]) == _rgb(tokens["outlineSelected"]) and _rgb(editing["color"]) == _rgb(tokens["ink"])
     assert _contrast(editing["color"], editing["background"]) >= 4.5
     assert back["text"] == "Edit" and _rgb(back["color"]) == _rgb(tokens["stale"])  # red again after Done
     # the size does not change between Edit and Done (so nothing moves)

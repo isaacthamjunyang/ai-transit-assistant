@@ -87,7 +87,7 @@ def test_no_runs_the_on_demand_search_and_end_rules_stop_everything():
     assert "MAX_MONITOR_MINUTES * 60000" in tick and "UNANSWERED_END_MINUTES * 60000" in tick
     end = _between(html, "function endTracking(kind)", "function resetTrackingState")
     assert "stopTracking()" in end and 'role="status"' in html
-    assert "Tracking ended. Your bus's expected arrival time has passed." in html
+    assert "Tracking ended: arrival time has passed." in html
     assert "Tracking stopped after 60 minutes." in html
     assert "resetTrackingState()" in _between(html, "function invalidateSession()", "function clearArrivalPanel")
     # Back from the on-your-way overview goes home.

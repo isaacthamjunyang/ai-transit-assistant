@@ -159,7 +159,7 @@ def test_option_rows_are_buttons_that_carry_a_point():
     assert "formatDistance(row.distance_m)" in row and "WALK_TO_TEXT" in row
     assert "AT_YOUR_STOP_TEXT" in row and "destinationText(row)" in row and "AFTER_TARGET_TEXT" in row
     assert "Next Bus" not in row
-    assert "PACE_TEXT.unlikely.title" in row and "WARN_SVG_SMALL" in row
+    assert "PACE_TEXT.unlikely.title" in row and 'buildAlert("warning"' in row
     shown = _between(html, "function renderPageC()", "function updatePageCUpdated")
     assert "OPTIONS_VISIBLE" in shown and "Show more" in shown and "OTHER_BUSES_HEADING" in shown
     assert "var OPTIONS_VISIBLE = 6;" in html

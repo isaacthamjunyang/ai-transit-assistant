@@ -84,7 +84,7 @@ NEEDS_ROUTE_SERVICE_MESSAGE = "Needs the route service."
 NO_BUS_CLOSED_MESSAGE = "Bus services have stopped for now. Try another priority."
 NO_MRT_CLOSED_MESSAGE = "MRT and LRT services have stopped for now. Try another priority."
 # the OneMap planner's no-service sentence; the static (bus only) planner keeps the old bus-only one on the page
-NO_SERVICE_MESSAGE = "No bus or MRT services are running to this destination at this time."
+NO_SERVICE_MESSAGE = "No services to this destination right now."
 PRIORITY_UNAVAILABLE = "priority_unavailable"
 STATIC_PRIORITIES = (PRIORITY_FASTEST, PRIORITY_FEWEST_TRANSFERS, PRIORITY_BUS_ONLY)  # what the fallback can do
 

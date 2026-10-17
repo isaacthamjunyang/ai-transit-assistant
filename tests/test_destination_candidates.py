@@ -322,10 +322,10 @@ def beyond(tmp_path_factory):
 
 def test_the_heading_and_the_info_note_say_stations_and_bus_stops(narrow_light):
     first = narrow_light["first"]
-    assert first["title"] == "Nearby destination MRT stations / bus stops"
-    assert first["info"] == ("Bus stops and MRT or LRT stations within 600 m of your destination, nearest walk first. "
-                             "If no station is that close, the nearest one within 1.5 km is shown. The first one is chosen for you.")
-    assert 'title: "Nearby destination MRT stations / bus stops"' in COPY
+    assert first["title"] == "Nearby stops and stations"
+    assert first["info"] == ("Stops and stations within 600 m, nearest first. "
+                             "If none, the nearest within 1.5 km. The first is pre-selected.")
+    assert 'title: "Nearby stops and stations"' in COPY
 
 
 def test_the_list_is_one_list_nearest_first_with_the_first_row_chosen(narrow_light):
@@ -357,11 +357,12 @@ def test_every_row_says_its_type_in_text_and_stations_show_every_line_badge_with
     assert bus["label"] == "Bus stop" and bus["lines"] == [] and "dest-tile--bus" in bus["tileCls"]
 
 
-def test_a_station_never_says_no_direct_bus(narrow_light, wide_dark):
+def test_no_row_says_no_direct_bus_and_every_row_is_listed(narrow_light, wide_dark):
     for run in (narrow_light, wide_dark):
-        for row in run["first"]["rows"]:
-            if row["kind"] == "station":
-                assert row["note"] is False and "no direct bus" not in row["text"].lower()
+        rows = run["first"]["rows"]
+        assert [row["code"] for row in rows] == run["first"]["order"]  # every candidate, in the same order
+        for row in rows:
+            assert row["note"] is False and "no direct bus" not in row["text"].lower() and "transfer" not in row["text"].lower()
 
 
 def test_a_station_ring_is_its_line_colour_and_a_bus_ring_is_grey(narrow_light, wide_dark):
@@ -504,7 +505,7 @@ def test_the_style_guide_shows_bus_and_station_rows_and_markers_in_both_themes()
 
 def test_the_plan_describes_the_stations_the_rings_and_the_planner_end():
     plan = (ROOT / "PROJECT_PLAN.md").read_text(encoding="utf-8")
-    for text in ("**Destination stops and stations.**", "Nearby destination MRT stations / bus stops", "within 1.5 km",
+    for text in ("**Destination stops and stations.**", "Nearby stops and stations", "within 1.5 km",
                  "`--ring-neutral`", "`end_lat` and `end_lon`", "`Destination station`", "`beyond_radius`"):
         assert text in plan, text
 
@@ -531,9 +532,9 @@ def confirm_bus(tmp_path_factory):
 
 
 def test_the_confirm_card_has_one_info_message_for_every_destination_and_the_button_says_confirm(wide_dark, confirm_bus):
-    one = "We'll find the best route from here by bus and MRT and work out your leave-by time."
+    one = "We'll find your best route and leave-by time."
     assert wide_dark["confirmScreen"]["info"] == one and confirm_bus["confirmScreen"]["info"] == one  # a station and a bus stop
-    assert f'info: "{one}"' in COPY and f'<p id="confirm-info-text">{one}</p>' in INDEX
+    assert f'info: "{one}"' in COPY and f'<p id="confirm-info-text" class="alert__text">{one}</p>' in INDEX
     assert "infoStation" not in COPY and "CONFIRM_INFO" not in INDEX
     for old in ("check live bus arrivals", "calculate your catch probability", "Confirm and find buses"):
         assert old not in COPY and old not in INDEX and old not in GUIDE
@@ -551,7 +552,7 @@ def test_the_confirm_row_of_a_station_has_the_train_icon_the_line_ring_and_every
 
 def test_the_confirm_row_of_a_bus_stop_keeps_the_bus_tile_and_shows_no_badges(confirm_bus):
     card = confirm_bus["confirmScreen"]
-    assert card["heading"] == "Destination bus stop" and card["tileIsTrain"] is False and card["tileSvg"] > 0
+    assert card["heading"] == "Destination stop" and card["tileIsTrain"] is False and card["tileSvg"] > 0
     assert "dest-tile" not in card["tileCls"] and card["linesShown"] is False and card["lines"] == []
 
 

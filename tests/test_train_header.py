@@ -42,10 +42,10 @@ def test_the_tile_css_keeps_the_outline_and_the_minimum_height_and_the_header_us
 
 
 def test_the_plan_and_the_style_guide_describe_the_header_and_the_time_only_tiles():
-    assert "with no line name on the tile" in PLAN and "North-South Line train, 8:16 PM" in PLAN
-    assert "the logo tile, the line badge and `To {terminus}`" in PLAN
+    assert "with no line name on the row" in PLAN and "North-South Line train, 8:16 PM" in PLAN
+    assert "the title `To {terminus}` beside the back button, the vehicle card with the logo ring, the line badge" in PLAN
     sample = GUIDE.split("function trainPagesSample()", 1)[1].split("function legsSample()", 1)[0]
-    assert "bus-card__line" in sample and "Thomson-East Coast Line" in sample and "Circle Line" in sample
+    assert "sgBusCard(" in sample and "sgLiveTop(" in sample and "Thomson-East Coast Line" in sample and "Circle Line" in sample
     assert "bus-tile-card__service" not in sample and "aria-label" in sample
     assert "bus-card__line-name" not in sample and "status-grid" not in sample and "live-then" not in sample
 
@@ -77,16 +77,17 @@ def test_the_badge_and_the_name_share_a_row_and_a_wrapped_name_stays_under_the_n
     for label, m in _all(run):
         assert m["badge"]["left"] >= m["hero"]["right"] - 0.5, label  # the text column is beside the logo tile
         assert m["scrollWidth"] <= m["innerWidth"], label
-        assert m["to"]["left"] >= m["badge"]["right"] - 0.5 or m["to"]["top"] >= m["badge"]["bottom"] - 1, label
-        assert m["pill"]["left"] >= m["to"]["right"] - 0.5 or m["pill"]["top"] >= m["to"]["bottom"] - 1, label
+        assert m["to"]["bottom"] <= m["card"]["top"] + 0.5, label  # "To {terminus}" is the page title above the vehicle card
+        assert m["pill"]["top"] >= m["badge"]["bottom"] - 1, label  # the pill is under the badge
         assert m["pill"]["right"] <= m["card"]["right"] + 0.5, label
 
 
-def test_the_refresh_button_is_at_the_top_right(run):
+def test_the_refresh_button_is_at_the_right_of_the_vehicle_card(run):
     for label, m in _all(run):
         refresh, card = m["refresh"], m["card"]
         assert refresh["right"] <= card["right"] and card["right"] - refresh["right"] <= 24, label
-        assert refresh["top"] - card["top"] <= 24, label
+        assert refresh["top"] - card["top"] <= 24 and card["bottom"] - refresh["bottom"] <= 24, label  # centred in the card
+        assert refresh["width"] >= 44 and refresh["height"] >= 44, label
         assert refresh["left"] >= m["badge"]["left"], label
 
 
