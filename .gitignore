@@ -25,5 +25,13 @@ Thumbs.db
 # Cache
 *.egg-info/
 .pytest_cache/
-cache/
+# The static LTA data and the train timetable are small, public and needed at first boot on a host with no key or disk (Render),
+# so those four files are tracked. Anything else in cache/ (backups, scratch) stays out.
+cache/*
+!cache/bus_stops.json
+!cache/bus_routes.json
+!cache/bus_services.json
+!cache/rail_timetable.json
 tmp/
+video/node_modules/
+video/out/

@@ -127,6 +127,12 @@ def home() -> HTMLResponse:
     return HTMLResponse(page)
 
 
+@app.get("/healthz")
+def healthz() -> dict:
+    """Hosting health check (Render): the process is up and answering. It reads no data, key or network and takes no input."""
+    return {"status": "ok"}
+
+
 @app.get("/theme.css")
 def theme_css() -> FileResponse:
     return FileResponse(STATIC_DIR / "theme.css", media_type="text/css")

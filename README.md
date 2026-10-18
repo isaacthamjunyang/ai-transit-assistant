@@ -18,8 +18,10 @@ In PowerShell, from the project folder:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
+
+`requirements.txt` holds what the server needs in production; `requirements-dev.txt` adds pytest for the tests.
 
 If you do not already have a local `.env` file, create one from the example:
 
@@ -91,3 +93,16 @@ Arrival scenarios need a selected boarding stop and service, because they ride t
 - `Unsafe / Contradictory OpenAI Output` affects the next explanation only. The first run uses blocked wording, the next run uses a contradictory reply, and the run after that simulates a timeout longer than 3 seconds. Each one still goes through the explanation checks and shows the usual fallback sentence.
 
 A card that is showing fixture data is marked `[SIMULATED]`. Providers that are not part of the selected scenario stay live.
+
+## Deploying
+
+`DEPLOY.md` has the exact steps for Render (build and start commands, the environment variable names, the health check path
+`/healthz`, and what the free tier does). The start command is `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+
+## Data sources and attribution
+
+- Bus stops, routes, services, live bus arrivals, train service alerts and the train timetable (GTFS) come from **LTA DataMall**.
+  Contains information from LTA DataMall under the Singapore Open Data Licence v1.0.
+- Place search, reverse geocoding and public-transport routing come from **OneMap**, by the Singapore Land Authority.
+- Map tiles are from OpenStreetMap, shown with Leaflet. Map data is (c) OpenStreetMap contributors.
+- Written explanations, when switched on, use the OpenAI API. Their input carries no coordinates (see `explain.py`).

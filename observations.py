@@ -9,8 +9,13 @@ the poll time, the stop, the bus position, the ETA, the probabilities, the data 
 distance.
 """
 
+import logging
 import sqlite3
+from contextlib import closing
 from pathlib import Path
+
+_log = logging.getLogger("uvicorn.error")
+_write_warned = False
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent / "observations.db"
 
@@ -79,6 +84,13 @@ def record_observation(row: dict, db_path: Path | None = None) -> None:
         "reroute_fired": 1 if row.get("reroute_fired") else 0,
         "reroute_reason": row.get("reroute_reason") or "",
     }
-    with sqlite3.connect(path) as connection:
-        connection.execute(_CREATE)
-        connection.execute(_INSERT, stored)
+    global _write_warned
+    try:
+        with closing(sqlite3.connect(path)) as connection, connection:
+            connection.execute(_CREATE)
+            connection.execute(_INSERT, stored)
+    except (sqlite3.Error, OSError) as error:
+        # A read-only or missing disk (a hosting container) must not fail the poll that was being logged: skip the row, say so once.
+        if not _write_warned:
+            _write_warned = True
+            _log.warning("observations log is not writable (%s); rows are skipped", type(error).__name__)

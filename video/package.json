@@ -1,0 +1,25 @@
+{
+  "name": "just-in-time-demo-video",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Vertical demo video of the Just-In-Time app, built with Remotion from real captures.",
+  "scripts": {
+    "capture": "node capture/run.mjs",
+    "theme": "node scripts/prepare.mjs",
+    "preview": "node scripts/prepare.mjs && remotion studio src/index.ts --public-dir=assets",
+    "render": "node scripts/render.mjs out/just-in-time.mp4",
+    "render:music": "node scripts/render.mjs out/just-in-time-music.mp4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.355",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.355"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "leaflet": "1.9.4",
+    "typescript": "5.6.3"
+  }
+}

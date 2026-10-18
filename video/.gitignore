@@ -1,0 +1,2 @@
+# map tiles fetched once from OpenStreetMap for the capture (see capture/network.mjs)
+assets/tiles-cache/
