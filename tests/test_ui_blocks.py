@@ -58,7 +58,7 @@ def test_the_page_has_no_row_filtering_and_lists_every_candidate_in_order():
     body = INDEX.split("function renderDestinationStops(body) {", 1)[1].split("function loadDestinationStops", 1)[0]
     assert ".filter(" not in body and "listed" not in body and "reduce(" not in body  # nothing drops or reorders rows
     assert "var all = Array.isArray(body.candidates) ? body.candidates : body.reachable_stops.concat(body.unreachable_stops);" in body
-    assert "bestDestinationStopCode(body.reachable_stops)" in body and "selectDestinationStop(all[0])" in body
+    assert "bestDestinationStopCode(body.reachable_stops)" in body and "selectDestinationStop(all[0])" not in body  # no row is chosen for the user
     assert "all.forEach(function (stop) {" in body and "renderDestinationStopCard(stop, reachableStopList," in body
     assert 'setDestinationStopStatus("No stops within 600 m.", "caution")' in body  # the unchanged "no stops" logic
     assert 'setDestinationStopStatus("No service to this destination right now.", "caution")' in body
@@ -91,7 +91,9 @@ def test_the_pulse_is_pure_css_every_2_seconds_on_one_shared_class():
     assert "is-ready" not in CSS and "is-ready" not in INDEX and "find-ready" not in CSS  # Find my route's one-time pulse is gone
     for ident in ("find-route", "select-destination-stop", "confirm-destination-stop", "start-journey", "see-arrivals"):
         tag = INDEX.split(f'id="{ident}"', 1)[0].rsplit("<button", 1)[1] + INDEX.split(f'id="{ident}"', 1)[1].split(">", 1)[0]
-        assert "pulse-button" in tag, ident  # all five share the class (Find my route was not in the old list)
+        # Find my route, Confirm and Start journey carry the class; Select stop gets it only once a row is chosen (the page moves it
+        # from Skip); See times never pulses
+        assert ("pulse-button" in tag) is (ident not in ("see-arrivals", "select-destination-stop")), ident
     assert ":is(#select-destination-stop" not in CSS  # no id list any more
     assert "Pulse every 2 s" in PLAN and "CSS animation alone" in PLAN and "`pulse-button`" in PLAN
     assert "Action buttons pulse every 2 s" in GUIDE and GUIDE.count("pulse-button") >= 6
@@ -196,7 +198,8 @@ def test_the_back_button_has_the_menu_buttons_colours_outline_and_size(report):
 
 def test_each_button_pulses_every_2_seconds_while_visible_and_enabled(report):
     pulse = report["pulse"]
-    for key in ("selectEnabled", "confirm", "start", "see", "find"):
+    assert pulse["see"]["count"] == 0  # See bus arrival times and See train times never pulse
+    for key in ("selectEnabled", "confirm", "start", "find"):
         shown = pulse[key]
         assert shown["count"] == 1 and shown["state"] == "running" and shown["name"] == "button-pulse", key
         assert shown["duration"] == 2000 and shown["iterations"] == "Infinity", key  # a 2 s period, for as long as it shows
@@ -227,7 +230,7 @@ def test_every_nearby_stop_is_listed_in_order_including_ones_with_no_direct_bus(
     stops = report["stops"]
     codes = ["S1", "S2", "S3", "S4", "S5"]
     assert stops["order"] == codes and [row["code"] for row in stops["rows"]] == codes
-    assert stops["selected"] == "S1" and stops["rows"][0]["pill"] is True  # the first row is chosen for the user
+    assert stops["selected"] is None and stops["rows"][0]["pill"] is True  # no row is chosen; the nearest keeps its Best option label
     assert [("is-unreachable" in row["cls"]) for row in stops["rows"]] == [False, True, False, True, False]  # listed, not dropped
     assert stops["scrollWidth"] <= stops["innerWidth"]
 
@@ -250,8 +253,8 @@ def test_every_destination_row_shows_the_green_flag_with_3_to_1(report):
         assert _contrast(row["color"], row["background"]) >= 3.0, row["title"]
 
 
-def test_all_five_buttons_carry_the_shared_pulse_class_in_the_page(report):
-    assert report["pulse"]["classes"] == [[ident, True] for ident in
+def test_four_buttons_carry_the_shared_pulse_class_in_the_page_and_see_times_does_not(report):
+    assert report["pulse"]["classes"] == [[ident, ident not in ("see-arrivals", "select-destination-stop")] for ident in
                                           ("find-route", "select-destination-stop", "confirm-destination-stop",
                                            "start-journey", "see-arrivals")]
 

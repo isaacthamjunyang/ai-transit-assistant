@@ -23,7 +23,7 @@ def test_overview_order_and_edit_routes():
     main = _between(render, "function renderJourneyOverview()", "function priorityDisabled")
     order = [  # origin, the walk to the first stop, one row per leg, the final walk, the destination
         'stepItem("origin"',
-        "stepItem(\"walk\", fillText(JO_WALK_ROW, { n: walkMinutes(toBoard) })",
+        "walkStep(\"walk\", walkMinutes(toBoard)",
         "transitRow(leg, position",
         "finalWalkRow(between, confirmedDestinationStop)",
         'stepItem("destination", "Destination"',

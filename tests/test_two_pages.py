@@ -153,7 +153,7 @@ def test_start_journey_opens_page_a_and_the_button_opens_page_b():
     block = _between(css, "body.is-page-b #arrival-card,", "}")
     for target in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#stale-status"):
         assert target in block
-    assert "See bus arrival times" in html.split('id="see-arrivals-bar"', 1)[1].split("</div>", 1)[0]
+    assert "See bus arrival times" in html.split('id="see-arrivals"', 1)[1].split("</button>", 1)[0]
 
 
 def test_back_order_between_the_pages_and_the_overview():

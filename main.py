@@ -796,8 +796,10 @@ def reroute_options(
     For a train first leg (leg_kind=rail) there is no search: the answer says it is off and lists the next scheduled
     departures.
 
-    entry is "recommended" (after "No, I missed it") or "better" (the unlikely entry). It only names the
-    card's heading chip. Both choose from all eligible options and ignore the improvement rule."""
+    entry is "recommended" (after "No, I missed it") or "better" (Other bus options). It only names the
+    card's heading chip. Both run the same search (the same candidates, the planner's bus-first routes and the same
+    ordering) and ignore the improvement rule; only "No, I missed it" sends the missed arrival (missed_eta), which is
+    left out. Without it the current bus and the same service's later buses are all listed."""
     if entry not in ("recommended", "better"):
         return JSONResponse(status_code=422, content={"detail": "entry must be recommended or better."})
     if leg_kind is not None and leg_kind not in rail_arrivals.LEG_KINDS:
@@ -859,7 +861,7 @@ def reroute_options(
         planner=lambda: _reroute_planner_starts(
             cache, lat, lon, current_stop, destination_code, dest_lat, dest_lon, parsed_arrive_by, speed, moment
         ),
-        after_miss=entry == "recommended",
+        after_miss=True,  # both entries search alike (the planner's bus-first routes too); only the missed bus differs
     )
     return {
         **response_fields(speed, speed_source),
@@ -1312,15 +1314,16 @@ def journey(
 def journey_plan(
     user_lat: Annotated[float, Query(ge=-90, le=90)],
     user_lon: Annotated[float, Query(ge=-180, le=180)],
-    destination_stop_code: Annotated[str, Query(min_length=1)],
     dest_lat: Annotated[float, Query(ge=-90, le=90)],
     dest_lon: Annotated[float, Query(ge=-180, le=180)],
+    destination_stop_code: Annotated[str | None, Query()] = None,
     arrive_by: Annotated[str | None, Query()] = None,
     walk_speed: Annotated[str | None, Query()] = None,
     walk_speed_source: Annotated[str | None, Query()] = None,
     priority: Annotated[str | None, Query()] = None,
     end_lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     end_lon: Annotated[float | None, Query(ge=-180, le=180)] = None,
+    end_name: Annotated[str, Query(max_length=120)] = "",
 ) -> dict | JSONResponse:
     """The app picks the boarding stop and the route. Static data only, unless `priority` asks for OneMap routing.
 
@@ -1337,8 +1340,9 @@ def journey_plan(
             status_code=422,
             content={"detail": "Coordinates must be finite latitudes and longitudes."},
         )
-    destination = destination_stop_code.strip()
-    if not destination:
+    # No destination_stop_code means the traveller skipped choosing a stop: the planner ends at the place itself.
+    destination = "" if destination_stop_code is None else destination_stop_code.strip()
+    if destination_stop_code is not None and not destination:
         return JSONResponse(
             status_code=422,
             content={"detail": "destination_stop_code must be a non-empty string."},
@@ -1363,7 +1367,7 @@ def journey_plan(
         planned = _priority_plan(
             cache, route=False, priority=priority, user_lat=user_lat, user_lon=user_lon,
             destination_stop_code=destination, dest_lat=dest_lat, dest_lon=dest_lon, arrive_by=parsed_arrive_by,
-            walk_speed_m_s=speed, end_lat=end_lat, end_lon=end_lon)
+            walk_speed_m_s=speed, end_lat=end_lat, end_lon=end_lon, end_name=end_name)
         return {**planned, **response_fields(speed, speed_source)}
     planned = plan_journey(
         cache,
@@ -1473,6 +1477,7 @@ def route_plan(
     priority: Annotated[str | None, Query()] = None,
     end_lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     end_lon: Annotated[float | None, Query(ge=-180, le=180)] = None,
+    end_name: Annotated[str, Query(max_length=120)] = "",
 ) -> dict | JSONResponse:
     if priority is not None and pt_plan.valid_priority(priority) is None:
         return JSONResponse(status_code=422, content={"detail": pt_plan.PRIORITY_MESSAGE})
@@ -1514,7 +1519,7 @@ def route_plan(
         planned = _priority_plan(
             cache, route=True, priority=priority, origin_stop_code=origin, alternates=alternates,
             user_lat=user_lat, user_lon=user_lon, destination_stop_code=destination, dest_lat=dest_lat,
-            dest_lon=dest_lon, arrive_by=parsed_arrive_by, walk_speed_m_s=speed, now=moment, end_lat=end_lat, end_lon=end_lon)
+            dest_lon=dest_lon, arrive_by=parsed_arrive_by, walk_speed_m_s=speed, now=moment, end_lat=end_lat, end_lon=end_lon, end_name=end_name)
         if planned.get("planner") == "static" and planned.get("route_status") != pt_plan.PRIORITY_UNAVAILABLE:
             options = planned.get("options") or []
             minutes = [option.get("generalized_time_minutes") for option in options]

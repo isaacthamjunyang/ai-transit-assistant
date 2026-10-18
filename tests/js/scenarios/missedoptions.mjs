@@ -10,7 +10,7 @@ const SHOW = (missed, options, point) => `(function () {
   document.getElementById("page-c").hidden = false;
   rerouteNotice = ${missed ? 'BUS_LEFT_NOTICE.replace("{service}", "174")' : '""'};
   lastKnownPoint = ${point};
-  pageC = { entry: ${JSON.stringify(missed ? "missed" : "unlikely")}, loading: false, failed: false, noBuses: false,
+  pageC = { entry: ${JSON.stringify(missed ? "missed" : "other")}, loading: false, failed: false, noBuses: false,
     options: ${JSON.stringify(options)}, missedEpoch: null, fetchedAt: Date.now() };
   syncPageCClasses();
   renderPageC();
@@ -91,7 +91,7 @@ export default async function (h) {
   out.withCard = await h.eval(READ);
   await h.eval(SHOW(true, { mode: "none", entry: "recommended", recommended: null, rows: [] }, 76));
   out.empty = await h.eval(READ);
-  await h.eval(SHOW(false, { mode: "none", entry: "better", recommended: null, rows: [] }, 76));
+  await h.eval(SHOW(false, { mode: "winner", entry: "better", recommended: best, cards: [best], rows: listed }, 76));
   out.unlikely = await h.eval(READ);
   return out;
 }

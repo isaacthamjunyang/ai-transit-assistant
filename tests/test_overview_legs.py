@@ -98,6 +98,7 @@ PAIRS = {  # copy.js journeyOverview key: the page's constant
     "noService": "JO_NO_SERVICE_STATIC", "noServiceAny": "JO_NO_SERVICE_ANY", "noBusClosed": "JO_NO_BUS_CLOSED",
     "noMrtClosed": "JO_NO_MRT_CLOSED",
     "fallbackNote": "JO_FALLBACK_NOTE",
+    "destinationFallback": "JO_DESTINATION_FALLBACK",
 }
 
 

@@ -91,15 +91,15 @@ def test_row_and_marker_taps_select_only_and_the_footer_opens_screen_four():
     assert "chooseDestinationStop(stop)" in row and "chooseDestinationStop(stop)" in marker
     assert "openDestinationConfirm" not in row and "openDestinationConfirm" not in marker
     assert "scrollIntoView" in marker
-    footer = _between(html, 'class="dest-sheet__footer"', "</div>")
-    assert 'id="select-destination-stop" class="primary primary--icon pulse-button" disabled' in footer
+    footer = _between(html, 'class="dest-sheet__footer"', "</button>")
+    assert 'id="select-destination-stop" class="primary primary--icon">' in footer and "disabled" not in footer  # always enabled, no pulse until a row is chosen
     assert "Select stop" in footer
     select = _between(html, "function selectDestinationStop(stop)", "function chooseDestinationStop")
-    assert 'getElementById("select-destination-stop").disabled = false' in select
+    assert "syncStopPulse();" in select and 'getElementById("select-destination-stop").disabled' not in html
     clear = _between(html, "function clearDestinationStops()", "function clearDestinationSelection")
-    assert 'getElementById("select-destination-stop").disabled = true' in clear
+    assert "syncStopPulse();" in clear and 'getElementById("select-stop-error").hidden = true' in clear
     opens = _between(html, 'getElementById("select-destination-stop").addEventListener("click"', "});")
-    assert "openDestinationConfirm()" in opens
+    assert "openDestinationConfirm()" in opens and 'getElementById("select-stop-error").hidden = false' in opens
 
 
 def test_back_and_edit_return_to_screen_three_without_clearing_the_selection():

@@ -114,6 +114,9 @@ select {
   cursor: pointer;
 }
 
+/* One style for every filled blue button (Start journey, Select stop, Confirm, Find my route, See bus and train times, Other bus
+   options, Switch, Search, Delete and the other primaries): bold 16 px or more, a plain label with no shadow, blur or opacity, and
+   white on the fill at 4.5:1 or more in both themes (--color-primary against --color-primary-ink). */
 .button--primary,
 .primary,
 #demo-run {
@@ -121,6 +124,16 @@ select {
   width: 100%;
   background: var(--color-primary);
   color: var(--color-primary-ink);
+  font-size: 1rem;
+  font-weight: 700;
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.primary > span {
+  opacity: 1;
+  filter: none;
 }
 
 .primary.primary--icon {
@@ -235,6 +248,51 @@ a {
 .back-bar__button {
   display: grid;
   place-items: center;
+}
+
+/* On the destination stops page the back row also holds Skip beside Back: a fully filled green button (--action-yes, the green of
+   the Go buttons) with a bold 18 px white label (--action-ink), like the Just-In-Time button: 5.4:1 in light and 6.6:1 in dark
+   (the lighter flag green, --marker-end, gives white only 4.21:1 and 1.78:1). 44 px at least, the label wrapping to a second line instead of running out of the row. It
+   carries the shared pulse class while no stop is chosen (Select stop takes it over). */
+.back-bar:has(.skip-stop:not([hidden])) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.back-bar:has(.skip-stop:not([hidden])) .back-bar__button {
+  flex: 0 0 auto;
+}
+
+.back-bar .skip-stop {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--tap-min);
+  width: auto;
+  padding: var(--space-1) var(--space-2);
+  background: var(--action-yes);
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--action-ink);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-shadow: none;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* "Choose a stop or station first.": the shared red alert above Select stop, with room above and below. */
+#select-stop-error {
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+.back-bar .skip-stop:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .menu-sheet {
@@ -3194,6 +3252,11 @@ body.is-screen-home .hero {
   line-height: 1.1;
 }
 
+/* The journey overview only: 12 px between the Your journey heading and the priority select (the other title margins stay 8 px). */
+#overview-card .overview-title {
+  margin-bottom: calc(var(--space-2) + var(--space-1));
+}
+
 .journey-steps {
   margin: 0;
   padding: 0;
@@ -4897,26 +4960,6 @@ body:not(.is-screen-live) .live-only {
   line-height: 1.25;
 }
 
-.catch-card__sub {
-  display: flex;
-  gap: var(--space-1);
-  min-width: 0;
-  color: var(--color-muted);
-  font-size: 0.9375rem;
-  white-space: nowrap;
-}
-
-.catch-card__eta,
-.catch-card__sep {
-  flex: 0 0 auto;
-}
-
-.catch-card__stop {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* The bus arrival time at the right of the ring: a muted label and the clock time on one line. */
 .catch-card__arrives {
   display: flex;
@@ -6339,30 +6382,6 @@ body.is-entry-loading #live-train-alerts {
 
 /* Approved Page C design (tmp/design/pagec-v2.html), which supersedes the mockup for Page C. The current-bus card, two
    recommended cards that each hold their own Switch button, the alternative rows with a ring, and the empty answer. */
-.page-c-current .catch-card__arrives {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-  white-space: normal;
-}
-
-.page-c-current .catch-card__arrives-label {
-  color: var(--color-muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.page-c-current .catch-card__arrives-time {
-  font-size: 1.875rem;
-  font-weight: 800;
-  line-height: 1.05;
-}
-
-.page-c-current .secondary {
-  width: 100%;
-  min-height: 3rem;
-}
-
 .option-merged {
   gap: calc(var(--space-2) + var(--space-1));
 }
@@ -6667,7 +6686,7 @@ body.is-entry-loading #live-train-alerts {
   display: none;
 }
 
-/* Pulse every 2 seconds: Find my route, Select stop, Confirm, Start journey and See arrival times (one shared class,
+/* Pulse every 2 seconds: Find my route, Select stop, Confirm and Start journey (one shared class,
    .pulse-button) grow about 4% and return over 400 ms (the first 20% of a 2 s cycle), then rest for the other 1.6 s, for
    as long as the button is visible and enabled. It is a CSS animation alone (no timer, no script, no class from the
    page). It does not run while the button is disabled, hidden (a hidden element has no animation), pressed or focused
@@ -6700,8 +6719,8 @@ body.is-page-w #see-arrivals {
 }
 
 /* Page A's bottom bar has two stacked buttons: "See bus arrival times" (the primary blue, with the shared pulse) and, for a bus,
-   "Other bus options" in the add-place panel's Save style (green outline and text, 48 px, the control radius). Page W's bar keeps
-   its one button, and the bar is taller on Page A, so the page leaves more room under it. */
+   "Other bus options" (the same filled blue primary with a trailing arrow, and no pulse). Page W's bar keeps its one button, and
+   the bar is taller on Page A, so the page leaves more room under it. */
 .other-bus-actions {
   width: 100%;
 }
@@ -6709,6 +6728,20 @@ body.is-page-w #see-arrivals {
 .other-bus-actions[hidden],
 body.is-page-w .other-bus-actions {
   display: none;
+}
+
+/* Page A's bottom bar is not a bordered box: the buttons sit on the page colour like Start journey does (no outline, no shadow, no card
+   fill). It stays fixed at the foot of the screen, and its opaque page-colour fill still hides what scrolls under it. */
+body.is-page-a #see-arrivals-bar,
+.catch-bar.catch-bar--flat {
+  background: var(--color-paper);
+  border-top: 0;
+  box-shadow: none;
+}
+
+/* With the unlikely warning in the bar (about 60 px more), the page leaves that much more room under its last card. */
+body.is-page-a.has-catch-bar:has(#unlikely-bar-alert:not([hidden])) {
+  padding-bottom: calc(16rem + env(safe-area-inset-bottom));
 }
 
 body.is-page-a.has-catch-bar {

@@ -57,7 +57,7 @@ def test_edit_destination_leaves_the_overview_for_the_right_page_and_keeps_the_d
 def test_the_screen_to_go_back_to_is_one_helper_used_by_every_edit_destination_control():
     assert "function editDestination() {" in INDEX
     body = INDEX.split("function editDestination() {", 1)[1].split("\n    }", 1)[0]
-    assert 'screenStack.indexOf("results") !== -1' in body and 'backToScreen(' in body
+    assert 'screenStack.indexOf("results") === -1' in body and "destinationSkipped()" in body and 'backToScreen(' in body
     for old in ('id="overview-edit-destination").addEventListener("click", function () {\n      backToScreen("results");',
                 'id="overview-edit-destination-service").addEventListener("click", function () {\n      backToScreen("results");',
                 'action: function () { backToScreen("results"); } }));'):

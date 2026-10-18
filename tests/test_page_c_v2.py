@@ -1,5 +1,5 @@
-"""The approved Page C design (tmp/design/pagec-v2.html) on the real page at 320, 360 and 1280 px, light and dark: the
-current-bus card, two recommended cards that hold their own Switch button, the Leave by and Reach destination by tiles
+"""The approved Page C design (tmp/design/pagec-v2.html) on the real page at 320, 360 and 1280 px, light and dark: two
+recommended cards that hold their own Switch button, the Leave by and Reach destination by tiles
 (Page A's Leave by tile), the alternative rows with a ring and their alerts, and the empty answer. Nothing here calls an API."""
 
 import re
@@ -38,7 +38,7 @@ def test_the_plan_and_the_style_guide_describe_the_approved_page_c_design():
 
 
 def test_the_page_c_markup_uses_the_shared_alert_for_every_message():
-    assert '<div id="pc-warn" class="alert alert--warning" hidden>' in INDEX
+    assert 'id="pc-warn"' not in INDEX and 'id="reroute-current"' not in INDEX  # the old current-bus card is gone
     assert '<div id="reroute-notice" class="alert alert--info" role="status" hidden>' in INDEX
     assert '<div id="page-c-none" class="alert alert--info" hidden>' in INDEX
     card = INDEX.split("function buildOptionCard(row)", 1)[1].split("function buildTimeTile", 1)[0]
@@ -63,15 +63,10 @@ def page(request, tmp_path_factory):
         return run_scenario("pagecv2", base, {"width": width, "height": height, "dark": dark}, timeout=300)["result"], width
 
 
-def test_the_current_bus_card_has_the_time_large_no_caption_and_a_shared_alert(page):
+def test_the_old_current_bus_card_is_gone_from_page_c(page):
     result, width = page
-    current = result["route"]["current"]
-    assert current["arrivesTime"] >= 28 and current["labelAbove"] is True and current["captionInCopy"] is False
-    warn = current["warn"]
-    assert warn["text"] == "Catching this bus is unlikely."
-    assert warn["cls"].startswith("alert alert--warning") and warn["radius"] == "12px"
-    assert abs(warn["box"]["w"] - (current["card"]["w"] - 2 * 16 - 2)) < 6  # full width of the card's content
-    assert current["button"]["h"] >= 48 and abs(current["button"]["w"] - warn["box"]["w"]) < 2
+    assert result["route"]["oldCard"] == {"current": False, "warn": False, "see": False, "title": False}
+    assert result["empty"]["oldCard"] == {"current": False, "warn": False, "see": False, "title": False}
 
 
 def test_each_recommended_card_has_the_ring_at_the_left_the_two_tiles_and_its_own_switch_button(page):

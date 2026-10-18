@@ -32,7 +32,7 @@ ALLOWED = {
 OLD = ("banner", "alert-row", "info-box", "field-help", "field-error", "reroute-warning", "page-c-warn", "alt-row__warn",
        "planning-banner", "train-alert", "train-alerts", "pace-chip", "pace-walk", "reroute-confirm", "reroute-notice",
        "reroute-none", "demo-banner", "unlikely-banner", "catch-warning", "arrival-warning", "notification-card",
-       "leave-now-banner", "overview-reason", "leave-tile__warn", "arrive-box__status", "on-way-alert", "card--info",
+       "overview-reason", "leave-tile__warn", "arrive-box__status", "on-way-alert", "card--info",
        "card--caution", "card--success", "card--unavailable", "card--simulated")
 
 

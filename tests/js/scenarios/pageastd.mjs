@@ -31,7 +31,7 @@ const READ = `(function () {
       };
     })(),
     ai: shown("ai-explanation") ? text("ai-explanation-text") : null,
-    bar: shown("see-arrivals-bar") ? text("see-arrivals") : null, banner: shown("unlikely-banner"),
+    bar: shown("see-arrivals-bar") ? text("see-arrivals") : null, banner: shown("unlikely-bar-alert"),
     buttons: (function () {
       var see = document.getElementById("see-arrivals"), other = document.getElementById("other-bus-options"), bar = document.getElementById("see-arrivals-bar");
       var rs = function (el) { var r = el.getBoundingClientRect(), s = getComputedStyle(el);
@@ -40,14 +40,15 @@ const READ = `(function () {
       var root = getComputedStyle(document.documentElement);
       return { seeText: text("see-arrivals"), otherShown: shown("other-bus-actions"), otherText: text("other-bus-options"), see: rs(see),
         other: shown("other-bus-actions") ? rs(other) : null, bar: shown("see-arrivals-bar") ? rs(bar) : null, anims: see.getAnimations().length,
-        pulse: see.classList.contains("pulse-button"), otherPulse: other.classList.contains("pulse-button"),
+        pulse: see.classList.contains("pulse-button"), otherPulse: other.classList.contains("pulse-button"), otherAnims: other.getAnimations().length,
+        seeArrow: !!see.querySelector("svg"), otherArrow: !!other.querySelector("svg"),
         successOutline: root.getPropertyValue("--color-selected-outline-success").trim(), live: root.getPropertyValue("--status-live").trim(),
         innerHeight: window.innerHeight, innerWidth: window.innerWidth,
         padding: parseFloat(getComputedStyle(document.body).paddingBottom) };
     })(),
-    bannerText: shown("unlikely-banner") ? text("unlikely-banner") : null,
-    bannerExtras: document.querySelectorAll("#unlikely-banner button, #unlikely-banner .alert__meta, #unlikely-banner .alert__actions").length,
-    bannerIsAlert: document.getElementById("unlikely-banner").classList.contains("alert") && document.getElementById("unlikely-banner").classList.contains("alert--warning"),
+    bannerText: shown("unlikely-bar-alert") ? text("unlikely-bar-alert") : null,
+    bannerExtras: document.querySelectorAll("#unlikely-bar-alert button, #unlikely-bar-alert .alert__meta, #unlikely-bar-alert .alert__actions").length,
+    bannerIsAlert: document.getElementById("unlikely-bar-alert").classList.contains("alert") && document.getElementById("unlikely-bar-alert").classList.contains("alert--warning"),
     captionAnywhere: document.body.textContent.indexOf("if you leave now and walk at a normal pace") !== -1,
     aiBadge: !!document.getElementById("ai-badge"), missRow: !!document.getElementById("if-you-miss"),
     ringColour: getComputedStyle(document.getElementById("catch-node")).boxShadow,
@@ -74,15 +75,21 @@ export default async function (h) {
     out[name] = await h.eval(READ);
   }
   if (c.openOther) {
-    // "Other bus options" runs the "No, I missed it" code path
+    // "Other bus options" opens Page C (the "other" entry) and keeps tracking on
     await h.eval(`document.getElementById("other-bus-options").click(); true`);
     await h.sleep(1800);
     out.other = await h.eval(`(function () {
       var page = document.getElementById("page-c");
-      return { top: screenStack[screenStack.length - 1], entry: pageC ? pageC.entry : null, missed: !!missedMode, notice: rerouteNotice,
+      var notice = document.getElementById("reroute-notice");
+      return { top: screenStack[screenStack.length - 1], entry: pageC ? pageC.entry : null, missed: !!missedMode, notice: notice && !notice.hidden ? notice.textContent.replace(/\\s+/g, " ").trim() : null,
         bodyMissed: document.body.classList.contains("is-bus-missed"), pageCShown: !!page && !page.hidden && page.getClientRects().length > 0,
-        tracking: monitoringActive, barHidden: document.getElementById("see-arrivals-bar").hidden, text: page ? page.textContent.replace(/\\s+/g, " ").trim().slice(0, 300) : "" };
+        tracking: monitoringActive, barHidden: document.getElementById("see-arrivals-bar").hidden, barDrawn: getComputedStyle(document.getElementById("see-arrivals-bar")).display !== "none", text: page ? page.textContent.replace(/\\s+/g, " ").trim().slice(0, 300) : "" };
     })()`);
+  }
+  if (c.openOther) {
+    await h.eval(`requestBack(); true`);
+    await h.sleep(500);
+    out.afterBack = await h.eval(`({ top: screenStack[screenStack.length - 1], pageC: !!pageC, pageA: document.body.classList.contains("is-page-a"), tracking: monitoringActive, dialog: !document.getElementById("leave-dialog").hidden, barDrawn: getComputedStyle(document.getElementById("see-arrivals-bar")).display !== "none" })`);
   }
   return out;
 }

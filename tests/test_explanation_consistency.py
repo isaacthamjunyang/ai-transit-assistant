@@ -40,7 +40,7 @@ def _between(text: str, start: str, end: str) -> str:
 
 def _mirror_source() -> str:
     page = _between(INDEX, "var EXPL_ARRIVING_NOW", "// Redraws the card from the poll on screen")
-    tile = _between(INDEX, "var ARRIVING_IN_TEXT", "// The muted line under the heading")
+    tile = _between(INDEX, "var ARRIVING_IN_TEXT", "function ringLabel(chance, hero) {")
     fill = _between(INDEX, "function fillText(template, values) {", "// \"5 min\", or \"under 1 min\"")
     parts = _between(INDEX, "function singaporeParts(date) {", "function pad2(value)")
     return FORMAT_DISTANCE + "\n" + parts + "\n" + fill + "\n" + tile + "\n" + page + '\nvar LEAVE_NOW_TEXT = "Leave now";\nfunction isTrain() { return false; }  // a bus journey: the train words are unused here\n'

@@ -83,6 +83,14 @@
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         </button>
       </div>
+      <h3>Destination stops page: the back row with Skip (fully filled green, bold white label, wraps to two lines; it pulses while no stop is chosen) and the red alert Select stop shows when nothing is chosen</h3>
+      <div class="back-bar">
+        <button type="button" class="icon-button back-bar__button" aria-label="Back">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <button type="button" class="primary skip-stop pulse-button"><span data-copy="destinationStops.skip"></span></button>
+      </div>
+      <div id="select-stop-error-sample" class="alert alert--error"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="destinationStops.chooseFirst"></p></div>
       <button type="button" class="stop-button is-selected" aria-selected="true">Selected row</button>
       <button type="button" class="stop-button is-hover">Hover row</button>
       <button type="button" class="stop-button is-focus">Focus row</button>
@@ -103,7 +111,7 @@
       <button type="button" class="primary primary--icon pulse-button"><span>Select stop</span></button>
       <button type="button" class="primary primary--icon pulse-button"><span>Confirm</span></button>
       <button type="button" class="primary primary--icon pulse-button"><span>Start journey</span></button>
-      <button type="button" class="primary primary--icon pulse-button"><span>See arrival times</span></button>
+      <button type="button" class="primary primary--icon"><span>See arrival times (no pulse)</span></button>
       <button type="button" class="primary primary--icon pulse-button" disabled><span>Select stop (disabled: no pulse)</span></button>
       <h3>Leave this journey? Stay is the Save look (green), Leave the Cancel look (red); Stay has the focus</h3>
       <div class="leave-dialog" role="group" aria-label="Leave this journey?">
@@ -198,12 +206,14 @@
         <button type="button" class="button button--secondary" id="show-denied" aria-pressed="false">Blocked banner</button>
         <button type="button" class="button button--secondary" id="show-active" aria-pressed="false">Active line</button>
         <button type="button" class="button button--secondary" id="show-caution" aria-pressed="false">Caution banner</button>
+        <button type="button" class="button button--secondary" id="show-caution-granted" aria-pressed="false">Caution banner, permission granted</button>
       </div>
       <div class="alert-slot" id="alert-slot">
         <div class="alert alert--info alert-slot__item is-shown" id="slot-optional"><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><h3 class="alert__text" data-copy="notificationCard.title"></h3><p class="alert__detail" data-copy="notificationCard.description"></p><div class="alert__actions"><button type="button" class="primary" data-copy="notificationCard.action"></button></div></div></div>
         <div class="alert alert--warning alert-slot__item" id="slot-denied"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="deniedBanner"></p></div>
         <div class="alert alert--success alert-slot__item" id="slot-active"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" data-copy="notificationCard.granted"></p></div>
         <div class="alert alert--warning alert-slot__item" id="slot-caution"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" id="slot-caution-text"></p></div>
+        <div class="alert alert--warning alert-slot__item" id="slot-caution-granted"><span class="alert__icon" aria-hidden="true"></span><p class="alert__text" id="slot-caution-granted-text"></p></div>
       </div>
     </section>
 
@@ -573,6 +583,7 @@
     });
 
     document.getElementById("slot-caution-text").textContent = copy.cautionBanner.replace("{point}", "48");
+    document.getElementById("slot-caution-granted-text").textContent = copy.cautionBannerGranted.replace("{point}", "48");
     document.getElementById("reroute-message").textContent = copy.rerouteCard.message
       .replace("{new_service}", "18")
       .replace("{new_stop_name}", "Opp Pebble Bay")
@@ -588,7 +599,7 @@
       document.querySelectorAll(".alert-slot__item").forEach(function (item) {
         item.classList.toggle("is-shown", item.id === id);
       });
-      ["show-optional", "show-denied", "show-active", "show-caution"].forEach(function (buttonId) {
+      ["show-optional", "show-denied", "show-active", "show-caution", "show-caution-granted"].forEach(function (buttonId) {
         var item = document.getElementById(buttonId);
         item.setAttribute("aria-pressed", item === button ? "true" : "false");
       });
@@ -605,6 +616,9 @@
     });
     document.getElementById("show-caution").addEventListener("click", function () {
       showSlot("slot-caution", this);
+    });
+    document.getElementById("show-caution-granted").addEventListener("click", function () {
+      showSlot("slot-caution-granted", this);
     });
 
     document.getElementById("menu-open").addEventListener("click", function () {
@@ -1389,7 +1403,7 @@
         }).join("") + "</div>"
         + "<h4>Priority select: Least walking selected</h4><div class=\"overview-priority\">" + sgSelect("least_walking", []) + "</div>"
         + "<h4>Priority select: the bus planner is the fallback (two options disabled, both notes)</h4><div class=\"overview-priority\">"
-        + sgSelect("fastest", ["least_walking", "mrt_only"]) + sgAlert("info", jo.fallbackNote) + sgAlert("info", jo.needsRouteService) + "</div>"
+        + sgSelect("fastest", ["least_walking", "mrt_only"]) + sgAlert("info", jo.fallbackNote) + sgAlert("info", jo.needsRouteService) + sgAlert("info", jo.destinationFallback.replace("{stop}", "Opp Bencoolen Stn").replace("{place}", "SCIS 1")) + "</div>"
         + "<h4>Priority select: nothing for MRT only (the banner below says so)</h4><div class=\"overview-priority\">" + sgSelect("mrt_only", []) + "</div>"
         + "<div class=\"card overview-card\">" + sgAlert("warning", jo.noMrtOnly) + "</div>"
         + "<h4>Train leg row: a first leg says \"Scheduled \u00b7 In N min\"; Start journey is on</h4>"
@@ -1507,13 +1521,6 @@
     }
 
     var SG_LONG_STOP = "Opp Block 123 Bishan Street 12 / Bishan Community Club Annexe";
-
-    // The muted line under the heading: minutes, then the stop name (one line, ellipsis, full name in the title).
-    function sgSub(eta, stop) {
-      return "<p class=\"catch-card__sub\">" + (eta ? "<span class=\"catch-card__eta\">" + eta + "</span>" : "")
-        + (eta && stop ? "<span class=\"catch-card__sep\" aria-hidden=\"true\"> \u00b7 </span>" : "")
-        + (stop ? "<span class=\"catch-card__stop\" title=\"" + stop + "\">" + stop + "</span>" : "") + "</p>";
-    }
 
     // Heading and muted line on the left, the pill on the right; the heading wraps rather than meeting the pill.
     function sgCardHead(title, sub, state) {
@@ -1752,21 +1759,13 @@
     var CROSS_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 6l12 12M18 6L6 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"></path></svg>";
     var REFRESH_ICON = "<svg class=\"icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20 12a8 8 0 1 1-2.34-5.66\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path><path d=\"M20 4v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>";
 
-    function sgCurrentBusCard(stop, none) {
-      return '<section class="card catch-card page-c-current" aria-live="polite">'
-        + sgCardHead(lc.chanceToCatchPageC.replace("{service}", "11"), sgSub(lc.arrivingIn.replace("{n}", "2"), stop || "Tanjong Rhu Stn Exit 2"), "live")
-        + '<div class="catch-card__row">' + sgRing(5, 3, 8, false, "") + '<div class="catch-card__copy">' + sgBusArrives(2) + '</div></div>'
-        + sgAlert("warning", rp.currentWarning)
-        + '<button type="button" class="secondary">' + cp.seeBusArrivals + '</button></section>';
-    }
-
     function sgRefreshHeader(heading) {
       return '<div class="reroute-alternatives__head"><p class="reroute-alternatives__heading">' + heading + '</p><p class="reroute-updated">' + rp.updated.replace("{time}", "6:12\u00a0PM") + '</p>'
         + '<button type="button" class="refresh-button" aria-label="' + rp.refreshLabel + '" aria-disabled="false">' + REFRESH_ICON + '</button></div>';
     }
 
-    function sgPageCUnlikely() {
-      return '<div class="page-c">' + sgCurrentBusCard() + '<div class="reroute-proposal">' + sgMergedCard(["fastest"], "16") + sgMergedCard(["highest_chance"], "7")
+    function sgPageCOther() {
+      return '<div class="page-c"><div class="reroute-proposal">' + sgAlert("info", rp.otherOptions) + sgMergedCard(["fastest"], "16") + sgMergedCard(["highest_chance"], "7")
         + sgRefreshHeader(rp.alternatives) + '<ul class="reroute-alternatives">'
         + sgOptionRow("16", 60, 50, 70, "20 min", "6:54\u00a0PM", rp.walkTo.replace("{stop}", "Opp Tanjong Rhu").replace("{distance}", "183\u00a0m"), {})
         + sgOptionRow("11", 35, 25, 39, "31 min", "7:05\u00a0PM", rp.atYourStop, { unlikely: true })
@@ -1788,7 +1787,7 @@
     }
 
     function sgPageCNone() {
-      return '<div class="page-c">' + sgCurrentBusCard(undefined, true) + '<div class="reroute-proposal"></div></div>';
+      return '<div class="page-c"><div class="reroute-proposal">' + sgAlert("info", rp.noOtherOptions) + '</div></div>';
     }
 
     function sgUnlikelyBanner() {
@@ -1900,7 +1899,6 @@
         + "<div class=\"pace-debug__panel\"><pre class=\"pace-debug__text\">mode gps (walking by gps)\ncadence 1.82 score 0.91 rms 1.20 null 0 cv 0.04\ngps 1.30 m/s reported acc 8 m age 0.4 s\nfix age 0.4 s, stale ignored 0\nlocation age: server 3 s, phone 2 s\ngps-only n 9 in 8 out 0 outliers 1 cv 0.05 ok\npick stride_doubled in 0.00/0.00 all 1.01/0.82 low 1.01/0.82\nstep 0.72 m n=4 learn: ok\nused 1.30 m/s gps smooth 1.29 sent 1.28\nmotion on events 1420\ntrace: trace ready: 90 rows, raw 2250 values</pre>"
         + "<div class=\"pace-debug__actions\"><button type=\"button\" class=\"pace-debug__button\">Record trace</button><button type=\"button\" class=\"pace-debug__button\">Copy trace</button><button type=\"button\" class=\"pace-debug__button\">Copy raw motion</button></div></div></div>"
         + "<h4>Page A heading with no ETA (no clock time)</h4>" + sgCatchCard("schedule", 41, 30, 52, undefined, "")
-        + "<h4>Page C current-bus card with a long stop name</h4>" + sgCurrentBusCard(SG_LONG_STOP)
         + "<h4>Page A, action wait: the Leave by card (primary fill, primary-ink text) shows Leave by: and the large time</h4>" + sgLayoutB("bus", 92, 92, 92, sgArriving(15), "steady", sgTileState(15, 300, 1.25))
         + "<h4>Page A, action leave_now: the Leave by card reads Leave now alone, in the same large size</h4>" + sgLayoutB("bus", 70, 44, 76, sgArriving(6), "steady", sgTileState(6, 250, 1.3))
         + "<h4>Leave by tile, location uncertain, clock time (warning line)</h4>" + sgLeaveTiles(false, sgTileState(15, 300, 1.25, true))
@@ -1935,24 +1933,14 @@
     document.getElementById("catch-sample-light").innerHTML = catchSample();
     document.getElementById("catch-sample-dark").innerHTML = catchSample();
 
-    // Screens 9 and 10: Leave now banner and the data-quality alert components.
+    // Screens 9 and 10: the data-quality alert components.
     var qc = copy.quality;
-    var lb = copy.leaveNowBanner;
     var TRI_FILL_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M10.3 4.2a2 2 0 0 1 3.4 0l8 14A2 2 0 0 1 20 21.2H4a2 2 0 0 1-1.7-3zM11 9.5v4.5h2V9.5zM12 15.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"></path></svg>';
     var SG_STALE_START = Date.now() - 84000;
 
     function sgAge() {
       var seconds = Math.max(0, Math.floor((Date.now() - SG_STALE_START) / 1000));
       return seconds < 60 ? seconds + " seconds ago" : Math.floor(seconds / 60) + " min " + (seconds % 60) + " sec ago";
-    }
-
-    function sgLeaveNow(title, body, simulated) {
-      return '<section class="alert alert--info" aria-label="' + title + '">' + SG_ICON + '<div class="alert__body">'
-        + '<p class="alert__meta"><span>' + lb.app + '</span> &middot; <span>' + lb.now + '</span></p>'
-        + '<h3 class="alert__text">' + title + '</h3><p class="alert__detail">' + body + '</p>'
-        + (simulated ? '<p class="simulated-badge">' + copy.simulated + '</p>' : '')
-        + '<div class="alert__actions"><button type="button" class="primary">' + lb.viewDetails + '</button>'
-        + '<button type="button" class="secondary">' + lb.dismiss + '</button></div></div></section>';
     }
 
     function sgStaleBanner() {
@@ -1978,8 +1966,6 @@
     function qualitySample() {
       var longName = "Opp Stamford Pr Sch";
       return ""
-        + "<h4>Leave now banner: short strings</h4>" + sgLeaveNow(copy.leaveNow.title.replace("{service_no}", "36"), copy.leaveNow.body.replace("{stop_name}", "Hotel Grand Pacific").replace("{stop_code}", "01012").replace(/\{service_no\}/g, "36").replace("{point}", "64").replace("{range_low}", "51").replace("{range_high}", "78"), false)
-        + "<h4>Leave now banner: long stop name, with the [SIMULATED] tag</h4>" + sgLeaveNow(copy.leaveNow.title.replace("{service_no}", "190"), copy.leaveNow.body.replace("{stop_name}", "Opp Singapore Management University Administration Building").replace("{stop_code}", "04119").replace(/\{service_no\}/g, "190").replace("{point}", "64").replace("{range_low}", "51").replace("{range_high}", "78"), true)
         + "<h4>Stale banner, with the counting-up time</h4>" + sgStaleBanner()
         + "<h4>Unavailable banner (no time)</h4>" + sgUnavailableBanner()
         + "<h4>Stale status card</h4>" + sgStaleStatus()
@@ -2083,12 +2069,11 @@
         + "<h4>On your way: transfer route</h4>" + sgOnWay(true)
         + "<h4>End card</h4>" + sgAlertRich("info", '<p class="alert__text">' + cp.endUnanswered + '</p><div class="alert__actions"><button type="button" class="primary">' + cp.planNew + '</button></div>')
         + sgAlertRich("info", '<p class="alert__text">' + cp.endMax + '</p><div class="alert__actions"><button type="button" class="primary">' + cp.planNew + '</button></div>')
-        + "<h4>Page C, unlikely entry (current-bus card, recommended card, refresh header, alternatives)</h4>" + sgPageCUnlikely()
-        + "<h4>Page C, missed entry (banner first, no current-bus card)</h4>" + sgPageCMissed()
+        + "<h4>Page C after Other bus options (the banner Here are your other options., recommended cards, refresh header, alternatives)</h4>" + sgPageCOther()
+        + "<h4>Page C, missed entry (the banner Bus {service} has left first)</h4>" + sgPageCMissed()
         + "<h4>Page C, missed entry, nothing found (plain text and the ride-app card)</h4>" + sgPageCMissedNone()
-        + "<h4>Page C, unlikely entry, the search found nothing (the shorter banner, nothing beneath)</h4>" + sgPageCNone()
+        + "<h4>Page C after Other bus options, the search found nothing (the plain no-options banner)</h4>" + sgPageCNone()
         + "<h4>Compact warning banner on Pages A and B</h4>" + sgUnlikelyBanner()
-        + "<h4>Page C current-bus card on its own</h4>" + sgCurrentBusCard()
         + "<h4>Question bar: Yes green, No red</h4>" + sgQuestionBar()
         + "<h4>Entry banners: automatic entry and the No entry</h4>" + sgAutoBanner() + sgAlert("info", rp.busLeftNotice.replace("{service}", "36")) + ''
         + "<h4>Recommended cards: two cards, Fastest to destination and Highest catch probability</h4>"
@@ -2126,10 +2111,11 @@
     }
 
     // mode: "bus" (Page A: both buttons), "train" (Page A: only See train times) or "walk" (Page W: See arrival times)
-    function sgSeeArrivalsBar(mode) {
+    // unlikely: the warning sits in the bar, above the buttons, only when the catch is unlikely
+    function sgSeeArrivalsBar(mode, unlikely) {
       var text = mode === "walk" ? cp.seeArrivals : mode === "train" ? copy.trainPage.seeTimes : cp.seeBusArrivals;
-      return '<div class="catch-bar catch-bar--single catch-bar--sample"><button type="button" class="primary primary--icon pulse-button"><span>' + text + '</span>' + ARROW_ICON + '</button>'
-        + (mode === "walk" || mode === "train" ? "" : '<div class="other-bus-actions saved-panel__actions saved-panel__actions--form"><button type="button" class="primary"><span>' + cp.otherBusOptions + '</span></button></div>')
+      return '<div class="catch-bar catch-bar--single catch-bar--sample' + (mode === "walk" ? '' : ' catch-bar--flat') + '">' + (unlikely ? sgAlert("warning", rp.currentWarning) : '') + '<button type="button" class="primary primary--icon"><span>' + text + '</span>' + ARROW_ICON + '</button>'
+        + (mode === "walk" || mode === "train" ? "" : '<div class="other-bus-actions"><button type="button" class="primary primary--icon"><span>' + cp.otherBusOptions + '</span>' + ARROW_ICON + '</button></div>')
         + '</div>';
     }
 
@@ -2137,8 +2123,10 @@
       var cards = kind === "live"
         ? sgLayoutB("bus", 65, 48, 78, sgArriving(6), "steady", sgTileState(6, 250, 1.25))
           + sgAiCard("normal", { e: 6, action: "leaveNow", band: "ok", distance: 250, speed: 1.25, source: "default" })
-        : "";
-      return sgPageAlerts(kind === "live" ? "" : kind) + cards + sgSeeArrivalsBar();
+        : kind === "unlikely"
+          ? sgLayoutB("bus", 5, 2, 12, sgArriving(3), "steady", sgTileState(3, 1500, 1.25))
+          : "";
+      return sgPageAlerts(kind === "live" || kind === "unlikely" ? "" : kind) + cards + sgSeeArrivalsBar(undefined, kind === "unlikely");
     }
 
     function sgPageB(kind) {
@@ -2161,6 +2149,7 @@
       return ""
         + "<h4>Probability ring at 92%, 64%, 45% and 30%: no marks, band colours, neutral track</h4>" + sgRingRow()
         + "<h4>Page A, Catch probability, with its sticky button</h4>" + sgPageA("live")
+        + "<h4>Page A at 5%: the same card, the warning above the blue and the green buttons in the bar</h4>" + sgPageA("unlikely")
         + "<h4>Page A: no-service state (status card replaces the ring, tiles and AI card)</h4>" + sgPageA("no-service")
         + "<h4>Page A: stale state</h4>" + sgPageA("stale")
         + "<h4>Page A: location uncertain, accuracy reason and age reason</h4>" + sgPageA("uncertain")

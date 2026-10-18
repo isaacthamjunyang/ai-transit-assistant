@@ -194,7 +194,9 @@ def test_the_planner_routes_to_the_chosen_point_and_adds_the_walk_to_the_place(a
     legs = body["itinerary"]["legs"]
     assert legs[-1]["kind"] == "walk" and legs[-1]["to_name"] == "Destination"
     ride = [leg for leg in legs if leg["kind"] != "walk"][-1]["stops"][-1]
-    assert abs(legs[-1]["distance_m"] - haversine_m(ride["latitude"], ride["longitude"], place[0], place[1])) < 1.0
+    to_stop = [leg for leg in legs if leg.get("to_stop")]  # the ride alights 120 m from the station: a walk row to it first
+    assert len(to_stop) == 1 and abs(to_stop[0]["distance_m"] - haversine_m(ride["latitude"], ride["longitude"], STATION[0], STATION[1])) < 1.0
+    assert abs(legs[-1]["distance_m"] - haversine_m(STATION[0], STATION[1], place[0], place[1])) < 1.0  # then the walk from the station
     assert body["option"]["totals"]["walk_m"] >= legs[-1]["distance_m"] - 1
 
 
@@ -324,11 +326,11 @@ def test_the_heading_and_the_info_note_say_stations_and_bus_stops(narrow_light):
     first = narrow_light["first"]
     assert first["title"] == "Nearby stops and stations"
     assert first["info"] == ("Stops and stations within 600 m, nearest first. "
-                             "If none, the nearest within 1.5 km. The first is pre-selected.")
+                             "If none, the nearest within 1.5 km.")
     assert 'title: "Nearby stops and stations"' in COPY
 
 
-def test_the_list_is_one_list_nearest_first_with_the_first_row_chosen(narrow_light):
+def test_the_list_is_one_list_nearest_first_with_no_row_chosen(narrow_light):
     first = narrow_light["first"]
     rows = first["rows"]
     metres = [int(re.search(r"\((\d+)" + NB + "m\)", row["meta"]).group(1)) for row in rows if "(" in row["meta"]]
@@ -336,8 +338,8 @@ def test_the_list_is_one_list_nearest_first_with_the_first_row_chosen(narrow_lig
     assert [row["kind"] for row in rows][0] == "bus" and "station" in [row["kind"] for row in rows]
     assert [row["name"] for row in rows if row["kind"] == "station"] == ["Alpha", "Casing Test", "Beta", "Gamma"]
     assert "Far Away" not in [row["name"] for row in rows]  # 900 m: out of the radius while others are in
-    assert rows[0]["selected"] is True and rows[0]["pressed"] == "true" and first["selectedCode"] == rows[0]["code"]
-    assert sum(1 for row in rows if row["selected"]) == 1 and first["selectDisabled"] is False
+    assert not any(row["selected"] for row in rows) and all(row["pressed"] == "false" for row in rows) and first["selectedCode"] is None
+    assert first["selectDisabled"] is False  # Select stop is enabled so it can say that nothing is chosen
     assert rows[0]["pill"] == "Best option" and all(row["pill"] is None for row in rows[1:])
 
 

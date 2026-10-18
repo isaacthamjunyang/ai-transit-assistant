@@ -1,6 +1,6 @@
 import { openHome } from "./common.mjs";
 
-// The "No other buses or routes are available right now." sentence and the unlikely banner, in every Page C state.
+// The "No other buses or routes are available right now." sentence and the notices, in every Page C state.
 // The page is fed states directly: no request is made. config: width, height, dark.
 const SHOW = (entry, state, options) => `(function () {
   screenStack.push("live");
@@ -18,7 +18,7 @@ const READ = `(function () {
   function text(id) { var el = document.getElementById(id); return el ? el.textContent.replace(/\\s+/g, " ").trim() : null; }
   var page = document.getElementById("page-c").textContent.replace(/\\s+/g, " ");
   var needle = "No other buses or routes are available right now.";
-  return { warn: text("pc-warn-text"), notice: shown("reroute-notice") ? text("reroute-notice") : null,
+  return { notice: shown("reroute-notice") ? text("reroute-notice") : null,
     none: text("page-c-none"), ride: shown("pc-ride-apps"), cards: document.querySelectorAll("#reroute-cards > *").length,
     rows: document.querySelectorAll("#reroute-alternatives .alt-row").length,
     occurrences: page.split(needle).length - 1, refresh: shown("reroute-refresh"),
@@ -39,7 +39,7 @@ export default async function (h) {
   await openHome(h, { dark: c.dark, width: c.width, height: c.height, permission: "granted" });
   const empty = { mode: "none", entry: "x", recommended: null, cards: [], rows: [] };
   const found = { mode: "none", entry: "x", recommended: null, cards: [], rows: [row("a", "36", 9)] };
-  for (const entry of ["unlikely", "missed"]) {
+  for (const entry of ["other", "missed"]) {
     for (const [name, state, options] of [["empty", "done", empty], ["found", "done", found],
       ["loading", "loading", null], ["failed", "failed", null]]) {
       await h.eval(SHOW(entry, state, options));

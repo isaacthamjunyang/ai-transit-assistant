@@ -87,7 +87,7 @@ export default async function (h) {
   out.pulse = {};
   await h.eval(`applyScreen("stops"); document.getElementById("select-destination-stop").disabled = true; true`); await wait(80);
   out.pulse.selectDisabled = await h.eval(`${ANIM}("select-destination-stop")`);
-  await h.eval(`document.getElementById("select-destination-stop").disabled = false; true`); await wait(80);
+  await h.eval(`document.getElementById("select-destination-stop").disabled = false; selectedDestinationStop = { stop_code: "S1" }; syncStopPulse(); true`); await wait(80);
   out.pulse.selectEnabled = await h.eval(`${ANIM}("select-destination-stop")`);
   out.pulse.samples = [];
   for (let i = 0; i < 6; i++) {
@@ -130,6 +130,7 @@ export default async function (h) {
   out.pulse.findDisabled = await h.eval(`${ANIM}("find-route")`);
   await h.eval(`destinationInput.value = "x"; arriveByPicked = true; syncSearchReadiness(); true`); await wait(80);
   out.pulse.find = await h.eval(`${ANIM}("find-route")`);
+  await h.eval(`selectedDestinationStop = null; syncStopPulse(); true`);  // the markup state: nothing chosen, so Skip has the class
   out.pulse.classes = await h.eval(`["find-route", "select-destination-stop", "confirm-destination-stop", "start-journey", "see-arrivals"].map(function (id) { return [id, document.getElementById(id).classList.contains("pulse-button")]; })`);
   await h.eval(`destinationInput.value = ""; arriveByPicked = false; syncSearchReadiness(); true`);
   await h.eval(`applyScreen("live"); document.getElementById("see-arrivals-bar").hidden = true; true`); await wait(80);

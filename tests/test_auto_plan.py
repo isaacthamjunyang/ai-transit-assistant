@@ -209,7 +209,7 @@ def test_at_most_one_lookup_per_overview_open_and_none_in_demo_mode():
 def test_edit_links_are_present_or_absent_as_specified():
     html = _page()
     render = _between(html, "function legIsRail(leg)", "function syncOverviewArrive()")
-    assert 'stepItem("walk", fillText(JO_WALK_ROW' in render  # the walk to the first stop; no "Boarding stop" row
+    assert 'walkStep("walk", walkMinutes(toBoard)' in render  # the walk to the first stop (a walk row that keeps its minutes); no "Boarding stop" row
     for label in ("Edit boarding stop", "Edit bus service", "Edit transfer stop"):
         assert label not in html
     assert 'label: "Edit destination stop", action: function () { backToScreen("stops"); }' in render

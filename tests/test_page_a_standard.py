@@ -278,14 +278,15 @@ def test_both_buttons_are_stacked_full_width_in_the_sticky_bar_at_every_probabil
         assert b["padding"] >= bar["h"], key  # the page leaves room under it: nothing is covered
 
 
-def test_see_bus_arrival_times_pulses_like_find_my_route_and_other_bus_options_is_the_save_look(states):
+def test_neither_bottom_button_pulses_and_other_bus_options_is_the_same_blue_with_an_arrow(states):
     for key in ("far", "atStop", "low"):
         b = states[key]["buttons"]
-        assert b["pulse"] is True and b["anims"] == 1 and b["otherPulse"] is False, key  # the shared pulse class
-        other = b["other"]
-        assert other["borderWidth"] == "2px" and other["radius"] == "10px" and other["h"] >= 44, key  # as Save: 44 px or more, the control radius
-        assert other["border"] == _rgb_text(b["successOutline"]) and other["color"] == _rgb_text(b["live"]), key  # green outline and text
-        assert other["background"] in ("rgba(0, 0, 0, 0)", "transparent"), key
+        assert b["pulse"] is False and b["anims"] == 0 and b["otherPulse"] is False and b["otherAnims"] == 0, key  # no pulse on either
+        see, other = b["see"], b["other"]
+        for field in ("background", "color", "radius", "borderWidth", "weight"):
+            assert see[field] == other[field], (key, field)  # the same blue, text colour and radius
+        assert other["h"] >= 44 and b["otherArrow"] is True and b["seeArrow"] is True, key
+        assert 8 <= b["other"]["top"] - b["see"]["bottom"] <= 12, key  # an 8 to 12 px gap
 
 
 @pytest.fixture(scope="module")
@@ -296,24 +297,27 @@ def other(tmp_path_factory):
                                                "steps": [["far", 60]], "openOther": True}, timeout=300)["result"]
 
 
-def test_other_bus_options_opens_the_same_page_c_as_no_i_missed_it(other):
+def test_other_bus_options_opens_page_c_with_its_own_notice_and_keeps_tracking(other):
     result = other["other"]
-    assert result["entry"] == "missed" and result["missed"] is True and result["bodyMissed"] is True  # the "missed" entry
-    assert result["pageCShown"] is True and result["top"] == "live"  # Page C is a view of the live screen, like after No
-    assert result["notice"] == "Bus 18 has left. Here are your other options."  # what that entry shows first
-    assert result["tracking"] is False and result["barHidden"] is True  # it stopped tracking, so both buttons are hidden
-    assert "Other buses" in result["text"] or "options" in result["text"].lower()
+    assert result["entry"] == "other" and result["missed"] is False and result["bodyMissed"] is False
+    assert result["pageCShown"] is True and result["top"] == "live"  # Page C is a view of the live screen
+    assert result["notice"] in ("Here are your other options.", "No other buses or routes are available right now.")
+    assert result["tracking"] is True and result["barDrawn"] is False  # tracking goes on; Page C draws no bottom bar
+    back = other["afterBack"]  # Back goes to Page A with tracking kept, and asks nothing
+    assert back["top"] == "live" and back["pageC"] is False and back["pageA"] is True and back["tracking"] is True
+    assert back["dialog"] is False and back["barDrawn"] is True
 
 
-def test_other_bus_options_is_in_the_save_class_chain_and_not_in_the_train_bar():
+def test_other_bus_options_is_in_the_blue_class_chain_and_not_in_the_train_bar():
     root = Path(__file__).resolve().parents[1]
     html = (root / "static" / "index.html").read_text(encoding="utf-8")
     block = html.split('id="see-arrivals-bar"', 1)[1].split("</div>\n  </div>", 1)[0]
-    assert 'class="other-bus-actions saved-panel__actions saved-panel__actions--form"' in block
-    assert '<button type="button" id="other-bus-options" class="primary"><span>Other bus options</span></button>' in block
-    assert "pulse-button" in block.split('id="other-bus-options"', 1)[0]  # the primary has the shared class
+    assert '<div id="other-bus-actions" class="other-bus-actions">' in block
+    assert '<button type="button" id="other-bus-options" class="primary primary--icon"><span>Other bus options</span><svg' in block
+    assert "pulse-button" not in block  # neither button of the bar pulses
     assert 'document.getElementById("other-bus-actions").hidden = isTrain() || !document.body.classList.contains("is-page-a");' in html
-    assert "answerMissed();" in html.split('getElementById("other-bus-options").addEventListener', 1)[1].split("});", 1)[0]
+    handler = html.split('getElementById("other-bus-options").addEventListener', 1)[1].split("});", 1)[0]
+    assert 'openPageC("other")' in handler and "answerMissed" not in handler and "endedKind" in handler and "isTrain()" in handler
     plan = (root / "PROJECT_PLAN.md").read_text(encoding="utf-8")
     for text in ("`Other bus options`", "`See bus arrival times`", "Catching this bus is unlikely."):
         assert text in plan, text

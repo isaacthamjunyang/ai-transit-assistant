@@ -27,13 +27,13 @@ def test_duplicates_are_gone_and_needed_ids_stay():
                  "function appendScore", "function appendHeroPoint", "function appendCatchMeter", "function heroRoute"):
         assert gone not in html
     for kept in ("arrival-card", "arrival-heading", "arrival-status", "arrival-warning", "arrival-list", "arrival-updated",
-                 "quality-banner", "stale-status", "location-card", "leave-now-banner", "leave-by-section", "journey-comparison", "journey-leave-countdown",
+                 "quality-banner", "stale-status", "location-card", "leave-by-section", "journey-comparison", "journey-leave-countdown",
                  "reroute-block", "reroute-card", "reroute-title", "ai-explanation", "ai-explanation-status",
                  "ai-explanation-text", "notification-panel",
                  "catch-warning", "live-tracking"):
         assert html.count('id="%s"' % kept) == 1, kept
     slot = _between(html, 'id="alert-slot"', 'id="arrival-card"')
-    for occupant in ("quality-banner", "stale-status", "location-card", "leave-now-banner", "reroute-block",
+    for occupant in ("quality-banner", "stale-status", "location-card", "reroute-block",
                      "catch-warning", "notification-panel"):
         assert 'id="%s"' % occupant in slot
 

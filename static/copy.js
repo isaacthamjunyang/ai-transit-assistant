@@ -11,6 +11,8 @@ var copy = {
   },
   deniedBanner: "Browser notifications are blocked. Keep this page open to see live leave-by alerts.",
   cautionBanner: "⚠ Catch chance dropping ({point}%). Tap to enable Leave-Now Alert.",
+  /* shown instead when notification permission is already granted */
+  cautionBannerGranted: "⚠ Catch chance dropping ({point}%).",
   leaveNow: {
     title: "Leave Now — Bus {service_no}",
     body: "Walk to {stop_name} now to catch Bus {service_no}. Catch probability: {point}% ({range_low}–{range_high}%)."
@@ -248,13 +250,17 @@ var copy = {
   destinationStops: {
     title: "Nearby stops and stations",
     infoLabel: "About these stops",
-    info: "Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km. The first is pre-selected.",
+    info: "Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km.",
     /* proposed, needs approval: the text on every row of the list, so the type is never told by colour alone */
     busStop: "Bus stop",
     mrtStation: "MRT station",
     lrtStation: "LRT station",
     bestOption: "Best option",
     selectStop: "Select stop",
+    /* beside Back on this page: keeps the place as the destination and lets the planner choose the route */
+    skip: "Skip: Let us plan your route",
+    /* the red alert when Select stop is pressed with nothing chosen */
+    chooseFirst: "Choose a stop or station first.",
     range: "Range: {distance}",
     walk: "{minutes} min walk ({distance})",
     locate: "Centre map on your location",
@@ -356,6 +362,7 @@ var copy = {
     noMrtClosed: "MRT and LRT services have stopped for now. Try another priority.",
     needsRouteService: "Needs the route service.",
     fallbackNote: "Showing bus routes only. The route service is unavailable.",
+    destinationFallback: "No route to {stop}. Showing a route to {place}.",
     /* proposed, needs approval: one muted line under the summary card when the route has a bus leg. The bus minutes
        shown already include an assumed traffic factor (config.BUS_PEAK_FACTOR); no figure is put on screen. */
     trafficNote: "Bus times can vary with traffic."
@@ -446,7 +453,6 @@ var copy = {
     /* proposed, needs approval; a deliberate deviation from mockup 7, recorded in the plan */
     chanceToCatch: "Chance to catch Bus {service}",
     /* proposed, needs approval: the Page C current-bus card */
-    chanceToCatchPageC: "Chance to catch your Bus {service}",
     /* proposed, needs approval: muted line under the heading; the stop name follows after " · " */
     arrivingIn: "Arriving in {n} min",
     arrivingSoon: "Arriving in <1 min",
@@ -519,6 +525,7 @@ var copy = {
     newJourneyReason: "Switching because your current bus is unlikely to be caught.",
     /* proposed, needs approval */
     busLeftNotice: "Bus {service} has left. Here are your other options.",
+    otherOptions: "Here are your other options.",
     /* proposed, needs approval: after a miss when no bus or route is found; the ride-app card follows it */
     noOtherOptions: "No other buses or routes are available right now.",
     /* proposed, needs approval */
@@ -580,12 +587,6 @@ var copy = {
   liveMap: {
     fullRoute: "Full route",
     nearMe: "Near me"
-  },
-  leaveNowBanner: {
-    app: "Just-In-Time",
-    now: "now",
-    viewDetails: "View details",
-    dismiss: "Dismiss"
   },
   quality: {
     stale: {

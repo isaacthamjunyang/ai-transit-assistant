@@ -86,7 +86,7 @@ def test_leave_by_passing_between_two_polls_flips_the_tile_the_card_the_chip_the
             assert row["tile"] == row["expectedClock"] and (" (tomorrow)" in row["tile"]) == row["expectedClock"].endswith("(tomorrow)")
         assert (" Leave now to reach your stop in " in row["card"]) == leave_now and (" Leave by " in row["card"]) == (not leave_now), row
         assert row["action"] == ("leave_now" if leave_now else "wait")
-        assert row["banner"] is leave_now and row["notifications"] == (1 if leave_now else 0), (seconds, row)
+        assert row["notifications"] == (1 if leave_now else 0), (seconds, row)
         assert row["paceSlotShown"] is True, (seconds, row)  # the pace chip is on Page A in every action
         # the walk line under the pace chip: one short line, the walk minutes the AI sentence states
         assert re.fullmatch(r"\d+\u00a0min walk", row["detail"]), row

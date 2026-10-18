@@ -83,8 +83,9 @@ def test_start_journey_shows_a_loading_state_then_decides_once():
     for name in ("handleEmptyBuses", "showFirstFailure", "freezeStale"):
         assert "resolveEntry(null)" in _function(name), name
     assert "resolveEntry(body)" in _function("applySuccess")
-    # The decision is the only automatic way into Page C, and it never navigates afterwards.
-    assert HTML.count('openPageC("unlikely")') == 1  # the decision only: the banner has no button now
+    # Page A shows at every probability: there is no automatic way into Page C, and nothing navigates by itself.
+    assert 'openPageC("unlikely")' not in HTML and "openPageC(" not in resolve
+    assert HTML.count('openPageC("other")') == 1  # only the Other bus options button opens it
     assert "openPageC(" not in _function("applySuccess") and "openPageC(" not in _function("renderUnlikelyBanner")
     assert "pushScreen" not in resolve and "pushScreen" not in _function("renderUnlikelyBanner")
 
@@ -96,35 +97,32 @@ def test_a_later_change_shows_only_the_compact_banner_and_it_clears():
     assert "CURRENT_WARNING_TEXT" in banner and "probabilityText" not in banner  # the banner is just the sentence
     order = between(HTML, "var occupants = [", "];")
     ids = re.findall(r'byId\("([a-z-]+)"\)', order)
-    assert ids.index("end-card") < ids.index("unlikely-banner") < ids.index("leave-now-banner") < ids.index("reroute-block") < ids.index("catch-warning")
+    assert ids.index("end-card") < ids.index("unlikely-banner") < ids.index("reroute-block") < ids.index("catch-warning")
+    assert "leave-now-banner" not in HTML  # the in-app Leave now banner is gone
     assert "catch-warning" in HTML and "Tap to enable Leave-Now Alert." in HTML  # the existing banner is untouched
 
 
-def test_becoming_catchable_on_page_c_hides_the_warning_and_does_not_navigate():
-    update = _function("updatePageCCurrent")
-    assert 'getElementById("pc-warn").hidden = !(usable && isUnlikely(hero))' in update
-    assert "pushScreen" not in update and "closePageC" not in update
-
+def test_there_is_no_current_bus_card_code_left():
+    for gone in ("updatePageCCurrent", "pc-warn", "pc-title", "pc-see-arrivals", "reroute-current", "setCatchSub", "CATCH_HEADING_PAGE_C_TEXT"):
+        assert gone not in HTML, gone
 
 # ---- Page C layouts --------------------------------------------------------------------
 
-def test_unlikely_entry_has_the_current_bus_card_first_and_no_page_a_cards():
+def test_page_c_has_no_current_bus_card_and_no_page_a_cards():
     page_c = between(HTML, 'id="page-c"', 'id="arrival-card"')
-    assert page_c.index('id="reroute-current"') < page_c.index('id="reroute-proposal"') < page_c.index('id="reroute-cards"')
-    for text in ("Catching this bus is unlikely.", "See bus arrival times", 'id="pc-pill"', 'id="pc-ring"'):
-        assert text in page_c
+    assert 'id="reroute-current"' not in page_c and page_c.index('id="reroute-proposal"') < page_c.index('id="reroute-cards"')
+    for text in ("Chance to catch your Bus", "Bus arrives", "See bus arrival times", 'id="pc-ring"'):
+        assert text not in page_c, text
     hidden = between(CSS, "body.is-page-c #arrival-card,", "{")
     for needed in ("#pace-slot", "#leave-tiles", "#ai-explanation", "#see-arrivals-bar", "#unlikely-banner", "#catch-warning"):
         assert needed in hidden, needed
 
-
-def test_missed_entry_has_no_current_bus_card_and_the_banner_leads():
+def test_each_entry_has_its_banner_leading_the_page():
     render = _function("renderPageC")
-    assert 'document.getElementById("reroute-current").hidden = !unlikelyEntry' in render
-    assert 'pageC.entry === "missed" && !!noticeText' in render
+    assert 'pageC.entry === "other"' in render and "OTHER_OPTIONS_TEXT" in render and "var showNotice = !!pageC && !!noticeText;" in render
+    assert 'var OTHER_OPTIONS_TEXT = "Here are your other options.";' in HTML and 'otherOptions: "Here are your other options."' in COPY
     assert 'rerouteNotice = BUS_LEFT_NOTICE.replace("{service}", service || "")' in _function("answerMissed")
     assert HTML.index('id="reroute-notice"') < HTML.index('id="reroute-cards"')
-
 
 def test_nothing_eligible_shows_the_current_card_the_no_better_card_and_the_list_without_ai():
     render = _function("renderPageC")
@@ -137,15 +135,13 @@ def test_nothing_eligible_shows_the_current_card_the_no_better_card_and_the_list
 
 
 def test_every_probability_names_its_bus_and_appears_once_per_option():
-    for text in ("Chance to catch Bus {service}", "Chance to catch your Bus {service}"):
-        assert text in HTML and text in COPY, text
-    assert "Chance to catch current Bus" not in HTML + COPY
+    assert "Chance to catch Bus {service}" in HTML and "Chance to catch Bus {service}" in COPY
+    assert "Chance to catch your Bus" not in HTML + COPY and "Chance to catch current Bus" not in HTML + COPY
     assert "Arriving in {n} min" in HTML and "Arriving in {n} min" in COPY
     heading = _function("catchHeading")
     assert "LEG2" not in heading and "CATCH_HEADING_TEXT" in heading
-    assert 'getElementById("catch-title").textContent = catchHeading(false)' in _function("renderCatchCard")
-    assert 'getElementById("pc-title").textContent = catchHeading(true)' in _function("updatePageCCurrent")
-    assert "renderCatchHeading(hero)" in _function("renderCatchCard") and 'setCatchSub("pc", hero)' in _function("updatePageCCurrent")
+    assert 'getElementById("catch-title").textContent = catchHeading()' in _function("renderCatchCard")
+    assert "renderCatchHeading(hero)" in _function("renderCatchCard")
     assert 'aria-label", ringLabel(chance,' in _function("setRing")
     card = _function("buildOptionCard")
     assert "optionHeading(row)" in card and "busBadge(row.service_no)" in _function("optionHeading") and "Catch probability" not in card and card.count("buildLargeRing(row)") == 1
@@ -418,7 +414,7 @@ def test_back_keeps_the_confirm_while_polling_and_skips_it_after_no():
 
 def test_polls_while_page_c_is_open_ask_the_server_to_skip_the_reroute_evaluation():
     request = _function("requestArrivals")
-    assert 'pageC && pageC.entry === "unlikely"' in request and '"&reroute=0"' in request
+    assert 'pageC && pageC.entry === "other"' in request and '"&reroute=0"' in request
 
 
 def test_a_switch_from_page_c_decides_again_for_the_new_bus():
@@ -451,29 +447,17 @@ def test_the_muted_line_and_the_ring_label_follow_the_agreed_wording():
     assert got["nowLabel"] == "about 92 percent chance of catching Bus 11 arriving now at Tanjong Rhu Stn Exit 2"
 
 
-def test_the_stop_line_truncates_on_one_line_with_the_full_name_in_a_title__():
-    sub = _function("setCatchSub")
-    assert 'var stop = boardingStopName();' in sub
-    assert 'stopEl.setAttribute("title", stop)' in sub
-    assert "sepEl.hidden = !(eta && stop)" in sub and 'document.getElementById(prefix + "-sub").hidden = !(eta || stop)' in sub
-    rule = between(CSS, ".catch-card__sub {", "}")
-    assert "white-space: nowrap" in rule and "min-width: 0" in rule
-    stop = between(CSS, ".catch-card__stop {", "}")
-    assert "overflow: hidden" in stop and "text-overflow: ellipsis" in stop and "min-width: 0" in stop
-    assert "flex: 0 0 auto" in between(CSS, ".catch-card__eta,", "}")
-    assert 'id="pc-sub-stop"' in HTML and 'id="pc-sub-eta"' in HTML
+def test_the_old_muted_line_is_gone_and_the_ring_label_keeps_its_wording():
+    assert "setCatchSub" not in HTML and ".catch-card__sub {" not in CSS and ".catch-card__stop {" not in CSS
     assert 'id="catch-sub" class="catch-card__sub-line"' in HTML  # Layout B: Page A's muted line is a train's line name
-    assert "Arriving in {n} min" in COPY and "Chance to catch your Bus {service}" in COPY
+    assert "Arriving in {n} min" in COPY and "Chance to catch your Bus {service}" not in COPY
     assert 'ringLabel: "about {p} percent chance of catching Bus {service}{eta}{at}"' in COPY
-
 
 def test_the_pill_shares_a_row_with_the_heading_and_the_heading_wraps_instead_of_overlapping():
     assert "position: absolute" not in between(CSS, ".catch-card__pill {", "}")
     head = between(CSS, ".catch-card__head {", "}")
     assert "display: flex" in head and "justify-content: space-between" in head
     assert "min-width: 0" in between(CSS, ".catch-card__heading {", "}")  # the heading shrinks and wraps beside the pill
-    after = HTML.split('id="pc-title"', 1)[1].split('<div class="catch-card__row">', 1)[0]
-    assert after.index('id="pc-pill"') < after.index('id="pc-sub"')  # head row (title, pill), then the muted line
     status = HTML.split('id="catch-arrives"', 1)[1].split("</p>", 1)[1].split("</p>", 1)[0]
     assert 'id="catch-pill"' in status  # on Page A the pill is its own row, after the clock time
 

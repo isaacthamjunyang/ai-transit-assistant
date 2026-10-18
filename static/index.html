@@ -69,6 +69,7 @@
     <button type="button" class="icon-button back-bar__button" id="back-home" aria-label="Back">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
     </button>
+    <button type="button" class="primary skip-stop pulse-button" id="skip-stop" hidden><span>Skip: Let us plan your route</span></button>
   </div>
   <div class="wrap wrap--notices">
     <div id="demo-banner" class="alert alert--simulated" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">SIMULATED DEMO MODE</p></div>
@@ -216,13 +217,14 @@
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 11v6M12 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
           </button>
         </div>
-        <p id="dest-stops-note" class="info-popover" role="note" hidden>Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km. The first is pre-selected.</p>
+        <p id="dest-stops-note" class="info-popover" role="note" hidden>Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km.</p>
         <div id="destination-stop-status" class="alert alert--neutral" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><p id="destination-stop-status-text" class="alert__text"></p></div>
         <ul id="reachable-stops" class="destination-stop-list"></ul>
         <h3 id="other-destination-stops" hidden>Other stops within 600m (No direct service)</h3>
         <ul id="unreachable-stops" class="destination-stop-list" hidden></ul>
         <div class="dest-sheet__footer">
-          <button type="button" id="select-destination-stop" class="primary primary--icon pulse-button" disabled>
+          <div id="select-stop-error" class="alert alert--error" role="alert" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Choose a stop or station first.</p></div>
+          <button type="button" id="select-destination-stop" class="primary primary--icon">
             <span>Select stop</span>
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           </button>
@@ -244,8 +246,8 @@
             </span>
           </div>
         </div>
-        <hr class="hairline">
-        <div class="summary-section">
+        <hr class="hairline" id="confirm-stop-rule">
+        <div class="summary-section" id="confirm-stop-section">
           <div class="summary-head">
             <h3 class="summary-head__title" id="confirm-stop-heading">Destination stop</h3>
             <button type="button" class="link-button" id="edit-destination-stop" aria-label="Edit destination stop">Edit</button>
@@ -287,6 +289,7 @@
           </div>
           <div id="overview-fallback-note" class="alert alert--info" hidden><span class="alert__icon" aria-hidden="true"></span><p id="overview-fallback-note-text" class="alert__text"></p></div>
           <div id="overview-priority-note" class="alert alert--info" hidden><span class="alert__icon" aria-hidden="true"></span><p id="overview-priority-note-text" class="alert__text"></p></div>
+          <div id="overview-destination-note" class="alert alert--info" hidden><span class="alert__icon" aria-hidden="true"></span><p id="overview-destination-note-text" class="alert__text"></p></div>
         </div>
         <div id="overview-summary" class="overview-summary" role="group" aria-label="" hidden>
           <p class="overview-summary__cell"><span class="overview-summary__label">Total time</span><span id="summary-time" class="overview-summary__value"></span></p>
@@ -405,7 +408,6 @@
       </section>
       <section id="location-card" class="alert-occupant is-suppressed alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><h3 id="location-card-title" class="alert__text"></h3><p id="location-card-body" class="alert__detail"></p></div></section>
       <div id="unlikely-banner" class="alert-occupant is-suppressed alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p id="unlikely-banner-title" class="alert__text">Catching this bus is unlikely.</p></div>
-      <section id="leave-now-banner" class="alert-occupant is-suppressed alert alert--info" aria-labelledby="leave-now-title" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p class="alert__meta"><span>Just-In-Time</span> &middot; <span>now</span></p><h3 id="leave-now-title" class="alert__text"></h3><p id="leave-now-body" class="alert__detail"></p><p id="leave-now-simulated" class="simulated-badge" hidden>[SIMULATED]</p><div class="alert__actions"><button type="button" id="leave-now-details" class="primary">View details</button><button type="button" id="leave-now-dismiss" class="secondary">Dismiss</button></div></div></section>
       <div id="reroute-block" class="alert-occupant is-suppressed reroute-block" hidden>
         <div id="reroute-card" class="alert alert--success" hidden><span class="alert__icon" aria-hidden="true"></span><div class="alert__body"><p id="reroute-simulated" class="simulated-badge" hidden>[SIMULATED]</p><h3 id="reroute-title" class="alert__text"></h3><p id="reroute-message" class="alert__detail"></p><p id="reroute-probability" class="alert__detail"></p></div></div>
       </div>
@@ -422,26 +424,6 @@
       <button type="button" id="train-missed-plan-new" class="primary">Plan a new journey</button>
     </section>
     <section id="page-c" class="page-c" aria-label="Other buses" hidden>
-      <section id="reroute-current" class="card catch-card page-c-current" aria-live="polite" hidden>
-        <div class="catch-card__head">
-        <div class="catch-card__heading">
-          <p id="pc-title" class="catch-card__title"></p>
-        </div>
-        <span id="pc-pill" class="pill pill--live catch-card__pill"><span class="pill__dot" aria-hidden="true"></span><span id="pc-pill-text">live</span></span>
-      </div>
-      <p id="pc-sub" class="catch-card__sub"><span id="pc-sub-eta" class="catch-card__eta"></span><span id="pc-sub-sep" class="catch-card__sep" aria-hidden="true"> · </span><span id="pc-sub-stop" class="catch-card__stop"></span></p>
-      <div class="catch-card__row">
-          <div id="pc-ring" class="prob-ring" role="img" aria-label="Catch probability unavailable">
-            <svg class="prob-ring__svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="prob-ring__track" cx="50" cy="50" r="43" pathLength="100"></circle><circle id="pc-ring-value" class="prob-ring__value" cx="50" cy="50" r="43" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 50 50)"></circle></svg>
-            <span id="pc-ring-text" class="prob-ring__text"></span>
-          </div>
-          <div class="catch-card__copy">
-            <p id="pc-arrives" class="catch-card__arrives" hidden><span class="catch-card__arrives-label">Bus arrives</span><span id="pc-arrives-time" class="catch-card__arrives-time"></span></p>
-              </div>
-        </div>
-        <div id="pc-warn" class="alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p id="pc-warn-text" class="alert__text">Catching this bus is unlikely. Here are your other options.</p></div>
-        <button type="button" id="pc-see-arrivals" class="secondary">See bus arrival times</button>
-      </section>
       <div id="reroute-proposal" class="reroute-proposal">
         <div id="reroute-notice" class="alert alert--info" role="status" hidden><span class="alert__icon" aria-hidden="true"></span><p id="reroute-notice-text" class="alert__text"></p></div>
         <div id="reroute-loading" class="card page-c-skeleton" aria-busy="true" aria-label="Finding other buses" hidden>
@@ -634,9 +616,10 @@
     </div>
   </main>
   <div id="see-arrivals-bar" class="catch-bar catch-bar--single" hidden>
-    <button type="button" id="see-arrivals" class="primary primary--icon pulse-button"><span>See bus arrival times</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
-    <div id="other-bus-actions" class="other-bus-actions saved-panel__actions saved-panel__actions--form">
-      <button type="button" id="other-bus-options" class="primary"><span>Other bus options</span></button>
+    <div id="unlikely-bar-alert" class="alert alert--warning" hidden><span class="alert__icon" aria-hidden="true"></span><p class="alert__text">Catching this bus is unlikely.</p></div>
+    <button type="button" id="see-arrivals" class="primary primary--icon"><span>See bus arrival times</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+    <div id="other-bus-actions" class="other-bus-actions">
+      <button type="button" id="other-bus-options" class="primary primary--icon"><span>Other bus options</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
     </div>
   </div>
   <div id="first-run" class="first-run" role="dialog" aria-modal="true" aria-label="How it works" hidden>
@@ -736,7 +719,6 @@
     var fiveMinuteNotifiedKey = null;
     var leaveNowTimer = null;
     var leaveNowScheduleKey = null;
-    var leaveNowBanner = { busId: null, shown: false };
     var dataUnavailable = false;
     var lastQualityState = "";
     var missedRecheckBusId = null;
@@ -1207,7 +1189,6 @@
       lastSuccess = null;
       displayFrozen = false;
       dataUnavailable = false;
-      hideLeaveNowBanner();
       resetTrackingState();
       lastMeter = null;
       lastHeroKey = "";
@@ -1413,7 +1394,9 @@
         }
       }
       if (confirmedDestinationStop && selectedDestination) {
-        url += "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code);
+        if (destStopCode()) {
+          url += "&destination_stop_code=" + encodeURIComponent(destStopCode());  // after Skip with no planned bus leg it is left out
+        }
         url += "&dest_lat=" + encodeURIComponent(selectedDestination.latitude);
         url += "&dest_lon=" + encodeURIComponent(selectedDestination.longitude);
         if (arriveByInput.value) {
@@ -1450,7 +1433,7 @@
           }
         }
       }
-      if (pageC && pageC.entry === "unlikely") {
+      if (pageC && pageC.entry === "other") {
         url += "&reroute=0";
       }
       url += walkSpeedQuery() + trainQuery();
@@ -2203,9 +2186,6 @@
       var warned = state === "stale" || state === "unavailable";
       banner.hidden = !warned;
       status.hidden = state === "";
-      if (state !== "") {
-        hideLeaveNowBanner();
-      }
       if (warned) {
         var iso = state === "stale" && lastSuccess && lastSuccess.fetched_at ? lastSuccess.fetched_at : "";
         var age = relativeAge(iso);
@@ -2431,7 +2411,8 @@
       });
       destMarkersByCode = {};
       destLayer.clearLayers();
-      document.getElementById("select-destination-stop").disabled = true;
+      document.getElementById("select-stop-error").hidden = true;
+      syncStopPulse();
       updateStepRail();
     }
 
@@ -2906,6 +2887,7 @@
       return {
         stop_code: stop.stop_code,
         stop_name: stop.stop_name,
+        skipped: stop.skipped === true,
         road_name: stop.road_name,
         lat: stop.lat,
         lon: stop.lon,
@@ -2945,13 +2927,56 @@
       }
       selectedDestinationStop = copyDestinationStop(stop);
       highlightDestinationStop(stop.stop_code);
-      document.getElementById("select-destination-stop").disabled = false;
+      syncStopPulse();  // a row is chosen: Skip stops pulsing and Select stop starts; the error goes
+    }
+
+    // The pulse goes to the button to press: Skip while no row is chosen, Select stop once one is. The shared class is moved, so the
+    // CSS rules (disabled, hidden, pressed, keyboard focus, reduced motion) apply to both unchanged.
+    function syncStopPulse() {
+      var chosen = !!selectedDestinationStop && !!selectedDestinationStop.stop_code;
+      document.getElementById("select-destination-stop").classList.toggle("pulse-button", chosen);
+      document.getElementById("skip-stop").classList.toggle("pulse-button", !chosen);
+      if (chosen) {
+        document.getElementById("select-stop-error").hidden = true;
+      }
     }
 
     function chooseDestinationStop(stop) {
       selectDestinationStop(stop);
       map.panInside([stop.lat, stop.lon], { paddingTopLeft: [56, 96], paddingBottomRight: [72, 80] });
       layoutDestinationLabels();
+    }
+
+    // Skip: the searched place stays the destination with no stop or station chosen. The planner ends at the place's own point.
+    function destinationSkipped() {
+      var stop = confirmedDestinationStop || selectedDestinationStop;
+      return !!stop && stop.skipped === true;
+    }
+
+    // The bus stop code the stop-based calls need: the chosen stop, or after Skip the last bus leg's alighting stop of the planned
+    // route (never shown to the user), else "" (the call is left out or not made).
+    function destStopCode() {
+      if (!confirmedDestinationStop) {
+        return "";
+      }
+      if (confirmedDestinationStop.stop_code) {
+        return confirmedDestinationStop.stop_code;
+      }
+      var legs = activeRoutePlan && Array.isArray(activeRoutePlan.legs) ? activeRoutePlan.legs : (pendingItinerary && Array.isArray(pendingItinerary.legs) ? pendingItinerary.legs : []);
+      for (var i = legs.length - 1; i >= 0; i -= 1) {
+        if (legs[i] && legs[i].kind === "bus" && legs[i].alighting_stop_code) {
+          return legs[i].alighting_stop_code;
+        }
+      }
+      return "";
+    }
+
+    function skipDestinationStop() {
+      if (!selectedDestination) {
+        return;
+      }
+      selectedDestinationStop = { stop_code: "", stop_name: "", skipped: true, kind: "bus", connecting_services: [], station_codes: [] };
+      openDestinationConfirm();
     }
 
     function openDestinationConfirm() {
@@ -2965,6 +2990,13 @@
       var addressEl = document.getElementById("confirm-place-address");
       addressEl.textContent = address;
       addressEl.hidden = address === "";
+      var skipped = selectedDestinationStop.skipped === true;
+      document.getElementById("confirm-stop-section").hidden = skipped;  // after Skip there is no Destination stop row
+      document.getElementById("confirm-stop-rule").hidden = skipped;
+      if (skipped) {
+        pushScreen("confirm");
+        return;
+      }
       var stationChosen = destKind(selectedDestinationStop) === "station";
       document.getElementById("confirm-stop-heading").textContent = stationChosen ? DEST_STATION_HEADING : DEST_BUS_HEADING;
       document.getElementById("edit-destination-stop").setAttribute("aria-label", stationChosen ? DEST_STATION_EDIT : DEST_BUS_EDIT);
@@ -3092,7 +3124,7 @@
       reachableStopList.replaceChildren();
       unreachableStopList.replaceChildren();
       showDestinationPin();
-      // One list: bus stops and stations together, nearest walk first. The first row is chosen for you and says Best option.
+      // One list: bus stops and stations together, nearest walk first. No row is chosen for you; the nearest says Best option.
       var all = Array.isArray(body.candidates) ? body.candidates : body.reachable_stops.concat(body.unreachable_stops);
       var bestCode = Array.isArray(body.candidates) ? (all[0] ? all[0].stop_code : "") : bestDestinationStopCode(body.reachable_stops);
       all.forEach(function (stop) {
@@ -3102,9 +3134,6 @@
         addDestinationWalkLine(stop);
         addDestinationMarker(stop);
       });
-      if (Array.isArray(body.candidates) && all.length) {
-        selectDestinationStop(all[0]);
-      }
       if (body.no_service && !all.some(function (stop) { return destKind(stop) === "station"; })) {
         setDestinationStopStatus("No service to this destination right now.", "caution");
       } else if (all.length === 0) {
@@ -3928,7 +3957,7 @@
       if (screenStack[screenStack.length - 1] === "journey") {
         return;
       }
-      if (!confirmedDestinationStop || !selectedBoardingStop || !selectedDestination) {
+      if (!confirmedDestinationStop || !selectedBoardingStop || !selectedDestination || !destStopCode()) {
         renderPlanningWarning(null);
         return;
       }
@@ -3936,7 +3965,7 @@
         return;
       }
       var url = "/api/route-plan?boarding_stop_code=" + encodeURIComponent(selectedBoardingStop.stop_code)
-        + "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code)
+        + "&destination_stop_code=" + encodeURIComponent(destStopCode())
         + "&user_lat=" + encodeURIComponent(userLat)
         + "&user_lon=" + encodeURIComponent(userLon)
         + "&dest_lat=" + encodeURIComponent(selectedDestination.latitude)
@@ -4073,7 +4102,7 @@
 
     function loadJourney() {
       syncArriveBySummary();
-      if (!confirmedDestinationStop || !selectedDestination) {
+      if (!confirmedDestinationStop || !selectedDestination || !destStopCode()) {
         return;
       }
       if (userLat === null || userLon === null) {
@@ -4089,7 +4118,7 @@
         + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude)
         + "&user_lat=" + encodeURIComponent(userLat)
         + "&user_lon=" + encodeURIComponent(userLon)
-        + "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code);
+        + "&destination_stop_code=" + encodeURIComponent(destStopCode());
       if (selectedBoardingStop && selectedBoardingStop.stop_code) {
         url += "&boarding_stop_code=" + encodeURIComponent(selectedBoardingStop.stop_code);
       }
@@ -4147,7 +4176,7 @@
     }
 
     confirmDestinationStop.addEventListener("click", function () {
-      if (!selectedDestinationStop || !selectedDestinationStop.stop_code) {
+      if (!selectedDestinationStop || (!selectedDestinationStop.stop_code && selectedDestinationStop.skipped !== true)) {
         return;
       }
       if (arriveByChoice === "arrive-custom") {
@@ -4161,7 +4190,7 @@
       resetExplanationState();
       confirmedDestinationStop = copyDestinationStop(selectedDestinationStop);
       journeyPlace.textContent = "Destination: " + (selectedDestination ? (selectedDestination.label_display || selectedDestination.label) : "");
-      journeyStop.textContent = displayStopName(confirmedDestinationStop.stop_name);
+      journeyStop.textContent = confirmedDestinationStop.skipped ? "" : displayStopName(confirmedDestinationStop.stop_name);
       renderNotificationPermission();
       if (lastSuccess) {
         syncLeaveNow(lastSuccess);
@@ -4287,7 +4316,6 @@
 
     function clearLeaveNowState() {
       clearLeaveNowTimer();
-      hideLeaveNowBanner();
       lastNotifiedBusId = null;
       missedRecheckBusId = null;
     }
@@ -4405,50 +4433,6 @@
       requestArrivals(monitorGeneration);
     }
 
-    function showLeaveNowBanner(busId, notice, body) {
-      var banner = document.getElementById("leave-now-banner");
-      if (!banner) {
-        return;
-      }
-      document.getElementById("leave-now-title").textContent = notice.title;
-      document.getElementById("leave-now-body").textContent = notice.body;
-      markSimulated("leave-now-simulated", !!(body && body.simulated === true));
-      leaveNowBanner = { busId: busId, shown: true };
-      banner.hidden = false;
-      banner.setAttribute("role", "alert");
-      syncAlertSlot();
-    }
-
-    function hideLeaveNowBanner() {
-      var banner = document.getElementById("leave-now-banner");
-      leaveNowBanner = { busId: leaveNowBanner.busId, shown: false };
-      if (!banner || banner.hidden) {
-        return;
-      }
-      banner.hidden = true;
-      banner.removeAttribute("role");
-      syncAlertSlot();
-    }
-
-    function leaveNowStillHolds(body) {
-      if (journeyPanel.hidden || !monitoringActive || !body || body.status !== "ok" || arrivalsBlockLeaveNow()) {
-        return false;
-      }
-      var notice = body.leave_now || {};
-      var primary = primaryBus(body);
-      if (!primary || primary.is_missed || etaIsMissed(primary.arrival_time)) {
-        return false;
-      }
-      var chance = primary.probability;
-      return notice.eligible === true
-        && notice.bus_id === leaveNowBanner.busId
-        && !!chance
-        && chance.at_stop !== true
-        && chance.data_quality !== "location uncertain"
-        && typeof chance.range_high === "number"
-        && chance.range_high >= 40;
-    }
-
     function deliverLeaveNow(busId) {
       if (journeyPanel.hidden || !monitoringActive || !lastSuccess || lastSuccess.status !== "ok") {
         return;
@@ -4489,7 +4473,6 @@
         }
       }
       lastNotifiedBusId = busId;
-      showLeaveNowBanner(busId, notice, lastSuccess);
     }
 
     function fiveMinuteLockKey() {
@@ -4542,12 +4525,11 @@
       fiveMinuteNotifiedKey = key;
     }
 
-    // At the stop there is nothing to walk to: no Leave now banner, no timer. Only a poll can start one (Q5).
+    // At the stop there is nothing to walk to: no Leave now notification, no timer. Only a poll can start one (Q5).
     function suppressLeaveNowAtStop(body) {
       var primary = body ? primaryBus(body) : null;
       if (primary && primary.probability && primary.probability.at_stop === true) {
         clearLeaveNowTimer();
-        hideLeaveNowBanner();
       }
     }
 
@@ -4555,11 +4537,7 @@
       if (isTrain()) {
         // a train has no leave-now notification and no "5 minutes left" (plan_edits_9 Q12)
         clearLeaveNowTimer();
-        hideLeaveNowBanner();
         return;
-      }
-      if (leaveNowBanner.shown && !leaveNowStillHolds(body)) {
-        hideLeaveNowBanner();
       }
       if (journeyPanel.hidden || !monitoringActive) {
         clearLeaveNowTimer();
@@ -4634,10 +4612,20 @@
       var chance = bus && bus.probability;
       var legOne = activeRoutePlan && activeRoutePlan.leg_index === 1 && !displayFrozen && !isTrain();
       if (legOne && chance && typeof chance.point === "number" && chance.point < 50 && !bus.is_missed) {
-        setAlertText(banner, "⚠ Catch chance dropping (" + chance.point + "%). Tap to enable Leave-Now Alert.");
+        setAlertText(banner, cautionText(chance.point));
         return;
       }
       banner.hidden = true;
+    }
+
+    var CAUTION_BANNER_TEXT = "⚠ Catch chance dropping ({point}%). Tap to enable Leave-Now Alert.";  // MIRROR: copy.js cautionBanner
+    var CAUTION_BANNER_GRANTED_TEXT = "⚠ Catch chance dropping ({point}%).";  // MIRROR: copy.js cautionBannerGranted
+
+    // With notification permission already granted the alert is set, so the sentence about enabling it goes. The state is read from
+    // Notification.permission, which never prompts (an unsupported browser counts as not granted).
+    function cautionText(point) {
+      var granted = typeof Notification === "function" && Notification.permission === "granted";
+      return fillText(granted ? CAUTION_BANNER_GRANTED_TEXT : CAUTION_BANNER_TEXT, { point: point });
     }
 
     function haversineMetres(lat1, lon1, lat2, lon2) {
@@ -5143,7 +5131,8 @@
     // "Edit destination" (the overview's rows and empty states, and the confirm page): back to the search results when the user came
     // through them, else to the destination stops page. A saved place goes straight to the stops, so "results" is not in the stack.
     function editDestination() {
-      backToScreen(screenStack.indexOf("results") !== -1 ? "results" : "stops");
+      // After Skip the stops page is where to choose again; otherwise the search results when the user came through them
+      backToScreen(destinationSkipped() || screenStack.indexOf("results") === -1 ? "stops" : "results");
     }
 
     function backToScreen(name) {
@@ -5263,6 +5252,10 @@
         return;
       }
       bar.hidden = screenStack[screenStack.length - 1] === "home";
+      var skip = document.getElementById("skip-stop");
+      if (skip) {
+        skip.hidden = screenStack[screenStack.length - 1] !== "stops";  // beside Back, on the destination stops page only
+      }
     }
 
     function pushScreen(name) {
@@ -5344,6 +5337,11 @@
         goHome();
         return;
       }
+      if (pageC && pageC.entry === "other") {
+        closePageC();  // Page C after "Other bus options" goes back to Page A, tracking kept
+        window.scrollTo(0, 0);
+        return;
+      }
       if (monitoringActive && !returnsWithoutConfirm()) {
         pendingLeaveAction = "back";
         openLeaveDialog();
@@ -5395,6 +5393,7 @@
     }
 
     document.getElementById("edit-destination").addEventListener("click", editDestination);
+    document.getElementById("skip-stop").addEventListener("click", skipDestinationStop);
     document.getElementById("edit-destination-stop").addEventListener("click", function () {
       backToScreen("stops");
     });
@@ -5926,9 +5925,11 @@
     });
     document.getElementById("home-button").addEventListener("click", requestHome);
     document.getElementById("select-destination-stop").addEventListener("click", function () {
-      if (!this.disabled) {
-        openDestinationConfirm();
+      if (!selectedDestinationStop || !selectedDestinationStop.stop_code) {
+        document.getElementById("select-stop-error").hidden = false;  // nothing chosen: stay here and say so
+        return;
       }
+      openDestinationConfirm();
     });
     document.getElementById("leave-leave").addEventListener("click", confirmLeave);
     window.addEventListener("popstate", function (event) {
@@ -6040,6 +6041,7 @@
     var JO_NO_MRT_CLOSED = "MRT and LRT services have stopped for now. Try another priority.";
     var JO_NEEDS_ROUTE_SERVICE = "Needs the route service.";
     var JO_FALLBACK_NOTE = "Showing bus routes only. The route service is unavailable.";
+    var JO_DESTINATION_FALLBACK = "No route to {stop}. Showing a route to {place}.";
     var JO_RIDE_DISTANCE = "About {km} km in a straight line";
     var LINE_NAMES = {
       NS: "North-South Line", EW: "East-West Line", CG: "Changi Airport Branch", NE: "North-East Line",
@@ -6112,12 +6114,14 @@
       plannedArriveBy = arriveByInput.value || "";
       var url = "/api/journey-plan?user_lat=" + encodeURIComponent(userLat)
         + "&user_lon=" + encodeURIComponent(userLon)
-        + "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code)
+        + (destinationSkipped() ? "" : "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code))
         + "&dest_lat=" + encodeURIComponent(selectedDestination.latitude)
         + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude);
       // The planner ends at the chosen stop or station (its own point); the walk from there to the place is added by the server.
+      // After Skip there is no stop, so it ends at the place itself.
       if (typeof confirmedDestinationStop.lat === "number" && typeof confirmedDestinationStop.lon === "number") {
         url += "&end_lat=" + encodeURIComponent(confirmedDestinationStop.lat) + "&end_lon=" + encodeURIComponent(confirmedDestinationStop.lon);
+        url += "&end_name=" + encodeURIComponent(displayStopName(confirmedDestinationStop.stop_name));
       }
       if (arriveByInput.value) {
         url += "&arrive_by=" + encodeURIComponent(arriveByInput.value);
@@ -6736,6 +6740,23 @@
       return legItem(leg, when, busRow(leg, live), whenClass);
     }
 
+    // A walk row: "Walk {n} min" with its lines. The minutes it shows are kept on the row itself, so the summary's Walking figure is the
+    // sum of the rows that are on screen (displayedWalkMinutes), with the very rounding each row used.
+    function walkStep(kind, minutes, lines, edit) {
+      var item = stepItem(kind, fillText(JO_WALK_ROW, { n: minutes }), lines, edit);
+      item.setAttribute("data-walk-minutes", String(minutes));
+      return item;
+    }
+
+    // The one place the Walking figure comes from: the first walk, the change walks and the final walk that the list shows.
+    function displayedWalkMinutes(list) {
+      var total = 0;
+      Array.prototype.forEach.call(list.querySelectorAll("[data-walk-minutes]"), function (row) {
+        total += Number(row.getAttribute("data-walk-minutes")) || 0;
+      });
+      return total;
+    }
+
     // The change between two transit legs is a plain walk row: "Walk {n} min" and "{distance} to {stop}", whatever
     // the two modes. No wait time. With no walk from OneMap there is no row (the bus planner's own transfer distance is
     // used when it has one and OneMap gave none).
@@ -6750,7 +6771,7 @@
       if (!walks.length && !(metres > 0)) {
         return null;
       }
-      return stepItem(done ? "done" : "walk", fillText(JO_WALK_ROW, { n: walkMinutes(metres) }), [
+      return walkStep(done ? "done" : "walk", walkMinutes(metres), [
         stepLine(fillText(JO_WALK_ROW_TO, {
           distance: formatDistance(metres),
           place: stopLabel(next.boarding_stop_name, next.boarding_stop_code, next)
@@ -6764,16 +6785,16 @@
       walks.forEach(function (walk) {
         metres += walk.distance_m || 0;
       });
-      var edit = { label: "Edit destination stop", action: function () { backToScreen("stops"); } };
+      var edit = destStop && destStop.skipped ? null : { label: "Edit destination stop", action: function () { backToScreen("stops"); } };
       var kind = done ? "done" : "walk";
       if (metres > 0) {
-        return stepItem(kind, fillText(JO_WALK_ROW, { n: walkMinutes(metres) }),
+        return walkStep(kind, walkMinutes(metres),
           [stepLine(fillText(JO_WALK_ROW_TO, { distance: formatDistance(metres), place: destinationDisplayName() }))], edit);
       }
       if (destStop && typeof destStop.walk_minutes === "number") {
-        return stepItem(kind, fillText(JO_WALK_ROW, { n: destStop.walk_minutes }), [stepLine("To " + destinationDisplayName())], edit);
+        return walkStep(kind, destStop.walk_minutes, [stepLine("To " + destinationDisplayName())], edit);
       }
-      return destStop ? stepItem(kind, "", [stepLine(displayStopName(destStop.stop_name))], edit) : null;
+      return destStop && !destStop.skipped ? stepItem(kind, "", [stepLine(displayStopName(destStop.stop_name))], edit) : null;
     }
 
     // A whole duration: "{n} min" under an hour, "{h} hr {m} min" from an hour, "{h} hr" on the hour.
@@ -7024,7 +7045,7 @@
         stepLine("Your current location", "journey-step__title")
       ], null));
       if (toBoard !== null) {
-        list.appendChild(stepItem("walk", fillText(JO_WALK_ROW, { n: walkMinutes(toBoard) }), [
+        list.appendChild(walkStep("walk", walkMinutes(toBoard), [
           stepLine(fillText(JO_WALK_ROW_TO, {
             distance: formatDistance(toBoard),
             place: stopLabel(firstTransit.boarding_stop_name, firstTransit.boarding_stop_code, firstTransit)
@@ -7051,6 +7072,11 @@
         list.appendChild(transitRow(leg, position, position === 0 && !legIsRail(leg) ? liveDataFor(leg) : null));
         previous = leg;
       });
+      var toStop = between.filter(function (walk) { return walk.to_stop === true; });
+      if (toStop.length) {  // the walk from where the ride ends to the stop that was chosen is its own row, before the walk on to the place
+        list.appendChild(changeWalkRow({ boarding_stop_name: toStop[0].to_name, boarding_stop_code: "" }, toStop, 0, false));
+        between = between.filter(function (walk) { return walk.to_stop !== true; });
+      }
       var finalRow = finalWalkRow(between, confirmedDestinationStop);
       if (finalRow) {
         list.appendChild(finalRow);
@@ -7058,7 +7084,11 @@
       list.appendChild(stepItem("destination", "Destination", [
         stepLine(destinationDisplayName())
       ], { label: "Edit destination", action: editDestination }));
-      renderOverviewSummary(overviewSummaryData(transit, toBoard), transit.some(function (leg) { return !legIsRail(leg); }));
+      var summary = overviewSummaryData(transit, toBoard);
+      if (summary) {
+        summary.walking = displayedWalkMinutes(list);  // the Walking figure is the sum of the walk rows shown, never the server's own total
+      }
+      renderOverviewSummary(summary, transit.some(function (leg) { return !legIsRail(leg); }));
       syncArriveBySummary();
       syncOverviewArrive();
       syncTrainAlerts();
@@ -7101,6 +7131,11 @@
       var note = document.getElementById("overview-priority-note");
       setAlertText(fallback, planFallback ? JO_FALLBACK_NOTE : "");
       setAlertText(note, planFallback ? JO_NEEDS_ROUTE_SERVICE : "");
+      // No itinerary could reach the chosen stop on foot: the plan goes to the place and says so.
+      var direct = document.getElementById("overview-destination-note");
+      setAlertText(direct, body && body.destination_fallback === true && confirmedDestinationStop && !destinationSkipped()
+        ? fillText(JO_DESTINATION_FALLBACK, { stop: displayStopName(confirmedDestinationStop.stop_name), place: destinationDisplayName() })
+        : "");
     }
 
     // Bus only and MRT only name their own mode when nothing is found, and say "stopped for now" when the server knows that
@@ -7507,6 +7542,9 @@
 
     function syncLiveDestination() {
       var stop = confirmedDestinationStop;
+      if (stop && stop.skipped && selectedDestination) {
+        stop = { lat: selectedDestination.latitude, lon: selectedDestination.longitude, stop_name: destinationDisplayName() };
+      }
       var lat = stop ? Number(stop.lat) : NaN;
       var lon = stop ? Number(stop.lon) : NaN;
       if (!stop || !isFinite(lat) || !isFinite(lon)) {
@@ -7815,13 +7853,12 @@
       setPillState(document.getElementById("catch-pill"), document.getElementById("catch-pill-text"), state);
       setRing("catch-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
       setBusArrives("catch", hero, usable);
-      document.getElementById("catch-title").textContent = catchHeading(false);
+      document.getElementById("catch-title").textContent = catchHeading();
       renderCatchHeading(hero);
       // The pace chip is on Page A in every probability band and action while the probability is usable. It is hidden only
       // inside the server's 30 m rule (near_stop, or at_stop); before a speed is measured it is the neutral "Walking pace".
       var nearStop = !!(chance && chance.at_stop === true) || !!(lastSuccess && lastSuccess.near_stop === true);
       renderPaceSlot(usable && !nearStop ? paceChip(paceCategoryFor(chance.pace) || "neutral") : null);
-      updatePageCCurrent(hero, usable, state);
       renderUnlikelyBanner(hero);
       syncTrainAlerts();
     }
@@ -8618,7 +8655,7 @@
       setPillState(document.getElementById("walk-pill"), document.getElementById("walk-pill-text"), pillState);
       setRing("walk-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
       setBusArrives("walk", hero, usable);
-      document.getElementById("walk-chance-title").textContent = catchHeading(false);
+      document.getElementById("walk-chance-title").textContent = catchHeading();
       var trend = document.getElementById("walk-trend");
       var trendKey = usable && walkTrend.text ? walkTrendKey(walkTrend.text, state) : "";
       document.getElementById("walk-trend-text").textContent = trendKey ? WALK_TREND_TEXT[trendKey] : "";
@@ -9031,8 +9068,8 @@
       return item;
     }
 
-    // Page C: the options page. Two entries: "unlikely" (decided once after Start journey, or opened from the
-    // compact banner) and "missed" (after "No, I missed it"). It is a view of the live screen, not a history entry.
+    // Page C: the options page. Two entries: "other" (after "Other bus options"; polling continues) and "missed" (after
+    // "No, I missed it"). It is a view of the live screen, not a history entry.
     var pageC = null;
     var pageCSerial = 0;
     var lastPageCRefreshAt = 0;
@@ -9042,7 +9079,6 @@
     var UPDATED_TEXT = "Updated {time}";
     var OPTIONS_FAILED_TEXT = "Could not load other buses. Try the refresh button.";
     var CATCH_HEADING_TEXT = "Chance to catch Bus {service}";
-    var CATCH_HEADING_PAGE_C_TEXT = "Chance to catch your Bus {service}";
     var ARRIVING_IN_TEXT = "Arriving in {n} min";
     var ARRIVING_SOON_TEXT = "Arriving in <1 min";
     var ARRIVING_NOW_TEXT = "Arriving now";
@@ -9076,12 +9112,11 @@
       return selectedBoardingStop ? displayStopName(selectedBoardingStop.description) : "";
     }
 
-    // pageC is true on the Page C current-bus card: "your Bus" there.
-    function catchHeading(pageCCard) {
+    function catchHeading() {
       if (isTrain()) {
         return fillText(TRAIN_PAGE.catchHeading, { line: trainLineName() });
       }
-      return fillText(pageCCard ? CATCH_HEADING_PAGE_C_TEXT : CATCH_HEADING_TEXT, { service: selectedService || "" });
+      return fillText(CATCH_HEADING_TEXT, { service: selectedService || "" });
     }
 
     // The same whole minutes as the arrival tile (countdownLabel): "Due" reads as now, under a minute as <1 min.
@@ -9151,25 +9186,6 @@
       return leg;
     }
 
-    // The muted line under the heading: arrival minutes and the stop name (one line, ellipsis, full name in the title).
-    // With no ETA only the stop name shows.
-    function setCatchSub(prefix, hero) {
-      var eta = etaParts(hero);
-      var stop = boardingStopName();
-      var etaEl = document.getElementById(prefix + "-sub-eta");
-      var sepEl = document.getElementById(prefix + "-sub-sep");
-      var stopEl = document.getElementById(prefix + "-sub-stop");
-      etaEl.textContent = eta ? eta.line : "";
-      stopEl.textContent = stop;
-      if (stop) {
-        stopEl.setAttribute("title", stop);
-      } else {
-        stopEl.removeAttribute("title");
-      }
-      sepEl.hidden = !(eta && stop);
-      document.getElementById(prefix + "-sub").hidden = !(eta || stop);
-    }
-
     function ringLabel(chance, hero) {
       var eta = etaParts(hero);
       var stop = boardingStopName();
@@ -9196,18 +9212,13 @@
       document.getElementById("entry-skeleton").hidden = !on;
     }
 
-    // The scenario is decided once, on the first poll result. Nothing navigates by itself afterwards.
+    // The first poll result ends the loading skeleton. Page A shows at every probability; nothing navigates by itself.
     function resolveEntry(body) {
       if (!entryPending) {
         return;
       }
       entryPending = false;
       setEntryLoading(false);
-      var hero = body && Array.isArray(body.buses) ? featuredBus(body.buses) : null;
-      if (hero && isUnlikely(hero) && !displayFrozen && !isTrain()) {
-        openPageC("unlikely");
-        return;
-      }
       syncPageCClasses();
       syncAlertSlot();
     }
@@ -9218,7 +9229,7 @@
         + "&lat=" + encodeURIComponent(userLat)
         + "&lon=" + encodeURIComponent(userLon)
         + "&accuracy=" + encodeURIComponent(userAccuracy === null ? 0 : userAccuracy)
-        + "&destination_stop_code=" + encodeURIComponent(confirmedDestinationStop.stop_code)
+        + "&destination_stop_code=" + encodeURIComponent(destStopCode())
         + "&dest_lat=" + encodeURIComponent(selectedDestination.latitude)
         + "&dest_lon=" + encodeURIComponent(selectedDestination.longitude)
         + "&entry=" + encodeURIComponent(entry);
@@ -9235,7 +9246,7 @@
     }
 
     function canSearchOptions() {
-      return !!(selectedBoardingStop && selectedService && userLat !== null && userLon !== null && confirmedDestinationStop && selectedDestination);
+      return !!(selectedBoardingStop && selectedService && userLat !== null && userLon !== null && confirmedDestinationStop && selectedDestination && !!destStopCode());
     }
 
     function openPageC(entry, missedEpoch) {
@@ -9324,16 +9335,15 @@
       if (!block) {
         return;
       }
-      var unlikelyEntry = !!pageC && pageC.entry === "unlikely";
-      document.getElementById("reroute-current").hidden = !unlikelyEntry;
       var notice = document.getElementById("reroute-notice");
       var loading = !!pageC && pageC.loading;
       var options = pageC && pageC.options ? pageC.options : null;
       var hasOptions = !!(options && (optionCards(options).length || (Array.isArray(options.rows) && options.rows.length)));
       // After a miss with the search completed and nothing found: the plain no-options text and the ride-app card.
       var emptyMiss = noOptionsState() === "missed";
-      var noticeText = emptyMiss ? NO_OTHER_OPTIONS : rerouteNotice;
-      var showNotice = !!pageC && pageC.entry === "missed" && !!noticeText;
+      var emptyOther = noOptionsState() === "other";
+      var noticeText = pageC && pageC.entry === "other" ? (emptyOther ? NO_OTHER_OPTIONS : pageC.failed ? "" : OTHER_OPTIONS_TEXT) : (emptyMiss ? NO_OTHER_OPTIONS : rerouteNotice);
+      var showNotice = !!pageC && !!noticeText;
       setAlertText(notice, showNotice ? noticeText : "");
       var rideCard = document.getElementById("pc-ride-apps");
       var rideLine = document.getElementById("pc-ride-apps-distance");
@@ -9356,7 +9366,6 @@
         head.hidden = !pageC || (loading && !options);
         setAlertText(none, pageC && pageC.failed ? OPTIONS_FAILED_TEXT : "");
         heading.textContent = ALTERNATIVES_HEADING;
-        syncPageCWarning();
         syncPageCRefresh();
         updatePageCUpdated();
         return;
@@ -9378,9 +9387,8 @@
       head.hidden = false;
       more.hidden = rows.length <= OPTIONS_VISIBLE;
       more.textContent = more.getAttribute("aria-expanded") === "true" ? "Show fewer" : "Show more";
-      // The unlikely entry never shows the none sentence: its banner changes instead (syncPageCWarning).
+      // The notice above the options says it all ("Here are your other options.", or that there are none).
       setAlertText(none, "");
-      syncPageCWarning();
       syncPageCRefresh();
       updatePageCUpdated();
     }
@@ -9394,41 +9402,16 @@
       label.textContent = at && isFinite(at.getTime()) ? fillText(UPDATED_TEXT, { time: formatTime(at.toISOString(), false) }) : "";
     }
 
-    // The current-bus card on the unlikely entry: the same ring component and the poll's own numbers.
-    function updatePageCCurrent(hero, usable, state) {
-      var card = document.getElementById("reroute-current");
-      if (!card) {
-        return;
-      }
-      var chance = hero && hero.probability;
-      setPillState(document.getElementById("pc-pill"), document.getElementById("pc-pill-text"), state);
-      setRing("pc-ring", usable ? chance : null, hero && hero.is_missed && !displayFrozen ? "Missed" : "Unavailable");
-      document.getElementById("pc-title").textContent = catchHeading(true);
-      setCatchSub("pc", hero);
-      setBusArrives("pc", hero, usable);
-      document.getElementById("pc-warn").hidden = !(usable && isUnlikely(hero));
-      syncPageCWarning();
-    }
-
     // The one decision for "No other buses or routes are available right now.": only after the search for this entry
     // has completed with zero options (no cards and no rows), and only after a miss. Never while loading, never after
-    // a failed request, never on the unlikely entry. Returns "missed", "unlikely" (a completed empty search, for the
-    // banner wording) or "".
+    // a failed request. Returns "missed", "other" (a completed empty search after Other bus options) or "".
     function noOptionsState() {
       if (!pageC || pageC.loading || pageC.failed || !pageC.options) {
         return "";
       }
       var options = pageC.options;
       var found = optionCards(options).length || (Array.isArray(options.rows) && options.rows.length);
-      return found ? "" : (pageC.entry === "missed" ? "missed" : "unlikely");
-    }
-
-    // The unlikely entry's banner: "Catching this bus is unlikely." (the same words as Page A's compact banner).
-    function syncPageCWarning() {
-      var text = document.getElementById("pc-warn-text");
-      if (text) {
-        text.textContent = CURRENT_WARNING_TEXT;
-      }
+      return found ? "" : (pageC.entry === "missed" ? "missed" : "other");
     }
 
     // The compact warning on Pages A and B once the scenario has been decided. It clears when the bus is catchable again.
@@ -9488,7 +9471,6 @@
       var occupants = [
         [byId("end-card"), function (el) { return !el.hidden; }],
         [byId("unlikely-banner"), function (el) { return !el.hidden; }],
-        [byId("leave-now-banner"), function (el) { return !el.hidden; }],
         [byId("reroute-block"), function (el) { return !el.hidden; }],
         [byId("catch-warning"), function (el) { return !el.hidden; }],
         [byId("notification-panel"), function (el) { return el.children.length > 0; }]
@@ -9505,18 +9487,20 @@
           taken = true;
         }
       });
-    }
-
-    document.getElementById("leave-now-details").addEventListener("click", function () {
-      hideLeaveNowBanner();
-      var card = document.getElementById("arrival-card");
-      if (!card || card.hidden) {
-        return;
+      // Page A shows the unlikely warning in its bottom bar, above the buttons, so the page's content never moves when it comes
+      // or goes. The slot's own copy stays counted as the slot's occupant (nothing outranked takes its place) but is not drawn there.
+      var unlikely = byId("unlikely-banner");
+      var barAlert = byId("unlikely-bar-alert");
+      if (unlikely && barAlert) {
+        var showing = !unlikely.hidden && !unlikely.classList.contains("is-suppressed");
+        var onPageA = document.body.classList.contains("is-page-a");
+        barAlert.querySelector(".alert__text").textContent = CURRENT_WARNING_TEXT;
+        barAlert.hidden = !(showing && onPageA);
+        if (showing && onPageA) {
+          unlikely.classList.add("is-suppressed");
+        }
       }
-      card.focus({ preventScroll: true });
-      card.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-    });
-    document.getElementById("leave-now-dismiss").addEventListener("click", hideLeaveNowBanner);
+    }
 
     // Screen 8 to 5: a tapped option opens the new-journey overview. Nothing changes until "Start journey".
     var NEW_JOURNEY_REASON = "Switching because your current bus is unlikely to be caught.";
@@ -9524,6 +9508,7 @@
     var NO_OTHER_OPTIONS = "No other buses or routes are available right now.";
     // MIRROR: copy.js rerouteProposal.currentWarning
     var CURRENT_WARNING_TEXT = "Catching this bus is unlikely.";
+    var OTHER_OPTIONS_TEXT = "Here are your other options.";  // MIRROR: copy.js rerouteProposal.otherOptions (Page C after Other bus options)
     var SEE_ARRIVALS_TEXT = "See arrival times";  // MIRROR: copy.js catchPrompt.seeArrivals (Page W's button)
     var SEE_BUS_ARRIVALS_TEXT = "See bus arrival times";  // MIRROR: copy.js catchPrompt, the bus button key (Page A and Page C)
     var BUS_ALREADY_LEFT = "That bus has already left. Choose another option.";
@@ -9561,7 +9546,7 @@
       lines.push(stepLine(/min/.test(when) ? "Arriving in " + when : when, "journey-step__arriving"));
       list.appendChild(stepItem("bus", "Bus service", lines, null));
       var destStop = confirmedDestinationStop;
-      if (destStop) {
+      if (destStop && !destStop.skipped) {
         list.appendChild(stepItem("stop", "Destination stop", [
           stepLine(displayStopName(destStop.stop_name)),
           stepLine(typeof destStop.walk_minutes === "number" ? "~ " + destStop.walk_minutes + " min walk to destination" : "")
@@ -9714,6 +9699,7 @@
       document.querySelector("#see-arrivals span").textContent = isTrain() ? TRAIN_PAGE.seeTimes : (onWalk ? SEE_ARRIVALS_TEXT : SEE_BUS_ARRIVALS_TEXT);
       document.getElementById("other-bus-actions").hidden = isTrain() || !document.body.classList.contains("is-page-a");
       document.body.classList.toggle("has-catch-bar", showQuestion || showArrivals);
+      syncAlertSlot();  // Page A's unlikely warning sits in this bar, so it follows the bar
     }
 
     // Runs on the one-second display tick: the unanswered end and the 60-minute cap.
@@ -9854,7 +9840,6 @@
       monitoringActive = false;
       syncWalkTimers();
       clearLeaveNowTimer();
-      hideLeaveNowBanner();
       clearRerouteProposal();
       resetPaceGuidance();
       fiveMinuteNotifiedKey = null;
@@ -10418,18 +10403,16 @@
       pushScreen("arrivals");
       window.scrollTo(0, 0);
     });
-    // "Other bus options" does what "No, I missed it" does: the same function, so the same Page C ("missed" entry), the same data
+    // "Other bus options" opens Page C (the "other" entry): the options for this stop, with tracking kept on. Unlike "No, I missed
+    // it" it does not stop tracking or say the bus has left.
     document.getElementById("other-bus-options").addEventListener("click", function () {
-      if (isTrain() || entryPending || missedMode) {
+      if (isTrain() || entryPending || missedMode || endedKind) {
         return;
       }
-      answerMissed();
-    });
-    document.getElementById("reroute-refresh").addEventListener("click", refreshPageC);
-    document.getElementById("pc-see-arrivals").addEventListener("click", function () {
-      pushScreen("arrivals");
+      openPageC("other");
       window.scrollTo(0, 0);
     });
+    document.getElementById("reroute-refresh").addEventListener("click", refreshPageC);
     document.getElementById("catch-yes").addEventListener("click", answerCaught);
     document.getElementById("catch-no").addEventListener("click", answerMissed);
     document.getElementById("end-plan-new").addEventListener("click", planNewJourney);

@@ -309,10 +309,10 @@ def test_with_nothing_found_the_plain_text_and_the_ride_app_card_show(report):
     assert shown["scrollWidth"] <= shown["innerWidth"]
 
 
-def test_the_unlikely_entry_is_unchanged(report):
+def test_the_entry_after_other_bus_options_has_its_own_notice_and_no_ride_apps(report):
     shown = report["unlikely"]
     assert shown["ride"] is False
-    assert shown["notice"] is None
+    assert shown["notice"] == "Here are your other options."  # the entry after Other bus options: its own notice, no left text
 
 
 # ---- the shared row format on Page C (item 4) and no bus stop code on screen (item 7)
@@ -353,9 +353,9 @@ LONG = "Catching this bus is unlikely."  # one sentence now
 def test_the_none_sentence_is_decided_in_one_function_and_the_strings_are_mirrored():
     gate = _function("noOptionsState")
     assert "pageC.loading || pageC.failed || !pageC.options" in gate and '"missed"' in gate
-    assert f'currentWarning: "{SHORT}"' in COPY and "currentWarningNone" not in COPY and "Here are your other options" not in COPY.split("busLeftNotice", 1)[0]
+    assert f'currentWarning: "{SHORT}"' in COPY and "currentWarningNone" not in COPY and 'otherOptions: "Here are your other options."' in COPY
     assert f'var CURRENT_WARNING_TEXT = "{SHORT}";' in INDEX and "CURRENT_WARNING_NONE_TEXT" not in INDEX
-    assert "currentWarningNone" not in GUIDE and "unlikely entry" in PLAN and SHORT in PLAN
+    assert "currentWarningNone" not in GUIDE and "Other bus options" in PLAN and SHORT in PLAN
 
 
 @pytest.fixture(scope="module", params=[("n360", 360, 800, False), ("n1280", 1280, 900, True)],
@@ -368,15 +368,16 @@ def states(request, tmp_path_factory):
                             timeout=300)["result"]
 
 
-def test_unlikely_entry_never_shows_the_none_sentence_and_shortens_the_banner_only_when_nothing_was_found(states):
-    empty = states["unlikely_empty"]
-    assert empty["warn"] == SHORT and empty["occurrences"] == 0 and empty["none"] == "" and empty["ride"] is False
-    assert empty["notice"] is None and empty["cards"] == 0 and empty["rows"] == 0
-    found = states["unlikely_found"]
-    assert found["warn"] == LONG and found["rows"] == 1 and found["occurrences"] == 0
-    for name in ("unlikely_loading", "unlikely_failed"):
-        assert states[name]["warn"] == LONG and states[name]["occurrences"] == 0 and states[name]["ride"] is False
-    assert states["unlikely_failed"]["none"] == "Could not load other buses. Try the refresh button."
+def test_the_other_entry_says_here_are_your_options_and_the_none_sentence_only_after_a_completed_empty_search(states):
+    empty = states["other_empty"]
+    assert empty["notice"] == NONE and empty["occurrences"] == 1 and empty["none"] == "" and empty["ride"] is False  # no ride-app card
+    assert empty["cards"] == 0 and empty["rows"] == 0
+    found = states["other_found"]
+    assert found["notice"] == "Here are your other options." and found["rows"] == 1 and found["occurrences"] == 0
+    assert states["other_loading"]["notice"] == "Here are your other options." and states["other_loading"]["occurrences"] == 0
+    failed = states["other_failed"]
+    assert failed["notice"] is None and failed["occurrences"] == 0 and failed["ride"] is False
+    assert failed["none"] == "Could not load other buses. Try the refresh button."
 
 
 def test_missed_entry_shows_the_sentence_and_ride_apps_only_after_a_completed_empty_search(states):

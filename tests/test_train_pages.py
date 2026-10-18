@@ -85,7 +85,7 @@ def test_a_train_never_reaches_the_bus_or_reroute_code():
     for guard in ("function maybeFiveMinuteReminder(body) {\n      if (isTrain() ||",
                   "function syncLeaveNow(body) {\n      if (isTrain()) {",
                   "!!selectedService && !isTrain();",
-                  "isUnlikely(hero) && !displayFrozen && !isTrain()",
+                  "document.getElementById(\"other-bus-actions\").hidden = isTrain() ||",
                   "if (!isTrain() && activeRoutePlan && activeRoutePlan.route_type === \"one_transfer\" && activeRoutePlan.leg_index)"):
         assert guard in INDEX, guard
     assert "trainQuery()" in INDEX.split("function walkRescoreTick(", 1)[1].split("function applyRescore", 1)[0]
@@ -240,7 +240,7 @@ def test_page_b_for_a_train(missed_light):
 
 def test_a_train_never_makes_a_leave_now_or_five_minute_notification(missed_light, yes_dark):
     for run in (missed_light, yes_dark):
-        assert run["notes"] == {"notes": [], "banner": False} and run["notesAfter"] == []
+        assert run["notes"] == {"notes": []} and run["notesAfter"] == []
 
 
 def test_the_missed_train_shows_the_left_text_the_next_three_rows_and_plan_a_new_journey(missed_light):

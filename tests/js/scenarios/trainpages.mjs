@@ -159,7 +159,7 @@ export default async function (h) {
     lastSuccess = body;
     syncLeaveNow(body);
     maybeFiveMinuteReminder(body);
-    return { notes: window.__notes.slice(), banner: leaveNowBanner.shown === true };
+    return { notes: window.__notes.slice() };
   })()`);
   if (!c.bus) {
     await h.eval("requestArrivals(monitorGeneration); true");

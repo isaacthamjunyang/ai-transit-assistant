@@ -30,37 +30,26 @@ def _slot() -> str:
     return _between(_page(), 'id="alert-slot"', 'id="arrival-card"')
 
 
-def test_leave_now_banner_mirrors_the_notification_card():
+def test_there_is_no_in_app_leave_now_banner():
     html = _page()
-    banner = _between(html, 'id="leave-now-banner"', "</section>")
-    for needle in ("alert__icon", "Just-In-Time", "now", 'id="leave-now-title"', 'id="leave-now-body"',
-                   'id="leave-now-details"', "View details", 'id="leave-now-dismiss"', "Dismiss"):
-        assert needle in banner, needle
-    assert banner.index("alert__meta") < banner.index('id="leave-now-title"') < banner.index('id="leave-now-body"')
-    assert banner.index('id="leave-now-details"') < banner.index('id="leave-now-dismiss"')
-    assert 'class="primary"' in banner and 'class="secondary"' in banner
-    tag = html.split('id="leave-now-banner"', 1)[1].split(">", 1)[0]
-    assert "role=" not in tag
+    for gone in ("leave-now-banner", "leave-now-title", "leave-now-body", "leave-now-details", "leave-now-dismiss", "leave-now-simulated",
+                 "showLeaveNowBanner", "hideLeaveNowBanner", "leaveNowStillHolds", "leaveNowBannerBody", "leaveNowBanner ="):
+        assert gone not in html, gone
     copy = COPY.read_text(encoding="utf-8")
-    for text in ("viewDetails", "View details", "dismiss", "Dismiss"):
-        assert text in copy
+    assert "leaveNowBanner" not in copy and "viewDetails" not in copy and "bannerProbability" not in copy
 
 
-def test_banner_uses_the_locked_title_and_body_and_fires_once_per_event():
+def test_the_notification_uses_the_locked_title_and_body_and_fires_once_per_event():
     html = _page()
     deliver = _between(html, "function deliverLeaveNow(busId)", "function fiveMinuteLockKey")
     assert "if (lastNotifiedBusId === busId)" in deliver
-    assert deliver.index("if (lastNotifiedBusId === busId)") < deliver.index("showLeaveNowBanner(busId, notice, lastSuccess)")
-    assert deliver.index("lastNotifiedBusId = busId") < deliver.index("showLeaveNowBanner(busId, notice, lastSuccess)")
-    assert html.count("showLeaveNowBanner(") == 2  # the definition and the single call in deliverLeaveNow
-    show = _between(html, "function showLeaveNowBanner(", "function hideLeaveNowBanner")
-    assert "notice.title" in show and "notice.body" in show
-    assert "setInterval" not in show and "setTimeout" not in show
-    # The banner is not built from the design's wording; the title and body come from the payload.
+    assert deliver.index("if (lastNotifiedBusId === busId)") < deliver.index("showLocalNotification(")
+    assert deliver.index("showLocalNotification(") < deliver.index("lastNotifiedBusId = busId")
+    assert "notice.title" in deliver and "notice.body" in deliver
     assert "Leave now!" not in html and "Bus 36 arrives soon" not in html
 
 
-def test_banner_follows_the_same_trigger_for_every_permission_state():
+def test_the_notification_follows_the_permission_and_the_same_trigger():
     html = _page()
     deliver = _between(html, "function deliverLeaveNow(busId)", "function fiveMinuteLockKey")
     sync = _between(html, "function syncLeaveNow(body)", "function renderCatchWarning")
@@ -68,7 +57,6 @@ def test_banner_follows_the_same_trigger_for_every_permission_state():
     granted = 'typeof Notification === "function" && Notification.permission === "granted"'
     assert granted in deliver
     assert deliver.index(granted) < deliver.index("showLocalNotification(notice.title, { body: notice.body })")
-    assert deliver.index("showLocalNotification(") < deliver.index("showLeaveNowBanner(")
     assert "body.notification_time" in sync and "chance.range_high < 40" in sync
 
 
@@ -85,47 +73,27 @@ def test_notification_options_are_unchanged():
     assert html.count("Notification.requestPermission") == 1
 
 
-def test_view_details_focuses_the_probability_card_and_dismiss_hides():
+def test_nothing_else_depended_on_the_banner():
     html = _page()
     card = html.split('id="arrival-card"', 1)[1].split(">", 1)[0]
-    assert 'tabindex="-1"' in card
-    details = _between(html, 'getElementById("leave-now-details").addEventListener("click"', "\n    });")
-    assert details.index("hideLeaveNowBanner()") < details.index("card.focus(")
-    assert 'getElementById("arrival-card")' in details
-    assert "preventScroll: true" in details and "scrollIntoView" in details and "prefersReducedMotion()" in details
-    assert 'getElementById("leave-now-dismiss").addEventListener("click", hideLeaveNowBanner)' in html
-    show = _between(html, "function showLeaveNowBanner(", "function hideLeaveNowBanner")
-    assert ".focus(" not in show
-    assert 'setAttribute("role", "alert")' in show
-    hide = _between(html, "function hideLeaveNowBanner()", "function leaveNowStillHolds")
-    assert 'removeAttribute("role")' in hide
-    # Dismiss never clears lastNotifiedBusId, so nothing re-shows it until the next event.
-    assert "lastNotifiedBusId" not in hide and "lastNotifiedBusId" not in details
-
-
-def test_banner_is_removed_when_the_condition_stops_holding():
-    html = _page()
-    sync = _between(html, "function syncLeaveNow(body)", "function renderCatchWarning")
-    assert sync.index("leaveNowStillHolds(body)") < sync.index("clearLeaveNowTimer()", sync.index("leaveNowStillHolds(body)"))
-    holds = _between(html, "function leaveNowStillHolds(body)", "function deliverLeaveNow")
-    for needle in ("arrivalsBlockLeaveNow()", "primary.is_missed", "etaIsMissed(primary.arrival_time)", "notice.eligible === true",
-                   'chance.data_quality !== "location uncertain"', "chance.range_high >= 40", "journeyPanel.hidden"):
-        assert needle in holds, needle
+    assert 'tabindex="-1"' in card  # the card stays focusable
     quality = _between(html, "function syncQuality()", "function activePlannedLeg")
-    assert "hideLeaveNowBanner()" in quality
-    assert "hideLeaveNowBanner()" in _between(html, "function clearLeaveNowState()", "function etaIsMissed")
-    assert "hideLeaveNowBanner()" in _between(html, "function invalidateSession()", "function clearArrivalPanel")
+    assert "LeaveNow" not in quality
+    assert "clearLeaveNowTimer()" in _between(html, "function clearLeaveNowState()", "function etaIsMissed")
+    assert "lastNotifiedBusId = null" in _between(html, "function clearLeaveNowState()", "function etaIsMissed")
+
+
 
 
 def test_alert_slot_priority_order():
     html = _page()
     slot = _slot()
-    ids = ["quality-banner", "stale-status", "location-card", "leave-now-banner", "reroute-block", "catch-warning",
+    ids = ["quality-banner", "stale-status", "location-card", "reroute-block", "catch-warning",
            "notification-panel"]
     positions = [slot.index('id="%s"' % name) for name in ids]
     assert positions == sorted(positions)
-    fn = _between(html, "function syncAlertSlot()", 'document.getElementById("leave-now-details")')
-    order = ["leave-now-banner", "reroute-block", "catch-warning", "notification-panel"]
+    fn = _between(html, "function syncAlertSlot()", "// Screen 8 to 5")
+    order = ["reroute-block", "catch-warning", "notification-panel"]
     indexes = [fn.index('byId("%s")' % name) for name in order]
     assert indexes == sorted(indexes)
     assert "var taken = warned;" in fn

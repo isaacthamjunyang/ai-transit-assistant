@@ -42,7 +42,10 @@ def north(metres: float) -> tuple[float, float]:
     return LAT + math.degrees(metres / EARTH_RADIUS_M), LON
 
 
-def make_cache() -> StopAndRouteCache:
+ALT_STOP = "88888"  # an earlier stop of bus 18 (500 m before DEST), for tests where the planner could end at the wrong stop
+
+
+def make_cache(alt_stop: bool = False) -> StopAndRouteCache:
     dest_lat, dest_lon = north(2000)
     stops = [
         {"BusStopCode": ORIGIN, "Description": "Origin", "RoadName": "Orchard Rd", "Latitude": LAT, "Longitude": LON},
@@ -52,6 +55,10 @@ def make_cache() -> StopAndRouteCache:
         {"ServiceNo": "18", "Direction": 1, "BusStopCode": ORIGIN, "StopSequence": 1, "Distance": 0},
         {"ServiceNo": "18", "Direction": 1, "BusStopCode": DEST, "StopSequence": 5, "Distance": 3},
     ]
+    if alt_stop:
+        alt_lat, alt_lon = north(1500)
+        stops.append({"BusStopCode": ALT_STOP, "Description": "Earlier Stop", "RoadName": "Orchard Rd", "Latitude": alt_lat, "Longitude": alt_lon})
+        routes.append({"ServiceNo": "18", "Direction": 1, "BusStopCode": ALT_STOP, "StopSequence": 3, "Distance": 2})
     services = [{
         "ServiceNo": "18", "Direction": 1, "OriginCode": ORIGIN, "DestinationCode": DEST,
         "AM_Offpeak_Freq": "10-10", "AM_Peak_Freq": "10-10", "PM_Peak_Freq": "10-10", "PM_Offpeak_Freq": "10-10",
@@ -70,7 +77,7 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
                 reroute_stub: bool = False, onemap=None, rail_table: dict | None = None,
                 lta_services: dict | None = None, lta_log: list | None = None, train_alerts_payload: dict | None = None,
                 alerts_log: list | None = None, alerts_status: int = 200,
-                loads: list | None = None):
+                loads: list | None = None, alt_stop: bool = False):
     """The real FastAPI app on a local port, with the fake cache and a fake LTA.
 
     eta_minutes is one number (one bus) or a list (NextBus, NextBus2, NextBus3). With reroute_stub the reroute
@@ -79,7 +86,7 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
     from main import app
 
     patches = pytest.MonkeyPatch()
-    cache = make_cache()
+    cache = make_cache(alt_stop)
     env = tmp_path / "demo.env"
     env.write_text("", encoding="utf-8")
     patches.setattr(lta_static, "ENV_PATH", env)
@@ -123,7 +130,13 @@ def running_app(tmp_path: Path, eta_minutes: float | list = 10.3, log_level: str
 
     def fake_get(self, url, *args, **kwargs):
         if "routingsvc/route" in str(url):
-            body = onemap(kwargs.get("params", {}).get("mode")) if onemap else None
+            params = kwargs.get("params", {})
+            try:  # a stub that takes (mode, params) can follow the requested end point; the others take the mode alone
+                import inspect
+                two = len(inspect.signature(onemap).parameters) >= 2 if onemap else False
+            except (TypeError, ValueError):
+                two = False
+            body = (onemap(params.get("mode"), params) if two else onemap(params.get("mode"))) if onemap else None
             return httpx.Response(200, json=body) if body is not None else httpx.Response(404, json={"error": "none"})
         if "onemap.gov.sg" in str(url):  # nothing else may reach OneMap from a test
             return httpx.Response(503, json={})

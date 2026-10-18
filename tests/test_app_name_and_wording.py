@@ -25,8 +25,8 @@ def test_the_app_is_named_just_in_time_in_the_page_title_header_and_home_link():
     assert f"<title>{NAME}</title>" in INDEX
     assert f'<span class="app-header__title">{NAME}</span>' in INDEX
     assert f'aria-label="{NAME}, go to home"' in INDEX
-    assert f'homeLabel: "{NAME}, go to home"' in COPY and f'app: "{NAME}"' in COPY  # the home link and the Leave now banner
-    assert f"<span>{NAME}</span> &middot; <span>now</span>" in INDEX
+    assert f'homeLabel: "{NAME}, go to home"' in COPY  # the home link (the in-app Leave now banner that also named the app is gone)
+    assert "&middot; <span>now</span>" not in INDEX
     assert f'FastAPI(title="{NAME}"' in MAIN
     assert f'<h1 class="app-header__title">{NAME}</h1>' in GUIDE
     assert NAME in README and NAME in PLAN

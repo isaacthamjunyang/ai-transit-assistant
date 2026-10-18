@@ -11,7 +11,7 @@ CSS = ROOT / "static" / "components.css"
 
 STRINGS = (
     "Nearby stops and stations",
-    "Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km. The first is pre-selected.",
+    "Stops and stations within 600 m, nearest first. If none, the nearest within 1.5 km.",
     "Best option",
     "Centre map on your location",
     "About these stops",
@@ -48,10 +48,10 @@ def test_best_option_only_marks_the_shortest_reachable_walk():
     assert "renderDestinationStopCard(stop, reachableStopList, stop.stop_code === bestCode)" in render
 
 
-def test_the_first_row_is_chosen_and_marker_taps_do_not_navigate():
+def test_no_row_is_chosen_at_first_and_marker_taps_do_not_navigate():
     html = _page()
     render = html.split("function renderDestinationStops(body)", 1)[1].split("function loadDestinationStops", 1)[0]
-    assert "selectDestinationStop(all[0])" in render  # the first (nearest) row is the default choice
+    assert "selectDestinationStop(all[0])" not in render and "selectDestinationStop(" not in render  # no default choice
     assert "chooseDestinationStop" not in render and "openDestinationConfirm" not in render  # no pan, no navigation
     marker = html.split("function addDestinationMarker(stop)", 1)[1].split("function addDestinationWalkLine", 1)[0]
     assert "openDestinationConfirm" not in marker

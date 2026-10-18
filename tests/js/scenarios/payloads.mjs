@@ -70,7 +70,6 @@ export default async function (h) {
             detail: ((document.getElementById('pace-walk') || {}).textContent || ''),
             detailHidden: (!document.getElementById('pace-walk') || document.getElementById('pace-walk').hidden),
             card: document.getElementById('ai-explanation-text').textContent,
-            banner: leaveNowBanner.shown === true,
             notifications: calls.length,
             paceSlotShown: !document.getElementById('pace-slot').hidden,
             chipPossible: chip,

@@ -242,9 +242,107 @@ def casings() -> dict:
         walk(50, 52, 100, origin=te_b)))
 
 
+def _end_point(params) -> tuple[float, float]:
+    lat, lon = str(params.get("end", "")).split(",")
+    return float(lat), float(lon)
+
+
+def bus_to_end(params) -> dict:
+    """Bus 18 from the origin stop to the requested end point (the stop the traveller chose), as OneMap answers: it ends there,
+    with no walk after it. The planner adds the walk from that stop to the place."""
+    end = _end_point(params)
+    target = stop("CHOSEN STOP", DEST, end)
+    return answer(itinerary(
+        walk(0, 1, 40, target=ORIGIN_STOP),
+        ride("BUS", "18", "SBST BUS 18", 8, 28, ORIGIN_STOP, target)))
+
+
+def train_to_end(params) -> dict:
+    """A train NS17 to NS22 ending at the requested end point (a chosen station)."""
+    end = _end_point(params)
+    station = stop("BISHAN MRT STATION", "NS17", north(80))
+    far = stop("CHOSEN STATION", "NS22", end)
+    return answer(itinerary(
+        walk(0, 3, 200, target=station),
+        ride("SUBWAY", "NS", "NORTH SOUTH LINE", 8, 22, station, far, between=4)))
+
+
+def _answer_to(end, *itineraries) -> dict:
+    """An answer whose plan ends at the requested point (OneMap echoes the point it routed to)."""
+    body = answer(*itineraries)
+    body["plan"]["to"] = {"name": "Destination", "lat": end[0], "lon": end[1]}
+    return body
+
+
+def _metres(a, b) -> float:
+    from nearby import haversine_m
+    return haversine_m(a[0], a[1], b[0], b[1])
+
+
+def bus_via_other(params) -> dict:
+    """What OneMap does for a stop that is not the nearest way in: two itineraries to the requested end point. The faster one rides bus 18
+    to an EARLIER stop (500 m short) and walks the rest; the slower one rides on to the stop that was asked for."""
+    from page_runner import ALT_STOP
+    end = _end_point(params)
+    alt = stop("EARLIER STOP", ALT_STOP, north(1500))
+    chosen = stop("CHOSEN STOP", DEST, end)
+    metres = _metres(north(1500), end)
+    tail = [walk(18, 18 + max(1.0, metres / 80), metres, origin=alt, target={"name": "Destination", "lat": end[0], "lon": end[1]})] if metres >= 5 else []
+    short = itinerary(walk(0, 1, 40, target=ORIGIN_STOP), ride("BUS", "18", "SBST BUS 18", 8, 18, ORIGIN_STOP, alt), *tail)
+    full = itinerary(walk(0, 1, 40, target=ORIGIN_STOP), ride("BUS", "18", "SBST BUS 18", 8, 30, ORIGIN_STOP, chosen))
+    return _answer_to(end, short, full)
+
+
+def train_via_other(params) -> dict:
+    """The same for a station: NS22 (500 m short) and a walk, or on to NS26 at the requested end point."""
+    end = _end_point(params)
+    station = stop("BISHAN MRT STATION", "NS17", north(80))
+    alt = stop("EARLIER STATION", "NS22", north(1500))
+    chosen = stop("CHOSEN STATION", "NS26", end)
+    metres = _metres(north(1500), end)
+    tail = [walk(14, 14 + max(1.0, metres / 80), metres, origin=alt, target={"name": "Destination", "lat": end[0], "lon": end[1]})] if metres >= 5 else []
+    short = itinerary(walk(0, 3, 200, target=station), ride("SUBWAY", "NS", "NORTH SOUTH LINE", 8, 14, station, alt, between=4), *tail)
+    full = itinerary(walk(0, 3, 200, target=station), ride("SUBWAY", "NS", "NORTH SOUTH LINE", 8, 26, station, chosen, between=4))
+    return _answer_to(end, short, full)
+
+
+def bus_short_only(params) -> dict:
+    """Only the faster itinerary of bus_via_other: it alights 500 m short of the requested stop."""
+    return _answer_to(_end_point(params), bus_via_other(params)["plan"]["itineraries"][0])
+
+
+def train_short_only(params) -> dict:
+    return _answer_to(_end_point(params), train_via_other(params)["plan"]["itineraries"][0])
+
+
+def following_end(table: dict):
+    """A stub for running_app(onemap=...) whose builders take the request's parameters (mode TRANSIT / BUS / RAIL)."""
+    def stub(mode, params):
+        builder = table.get(mode)
+        return builder(params) if builder else None
+    return stub
+
+
 def by_mode(table: dict):
     """A stub for running_app(onemap=...): table maps TRANSIT / BUS / RAIL to a builder (or None for a 404)."""
     def stub(mode):
         builder = table.get(mode)
         return builder() if builder else None
     return stub
+
+
+def alights_away(metres: float, kind: str = "bus", code: str = "") -> object:
+    """A builder for following_end: one itinerary that rides to a stop `metres` due south of the requested end point (the other side
+    of the road, another exit, or a stop short of it), then walks the rest to the end point, as OneMap does when no stop is exactly there."""
+    def build(params) -> dict:
+        end = _end_point(params)
+        at = (end[0] - metres / 111195.0, end[1])
+        walk_m = max(1.0, _metres(at, end))
+        tail = [walk(30, 30 + walk_m / 80, walk_m, origin={"lat": at[0], "lon": at[1]}, target={"name": "Destination", "lat": end[0], "lon": end[1]})] if metres >= 5 else []
+        if kind == "bus":
+            alight = stop("NEAR STOP", code or "66666", at)
+            return _answer_to(end, itinerary(walk(0, 1, 40, target=ORIGIN_STOP), ride("BUS", "18", "SBST BUS 18", 8, 28, ORIGIN_STOP, alight), *tail))
+        station = stop("BISHAN MRT STATION", "NS17", north(80))
+        alight = stop("NEAR STATION", code or "NS40", at)
+        return _answer_to(end, itinerary(walk(0, 3, 200, target=station), ride("SUBWAY", "NS", "NORTH SOUTH LINE", 8, 28, station, alight, between=4), *tail))
+    return build

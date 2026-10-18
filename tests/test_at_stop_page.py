@@ -35,7 +35,6 @@ def test_at_the_stop_the_ring_the_tile_the_card_and_the_aria_say_so(report):
     assert view["card"] == f"You're here. {view['e']} minutes to wait."
     assert view["cautionHidden"] is True  # the location-uncertain line cannot appear with a good fix
     assert view["chip"] == ""  # no pace chip (hidden inside 30 m)
-    assert view["banner"] is True  # no Leave now banner
     assert report["atStopRescore"]["near"] is True
 
 
@@ -60,10 +59,6 @@ def test_a_rescore_alone_brings_the_at_stop_text_back(report):
     assert "97" in view["ring"]
 
 
-def test_a_rescore_that_says_at_the_stop_hides_a_showing_leave_now_banner(report):
-    assert report["bannerShown"] is True and report["bannerAfter"] is True
-
-
 # ---- the strings are in copy.js and the page, character for character
 
 def test_the_at_stop_strings_are_in_the_page_and_in_copy_js():
@@ -86,6 +81,5 @@ def test_one_place_decides_the_tile_the_card_and_the_action_between_polls():
     assert INDEX.count("pack.at_stop === true") >= 3  # sentence one, sentence two, the tile
     action = INDEX.split("function trackedAction(body)", 1)[1].split("function boardingStopName", 1)[0]
     assert "probability.at_stop === true" in action and "return action;" in action
-    banner = INDEX.split("function leaveNowStillHolds", 1)[1].split("function deliverLeaveNow", 1)[0]
-    assert "chance.at_stop !== true" in banner
+    assert "leaveNowStillHolds" not in INDEX  # there is no banner to hide any more
     assert len(re.findall(r"chance\.at_stop === true", INDEX)) >= 2  # the timer and the delivery

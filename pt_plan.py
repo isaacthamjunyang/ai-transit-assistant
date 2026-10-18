@@ -112,6 +112,7 @@ def plan_multi_leg(
     destination_stop_code: str = "",
     end_lat: float | None = None,
     end_lon: float | None = None,
+    end_name: str = "",
     origin_stop_code: str | None = None,
     arrive_by: datetime | None = None,
     priority: str = DEFAULT_PRIORITY,
@@ -125,7 +126,10 @@ def plan_multi_leg(
     """Plan with OneMap. Raises RouteUnavailable when OneMap cannot be used; plan_with_fallback catches it.
 
     dest_lat and dest_lon are the place. With end_lat and end_lon (the chosen destination stop or station) OneMap routes to
-    that point, so the ride ends at the stop the user chose, and the walk from there to the place is added as the last leg."""
+    that point and the itinerary ends there: an itinerary whose last transit leg alights at the stop (or within AT_STOP_M of it)
+    is kept as it is; failing that, one that alights within WALK_TO_STOP_MAX_M gets a walk leg from the alighting point to the stop;
+    failing that, the plan is made to the place itself and the answer says so (`destination_fallback`). Either way the walk from
+    the stop to the place is the last leg. "No route" is only what OneMap says when it has no transit route at all."""
     if priority not in PRIORITIES:
         raise ValueError("unknown priority")
     moment = _as_sgt(now if now is not None else datetime.now(SGT))
@@ -143,26 +147,57 @@ def plan_multi_leg(
     args = {"session": session, "client": client, "lta_cache": cache, "rail_table": rail_table,
             "token": token, "email": email, "password": password, "now": clock}
     primary_mode = {PRIORITY_BUS_ONLY: MODE_BUS, PRIORITY_MRT_ONLY: MODE_RAIL}.get(priority, MODE_TRANSIT)
-    if arrive_by is not None:
-        km = haversine_m(origin.latitude, origin.longitude, target_lat, target_lon) / 1000
-        estimate = max(20.0, bus_ride_minutes(km / BUS_SPEED_KM_H * 60, depart) * 1.2 + 10)
-        first = pt_route.search_arrive_by(router, origin, destination, arrive_by, estimate_minutes=estimate,
-                                          earliest=depart, mode=primary_mode, budget=budget, **args)
-    else:
-        first = router.route(origin, destination, depart, primary_mode, budget=budget, **args)
+    km = haversine_m(origin.latitude, origin.longitude, target_lat, target_lon) / 1000
+    estimate = max(20.0, bus_ride_minutes(km / BUS_SPEED_KM_H * 60, depart) * 1.2 + 10)
+
+    def search(where, mode, limit):
+        if arrive_by is not None:
+            return pt_route.search_arrive_by(router, origin, where, arrive_by, estimate_minutes=estimate, earliest=depart,
+                                             mode=mode, budget=limit, **args)
+        return router.route(origin, where, depart, mode, budget=limit, **args)
+
+    first = search(destination, primary_mode, budget)
     pool = list(first["itineraries"])
     status = first["status"]
+    fallback = False
+    extra_calls = 0
     if ends_at_stop:
-        pool = [_end_at_place(item, dest_lat, dest_lon, walk_speed_m_s, destination_name) for item in pool]
+        # itineraries that end at the chosen stop or station (with a walk to it when they alight a little way off), then the walk on
+        # to the place
+        pool = _via_stop(first["itineraries"], end_lat, end_lon, destination_stop_code, end_name, dest_lat, dest_lon, walk_speed_m_s,
+                         destination_name)
+        if not pool and primary_mode == MODE_TRANSIT and first["itineraries"]:
+            # OneMap's mixed search ended elsewhere: ask for the mode of the chosen stop (a bus stop code is digits, a station's is not)
+            retry = MODE_BUS if destination_stop_code.isdigit() else MODE_RAIL
+            try:
+                limit = pt_route.CallBudget.single()
+                again = search(destination, retry, limit)
+                extra_calls += limit.used
+                pool = _via_stop(again["itineraries"], end_lat, end_lon, destination_stop_code, end_name, dest_lat, dest_lon,
+                                 walk_speed_m_s, destination_name)
+            except (BudgetExhausted, RouteUnavailable, RouteRejected):
+                pool = []
+        if not pool:
+            # nothing reaches the stop within a walk: plan to the place itself, as Skip does, and say so
+            try:
+                limit = pt_route.CallBudget.single()
+                direct_place = pt_route.destination_place(destination_name, dest_lat, dest_lon)
+                direct = search(direct_place, primary_mode, limit)
+                extra_calls += limit.used
+                if direct["itineraries"]:
+                    pool, status, fallback = list(direct["itineraries"]), direct["status"], True
+                    destination, ends_at_stop = direct_place, False
+            except (BudgetExhausted, RouteUnavailable, RouteRejected):
+                pass
     if priority == PRIORITY_FEWEST_TRANSFERS and arrive_by is None and pool and min(i["transfers"] for i in pool) > 0:
         for mode in (MODE_BUS, MODE_RAIL):  # a direct bus or train may exist that the mixed search did not return
             try:
                 extra = router.route(origin, destination, depart, mode, budget=budget, **args)
             except (BudgetExhausted, RouteUnavailable, RouteRejected):
                 break
-            pool = _merge(pool, [_end_at_place(item, dest_lat, dest_lon, walk_speed_m_s, destination_name)
-                                 if ends_at_stop else item for item in extra["itineraries"]])
-    calls = budget.used
+            pool = _merge(pool, _via_stop(extra["itineraries"], end_lat, end_lon, destination_stop_code, end_name, dest_lat, dest_lon,
+                                          walk_speed_m_s, destination_name) if ends_at_stop else extra["itineraries"])
+    calls = budget.used + extra_calls
     dropped = {"hours": 0, "budget": 0, **first.get("dropped", {})}
     # a chip (Bus only, MRT only) says "stopped for now" only when its own service is known to be closed at the travel time
     travel = _as_sgt(arrive_by) if arrive_by is not None else depart
@@ -203,6 +238,7 @@ def plan_multi_leg(
         "planner": "onemap",
         "priority": priority,
         "fallback_note": False,
+        "destination_fallback": fallback,  # the chosen stop could not be reached on foot from any route: this one goes to the place
         "calls": calls,
         "candidate_stop_count": 1,
         "option": best["option"],
@@ -328,8 +364,6 @@ def _merge(pool: list[dict], extra: list[dict]) -> list[dict]:
 
 
 END_AT_PLACE_MIN_M = 5.0
-
-
 def _end_at_place(itinerary: dict, place_lat: float, place_lon: float, speed: float, name: str = "") -> dict:
     """The itinerary OneMap gave for the chosen stop, ending with the walk from that stop to the place: any walk OneMap
     added after the last ride (to the stop's own point) is replaced by the straight-line walk to the place, so the end
@@ -354,6 +388,74 @@ def _end_at_place(itinerary: dict, place_lat: float, place_lon: float, speed: fl
         "from_name": last.get("alighting_stop_name", ""), "to_name": name or "Destination",
     }
     return {**itinerary, "legs": legs + [walk], "arrive": end.isoformat(), "walk_m": (itinerary.get("walk_m") or 0) + metres}
+
+
+AT_STOP_M = 25.0  # alighting this close to the chosen stop (or at its code) counts as being at it: no walk to it
+WALK_TO_STOP_MAX_M = 400.0  # the longest walk from where an itinerary alights to the chosen stop that is still offered
+
+
+def _alight(itinerary: dict) -> tuple[float, float, str] | None:
+    transit = [leg for leg in itinerary["legs"] if leg["kind"] != KIND_WALK]
+    if not transit:
+        return None
+    last = transit[-1]
+    stops = last.get("stops") or []
+    point = stops[-1] if stops else {}
+    lat, lon = point.get("latitude"), point.get("longitude")
+    if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+        return None
+    return float(lat), float(lon), str(last.get("alighting_stop_code") or "")
+
+
+def _via_stop(itineraries: list[dict], stop_lat: float, stop_lon: float, code: str, stop_name: str, place_lat: float, place_lon: float,
+              speed: float, place_name: str) -> list[dict]:
+    """The itineraries that end at the chosen stop, then walk to the place. Those that alight at the stop (its code, or within
+    AT_STOP_M) are preferred; when there are none, those that alight within WALK_TO_STOP_MAX_M, each with a walk leg from
+    the alighting point to the stop (`to_stop` true). Every one then ends with the walk from the stop to the place."""
+    near, exact = [], []
+    for item in itineraries:
+        point = _alight(item)
+        if point is None:
+            continue
+        metres = haversine_m(point[0], point[1], stop_lat, stop_lon)
+        if (code and point[2] == code) or metres <= AT_STOP_M:
+            exact.append(item)
+        elif metres <= WALK_TO_STOP_MAX_M:
+            near.append((item, point, metres))
+    if exact:
+        return [_end_at_place(item, place_lat, place_lon, speed, place_name) for item in exact]
+    result = []
+    for item, point, metres in near:
+        legs = list(item["legs"])
+        while len(legs) > 1 and legs[-1]["kind"] == KIND_WALK:
+            legs.pop()
+        last = legs[-1]
+        arrive = _as_sgt(datetime.fromisoformat(last["arrive"]))
+        seconds = metres / speed
+        reach = arrive + timedelta(seconds=seconds)
+        walk = {"depart": arrive.isoformat(), "arrive": reach.isoformat(), "duration_s": round(seconds, 1), "distance_m": round(metres, 1),
+                "path": [[point[0], point[1]], [stop_lat, stop_lon]], "kind": KIND_WALK, "to_stop": True,
+                "from_name": last.get("alighting_stop_name", ""), "to_name": stop_name or "the stop"}
+        moved = {**item, "legs": legs + [walk], "arrive": reach.isoformat(), "walk_m": (item.get("walk_m") or 0) + metres}
+        # the walk on to the place starts at the stop, not at the alighting point
+        result.append(_end_at_place_from(moved, stop_lat, stop_lon, place_lat, place_lon, speed, place_name))
+    return result
+
+
+def _end_at_place_from(itinerary: dict, from_lat: float, from_lon: float, place_lat: float, place_lon: float, speed: float,
+                       name: str) -> dict:
+    """Append the walk from a given point (the chosen stop) to the place; nothing when they are the same point."""
+    metres = haversine_m(from_lat, from_lon, place_lat, place_lon)
+    if metres < END_AT_PLACE_MIN_M:
+        return itinerary
+    last = itinerary["legs"][-1]
+    start = _as_sgt(datetime.fromisoformat(last["arrive"]))
+    seconds = metres / speed
+    end = start + timedelta(seconds=seconds)
+    walk = {"depart": start.isoformat(), "arrive": end.isoformat(), "duration_s": round(seconds, 1), "distance_m": round(metres, 1),
+            "path": [[from_lat, from_lon], [place_lat, place_lon]], "kind": KIND_WALK, "from_name": last.get("to_name", ""),
+            "to_name": name or "Destination"}
+    return {**itinerary, "legs": itinerary["legs"] + [walk], "arrive": end.isoformat(), "walk_m": (itinerary.get("walk_m") or 0) + metres}
 
 
 def _signature(itinerary: dict) -> tuple:

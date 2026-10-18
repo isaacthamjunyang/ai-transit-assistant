@@ -1,7 +1,7 @@
 import { openHome } from "./common.mjs";
 
 // The approved Page C design (pagec-v2) on the real page, fed option bodies directly (no request is made): the current-bus
-// card, two recommended cards, alternative rows with their alerts, and the empty answer. config: width, height, dark.
+// two recommended cards, alternative rows with their alerts, and the empty answer (there is no current-bus card on Page C). config: width, height, dark.
 function row(id, service, wait, destMinutes, point, tags, extra) {
   const at = new Date(Date.now() + wait * 60000).toISOString();
   const dest = destMinutes === null ? null : new Date(Date.now() + destMinutes * 60000).toISOString();
@@ -25,7 +25,6 @@ const SHOW = (options, entry) => `(function () {
 const READ = `(function () {
   function box(el) { if (!el) { return null; } var r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; }
   function css(el, prop) { return el ? getComputedStyle(el)[prop] : null; }
-  var current = document.getElementById("reroute-current");
   var cards = Array.prototype.map.call(document.querySelectorAll("#reroute-cards .option-merged"), function (card) {
     var ring = card.querySelector(".prob-ring"), copy = card.querySelector(".option-card__copy");
     var leave = card.querySelector(".leave-tile--option:not(.leave-tile--reach)"), reach = card.querySelector(".leave-tile--reach");
@@ -55,7 +54,6 @@ const READ = `(function () {
       chance: item.querySelector(".alt-row__chance") ? item.querySelector(".alt-row__chance").textContent : null };
   });
   var head = document.getElementById("reroute-alternatives-head");
-  var warn = document.getElementById("pc-warn");
   var none = document.getElementById("page-c-none"), notice = document.getElementById("reroute-notice");
   var ride = document.getElementById("pc-ride-apps");
   var links = ride ? Array.prototype.map.call(ride.querySelectorAll("a"), box) : [];
@@ -63,12 +61,7 @@ const READ = `(function () {
     cards: cards, rows: rows,
     headRow: head && !head.hidden ? { heading: box(head.querySelector(".reroute-alternatives__heading")), updated: box(head.querySelector(".reroute-updated")),
       refresh: box(head.querySelector(".refresh-button")), headingSize: css(head.querySelector(".reroute-alternatives__heading"), "fontSize") } : null,
-    current: current && !current.hidden ? {
-      arrivesTime: parseFloat(css(current.querySelector(".catch-card__arrives-time"), "fontSize")),
-      labelAbove: current.querySelector(".catch-card__arrives-label").getBoundingClientRect().bottom <= current.querySelector(".catch-card__arrives-time").getBoundingClientRect().top + 2,
-      captionInCopy: !!current.querySelector(".catch-card__copy .catch-card__caption"),
-      warn: warn && !warn.hidden ? { cls: warn.className, text: warn.textContent.trim(), box: box(warn), radius: css(warn, "borderTopLeftRadius") } : null,
-      button: box(current.querySelector("#pc-see-arrivals")), card: box(current) } : null,
+    oldCard: { current: !!document.getElementById("reroute-current"), warn: !!document.getElementById("pc-warn"), see: !!document.getElementById("pc-see-arrivals"), title: !!document.getElementById("pc-title") },
     none: none && !none.hidden ? { text: none.textContent.trim(), cls: none.className } : null,
     notice: notice && !notice.hidden ? { text: notice.textContent.trim(), cls: notice.className } : null,
     ride: ride && !ride.hidden ? { box: box(ride), links: links, bg: css(ride, "backgroundColor"), border: css(ride, "borderTopWidth") } : null,
@@ -90,22 +83,11 @@ export default async function (h) {
   const warnRow = row("w", "158", 3, 25, 5, [], { unlikely: true });
   const plain = row("p", "36", 9, 40, 50, []);
   const late = row("l", "14", 22, 70, 92, [], { after_target: true });
-  await h.eval(SHOW(body([fastest, highest], [warnRow, plain, late]), "unlikely"));
-  // the current-bus card of the unlikely entry, filled with sample values (the warning shows as the page shows it)
-  await h.eval(`(function () {
-    document.getElementById("reroute-current").hidden = false;
-    document.getElementById("pc-title").textContent = "Chance to catch your Bus 158";
-    document.getElementById("pc-arrives").hidden = false;
-    document.getElementById("pc-arrives-time").textContent = "12:37 PM";
-    document.getElementById("pc-ring-text").textContent = "5%";
-    document.getElementById("pc-warn").hidden = false;
-    return true;
-  })()`);
+  await h.eval(SHOW(body([fastest, highest], [warnRow, plain, late]), "other"));
   await h.sleep(300);
   out.route = await h.eval(READ);
   // the empty answer after a miss: the info alert and the ride-app card
   await h.eval(SHOW(body([], []), "missed"));
-  await h.eval(`document.getElementById("reroute-current").hidden = true; true`);
   await h.sleep(300);
   out.empty = await h.eval(READ);
   return out;
